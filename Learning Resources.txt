@@ -1,0 +1,100 @@
+Solid 
+https://en.wikipedia.org/wiki/SOLID
+
+Singlton DP
+https://csharpindepth.com/articles/singleton
+
+When Should I use Singlton
+https://stackoverflow.com/questions/228164/on-design-patterns-when-should-i-use-the-singleton
+
+Singlton Pattern VS Static Classes
+http://net-informations.com/faq/netfaq/singlestatic.htm#:~:text=A%20singleton%20allows%20a%20class,the%20lifetime%20of%20an%20application.&text=While%20a%20static%20class%20allows,other%20classes%20and%20allow%20inheritance.
+
+Why DB Connection Should Not Be Singlton
+https://stackoverflow.com/questions/6507687/should-a-db-connection-be-a-singleton#:~:text=many%20DB%20drivers%20are%20not,share%20a%20%22global%22%20instance.
+
+Singlton Might Lead To Bad Design 
+https://puredanger.github.io/tech.puredanger.com/2007/07/03/pattern-hate-singleton/
+
+liskov Substitution Principle
+https://stackoverflow.com/questions/4428725/can-you-explain-liskov-substitution-principle-with-a-good-c-sharp-example
+
+Factory VS Method Factory VS Abstract Method Factory 
+https://stackoverflow.com/questions/13029261/design-patterns-factory-vs-factory-method-vs-abstract-factory // Super Clear Example
+
+https://stackoverflow.com/questions/5739611/what-are-the-differences-between-abstract-factory-and-factory-design-patterns
+
+https://www.tutorialspoint.com/design_pattern/factory_pattern.htm
+
+DDD DP
+https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/ddd-oriented-microservice
+https://docs.microsoft.com/en-us/dotnet/architecture/microservices/microservice-ddd-cqrs-patterns/domain-events-design-implementation
+
+CQRS pattern
+https://docs.microsoft.com/en-us/azure/architecture/patterns/cqrs
+
+GC:
+https://devblogs.microsoft.com/premier-developer/understanding-different-gc-modes-with-concurrency-visualizer/#:~:text=Workstation%20GC%20uses%20smaller%20segments,best%20suited%20for%20UI%20applications.
+
+What is Application Domain 
+https://docs.microsoft.com/en-us/dotnet/framework/app-domains/application-domains#:~:text=Application%20domains%20provide%20an%20isolation,before%20an%20application%20is%20run.
+
+
+Accept Multiple TCP Clients 
+https://stackoverflow.com/questions/12238568/thread-pool-multiclient-tcp-messagehandling?rq=1
+https://stackoverflow.com/questions/7104293/best-way-to-accept-multiple-tcp-clients
+
+
+Task.Run vs Async Await
+https://stackoverflow.com/questions/18013523/when-correctly-use-task-run-and-when-just-async-await
+
+Task.Run and Async Await
+https://www.pluralsight.com/guides/using-task-run-async-await
+
+.WhenAll with TextWriter causes stream exception
+https://andrew.thomas.net.nz/c%23/2020/08/30/Beware-of-using-File-Stream-WriteLineAsync-methods/
+
+Why can't I use the 'await' operator within the body of a lock statement?
+https://stackoverflow.com/questions/7612602/why-cant-i-use-the-await-operator-within-the-body-of-a-lock-statement
+
+
+Semaphoreslim
+https://docs.microsoft.com/en-us/dotnet/api/system.threading.semaphoreslim?view=net-6.0
+
+
+Task.Run
+https://blog.stephencleary.com/2013/10/taskrun-etiquette-and-proper-usage.html
+https://blog.stephencleary.com/2013/11/taskrun-etiquette-examples-using.html
+https://blog.stephencleary.com/2013/11/taskrun-etiquette-examples-dont-use.html
+
+https://medium.com/bynder-tech/c-why-you-should-use-configureawait-false-in-your-library-code-d7837dce3d7f
+
+
+
+If async-await doesn't create any additional threads, then how does it make applications responsive?
+https://stackoverflow.com/questions/37419572/if-async-await-doesnt-create-any-additional-threads-then-how-does-it-make-appl
+
+Async No Thread
+https://blog.stephencleary.com/2013/11/there-is-no-thread.html
+
+Should I expose asynchronous wrappers for synchronous methods?
+https://devblogs.microsoft.com/pfxteam/should-i-expose-asynchronous-wrappers-for-synchronous-methods/?WT.mc_id=DT-MVP-5000058
+
+
+IOC and Dependency Injection 
+https://howtodoinjava.com/spring-core/spring-ioc-vs-di/
+https://www.geeksforgeeks.org/dependecy-inversion-principle-solid/
+https://simpleprogrammer.com/back-to-basics-understanding-ioc/
+https://daedtech.com/encapsulation-vs-inversion-of-control/
+
+https://softwareengineering.stackexchange.com/questions/311674/how-is-inversion-of-control-related-to-dependency-inversion#:~:text=IoC%20is%20about%20who%20initiates%20the%20call.%20If,your%20code%20to%20the%20thing%20it%20is%20calling.
+https://dotnettutorials.net/lesson/introduction-to-inversion-of-control/#:~:text=IoC%20Containers%20in%20C%23%3A%20The%20IoC%20Container%20is,to%20put%20additional%20time%20and%20effort%20into%20it.
+https://martinfowler.com/articles/dipInTheWild.html#YouMeanDependencyInversionRight
+
+
+https://www.youtube.com/watch?v=GAOCe-2nXqc
+
+
+.Net Core Logging 
+https://blog.stephencleary.com/2018/06/microsoft-extensions-logging-part-2-types.html
+https://www.bing.com/search?q=what+is+the+beneifit+of+generic+Microsoft.Extensions.ILogger&cvid=6cc378e8f20d45beb8ae82606fbbb5a6&aqs=edge..69i57j69i11004.29408j0j1&pglt=163&FORM=ANSAB1&PC=W037&ntref=1

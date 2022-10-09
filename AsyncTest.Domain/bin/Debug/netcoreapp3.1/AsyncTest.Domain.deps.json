@@ -1,0 +1,23 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v3.1",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v3.1": {
+      "AsyncTest.Domain/1.0.0": {
+        "runtime": {
+          "AsyncTest.Domain.dll": {}
+        }
+      }
+    }
+  },
+  "libraries": {
+    "AsyncTest.Domain/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

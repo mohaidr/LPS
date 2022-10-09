@@ -1,0 +1,14 @@
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\bin\Debug\netcoreapp3.1\AsyncTest.Infrastructure.deps.json
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\bin\Debug\netcoreapp3.1\AsyncTest.Infrastructure.dll
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\bin\Debug\netcoreapp3.1\AsyncTest.Infrastructure.pdb
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\bin\Debug\netcoreapp3.1\AsyncTest.Domain.dll
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\bin\Debug\netcoreapp3.1\AsyncTest.Domain.pdb
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.csprojAssemblyReference.cache
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.AssemblyInfoInputs.cache
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.AssemblyInfo.cs
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.csproj.CoreCompileInputs.cache
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.csproj.CopyComplete
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.dll
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.pdb
+C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Infrastructure\obj\Debug\netcoreapp3.1\AsyncTest.Infrastructure.csproj.AssemblyReference.cache
