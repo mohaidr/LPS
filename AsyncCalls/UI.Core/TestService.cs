@@ -3,11 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using AsyncTest.Domain;
 using AsyncTest.Domain.Common;
+using AsyncTest.Infrastructure.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Core;
 
 namespace AsyncTest.UI.Core
 {
@@ -15,12 +18,11 @@ namespace AsyncTest.UI.Core
     //redesign this class to remove redundent code and unify both manual and command build functions if it makes sense, also remove unnecessary complexity 
     internal class TestService<T1, T2> : ITestService<T1, T2> where T1: ICommand<T2> where T2: IExecutable
     {
-        private readonly ILogger _logger;
+        private readonly IFileLogger _logger;
         private readonly IConfiguration _config;
-        public TestService(ILogger<T1> loggger, IConfiguration config)
+        public TestService(IFileLogger loggger, IConfiguration config)
         {
             _logger = loggger;
-          
             _config = config;
         }
 
@@ -536,7 +538,7 @@ namespace AsyncTest.UI.Core
             };
         }
 
-        internal void Run(T1 setupCommand, string [] args)
+        public async Task Run(T1 setupCommand, string [] args)
         {
             var command = (HttpAsyncTest.SetupCommand) ((ICommand<HttpAsyncTest>) setupCommand);
             if (args.Length != 0)
@@ -574,9 +576,11 @@ namespace AsyncTest.UI.Core
             if (action == "start over")
             {
                 args = new string[] { };
-                await StartAsyncTest(args);
+                await Run(setupCommand, args);
             }
-        }
-    }
 
+          await _logger.Flush();
+        }
+
+    }
 }
