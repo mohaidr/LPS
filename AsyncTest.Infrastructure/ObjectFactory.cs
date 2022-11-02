@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace AsyncTest.Infrastructure
+namespace AsyncTest.Infrastructure.Logging
 {
     internal sealed class ObjectFactory
     {
@@ -38,9 +38,8 @@ namespace AsyncTest.Infrastructure
                         }
                         else
                         {
-                            StreamWriter streamWriter = new StreamWriter(path)
+                            StreamWriter streamWriter = new StreamWriter(path, true, Encoding.Default, 65536)
                             {
-                                AutoFlush = true
                             };
                             textWriters.Add(path, streamWriter);
                             return TextWriter.Synchronized(streamWriter);
@@ -54,7 +53,4 @@ namespace AsyncTest.Infrastructure
             }
         }
     }
-
-
-
 }

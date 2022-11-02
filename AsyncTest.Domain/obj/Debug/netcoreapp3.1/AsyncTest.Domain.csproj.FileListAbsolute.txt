@@ -7,5 +7,4 @@ C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Domain\obj\Debug\netcorea
 C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Domain\obj\Debug\netcoreapp3.1\AsyncTest.Domain.csproj.CoreCompileInputs.cache
 C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Domain\obj\Debug\netcoreapp3.1\AsyncTest.Domain.dll
 C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Domain\obj\Debug\netcoreapp3.1\AsyncTest.Domain.pdb
-C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Domain\obj\Debug\netcoreapp3.1\AsyncTest.Domain.csprojAssemblyReference.cache
 C:\Users\mohaidar\Documents\GitHub\.Net Core\AsyncTest.Domain\obj\Debug\netcoreapp3.1\AsyncTest.Domain.csproj.AssemblyReference.cache

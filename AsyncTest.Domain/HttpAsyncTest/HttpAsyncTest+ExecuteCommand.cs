@@ -54,37 +54,37 @@ namespace AsyncTest.Domain
 
 
 
-                    awaitableTasks.Add(_logger.Write<HttpAsyncRequest>(Serilog.Events.LogEventLevel.Information, "Request Details"));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Number Of Async Calls:  {container.NumberofAsyncRepeats}", LoggingLevel.Informational));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Client Http Request Timeout: {container.HttpRequest.HttpRequestTimeout}", LoggingLevel.Informational));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Method:  {container.HttpRequest.HttpMethod.ToUpper()}", LoggingLevel.Informational));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Version: {container.HttpRequest.Httpversion}", LoggingLevel.Informational));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"URL: {container.HttpRequest.URL}", LoggingLevel.Informational));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, "Request Details", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Number Of Async Calls:  {container.NumberofAsyncRepeats}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Client Http Request Timeout: {container.HttpRequest.HttpRequestTimeout}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Method:  {container.HttpRequest.HttpMethod.ToUpper()}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Version: {container.HttpRequest.Httpversion}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"URL: {container.HttpRequest.URL}", LoggingLevel.INF));
                     if (!string.IsNullOrEmpty(container.HttpRequest.Payload) && (container.HttpRequest.HttpMethod.ToUpper() == "PUT" || container.HttpRequest.HttpMethod.ToUpper() == "POST" || container.HttpRequest.HttpMethod.ToUpper() == "PATCH"))
                     {
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Body...", LoggingLevel.Informational));
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, container.HttpRequest.Payload, LoggingLevel.Informational));
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...End Request Body...", LoggingLevel.Informational));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Body...", LoggingLevel.INF));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, container.HttpRequest.Payload, LoggingLevel.INF));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...End Request Body...", LoggingLevel.INF));
                     }
                     else
                     {
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Empty Payload...", LoggingLevel.Informational));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Empty Payload...", LoggingLevel.INF));
                     }
 
                     if (container.HttpRequest.HttpHeaders != null)
                     {
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Headers...", LoggingLevel.Informational));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Headers...", LoggingLevel.INF));
 
                         foreach (var header in container.HttpRequest.HttpHeaders)
                         {
-                            awaitableTasks.Add(_logger.LogAsync(string.Empty, $"{header.Key}: {header.Value}", LoggingLevel.Informational));
+                            awaitableTasks.Add(_logger.LogAsync(string.Empty, $"{header.Key}: {header.Value}", LoggingLevel.INF));
                         }
 
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...End Request Headers...", LoggingLevel.Informational));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...End Request Headers...", LoggingLevel.INF));
                     }
                     else
                     {
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...No Headers Were Provided...", LoggingLevel.Informational));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, "...No Headers Were Provided...", LoggingLevel.INF));
                     }
 
                     awaitableTasks.Add(command.ExecuteAsync(container));
@@ -99,7 +99,7 @@ namespace AsyncTest.Domain
                 var elapsedMs = watch.ElapsedMilliseconds;
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"...All Requests has been sent in {elapsedMs} ms...");
-                awaitableTasks.Add(_logger.LogAsync($"{this.Name}.{(this.IsRedo ? "redo." : string.Empty)}{randomGuidId}", $"...All Requests has been sent in {elapsedMs} ms...", LoggingLevel.Informational));
+                awaitableTasks.Add(_logger.LogAsync($"{this.Name}.{(this.IsRedo ? "redo." : string.Empty)}{randomGuidId}", $"...All Requests has been sent in {elapsedMs} ms...", LoggingLevel.INF));
                 Console.ResetColor();
                 await Task.WhenAll(awaitableTasks.ToArray());
                 watch.Stop();

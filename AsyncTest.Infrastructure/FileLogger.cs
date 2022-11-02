@@ -1,25 +1,42 @@
-﻿using AsyncTest.Domain;
+﻿
 using System;
 using System.IO;
-using AsyncTest.Domain.Common;
 using System.Threading.Tasks;
 using System.Text;
 using System.Threading;
+using System.Reflection.Emit;
+using AsyncTest.Domain.Common;
 
-namespace AsyncTest.Infrastructure
+namespace AsyncTest.Infrastructure.Logging
 {
     public class FileLogger : IFileLogger
     {
-
+        TextWriter SynchronizedTextWriter;
         public FileLogger()
-        { 
-        
+        {
+            if (String.IsNullOrEmpty(Location))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("Logging has been disabled, Location Can't be empty");
+                Console.ResetColor();
+                return;
+            }
+
+            string directory = string.Concat($@"{Path.GetDirectoryName(Location)}");
+
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            string fileName = Path.GetFileName(Location);
+
+            SynchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
+
         }
 
         private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        // Change the implementation to accept the location and file name as constructor parameters
-        public string Location { get; set; } = $@"{DateTime.Now.Ticks.ToString() }\\{DateTime.Now.Ticks.ToString()}.json";
+        public string Location { get; set; } = "logs/load-test.Log";
         public void Log(string EventId, string DiagnosticMessage, LoggingLevel Level)
         {
             throw new NotImplementedException();
@@ -29,39 +46,10 @@ namespace AsyncTest.Infrastructure
         {
             try
             {
-                if (String.IsNullOrEmpty(Location) || !(Location.EndsWith(".txt") || Location.EndsWith(".json")))
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("Logging has been disabled due to one of the below reason \n  Incorrect location. \n  File name does not end with .txt|.Json");
-                    Console.ResetColor();
-                    return;
-                }
-                string directory = string.Concat($@"{Path.GetDirectoryName(Location)}\\{Level}");
-
-                if (!Directory.Exists(directory))
-                {
-                    Directory.CreateDirectory(directory);
-                }
-                string fileName = Path.GetFileName(Location);
-
-                TextWriter SynchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
-
-                string encodedText = System.Web.HttpUtility.HtmlEncode(DiagnosticMessage);
-
-                string entry = string.Empty;
-
-                entry = String.Concat(entry, "{\n");
-                entry = String.Concat(entry, ($"\t\"Log_Level\": \"{Level.ToString()}\",\n"));
-                if (!string.IsNullOrEmpty(EventId))
-                    entry = string.Concat(entry, ($"\t\"Event_Id\": \"{EventId}\",\n"));
-
-                if (!string.IsNullOrEmpty(DiagnosticMessage))
-                    entry = string.Concat(entry, ($"\t\"Message\": \"{encodedText}\"\n"));
-
-                entry = string.Concat(entry, "},\n");
                 await semaphoreSlim.WaitAsync();
+                string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss +3:00");
+                string entry = currentDateTime + " " + Level + " " + DiagnosticMessage;
                 await SynchronizedTextWriter.WriteLineAsync(entry);
-                await SynchronizedTextWriter.FlushAsync();
                 semaphoreSlim.Release();
             }
             catch (Exception ex)
@@ -71,5 +59,12 @@ namespace AsyncTest.Infrastructure
                 Console.ResetColor();
             }
         }
+
+
+        public async Task Flush()
+        {
+            await SynchronizedTextWriter.FlushAsync();
+        }
+
     }
 }

@@ -8,12 +8,12 @@ namespace AsyncTest.Domain
 
     public partial class HttpAsyncTest : IAggregateRoot, IValidEntity, IExecutable
     {
-        private ILogger _logger;
+        private IFileLogger _logger;
         private HttpAsyncTest()
         {
 
         }
-        public HttpAsyncTest(SetupCommand dto, ILogger logger)
+        public HttpAsyncTest(SetupCommand dto, IFileLogger logger)
         {
             HttpRequestContainers = new List<HttpAsyncRequestContainer>();
             _logger = logger;

@@ -105,7 +105,7 @@ namespace AsyncTest.Domain
                     var responseMessage = await responseMessageTask;
                     this.HasFailed = false;
                     command.SafelyIncrementSuccessfulCallsCounter(dto.HttpAsyncRequestContainerExecuteCommand);
-                    await _logger.LogAsync(string.Empty, $"...Response for call # {callNumber}...\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LoggingLevel.Informational);
+                    await _logger.LogAsync(string.Empty, $"...Response for call # {callNumber}...\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LoggingLevel.INF);
                 }
                 catch (Exception ex)
                 {
@@ -116,7 +116,7 @@ namespace AsyncTest.Domain
 
                     command.SafelyIncrementFailedCallsCounter(dto.HttpAsyncRequestContainerExecuteCommand);
                     this.HasFailed = true;
-                    await _logger.LogAsync(string.Empty, @$"...Response for call # {callNumber} \n\t ...Call # {callNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty) } \n\t  {ex.Message} \n  {ex.StackTrace}", LoggingLevel.Error);
+                    await _logger.LogAsync(string.Empty, @$"...Response for call # {callNumber} \n\t ...Call # {callNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty) } \n\t  {ex.Message} \n  {ex.StackTrace}", LoggingLevel.ERR);
 
                 }
             }

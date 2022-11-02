@@ -9,9 +9,9 @@ namespace AsyncTest.Domain.Common
 
     public enum LoggingLevel
     {
-        Informational,
-        Warning,
-        Error
+        INF,
+        WRN,
+        ERR
     }
     public interface ICustomLogger
     {
