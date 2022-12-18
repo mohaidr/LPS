@@ -7,32 +7,46 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.IO;
 using AsyncTest.Infrastructure.Logging;
-
+using AsyncCalls.UI.Core;
+using System.Threading.Tasks;
+using AsyncCalls.DIExtensions;
 namespace AsyncCalls
 {
     static class Startup
     {
-        internal static IHost _host;
-        public static void ConfigureServices(string [] args)
+        public static async Task ConfigureServices(string[] args)
         {
-            var builder = new ConfigurationBuilder();
-            BuildConfig(builder);
+            var host = Host.CreateDefaultBuilder()
+                .ConfigureAppConfiguration((configBuilder) =>
+               {
+                   configBuilder.SetBasePath(Directory.GetCurrentDirectory())
+                 //  .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                  // .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+                   .AddEnvironmentVariables();
+               })
+                .ConfigureServices((context, services) =>
+                {
 
-            _host = Host.CreateDefaultBuilder().ConfigureServices((context, services) =>
-            {
-                //Dpendency Injection goes Here
-                services.AddSingleton<IFileLogger, FileLogger>();
-                services.AddTransient<ITestService<ICommand<HttpAsyncTest>, HttpAsyncTest>, TestService<ICommand<HttpAsyncTest>, HttpAsyncTest>>();
-            })
+                    //Dpendency Injection goes Here
+                    services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args}));
+                    services.AddSingleton<IFileLogger, FileLogger>();
+                    services.AddTransient<ITestService<ICommand<HttpAsyncTest>, HttpAsyncTest>, TestService<ICommand<HttpAsyncTest>, HttpAsyncTest>>();
+
+                    if (context.HostingEnvironment.IsProduction())
+                    {
+                        //add production dependencies
+                    }
+                    else
+                    {
+                        // add development dependencies
+                    }
+                })
             .Build();
-        }
-
-        static void BuildConfig(IConfigurationBuilder builder)
-        {
-            builder.SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
-                .AddEnvironmentVariables();
+           
+            await host.RunAsync();
         }
     }
+
+   
+
 }

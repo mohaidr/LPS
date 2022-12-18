@@ -14,9 +14,7 @@ namespace AsyncTest
     {
         static async Task Main(string[] args)
         {
-            Startup.ConfigureServices(args);
-            var svc = ActivatorUtilities.CreateInstance<TestService<HttpAsyncTest.SetupCommand, HttpAsyncTest>>(Startup._host.Services);
-            await svc.Run(new HttpAsyncTest.SetupCommand(), args);
+           await Startup.ConfigureServices(args);
         }
 
 
