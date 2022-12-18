@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using static AsyncTest.Domain.HttpAsyncRequestContainer;
+using static AsyncTest.Domain.HttpAsyncRequestWrapper;
 using AsyncTest.Domain.Common;
 
 namespace AsyncTest.Domain

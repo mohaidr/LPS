@@ -31,18 +31,13 @@ namespace AsyncTest.Domain
 
             public Dictionary<string, string> HttpHeaders { get; set; }
 
-            public int HttpRequestTimeOut { get; set; }
+            public int TimeOut { get; set; }
 
             public bool IsValid { get; set; }
 
             public void Execute(HttpAsyncRequest entity)
             {
                 entity.Setup(this);
-            }
-
-            async public Task ExecuteAsync(HttpAsyncRequest entity)
-            {
-                throw new NotImplementedException();
             }
         }
 
@@ -53,7 +48,7 @@ namespace AsyncTest.Domain
 
             if (dto.IsValid)
             {
-                this.HttpRequestTimeout = dto.HttpRequestTimeOut;
+                this.HttpRequestTimeout = dto.TimeOut;
 
                 this.HttpMethod = dto.HttpMethod;
 

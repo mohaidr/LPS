@@ -35,7 +35,7 @@ namespace AsyncTest.Domain
 
                 string[] httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
 
-                if (dto.HttpRequestTimeOut <= 0)
+                if (dto.TimeOut <= 0)
                 {
                     Console.WriteLine("The http  request timeout value should be a valid integer (less than 4 mins is recommended)");
                     dto.IsValid = false;

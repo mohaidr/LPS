@@ -13,10 +13,10 @@ using AsyncTest.Domain.Common;
 namespace AsyncTest.Domain
 {
 
-    public partial class HttpAsyncRequestContainer
+    public partial class HttpAsyncRequestWrapper
     {
 
-        public class ExecuteCommand: ICommand<HttpAsyncRequestContainer>
+        public class ExecuteCommand: IAsyncCommand<HttpAsyncRequestWrapper>
         {
             private readonly ProtectedAccessTestExecuteCommand protectedAccessTestExecuteCommand = new ProtectedAccessTestExecuteCommand();
             private class ProtectedAccessTestExecuteCommand : HttpAsyncTest.ExecuteCommand
@@ -32,12 +32,8 @@ namespace AsyncTest.Domain
             {
                 HttpAsyncTestExecuteCommand = new HttpAsyncTest.ExecuteCommand();
             }
-            public void Execute(HttpAsyncRequestContainer entity)
-            {
-                throw new NotImplementedException();
-            }
 
-            async public Task ExecuteAsync(HttpAsyncRequestContainer entity)
+            async public Task ExecuteAsync(HttpAsyncRequestWrapper entity)
             {
                 await entity.ExecuteAsync(this);
             }

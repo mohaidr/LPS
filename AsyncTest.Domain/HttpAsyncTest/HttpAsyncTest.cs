@@ -15,12 +15,12 @@ namespace AsyncTest.Domain
         }
         public HttpAsyncTest(SetupCommand dto, IFileLogger logger)
         {
-            HttpRequestContainers = new List<HttpAsyncRequestContainer>();
+            HttpRequestWrappers = new List<HttpAsyncRequestWrapper>();
             _logger = logger;
             this.Setup(dto);
         }
 
-        public IList<HttpAsyncRequestContainer> HttpRequestContainers { get; private set; }
+        public IList<HttpAsyncRequestWrapper> HttpRequestWrappers { get; private set; }
 
         public string Name { set; private get; }
 

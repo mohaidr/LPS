@@ -10,13 +10,8 @@ namespace AsyncTest.Domain
 
     public partial class HttpAsyncTest
     {
-        public class ExecuteCommand : ICommand<HttpAsyncTest>
+        public class ExecuteCommand : IAsyncCommand<HttpAsyncTest>
         {
-            public void Execute(HttpAsyncTest entity)
-            {
-                throw new NotImplementedException();
-            }
-
             async public Task ExecuteAsync(HttpAsyncTest entity)
             {
                 Reset();
@@ -45,8 +40,8 @@ namespace AsyncTest.Domain
 
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var randomGuidId = Guid.NewGuid();
-                HttpAsyncRequestContainer.ExecuteCommand command = new HttpAsyncRequestContainer.ExecuteCommand() { HttpAsyncTestExecuteCommand = dto };
-                foreach (var container in this.HttpRequestContainers)
+                HttpAsyncRequestWrapper.ExecuteCommand command = new HttpAsyncRequestWrapper.ExecuteCommand() { HttpAsyncTestExecuteCommand = dto };
+                foreach (var container in this.HttpRequestWrappers)
                 {
 
                     numberOfTestRequests += container.NumberofAsyncRepeats;

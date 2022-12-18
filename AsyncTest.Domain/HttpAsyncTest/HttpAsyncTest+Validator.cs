@@ -32,11 +32,11 @@ namespace AsyncTest.Domain
                     Console.WriteLine("Invalid Test Name, The Name Should At least Be of 2 Charachters And Can Only Contains Letters, Numbers, ., _ and -");
                 }
 
-                if (dto.HttpRequestContainers != null && dto.HttpRequestContainers.Count>0)
+                if (dto.HttpRequestWrappers != null && dto.HttpRequestWrappers.Count>0)
                 {
-                    foreach (var command in dto.HttpRequestContainers)
+                    foreach (var command in dto.HttpRequestWrappers)
                     {
-                        new HttpAsyncRequestContainer.Validator(null, command);
+                        new HttpAsyncRequestWrapper.Validator(null, command);
                         if (!command.IsValid)
                         {
                             Console.WriteLine($"The http request named {command.Name} has an invalid input, please review the errors above");

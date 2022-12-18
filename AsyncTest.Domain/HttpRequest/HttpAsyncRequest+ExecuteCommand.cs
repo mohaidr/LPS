@@ -15,35 +15,30 @@ namespace AsyncTest.Domain
 
     public partial class HttpAsyncRequest
     {
-        private class ProtectedAccessContainerExecuteCommand : HttpAsyncRequestContainer.ExecuteCommand
+        private class ProtectedAccessContainerExecuteCommand : HttpAsyncRequestWrapper.ExecuteCommand
         {
-            public new int SafelyIncrementNumberofContainerSentRequests(HttpAsyncRequestContainer.ExecuteCommand dto)
+            public new int SafelyIncrementNumberofContainerSentRequests(HttpAsyncRequestWrapper.ExecuteCommand dto)
             {
                 return base.SafelyIncrementNumberofContainerSentRequests(dto);
             }
-            public new int SafelyIncrementFailedCallsCounter(HttpAsyncRequestContainer.ExecuteCommand dto)
+            public new int SafelyIncrementFailedCallsCounter(HttpAsyncRequestWrapper.ExecuteCommand dto)
             {
                 return base.SafelyIncrementFailedCallsCounter(dto);
             }
-            public new int SafelyIncrementSuccessfulCallsCounter(HttpAsyncRequestContainer.ExecuteCommand dto)
+            public new int SafelyIncrementSuccessfulCallsCounter(HttpAsyncRequestWrapper.ExecuteCommand dto)
             {
                 return base.SafelyIncrementSuccessfulCallsCounter(dto);
             }
         }
 
-        public class ExecuteCommand : ICommand<HttpAsyncRequest>
+        public class ExecuteCommand : IAsyncCommand<HttpAsyncRequest>
         {
             public ExecuteCommand()
             {
-                HttpAsyncRequestContainerExecuteCommand = new HttpAsyncRequestContainer.ExecuteCommand();
+                HttpAsyncRequestContainerExecuteCommand = new HttpAsyncRequestWrapper.ExecuteCommand();
             }
 
-            public HttpAsyncRequestContainer.ExecuteCommand HttpAsyncRequestContainerExecuteCommand { get; set; }
-
-            public void Execute(HttpAsyncRequest entity)
-            {
-                throw new NotImplementedException();
-            }
+            public HttpAsyncRequestWrapper.ExecuteCommand HttpAsyncRequestContainerExecuteCommand { get; set; }
 
             async public Task ExecuteAsync(HttpAsyncRequest entity)
             {
@@ -121,7 +116,6 @@ namespace AsyncTest.Domain
                 }
             }
         }
-
 
         private void SetContentHeader(HttpRequestMessage message, string name, string value)
         {

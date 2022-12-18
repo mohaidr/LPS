@@ -12,15 +12,15 @@ using AsyncTest.Domain.Common;
 namespace AsyncTest.Domain
 {
 
-    public partial class HttpAsyncRequestContainer : IValidEntity, IExecutable
+    public partial class HttpAsyncRequestWrapper : IValidEntity, IExecutable
     {
         private ICustomLogger _logger;
 
-        private HttpAsyncRequestContainer()
+        private HttpAsyncRequestWrapper()
         {
         }
 
-        public HttpAsyncRequestContainer(SetupCommand dto, ICustomLogger logger)
+        public HttpAsyncRequestWrapper(SetupCommand dto, ICustomLogger logger)
         {
             _logger = logger;
             this.Setup(dto);

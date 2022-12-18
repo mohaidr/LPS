@@ -98,3 +98,17 @@ https://www.youtube.com/watch?v=GAOCe-2nXqc
 .Net Core Logging 
 https://blog.stephencleary.com/2018/06/microsoft-extensions-logging-part-2-types.html
 https://www.bing.com/search?q=what+is+the+beneifit+of+generic+Microsoft.Extensions.ILogger&cvid=6cc378e8f20d45beb8ae82606fbbb5a6&aqs=edge..69i57j69i11004.29408j0j1&pglt=163&FORM=ANSAB1&PC=W037&ntref=1
+
+DI VS IOC
+
+https://www.tutorialsteacher.com/ioc/introduction#:~:text=Dependency%20Injection%20%28DI%29%20is%20a%20pattern%20and%20IoC,overview%20of%20each%20term%20before%20going%20into%20details.
+
+ConfigureAwait
+https://medium.com/bynder-tech/c-why-you-should-use-configureawait-false-in-your-library-code-d7837dce3d7f
+
+
+Encoding
+https://en.wikipedia.org/wiki/Plane_(Unicode)
+https://en.wikipedia.org/wiki/Code_point#:~:text=In%20character%20encoding%20terminology%2C%20a%20code%20point%2C%20codepoint,whitespace%E2%80%94but%20sometimes%20represent%20symbols%2C%20control%20characters%2C%20or%20formatting.
+https://www.youtube.com/watch?v=Vy2r21kli0Q&t=461s
+https://www.wise-geek.com/what-is-a-code-point.htm

@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace AsyncTest.Domain.Common
 {
-    public interface ICommand<TEntity> where TEntity: IExecutable
+    public interface IAsyncCommand<TEntity> where TEntity: IExecutable
     {
-        void Execute(TEntity entity);
+        Task ExecuteAsync(TEntity entity);
     }
 }

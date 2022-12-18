@@ -13,7 +13,7 @@ namespace AsyncTest.Domain
 
             public SetupCommand()
             {
-                HttpRequestContainers = new List<HttpAsyncRequestContainer.SetupCommand>();
+                HttpRequestWrappers = new List<HttpAsyncRequestWrapper.SetupCommand>();
             }
 
             public void Execute(HttpAsyncTest entity)
@@ -21,12 +21,7 @@ namespace AsyncTest.Domain
                 entity.Setup(this);
             }
 
-            async public Task ExecuteAsync(HttpAsyncTest entity)
-            {
-                throw new NotImplementedException();
-            }
-
-            public List<HttpAsyncRequestContainer.SetupCommand> HttpRequestContainers { get; set; }
+            public List<HttpAsyncRequestWrapper.SetupCommand> HttpRequestWrappers { get; set; }
 
             public string Name { get; set; }
 
@@ -44,9 +39,9 @@ namespace AsyncTest.Domain
             {
                 this.Name = dto.Name;
                 this.IsValid = true;
-                foreach (var command in dto.HttpRequestContainers)
+                foreach (var command in dto.HttpRequestWrappers)
                 {
-                    HttpRequestContainers.Add(new HttpAsyncRequestContainer(command, this._logger));
+                    HttpRequestWrappers.Add(new HttpAsyncRequestWrapper(command, this._logger));
                 }
             }
         }  

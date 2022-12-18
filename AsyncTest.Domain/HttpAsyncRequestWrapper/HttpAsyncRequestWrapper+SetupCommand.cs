@@ -13,9 +13,9 @@ using AsyncTest.Domain.Common;
 namespace AsyncTest.Domain
 {
 
-    public partial class HttpAsyncRequestContainer
+    public partial class HttpAsyncRequestWrapper
     {
-        public class SetupCommand: ICommand<HttpAsyncRequestContainer>
+        public class SetupCommand: ICommand<HttpAsyncRequestWrapper>
         {
 
             public SetupCommand()
@@ -23,14 +23,9 @@ namespace AsyncTest.Domain
                 HttpRequest = new HttpAsyncRequest.SetupCommand();
             }
 
-            public void Execute(HttpAsyncRequestContainer entity)
+            public void Execute(HttpAsyncRequestWrapper entity)
             {
                 entity.Setup(this);
-            }
-
-            async public Task ExecuteAsync(HttpAsyncRequestContainer entity)
-            {
-                throw new NotImplementedException();
             }
 
             public HttpAsyncRequest.SetupCommand HttpRequest { get; set; }

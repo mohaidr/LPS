@@ -13,17 +13,17 @@ using AsyncTest.Domain.Common;
 namespace AsyncTest.Domain
 {
 
-    public partial class HttpAsyncRequestContainer
+    public partial class HttpAsyncRequestWrapper
     {
    
-        public class Validator: IValidator<HttpAsyncRequestContainer, HttpAsyncRequestContainer.SetupCommand>
+        public class Validator: IValidator<HttpAsyncRequestWrapper, HttpAsyncRequestWrapper.SetupCommand>
         {
-            public Validator(HttpAsyncRequestContainer entity , SetupCommand dto)
+            public Validator(HttpAsyncRequestWrapper entity , SetupCommand dto)
             {
                 Validate(entity, dto);
             }
 
-            public void Validate(HttpAsyncRequestContainer entity,SetupCommand dto)
+            public void Validate(HttpAsyncRequestWrapper entity,SetupCommand dto)
             {
                 dto.IsValid = true;
                 Console.ForegroundColor = ConsoleColor.Yellow;
