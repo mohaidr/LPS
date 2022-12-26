@@ -20,7 +20,7 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
         {
             _requiredProperties = CommandProps.GetRequiredProperties();
             _optionalProperties = CommandProps.GetOptionalProperties();
-             requiredPropsAsArray = _requiredProperties.Keys.ToArray();
+            requiredPropsAsArray = _requiredProperties.Keys.ToArray();
             _validator = validator;
         }
 
@@ -53,10 +53,10 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
                     case "-a":
                         if (i > 2)
                         {
-                            //Fill Empty Required Arguments
+                            //Force user to enter empty required arguments
                             ForceRequiredCommandArguments(httpRequestWrapperCommand);
                         }
-                        CommandProps.ResetProperties(_requiredProperties,_optionalProperties);
+                        CommandProps.ResetProperties(_requiredProperties, _optionalProperties);
                         _requiredProperties["-add"] = true;
                         _requiredProperties["-a"] = true;
                         httpRequestWrapperCommand = new HttpAsyncRequestWrapper.SetupCommand();
@@ -81,7 +81,7 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
                         httpRequestWrapperCommand.HttpRequest.Httpversion = CommandLineArgs[++i];
                         if (!_validator.Validate("-httpversion", httpRequestWrapperCommand))
                         {
-                            httpRequestWrapperCommand.HttpRequest.Httpversion= ChallengeService.Challenge("-httpversion");
+                            httpRequestWrapperCommand.HttpRequest.Httpversion = ChallengeService.Challenge("-httpversion");
                             CommandLineArgs[i] = httpRequestWrapperCommand.HttpRequest.Httpversion;
                             i -= 2;
                             continue;
@@ -166,7 +166,7 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
                         httpRequestWrapperCommand.HttpRequest.URL = CommandLineArgs[++i];
                         if (!_validator.Validate("-url", httpRequestWrapperCommand))
                         {
-                            httpRequestWrapperCommand.HttpRequest.URL= ChallengeService.Challenge("-url");
+                            httpRequestWrapperCommand.HttpRequest.URL = ChallengeService.Challenge("-url");
                             CommandLineArgs[i] = httpRequestWrapperCommand.HttpRequest.URL;
                             i -= 2;
                             continue;
@@ -194,19 +194,37 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
 
         public void ForceRequiredCommandArguments(HttpAsyncRequestWrapper.SetupCommand httpRequestWrapperCommand)
         {
-
-            for (int j = 0; j < requiredPropsAsArray.Length; j++)
+            while (true)
             {
-                if (_requiredProperties[requiredPropsAsArray[j]] == false)
+
+                if (!_validator.Validate("-httpmethod", httpRequestWrapperCommand))
                 {
-                    httpRequestWrapperCommand. = ChallengeService.Challenge(requiredPropsAsArray[j]);
-                    if (!_validator.Validate(requiredPropsAsArray[j], httpRequestWrapperCommand))
+                    Console.WriteLine("Enter a Valid Http Method");
+                    httpRequestWrapperCommand.HttpRequest.HttpMethod = ChallengeService.Challenge("-httpmethod");
+                    continue;
+                }
+
+                if (!_validator.Validate("-url", httpRequestWrapperCommand))
+                {
+                    Console.WriteLine("Enter a valid URL e.g (http(s)://example.com)");
+                    httpRequestWrapperCommand.HttpRequest.URL = ChallengeService.Challenge("-url");
+                    continue;
+                }
+
+                if (!_validator.Validate("-repeat", httpRequestWrapperCommand))
+                {
+                    try
                     {
-                        j--;
+                        Console.WriteLine("Enter the number of async calls, it should be a valid positive integer number");
+                        httpRequestWrapperCommand.NumberofAsyncRepeats = int.Parse(ChallengeService.Challenge("-repeat"));
+                        continue;
+                    }
+                    catch {
+                        continue;
                     }
                 }
+                break;
             }
         }
-
     }
 }

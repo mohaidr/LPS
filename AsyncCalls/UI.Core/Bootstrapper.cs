@@ -10,28 +10,67 @@ using AsyncTest.Domain;
 using Microsoft.Extensions.Hosting;
 using AsyncTest.Domain.Common;
 using Microsoft.Extensions.Configuration;
-using AsyncTest.UI.Core;
 
 namespace AsyncCalls.UI.Core
 {
     internal class Bootstrapper : IBootStrapper
     {
-        IFileLogger _loggger;
+        IFileLogger _logger;
         IConfiguration _config;
         string[] _args;
-        public Bootstrapper(IFileLogger loggger, IConfiguration config, dynamic cmdArgs)
+        public Bootstrapper(IFileLogger logger, IConfiguration config, dynamic cmdArgs)
         {
-            _loggger = loggger;
+            _logger = logger;
             _config = config;
             _args = cmdArgs.args;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            if (_args != null && _args.Length >= 0)
-            { 
-                
+            HttpAsyncTest.SetupCommand httpasynsTestCommand = new HttpAsyncTest.SetupCommand();
+            if (_args != null && _args.Length > 0)
+            {
+                var commandLineParser = new CommandLineParser(new HttpAsyncRequestWrapperValidator());
+                commandLineParser.CommandLineArgs = _args;
+                commandLineParser.Parse(httpasynsTestCommand);
             }
+            else
+            {
+
+                var manualBuild = new ManualBuild(new HttpAsyncRequestWrapperValidator());
+                manualBuild.Build(httpasynsTestCommand);
+            }
+
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("...Test has started...");
+            Console.ResetColor();
+
+            var httpAsyncTest = new HttpAsyncTest(httpasynsTestCommand, _logger);
+            await new HttpAsyncTest.ExecuteCommand().ExecuteAsync(httpAsyncTest);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("...Test has completed...");
+            Console.ResetColor();
+            string action;
+            while (true)
+            {
+                Console.WriteLine("Press any key to exit, enter \"start over\" to start over or \"redo\" to repeat the same test ");
+                action = Console.ReadLine().Trim().ToLower();
+                if (action == "redo")
+                {
+                    await new HttpAsyncTest.RedoCommand().ExecuteAsync(httpAsyncTest);
+                    continue;
+                }
+                break;
+            }
+            if (action == "start over")
+            {
+                _args = new string[] { };
+                await StartAsync(new CancellationToken());
+            }
+
+            await _logger.Flush();
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)

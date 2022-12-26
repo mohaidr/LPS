@@ -1,6 +1,5 @@
 ﻿using AsyncTest.Domain;
 using AsyncTest.Domain.Common;
-using AsyncTest.UI.Core;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -30,7 +29,7 @@ namespace AsyncCalls
                     //Dpendency Injection goes Here
                     services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args}));
                     services.AddSingleton<IFileLogger, FileLogger>();
-                    services.AddTransient<ITestService<ICommand<HttpAsyncTest>, HttpAsyncTest>, TestService<ICommand<HttpAsyncTest>, HttpAsyncTest>>();
+                    //services.AddTransient<ITestService<ICommand<HttpAsyncTest>, HttpAsyncTest>, TestService<ICommand<HttpAsyncTest>, HttpAsyncTest>>();
 
                     if (context.HostingEnvironment.IsProduction())
                     {

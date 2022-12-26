@@ -13,17 +13,10 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
 {
     internal class ManualBuild : IBuilderService<HttpAsyncTest.SetupCommand, HttpAsyncTest>
     {
-        private readonly IFileLogger _logger;
-        private readonly IConfiguration _config;
-        string[]  _args;
         HttpAsyncRequestWrapperValidator _validator;
-        public ManualBuild(IFileLogger loggger, IConfiguration config, HttpAsyncRequestWrapperValidator validator, dynamic cmdArgs)
+        public ManualBuild(HttpAsyncRequestWrapperValidator validator)
         {
-            _logger = loggger;
-            _config = config;
             _validator= validator;
-            _args = cmdArgs.args;
-
         }
 
 
@@ -49,7 +42,7 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
             while (true)
             {
                 Console.WriteLine("Test name should at least be of 2 charachters and can only contains letters, numbers, ., _ and -");
-                if (!skipOptionalFields && string.IsNullOrEmpty(httpAsyncTestCommand.Name) || !Regex.IsMatch(httpAsyncTestCommand.Name, @"^[\w.-]{2,}$"))
+                if (!skipOptionalFields && (string.IsNullOrEmpty(httpAsyncTestCommand.Name) || !Regex.IsMatch(httpAsyncTestCommand.Name, @"^[\w.-]{2,}$")))
                 {
                     httpAsyncTestCommand.Name = ChallengeService.Challenge("-testName");
                     continue;
@@ -88,7 +81,9 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
                         httpRequestWrapperCommand.NumberofAsyncRepeats = int.Parse(ChallengeService.Challenge("-repeat"));
                         continue;
                     }
-                    catch { }
+                    catch {
+                        continue;
+                    }
                 }
 
                 switch (skipOptionalFields)

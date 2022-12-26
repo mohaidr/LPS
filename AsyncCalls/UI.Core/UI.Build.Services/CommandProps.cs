@@ -1,4 +1,5 @@
-﻿using AsyncTest.Domain;
+﻿using AsyncCalls.Extensions;
+using AsyncTest.Domain;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,7 +21,7 @@ namespace AsyncCalls.UI.Core.UI.Build.Services
                 { "-header",false },{ "-h",false },
                 { "-repeat",false }, { "-r",false }
             };
-            return requiredProperties.ToDictionary(entry => entry.Key, entry => entry.Value);
+            return requiredProperties.Clone();
         }
 
         public static Dictionary<string, bool> GetOptionalProperties()

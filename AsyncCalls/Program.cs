@@ -1,7 +1,6 @@
 ﻿using System;
 using AsyncTest.Domain;
 using AsyncTest.Infrastructure;
-using AsyncTest.UI.Core;
 using Microsoft.Extensions.DependencyInjection;
 using AsyncTest.Domain.Common;
 using System.Threading.Tasks;
@@ -14,7 +13,10 @@ namespace AsyncTest
     {
         static async Task Main(string[] args)
         {
-           await Startup.ConfigureServices(args);
+            Console.WriteLine("====================================================");
+            Console.WriteLine("LPS Tool V1");
+            Console.WriteLine("====================================================");
+            await Startup.ConfigureServices(args);
         }
 
 
