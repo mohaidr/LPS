@@ -20,10 +20,10 @@ namespace LPS.Domain
         {
         }
 
-        public LPSRequestWrapper(SetupCommand dto, ICustomLogger logger)
+        public LPSRequestWrapper(SetupCommand command, ICustomLogger logger)
         {
             _logger = logger;
-            this.Setup(dto);
+            this.Setup(command);
         }
 
         //TODO: Implement Mode Based Test

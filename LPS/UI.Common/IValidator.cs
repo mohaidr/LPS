@@ -8,6 +8,7 @@ namespace LPS.UI.Common
 {
     internal interface IValidator<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
     {
-        bool Validate (string ptoprtty, TCommand command);
+        TCommand Command { get; set; }
+        bool Validate (string ptoprtty);
     }
 }

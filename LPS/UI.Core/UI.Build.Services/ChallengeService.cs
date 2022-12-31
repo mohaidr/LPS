@@ -9,15 +9,6 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class ChallengeService
     {
-        public static void SetOptionalFeildsToDefaultValues(LPSRequestWrapper.SetupCommand lpsRequestWrapperCommand)
-        {
-            lpsRequestWrapperCommand.Name = !string.IsNullOrEmpty(lpsRequestWrapperCommand.Name) ? lpsRequestWrapperCommand.Name : DateTime.Now.Ticks.ToString();
-            lpsRequestWrapperCommand.LPSRequest.TimeOut = lpsRequestWrapperCommand.LPSRequest.TimeOut == 0 ? 4 : lpsRequestWrapperCommand.LPSRequest.TimeOut;
-            lpsRequestWrapperCommand.LPSRequest.Httpversion = lpsRequestWrapperCommand.LPSRequest.Httpversion ?? "1.1";
-        }
-
-        //work on this to receive userInputObject(create a child calss)
-
         public static string Challenge(string challenge)
         {
 

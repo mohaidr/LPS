@@ -48,6 +48,8 @@ namespace LPS.UI.Core.UI.Build.Services
                             break;
                     }
                 }
+
+                break;
             }
             return payload;
         }

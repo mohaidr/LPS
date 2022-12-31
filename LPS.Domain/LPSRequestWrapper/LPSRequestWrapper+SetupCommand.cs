@@ -15,11 +15,12 @@ namespace LPS.Domain
 
     public partial class LPSRequestWrapper
     {
-        public class SetupCommand: ICommand<LPSRequestWrapper>
+        public class SetupCommand : ICommand<LPSRequestWrapper>
         {
 
             public SetupCommand()
             {
+                Name = DateTime.Now.Ticks.ToString();
                 LPSRequest = new LPSRequest.SetupCommand();
             }
 
@@ -37,16 +38,16 @@ namespace LPS.Domain
             public string Name { get; set; }
         }
 
-        private void Setup(SetupCommand dto)
+        private void Setup(SetupCommand command)
         {
-            new Validator(this, dto);
+            new Validator(this, command);
 
-            if (dto.IsValid)
+            if (command.IsValid)
             {
 
-                this.NumberofAsyncRepeats = dto.NumberofAsyncRepeats;
-                this.Name = dto.Name;
-                this.LPSRequest = new LPSRequest(dto.LPSRequest, this._logger);
+                this.NumberofAsyncRepeats = command.NumberofAsyncRepeats;
+                this.Name = command.Name;
+                this.LPSRequest = new LPSRequest(command.LPSRequest, this._logger);
                 this.IsValid = true;
             }
         }

@@ -13,7 +13,8 @@ namespace LPS.Domain
 
             public SetupCommand()
             {
-                lpsRequestWrappers = new List<LPSRequestWrapper.SetupCommand>();
+                Name =  DateTime.Now.ToFileTime().ToString();
+                LPSRequestWrappers = new List<LPSRequestWrapper.SetupCommand>();
             }
 
             public void Execute(LPSTest entity)
@@ -21,14 +22,11 @@ namespace LPS.Domain
                 entity.Setup(this);
             }
 
-            public List<LPSRequestWrapper.SetupCommand> lpsRequestWrappers { get; set; }
+            public List<LPSRequestWrapper.SetupCommand> LPSRequestWrappers { get; set; }
 
             public string Name { get; set; }
 
             public bool IsValid { get; set; }
-
-            public bool IsCommandLine { get; set; }
-
         }
 
         private void Setup(SetupCommand dto)
@@ -39,7 +37,7 @@ namespace LPS.Domain
             {
                 this.Name = dto.Name;
                 this.IsValid = true;
-                foreach (var command in dto.lpsRequestWrappers)
+                foreach (var command in dto.LPSRequestWrappers)
                 {
                     LPSRequestWrappers.Add(new LPSRequestWrapper(command, this._logger));
                 }

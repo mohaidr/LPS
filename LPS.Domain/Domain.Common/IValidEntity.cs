@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common
 {
-    interface IValidEntity
+    public interface IValidEntity
     {
         bool  IsValid  { get; }
     }

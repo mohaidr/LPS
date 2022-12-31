@@ -22,40 +22,40 @@ namespace LPS.Domain
                 Validate(entity,dto);
             }
 
-            public void Validate(LPSRequest entity, SetupCommand dto)
+            public void Validate(LPSRequest entity, SetupCommand command)
             {
-                dto.IsValid = true;
+                command.IsValid = true;
                 //if you have to use the entity for validation purposes, check for nullability first
                 Console.ForegroundColor = ConsoleColor.Yellow;
 
-                if (dto == null)
+                if (command == null)
                 {
                     Console.WriteLine("Invalid Entity Command");
                 }
 
                 string[] httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
 
-                if (dto.TimeOut <= 0)
+                if (command.TimeOut <= 0)
                 {
                     Console.WriteLine("The http  request timeout value should be a valid integer (less than 4 mins is recommended)");
-                    dto.IsValid = false;
+                    command.IsValid = false;
                 }
 
-                if (dto.HttpMethod == null || !httpMethods.Any(httpMethod => httpMethod == dto.HttpMethod.ToUpper()))
+                if (command.HttpMethod == null || !httpMethods.Any(httpMethod => httpMethod == command.HttpMethod.ToUpper()))
                 {
                     Console.WriteLine("Invalid Http Method");
-                    dto.IsValid = false;
+                    command.IsValid = false;
                 }
 
-                if (dto.Httpversion != "1.0" && dto.Httpversion != "1.1")
+                if (command.Httpversion != "1.0" && command.Httpversion != "1.1")
                 {
                     Console.WriteLine("Invalid Http Version, the value should be either 1.0 and 1.1");
-                    dto.IsValid = false;
+                    command.IsValid = false;
                 }
-                if (!(Uri.TryCreate(dto.URL, UriKind.Absolute, out Uri uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps || uriResult.Scheme.Contains("ws"))))
+                if (!(Uri.TryCreate(command.URL, UriKind.Absolute, out Uri uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps || uriResult.Scheme.Contains("ws"))))
                 {
                     Console.WriteLine("Invalid URL");
-                    dto.IsValid = false;
+                    command.IsValid = false;
                 }
 
                 Console.ResetColor();

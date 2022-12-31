@@ -19,6 +19,8 @@ namespace LPS.Domain
         {
             public SetupCommand()
             {
+                TimeOut = 4;
+                Httpversion = "1.1";
                 HttpHeaders = new Dictionary<string, string>();
             }
 

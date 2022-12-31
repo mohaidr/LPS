@@ -28,16 +28,17 @@ namespace LPS.UI.Core
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             LPSTest.SetupCommand lpsTestCommand = new LPSTest.SetupCommand();
+
             if (_args != null && _args.Length > 0)
             {
-                var commandLineParser = new CommandLineParser(new LPSRequestWrapperValidator());
+                var commandLineParser = new CommandLineParser();
                 commandLineParser.CommandLineArgs = _args;
                 commandLineParser.Parse(lpsTestCommand);
             }
             else
             {
 
-                var manualBuild = new ManualBuild(new LPSRequestWrapperValidator());
+                var manualBuild = new ManualBuild(new LPSTestValidator(lpsTestCommand));
                 manualBuild.Build(lpsTestCommand);
             }
 
@@ -57,7 +58,7 @@ namespace LPS.UI.Core
             while (true)
             {
                 Console.WriteLine("Press any key to exit, enter \"start over\" to start over or \"redo\" to repeat the same test ");
-                action = Console.ReadLine().Trim().ToLower();
+                action = Console.ReadLine()?.Trim().ToLower();
                 if (action == "redo")
                 {
                     await new LPSTest.RedoCommand().ExecuteAsync(lpsTest);
@@ -77,8 +78,11 @@ namespace LPS.UI.Core
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             Console.WriteLine("Shitting Down...");
-            await _logger.LogAsync("0000-0000-0000", "Exited...", LoggingLevel.INF);
-            await _logger.Flush();
+            if (_logger != null)
+            {
+                await _logger.LogAsync("0000-0000-0000", "Exited...", LoggingLevel.INF);
+                await _logger.Flush();
+            }
         }
     }
 }

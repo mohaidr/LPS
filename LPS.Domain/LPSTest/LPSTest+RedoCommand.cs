@@ -16,13 +16,8 @@ namespace LPS.Domain
 
     public partial class LPSTest
     {
-        public class RedoCommand : ICommand<LPSTest>
+        public class RedoCommand : IAsyncCommand<LPSTest>
         {
-            public void Execute(LPSTest entity)
-            {
-                throw new NotImplementedException();
-            }
-
             async public Task ExecuteAsync(LPSTest entity)
             {
                 await entity.RedoAsync(this);

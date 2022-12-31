@@ -17,8 +17,6 @@ namespace LPS
                 .ConfigureAppConfiguration((configBuilder) =>
                {
                    configBuilder.SetBasePath(Directory.GetCurrentDirectory())
-                 //  .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-                  // .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
                    .AddEnvironmentVariables();
                })
                 .ConfigureServices((context, services) =>
@@ -27,11 +25,11 @@ namespace LPS
                     //Dpendency Injection goes Here
                     services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args}));
                     services.AddSingleton<IFileLogger, FileLogger>();
-                    //services.AddTransient<ITestService<ICommand<HttpAsyncTest>, HttpAsyncTest>, TestService<ICommand<HttpAsyncTest>, HttpAsyncTest>>();
 
                     if (context.HostingEnvironment.IsProduction())
                     {
                         //add production dependencies
+
                     }
                     else
                     {
@@ -43,7 +41,4 @@ namespace LPS
             await host.RunAsync();
         }
     }
-
-   
-
 }

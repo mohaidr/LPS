@@ -32,9 +32,9 @@ namespace LPS.Domain
                     Console.WriteLine("Invalid Test Name, The Name Should At least Be of 2 Charachters And Can Only Contains Letters, Numbers, ., _ and -");
                 }
 
-                if (dto.lpsRequestWrappers != null && dto.lpsRequestWrappers.Count>0)
+                if (dto.LPSRequestWrappers != null && dto.LPSRequestWrappers.Count>0)
                 {
-                    foreach (var command in dto.lpsRequestWrappers)
+                    foreach (var command in dto.LPSRequestWrappers)
                     {
                         new LPSRequestWrapper.Validator(null, command);
                         if (!command.IsValid)
