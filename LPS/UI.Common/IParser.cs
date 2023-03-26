@@ -8,6 +8,7 @@ namespace LPS.UI.Common
 {
     internal interface IParser<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
     {
-        void Parse(TCommand command);
+        TCommand Command { get; set; }
+        void Parse();
     }
 }

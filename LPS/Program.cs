@@ -12,9 +12,6 @@ namespace LPS
     {
         static async Task Main(string[] args)
         {
-            Console.WriteLine("====================================================");
-            Console.WriteLine("LPS Testing Tool V1");
-            Console.WriteLine("====================================================");
             await Startup.ConfigureServices(args);
         }
 

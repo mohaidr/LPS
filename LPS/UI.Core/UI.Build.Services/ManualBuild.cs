@@ -1,12 +1,6 @@
 ﻿using LPS.UI.Common;
 using LPS.Domain;
-using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
@@ -31,7 +25,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 skipOptionalFields = true;
 
             Console.WriteLine("Start building your collection of requests");
-            new LPSTestUserService(skipOptionalFields, lpsTestCommand, _validator).Challenge();
+            new LPSTestChallengeUserService(skipOptionalFields, lpsTestCommand, _validator).Challenge();
         }
     }
 }

@@ -10,15 +10,17 @@ using LPS.Domain;
 using Microsoft.Extensions.Hosting;
 using LPS.Domain.Common;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using System.IO;
 
 namespace LPS.UI.Core
 {
     internal class Bootstrapper : IBootStrapper
     {
-        IFileLogger _logger;
+        ICustomLogger _logger;
         IConfiguration _config;
         string[] _args;
-        public Bootstrapper(IFileLogger logger, IConfiguration config, dynamic cmdArgs)
+        public Bootstrapper(ICustomLogger logger, IConfiguration config, dynamic cmdArgs)
         {
             _logger = logger;
             _config = config;
@@ -27,62 +29,56 @@ namespace LPS.UI.Core
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            Console.WriteLine("===================");
+            Console.WriteLine("LPS Testing Tool V1");
+            Console.WriteLine("===================");
+
+            await _logger?.LogAsync("0000-0000-0000", "-------------- LPS V1 - App Started --------------", LoggingLevel.INF);
+
             LPSTest.SetupCommand lpsTestCommand = new LPSTest.SetupCommand();
 
             if (_args != null && _args.Length > 0)
             {
-                var commandLineParser = new CommandLineParser();
+                var commandLineParser = new CommandLineParser(_logger, lpsTestCommand);
                 commandLineParser.CommandLineArgs = _args;
-                commandLineParser.Parse(lpsTestCommand);
+                commandLineParser.Parse();
+                Console.WriteLine("====================================================");
+                Console.WriteLine("Command Successfully Executed - Ctrl+C To Exit");
+                Console.WriteLine("====================================================");
             }
             else
             {
-
                 var manualBuild = new ManualBuild(new LPSTestValidator(lpsTestCommand));
                 manualBuild.Build(lpsTestCommand);
-            }
-
-            await _logger.LogAsync("0000-0000-0000", "New Test Has Been Started", LoggingLevel.INF);
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("...Test has started...");
-            Console.ResetColor();
-
-            var lpsTest = new LPSTest(lpsTestCommand, _logger);
-            await new LPSTest.ExecuteCommand().ExecuteAsync(lpsTest);
-
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("...Test has completed...");
-            Console.ResetColor();
-            string action;
-            while (true)
-            {
-                Console.WriteLine("Press any key to exit, enter \"start over\" to start over or \"redo\" to repeat the same test ");
-                action = Console.ReadLine()?.Trim().ToLower();
-                if (action == "redo")
+                await new LpsRunner().Run(lpsTestCommand, _logger);
+                File.WriteAllText($"{lpsTestCommand.Name}.json", new LpsSerializer().Serialize(lpsTestCommand));
+                string action;
+                while (true)
                 {
-                    await new LPSTest.RedoCommand().ExecuteAsync(lpsTest);
-                    continue;
+                    Console.WriteLine("Press any key to exit, enter \"start over\" to start over or \"redo\" to repeat the same test ");
+                    action = Console.ReadLine()?.Trim().ToLower();
+                    if (action == "redo")
+                    {
+                        var lpsTest = new LPSTest(lpsTestCommand, _logger);
+                        await new LPSTest.RedoCommand().ExecuteAsync(lpsTest);
+                        continue;
+                    }
+                    break;
                 }
-                break;
-            }
-            if (action == "start over")
-            {
-                _args = new string[] { };
-                await StartAsync(new CancellationToken());
+                if (action == "start over")
+                {
+                    _args = new string[] { };
+                    await StartAsync(new CancellationToken());
+                }
             }
 
             await _logger.Flush();
         }
-
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            Console.WriteLine("Shitting Down...");
-            if (_logger != null)
-            {
-                await _logger.LogAsync("0000-0000-0000", "Exited...", LoggingLevel.INF);
-                await _logger.Flush();
-            }
+            Console.WriteLine("App Closed");
+            await _logger?.LogAsync("0000-0000-0000", "--------------  LPS V1 - App Closed  --------------", LoggingLevel.INF);
+            await _logger?.Flush();
         }
     }
 }

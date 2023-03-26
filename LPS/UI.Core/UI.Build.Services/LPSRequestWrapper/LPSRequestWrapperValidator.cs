@@ -13,7 +13,7 @@ namespace LPS.UI.Core.UI.Build.Services
             _command = command;
         }
         LPSRequestWrapper.SetupCommand _command;
-        public LPSRequestWrapper.SetupCommand Command { get { return _command; } set { value = _command; } }
+        public LPSRequestWrapper.SetupCommand Command { get { return _command; } set { } }
         public bool Validate(string property)
         {
             switch (property)

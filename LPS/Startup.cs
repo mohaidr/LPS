@@ -7,6 +7,8 @@ using LPS.Infrastructure.Logging;
 using LPS.UI.Core;
 using System.Threading.Tasks;
 using LPS.DIExtensions;
+using Microsoft.Extensions.Logging;
+
 namespace LPS
 {
     static class Startup
@@ -15,29 +17,33 @@ namespace LPS
         {
             var host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((configBuilder) =>
-               {
-                   configBuilder.SetBasePath(Directory.GetCurrentDirectory())
-                   .AddEnvironmentVariables();
-               })
+                {
+                    configBuilder.SetBasePath(Directory.GetCurrentDirectory())
+                    .AddEnvironmentVariables();
+                })
+                .ConfigureLogging(logging =>
+                {
+                    logging.ClearProviders();
+                    logging.AddConsole(options => options.DisableColors = true);
+                    logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+                })
                 .ConfigureServices((context, services) =>
                 {
-
-                    //Dpendency Injection goes Here
-                    services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args}));
-                    services.AddSingleton<IFileLogger, FileLogger>();
+                    //Dependency Injection goes Here
+                    services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args }));
+                    services.AddSingleton<ICustomLogger, FileLogger>();
 
                     if (context.HostingEnvironment.IsProduction())
                     {
                         //add production dependencies
-
                     }
                     else
                     {
                         // add development dependencies
                     }
                 })
-            .Build();
-           
+                .Build();
+
             await host.RunAsync();
         }
     }

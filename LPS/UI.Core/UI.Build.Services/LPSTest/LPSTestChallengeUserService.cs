@@ -8,7 +8,7 @@ using LPS.UI.Common;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestUserService : IUserService<LPSTest.SetupCommand, LPSTest>
+    internal class LPSTestChallengeUserService : IChallengeUserService<LPSTest.SetupCommand, LPSTest>
     {
         IValidator<LPSTest.SetupCommand, LPSTest> _validator;
         LPSTest.SetupCommand _command;
@@ -16,7 +16,7 @@ namespace LPS.UI.Core.UI.Build.Services
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
 
         private bool _skipOptionalFields;
-        public LPSTestUserService(bool skipOptionalFields, LPSTest.SetupCommand command, IValidator<LPSTest.SetupCommand, LPSTest> validator)
+        public LPSTestChallengeUserService(bool skipOptionalFields, LPSTest.SetupCommand command, IValidator<LPSTest.SetupCommand, LPSTest> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -41,7 +41,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 var lpsRequestWrapperCommand = new LPSRequestWrapper.SetupCommand();
                 LPSRequestWrapperValidator validator= new LPSRequestWrapperValidator(lpsRequestWrapperCommand);
-                LPSRequestWrapperUserService lpsRequestWrapperUserService = new LPSRequestWrapperUserService(SkipOptionalFields, lpsRequestWrapperCommand,validator);
+                LPSRequestWrapperChallengeUserService lpsRequestWrapperUserService = new LPSRequestWrapperChallengeUserService(SkipOptionalFields, lpsRequestWrapperCommand,validator);
                 lpsRequestWrapperUserService.Challenge();
 
                 Command.LPSRequestWrappers.Add(lpsRequestWrapperCommand);
@@ -55,6 +55,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 break;
             }
+            _command.IsValid = true;
         }
 
         public void ResetOptionalFields()

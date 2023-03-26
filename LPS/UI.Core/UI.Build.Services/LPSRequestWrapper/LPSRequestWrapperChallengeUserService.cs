@@ -6,11 +6,11 @@ using System.Text;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestWrapperUserService : IUserService<LPSRequestWrapper.SetupCommand, LPSRequestWrapper>
+    internal class LPSRequestWrapperChallengeUserService : IChallengeUserService<LPSRequestWrapper.SetupCommand, LPSRequestWrapper>
     {
         IValidator<LPSRequestWrapper.SetupCommand, LPSRequestWrapper> _validator;
 
-        public LPSRequestWrapperUserService(bool skipOptionalFields, LPSRequestWrapper.SetupCommand command, IValidator<LPSRequestWrapper.SetupCommand, LPSRequestWrapper> validator)
+        public LPSRequestWrapperChallengeUserService(bool skipOptionalFields, LPSRequestWrapper.SetupCommand command, IValidator<LPSRequestWrapper.SetupCommand, LPSRequestWrapper> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -53,9 +53,8 @@ namespace LPS.UI.Core.UI.Build.Services
                 break;
             }
 
-           
             LPSRequestValidator validator = new LPSRequestValidator(_command.LPSRequest);
-            LPSRequestUserService lpsRequestUserService = new LPSRequestUserService(SkipOptionalFields, _command.LPSRequest, validator);
+            LPSRequestChallengeUserService lpsRequestUserService = new LPSRequestChallengeUserService(SkipOptionalFields, _command.LPSRequest, validator);
             lpsRequestUserService.Challenge();
         }
 

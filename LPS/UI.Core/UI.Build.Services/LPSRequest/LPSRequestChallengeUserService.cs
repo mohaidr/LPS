@@ -5,10 +5,10 @@ using System;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestUserService : IUserService<LPSRequest.SetupCommand, LPSRequest>
+    internal class LPSRequestChallengeUserService : IChallengeUserService<LPSRequest.SetupCommand, LPSRequest>
     {
         IValidator<LPSRequest.SetupCommand, LPSRequest> _validator;
-        public LPSRequestUserService(bool skipOptionalFields, LPSRequest.SetupCommand command, IValidator<LPSRequest.SetupCommand, LPSRequest> validator)
+        public LPSRequestChallengeUserService(bool skipOptionalFields, LPSRequest.SetupCommand command, IValidator<LPSRequest.SetupCommand, LPSRequest> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
