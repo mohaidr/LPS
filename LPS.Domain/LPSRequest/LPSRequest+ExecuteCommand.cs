@@ -15,19 +15,19 @@ namespace LPS.Domain
 
     public partial class LPSRequest
     {
-        private class ProtectedAccessContainerExecuteCommand : LPSRequestWrapper.ExecuteCommand
+        private class ProtectedAccessWrapperExecuteCommand : LPSRequestWrapper.ExecuteCommand
         {
-            public new int SafelyIncrementNumberofContainerSentRequests(LPSRequestWrapper.ExecuteCommand dto)
+            public new int SafelyIncrementNumberofSentRequests(LPSRequestWrapper.ExecuteCommand dto)
             {
-                return base.SafelyIncrementNumberofContainerSentRequests(dto);
+                return base.SafelyIncrementNumberofSentRequests(dto);
             }
-            public new int SafelyIncrementFailedCallsCounter(LPSRequestWrapper.ExecuteCommand dto)
+            public new int SafelyIncrementNumberOfFailedRequests(LPSRequestWrapper.ExecuteCommand dto)
             {
-                return base.SafelyIncrementFailedCallsCounter(dto);
+                return base.SafelyIncrementNumberOfFaildRequests(dto);
             }
-            public new int SafelyIncrementSuccessfulCallsCounter(LPSRequestWrapper.ExecuteCommand dto)
+            public new int SafelyIncrementNumberOfSuccessfulRequests(LPSRequestWrapper.ExecuteCommand dto)
             {
-                return base.SafelyIncrementSuccessfulCallsCounter(dto);
+                return base.SafelyIncrementNumberOfSuccessfulRequests(dto);
             }
         }
 
@@ -51,55 +51,55 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 int callNumber = int.MinValue;
-                ProtectedAccessContainerExecuteCommand command = new ProtectedAccessContainerExecuteCommand();
+                ProtectedAccessWrapperExecuteCommand command = new ProtectedAccessWrapperExecuteCommand();
                 try
                 {
 
-                        var httpRequestMessage = new HttpRequestMessage();
-                        httpRequestMessage.RequestUri = new Uri(this.URL);
-                        httpRequestMessage.Method = new HttpMethod(this.HttpMethod);
+                    var httpRequestMessage = new HttpRequestMessage();
+                    httpRequestMessage.RequestUri = new Uri(this.URL);
+                    httpRequestMessage.Method = new HttpMethod(this.HttpMethod);
 
-                        bool supportsContent = (this.HttpMethod.ToLower() == "post" || this.HttpMethod.ToLower() == "put" || this.HttpMethod.ToLower() == "patch");
-                        string major = this.Httpversion.Split('.')[0];
-                        string minor = this.Httpversion.Split('.')[1];
-                        httpRequestMessage.Version = new Version(int.Parse(major), int.Parse(minor));
-                        httpRequestMessage.Content = supportsContent ? new StringContent(this.Payload) : null;
+                    bool supportsContent = (this.HttpMethod.ToLower() == "post" || this.HttpMethod.ToLower() == "put" || this.HttpMethod.ToLower() == "patch");
+                    string major = this.Httpversion.Split('.')[0];
+                    string minor = this.Httpversion.Split('.')[1];
+                    httpRequestMessage.Version = new Version(int.Parse(major), int.Parse(minor));
+                    httpRequestMessage.Content = supportsContent ? new StringContent(this.Payload) : null;
 
 
-                        foreach (var header in this.HttpHeaders)
+                    foreach (var header in this.HttpHeaders)
+                    {
+
+                        if (supportsContent)
                         {
+                            var contentHeaders = httpRequestMessage.Content.Headers;
 
-                            if (supportsContent)
+                            if (contentHeaders.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
                             {
-                                var contentHeaders = httpRequestMessage.Content.Headers;
-
-                                if (contentHeaders.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
-                                {
-                                    SetContentHeader(httpRequestMessage, header.Key, header.Value);
-                                    continue;
-                                }
+                                SetContentHeader(httpRequestMessage, header.Key, header.Value);
+                                continue;
                             }
+                        }
 
-                            if (!(new StringContent("").Headers.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", ""))))
+                        if (!(new StringContent("").Headers.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", ""))))
+                        {
+                            var requestHeader = httpRequestMessage.Headers;
+                            if (requestHeader.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
                             {
-                                var requestHeader = httpRequestMessage.Headers;
-                                if (requestHeader.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
-                                {
-                                    SetRequestHeader(httpRequestMessage, header.Key, header.Value.Trim());
-                                }
-                                else
-                                {
-                                    SetUserHeader(httpRequestMessage, header.Key, header.Value.Trim());
-                                }
+                                SetRequestHeader(httpRequestMessage, header.Key, header.Value.Trim());
                             }
-                        
+                            else
+                            {
+                                SetUserHeader(httpRequestMessage, header.Key, header.Value.Trim());
+                            }
+                        }
+
                     }
 
                     var responseMessageTask = httpClient.SendAsync(httpRequestMessage);
-                    callNumber = command.SafelyIncrementNumberofContainerSentRequests(dto.LPSRequestWrapperExecuteCommand);
+                    callNumber = command.SafelyIncrementNumberofSentRequests(dto.LPSRequestWrapperExecuteCommand);
                     var responseMessage = await responseMessageTask;
                     this.HasFailed = false;
-                    command.SafelyIncrementSuccessfulCallsCounter(dto.LPSRequestWrapperExecuteCommand);
+                    command.SafelyIncrementNumberOfSuccessfulRequests(dto.LPSRequestWrapperExecuteCommand);
                     await _logger.LogAsync(string.Empty, $"...Response for call # {callNumber}...\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LoggingLevel.INF);
                 }
                 catch (Exception ex)
@@ -109,9 +109,9 @@ namespace LPS.Domain
                         Console.WriteLine(ex);
                     }
 
-                    command.SafelyIncrementFailedCallsCounter(dto.LPSRequestWrapperExecuteCommand);
+                    command.SafelyIncrementNumberOfFailedRequests(dto.LPSRequestWrapperExecuteCommand);
                     this.HasFailed = true;
-                    await _logger.LogAsync(string.Empty, @$"...Response for call # {callNumber} \n\t ...Call # {callNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty) } \n\t  {ex.Message} \n  {ex.StackTrace}", LoggingLevel.ERR);
+                    await _logger.LogAsync(string.Empty, @$"...Response for call # {callNumber} \n\t ...Call # {callNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LoggingLevel.ERR);
 
                 }
             }
@@ -222,12 +222,12 @@ namespace LPS.Domain
                     break;
                 case "upgrade":
                     message.Headers.Upgrade.Add(new ProductHeaderValue(value));
-                        break;
+                    break;
                 case "pragma":
                     message.Headers.Pragma.Add(new NameValueHeaderValue(value));
                     break;
                 case "cache-control":
-                    message.Headers.CacheControl = new CacheControlHeaderValue() { NoCache = true};
+                    message.Headers.CacheControl = new CacheControlHeaderValue() { NoCache = true };
                     break;
                 default:
                     throw new NotSupportedException($"header {name} is unsupported requesat header, the current supported headers are (authorization, accept, accept-charset, accept-encoding, accept-language, connection, host, transfer-encoding, user-agent, )");

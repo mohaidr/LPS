@@ -18,5 +18,6 @@ namespace LPS.Domain.Common
         public string Location { get; set; }
         void Log(string EventId, string DiagnosticMessage, LoggingLevel Level);
         Task LogAsync(string EventId, string DiagnosticMessage, LoggingLevel Level);
+        public Task Flush();
     }
 }

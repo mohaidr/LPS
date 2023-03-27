@@ -40,25 +40,25 @@ namespace LPS.Domain
 
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var randomGuidId = Guid.NewGuid();
-                LPSRequestWrapper.ExecuteCommand command = new LPSRequestWrapper.ExecuteCommand() { LPSTestExecuteCommand = dto };
-                foreach (var container in this.LPSRequestWrappers)
+                foreach (var wrapper in this.LPSRequestWrappers)
                 {
+                    LPSRequestWrapper.ExecuteCommand wrapperExecutecommand = new LPSRequestWrapper.ExecuteCommand() { LPSTestExecuteCommand = dto };
 
-                    numberOfTestRequests += container.NumberofAsyncRepeats;
-                    string eventId = $"{this.Name}.{(this.IsRedo ? "redo." : string.Empty)}{(String.IsNullOrEmpty(container.Name) ? string.Empty : container.Name + ".")}{randomGuidId}";
+                    numberOfTestRequests += wrapper.NumberofAsyncRepeats;
+                    string eventId = $"{this.Name}.{(this.IsRedo ? "redo." : string.Empty)}{(String.IsNullOrEmpty(wrapper.Name) ? string.Empty : wrapper.Name + ".")}{randomGuidId}";
 
 
 
                     awaitableTasks.Add(_logger.LogAsync(string.Empty, "Request Details", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Number Of Async Calls:  {container.NumberofAsyncRepeats}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Client Http Request Timeout: {container.LPSRequest.HttpRequestTimeout}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Method:  {container.LPSRequest.HttpMethod.ToUpper()}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Version: {container.LPSRequest.Httpversion}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"URL: {container.LPSRequest.URL}", LoggingLevel.INF));
-                    if (!string.IsNullOrEmpty(container.LPSRequest.Payload) && (container.LPSRequest.HttpMethod.ToUpper() == "PUT" || container.LPSRequest.HttpMethod.ToUpper() == "POST" || container.LPSRequest.HttpMethod.ToUpper() == "PATCH"))
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Number Of Async Calls:  {wrapper.NumberofAsyncRepeats}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Client Http Request Timeout: {wrapper.LPSRequest.HttpRequestTimeout}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Method:  {wrapper.LPSRequest.HttpMethod.ToUpper()}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Version: {wrapper.LPSRequest.Httpversion}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"URL: {wrapper.LPSRequest.URL}", LoggingLevel.INF));
+                    if (!string.IsNullOrEmpty(wrapper.LPSRequest.Payload) && (wrapper.LPSRequest.HttpMethod.ToUpper() == "PUT" || wrapper.LPSRequest.HttpMethod.ToUpper() == "POST" || wrapper.LPSRequest.HttpMethod.ToUpper() == "PATCH"))
                     {
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Body...", LoggingLevel.INF));
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, container.LPSRequest.Payload, LoggingLevel.INF));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, wrapper.LPSRequest.Payload, LoggingLevel.INF));
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...End Request Body...", LoggingLevel.INF));
                     }
                     else
@@ -66,11 +66,11 @@ namespace LPS.Domain
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Empty Payload...", LoggingLevel.INF));
                     }
 
-                    if (container.LPSRequest.HttpHeaders != null)
+                    if (wrapper.LPSRequest.HttpHeaders != null)
                     {
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Headers...", LoggingLevel.INF));
 
-                        foreach (var header in container.LPSRequest.HttpHeaders)
+                        foreach (var header in wrapper.LPSRequest.HttpHeaders)
                         {
                             awaitableTasks.Add(_logger.LogAsync(string.Empty, $"{header.Key}: {header.Value}", LoggingLevel.INF));
                         }
@@ -82,7 +82,7 @@ namespace LPS.Domain
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...No Headers Were Provided...", LoggingLevel.INF));
                     }
 
-                    awaitableTasks.Add(command.ExecuteAsync(container));
+                    awaitableTasks.Add(wrapperExecutecommand.ExecuteAsync(wrapper));
                 }
 
                 while (dto.NumberOfSentRequests != numberOfTestRequests)

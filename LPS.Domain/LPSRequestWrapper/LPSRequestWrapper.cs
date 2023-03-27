@@ -26,15 +26,6 @@ namespace LPS.Domain
             this.Setup(command);
         }
 
-        //TODO: Implement Mode Based Test
-        public enum Mode
-        {
-            TimeBased,
-            NumberBased
-        }
-
-        //   private StreamWriter UserRequest { get; set; }
-
         public int NumberofAsyncRepeats { get; private set; }
 
         private int _numberOfSuccessfulCalls;

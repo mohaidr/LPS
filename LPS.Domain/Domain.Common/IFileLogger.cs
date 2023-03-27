@@ -10,6 +10,6 @@ namespace LPS.Domain.Common
 
     public interface IFileLogger : ICustomLogger
     {
-        public Task Flush();
+       
     }
 }

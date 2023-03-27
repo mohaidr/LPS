@@ -38,29 +38,29 @@ namespace LPS.Domain
                 await entity.ExecuteAsync(this);
             }
 
-            private int _numberOfContainerSuccessfullyCompletedRequests;
-            private int _numberOfContainerFailedToCompleteRequests;
-            private int _numberOfContianerSentRequests;
+            private int _numberOfSuccessfullyCompletedRequests;
+            private int _numberOfFailedToCompleteRequests;
+            private int _numberOfSentRequests;
 
-            protected int SafelyIncrementSuccessfulCallsCounter(ExecuteCommand dto)
+            protected int SafelyIncrementNumberOfSuccessfulRequests(ExecuteCommand dto)
             {
-                return Interlocked.Increment(ref dto._numberOfContainerSuccessfullyCompletedRequests);
+                return Interlocked.Increment(ref dto._numberOfSuccessfullyCompletedRequests);
             }
 
-            protected int SafelyIncrementFailedCallsCounter(ExecuteCommand dto)
+            protected int SafelyIncrementNumberOfFaildRequests(ExecuteCommand dto)
             {
-                return Interlocked.Increment(ref dto._numberOfContainerFailedToCompleteRequests);
+                return Interlocked.Increment(ref dto._numberOfFailedToCompleteRequests);
             }
 
-            protected int SafelyIncrementNumberofContainerSentRequests(ExecuteCommand dto)
+            protected int SafelyIncrementNumberofSentRequests(ExecuteCommand dto)
             {
                 protectedAccessTestExecuteCommand.SafelyIncrementNumberofSentRequests(dto.LPSTestExecuteCommand);
-                return Interlocked.Increment(ref dto._numberOfContianerSentRequests);
+                return Interlocked.Increment(ref dto._numberOfSentRequests);
             }
 
-            public int NumberOfContainerSentRequests { get { return _numberOfContianerSentRequests; } }
-            public int NumberOfContainerSuccessfullyCompletedRequests { get { return _numberOfContainerSuccessfullyCompletedRequests; } }
-            public int NumberOfContainerFailedToCompleteRequests { get { return _numberOfContainerFailedToCompleteRequests; } }
+            public int NumberOfSentRequests { get { return _numberOfSentRequests; } }
+            public int NumberOfSuccessfullyCompletedRequests { get { return _numberOfSuccessfullyCompletedRequests; } }
+            public int NumberOfFailedToCompleteRequests { get { return _numberOfFailedToCompleteRequests; } }
         }
         async private Task ExecuteAsync(ExecuteCommand dto)
         {
@@ -78,14 +78,14 @@ namespace LPS.Domain
                 _= ReportAsync(dto, this.LPSRequest.URL, this.NumberofAsyncRepeats);
                 await Task.WhenAll(awaitableTasks);
 
-                Console.WriteLine($"All requests has been processed by {this.LPSRequest.URL} with {dto.NumberOfContainerSuccessfullyCompletedRequests} successfully completed requests and {dto.NumberOfContainerFailedToCompleteRequests} failed to complete requests");
+                Console.WriteLine($"All requests has been processed by {this.LPSRequest.URL} with {dto.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {dto.NumberOfFailedToCompleteRequests} failed to complete requests");
             }
         }
         private async Task ReportAsync(ExecuteCommand dto, string url, int numberOAsyncfRepeats)
         {
-            while ((dto.NumberOfContainerSuccessfullyCompletedRequests + dto.NumberOfContainerFailedToCompleteRequests) != numberOAsyncfRepeats)
+            while ((dto.NumberOfSuccessfullyCompletedRequests + dto.NumberOfFailedToCompleteRequests) != numberOAsyncfRepeats)
             {
-                Console.WriteLine($"    Host: {url}, Successfully completed: {dto.NumberOfContainerSuccessfullyCompletedRequests}, Faile to complete:{dto.NumberOfContainerFailedToCompleteRequests}");
+                Console.WriteLine($"    Host: {url}, Successfully completed: {dto.NumberOfSuccessfullyCompletedRequests}, Faile to complete:{dto.NumberOfFailedToCompleteRequests}");
                 await Task.Delay(5000);
             }
         }

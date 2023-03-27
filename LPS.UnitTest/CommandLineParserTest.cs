@@ -8,20 +8,14 @@ namespace LPS.UnitTest
         public void CheckForException()
         {
             LPSTest.SetupCommand lpsTestCommand = new LPSTest.SetupCommand();
-           string [] _args = new string[9];
-            _args[0] = "-add";
-            _args[1] = "-hm";
-            _args[2] = "-get";
-            _args[3] = "-url";
-            _args[4] = "-https://www.example.com";
-            _args[5] = "-r";
-            _args[6] = "-5";
-            _args[7] = "-tn";
-            _args[8] = "-abc";
-
-            var commandLineParser = new CommandLineParser();
+           string [] _args = new string[3];
+            _args[0] = "run";
+            _args[1] = "--testname";
+            _args[2] = "testone";
+            var commandLineParser = new CommandLineParser(null, lpsTestCommand);
             commandLineParser.CommandLineArgs = _args;
-            commandLineParser.Parse(lpsTestCommand);
+            commandLineParser.Parse();
+            Console.WriteLine(lpsTestCommand.Name);
 
         }
     }
