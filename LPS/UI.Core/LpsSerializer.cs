@@ -9,7 +9,7 @@ namespace LPS.UI.Core
 {
     internal class LpsSerializer
     {
-        public string Serialize(LPSTest.SetupCommand command)
+        public string Serialize(LPSTestPlan.SetupCommand command)
         {
             try
             {
@@ -22,11 +22,11 @@ namespace LPS.UI.Core
             }
         }
 
-        public LPSTest.SetupCommand DeSerialize(string json)
+        public LPSTestPlan.SetupCommand DeSerialize(string json)
         {
             try
             {
-                return JsonConvert.DeserializeObject<LPSTest.SetupCommand>(json);
+                return JsonConvert.DeserializeObject<LPSTestPlan.SetupCommand>(json);
 
             }
             catch (Exception ex) 

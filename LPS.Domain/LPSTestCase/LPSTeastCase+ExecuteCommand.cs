@@ -13,27 +13,26 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSRequestWrapper
+    public partial class LPSTestCase
     {
-
-        public class ExecuteCommand: IAsyncCommand<LPSRequestWrapper>
+        public class ExecuteCommand : IAsyncCommand<LPSTestCase>
         {
             private readonly ProtectedAccessTestExecuteCommand protectedAccessTestExecuteCommand = new ProtectedAccessTestExecuteCommand();
-            private class ProtectedAccessTestExecuteCommand : LPSTest.ExecuteCommand
+            private class ProtectedAccessTestExecuteCommand : LPSTestPlan.ExecuteCommand
             {
-                public new int SafelyIncrementNumberofSentRequests(LPSTest.ExecuteCommand dto)
+                public new int SafelyIncrementNumberofSentRequests(LPSTestPlan.ExecuteCommand dto)
                 {
-                   return base.SafelyIncrementNumberofSentRequests(dto);
+                    return base.SafelyIncrementNumberofSentRequests(dto);
                 }
             }
-            public LPSTest.ExecuteCommand LPSTestExecuteCommand { get; set; }
+            public LPSTestPlan.ExecuteCommand LPSTestPlanExecuteCommand { get; set; }
 
             public ExecuteCommand()
             {
-                LPSTestExecuteCommand = new LPSTest.ExecuteCommand();
+                LPSTestPlanExecuteCommand = new LPSTestPlan.ExecuteCommand();
             }
 
-            async public Task ExecuteAsync(LPSRequestWrapper entity)
+            async public Task ExecuteAsync(LPSTestCase entity)
             {
                 await entity.ExecuteAsync(this);
             }
@@ -54,7 +53,7 @@ namespace LPS.Domain
 
             protected int SafelyIncrementNumberofSentRequests(ExecuteCommand dto)
             {
-                protectedAccessTestExecuteCommand.SafelyIncrementNumberofSentRequests(dto.LPSTestExecuteCommand);
+                protectedAccessTestExecuteCommand.SafelyIncrementNumberofSentRequests(dto.LPSTestPlanExecuteCommand);
                 return Interlocked.Increment(ref dto._numberOfSentRequests);
             }
 
@@ -66,24 +65,32 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
-                Task[] awaitableTasks = new Task[this.NumberofAsyncRepeats];
-
-                Console.WriteLine($"{this.NumberofAsyncRepeats} Async call(s) are bing sent to {this.LPSRequest.URL}");
-                LPSRequest.ExecuteCommand command = new LPSRequest.ExecuteCommand() { LPSRequestWrapperExecuteCommand = dto };
-                for (int i = 0; i < this.NumberofAsyncRepeats; i++)
+                if (this.Mode == IterationMode.R)
                 {
-                    awaitableTasks[i] = command.ExecuteAsync(LPSRequest);
+
+                    Task[] awaitableTasks = new Task[this.Count.Value];
+
+                    Console.WriteLine($"{this.Count} Async call(s) are being sent to {this.LPSRequest.URL}");
+                    LPSRequest.ExecuteCommand command = new LPSRequest.ExecuteCommand() { LPSTestCaseExecuteCommand = dto };
+                    for (int i = 0; i < this.Count; i++)
+                    {
+                        awaitableTasks[i] = command.ExecuteAsync(LPSRequest);
+                    }
+
+                    _ = ReportAsync(dto, this.LPSRequest.URL, this.Count.Value);
+                    await Task.WhenAll(awaitableTasks);
+
+                    Console.WriteLine($"All requests has been processed by {this.LPSRequest.URL} with {dto.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {dto.NumberOfFailedToCompleteRequests} failed to complete requests");
                 }
-
-                _= ReportAsync(dto, this.LPSRequest.URL, this.NumberofAsyncRepeats);
-                await Task.WhenAll(awaitableTasks);
-
-                Console.WriteLine($"All requests has been processed by {this.LPSRequest.URL} with {dto.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {dto.NumberOfFailedToCompleteRequests} failed to complete requests");
+                else
+                {
+                    throw new NotImplementedException("No implementation yet");
+                }
             }
         }
-        private async Task ReportAsync(ExecuteCommand dto, string url, int numberOAsyncfRepeats)
+        private async Task ReportAsync(ExecuteCommand dto, string url, int requestCount)
         {
-            while ((dto.NumberOfSuccessfullyCompletedRequests + dto.NumberOfFailedToCompleteRequests) != numberOAsyncfRepeats)
+            while ((dto.NumberOfSuccessfullyCompletedRequests + dto.NumberOfFailedToCompleteRequests) != requestCount)
             {
                 Console.WriteLine($"    Host: {url}, Successfully completed: {dto.NumberOfSuccessfullyCompletedRequests}, Faile to complete:{dto.NumberOfFailedToCompleteRequests}");
                 await Task.Delay(5000);

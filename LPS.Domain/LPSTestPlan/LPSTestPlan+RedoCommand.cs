@@ -8,17 +8,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using static LPS.Domain.LPSRequestWrapper;
+using static LPS.Domain.LPSTestCase;
 using LPS.Domain.Common;
 
 namespace LPS.Domain
 {
 
-    public partial class LPSTest
+    public partial class LPSTestPlan
     {
-        public class RedoCommand : IAsyncCommand<LPSTest>
+        public class RedoCommand : IAsyncCommand<LPSTestPlan>
         {
-            async public Task ExecuteAsync(LPSTest entity)
+            async public Task ExecuteAsync(LPSTestPlan entity)
             {
                 await entity.RedoAsync(this);
             }

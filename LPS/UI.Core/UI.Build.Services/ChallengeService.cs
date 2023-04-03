@@ -29,8 +29,8 @@ namespace LPS.UI.Core.UI.Build.Services
                 case "-timeout":
                     Console.Write("Timeout: ");
                     return Console.ReadLine().Trim();
-                case "-repeat":
-                    Console.Write("Repeat: ");
+                case "-requestCount":
+                    Console.Write("Request Count: ");
                     return Console.ReadLine().Trim();
                 case "-url":
                     Console.Write("Url: ");

@@ -16,10 +16,10 @@ using System.Xml.Linq;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    public class LPSRequestWrapperBinder : BinderBase<LPSRequestWrapper.SetupCommand>
+    public class LPSTestCaseBinder : BinderBase<LPSTestCase.SetupCommand>
     {
         private readonly Option<string> _nameOption;
-        private readonly Option<int> _repeatOption;
+        private readonly Option<int> _requestCountOption;
         private readonly Option<string> _httpMethodOption;
         private readonly Option<string> _httpversionOption;
         private readonly Option<int> _timeoutOption;
@@ -27,12 +27,12 @@ namespace LPS.UI.Core.UI.Build.Services
         private readonly Option<IList<string>> _headerOption;
         private readonly Option<string> _payloadOption;
 
-        public LPSRequestWrapperBinder(Option<string> nameOption, Option<int> repeatOption,
+        public LPSTestCaseBinder(Option<string> nameOption, Option<int> requestCountOption,
             Option<string> httpMethodOption, Option<string> httpversionOption, Option<int> timeoutOption, Option<string> urlOption,
             Option<IList<string>> headerOption, Option<string> payloadOption)
         {
             _nameOption = nameOption;
-            _repeatOption = repeatOption;
+            _requestCountOption = requestCountOption;
             _httpMethodOption = httpMethodOption;
             _httpversionOption = httpversionOption;
             _urlOption = urlOption;
@@ -41,11 +41,11 @@ namespace LPS.UI.Core.UI.Build.Services
             _timeoutOption = timeoutOption;
         }
 
-        protected override LPSRequestWrapper.SetupCommand GetBoundValue(BindingContext bindingContext) =>
-            new LPSRequestWrapper.SetupCommand
+        protected override LPSTestCase.SetupCommand GetBoundValue(BindingContext bindingContext) =>
+            new LPSTestCase.SetupCommand
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
-                NumberofAsyncRepeats = bindingContext.ParseResult.GetValueForOption(_repeatOption),
+                RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
                 LPSRequest = new LPSRequest.SetupCommand()
                 {
                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
@@ -64,7 +64,7 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             TestNameOption.AddAlias("-tn");
             NameOption.AddAlias("-n");
-            RepeatOption.AddAlias("-r");
+            RequestCountOption.AddAlias("-r");
             HttpMethodOption.AddAlias("-m");
             HttpversionOption.AddAlias("-v");
             TimeoutOption.AddAlias("-t");
@@ -74,7 +74,7 @@ namespace LPS.UI.Core.UI.Build.Services
         }
         public static Option<string> TestNameOption = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
         public static Option<string> NameOption = new Option<string>("--name", "The name of the request") { IsRequired = true };
-        public static Option<int> RepeatOption = new Option<int>("--repeat", "The number of requests") { IsRequired = true, };
+        public static Option<int> RequestCountOption = new Option<int>("--requestCount", "The number of requests") { IsRequired = true, };
         public static Option<string> HttpMethodOption = new Option<string>("--method", "HTTP method") { IsRequired = true };
         public static Option<string> HttpversionOption = new Option<string>("--version", ()=> "1.1", "HTTP version") { IsRequired = false };
         public static Option<int> TimeoutOption = new Option<int>("--timeout", () => 4, "Timeout") { IsRequired = false };

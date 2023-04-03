@@ -6,14 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestValidator : IValidator<LPSTest.SetupCommand, LPSTest>
+    internal class LPSTestPlanValidator : IValidator<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
-        public LPSTestValidator(LPSTest.SetupCommand command)
+        public LPSTestPlanValidator(LPSTestPlan.SetupCommand command)
         {
             _command = command;
         }
-        LPSTest.SetupCommand _command;
-        public LPSTest.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSTestPlan.SetupCommand _command;
+        public LPSTestPlan.SetupCommand Command { get { return _command; } set { value = _command; } }
         public bool Validate(string property)
         {
             switch (property)

@@ -6,23 +6,23 @@ using System.Threading.Tasks;
 namespace LPS.Domain
 {
 
-    public partial class LPSTest
+    public partial class LPSTestPlan
     {
-        public class SetupCommand: ICommand<LPSTest>
+        public class SetupCommand: ICommand<LPSTestPlan>
         {
 
             public SetupCommand()
             {
                 Name =  DateTime.Now.ToFileTime().ToString();
-                LPSRequestWrappers = new List<LPSRequestWrapper.SetupCommand>();
+                LPSTestCases = new List<LPSTestCase.SetupCommand>();
             }
 
-            public void Execute(LPSTest entity)
+            public void Execute(LPSTestPlan entity)
             {
-                entity.Setup(this);
+                entity?.Setup(this);
             }
 
-            public List<LPSRequestWrapper.SetupCommand> LPSRequestWrappers { get; set; }
+            public List<LPSTestCase.SetupCommand> LPSTestCases { get; set; }
 
             public string Name { get; set; }
 
@@ -37,9 +37,9 @@ namespace LPS.Domain
             {
                 this.Name = dto.Name;
                 this.IsValid = true;
-                foreach (var command in dto.LPSRequestWrappers)
+                foreach (var command in dto.LPSTestCases)
                 {
-                    LPSRequestWrappers.Add(new LPSRequestWrapper(command, this._logger));
+                    LPSTestCases.Add(new LPSTestCase(command, this._logger));
                 }
             }
         }  

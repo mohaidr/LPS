@@ -47,7 +47,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 {
                     try
                     {
-                        Console.WriteLine("Enter the HTTP request timeout value in minutes, it should be a valid positive integer number");
+                        Console.WriteLine("Enter the HTTP request timeout value in minutes");
                         _command.TimeOut = int.Parse(ChallengeService.Challenge("-timeout"));
                         continue;
                     }

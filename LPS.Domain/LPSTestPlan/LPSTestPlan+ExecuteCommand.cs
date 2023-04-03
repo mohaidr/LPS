@@ -8,11 +8,11 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSTest
+    public partial class LPSTestPlan
     {
-        public class ExecuteCommand : IAsyncCommand<LPSTest>
+        public class ExecuteCommand : IAsyncCommand<LPSTestPlan>
         {
-            async public Task ExecuteAsync(LPSTest entity)
+            async public Task ExecuteAsync(LPSTestPlan entity)
             {
                 Reset();
                 await entity.ExecuteAsync(this);
@@ -40,25 +40,23 @@ namespace LPS.Domain
 
                 var watch = System.Diagnostics.Stopwatch.StartNew();
                 var randomGuidId = Guid.NewGuid();
-                foreach (var wrapper in this.LPSRequestWrappers)
+                foreach (var testCase in this.LPSTestCases)
                 {
-                    LPSRequestWrapper.ExecuteCommand wrapperExecutecommand = new LPSRequestWrapper.ExecuteCommand() { LPSTestExecuteCommand = dto };
+                    LPSTestCase.ExecuteCommand testCaseExecutecommand = new LPSTestCase.ExecuteCommand() { LPSTestPlanExecuteCommand = dto };
 
-                    numberOfTestRequests += wrapper.NumberofAsyncRepeats;
-                    string eventId = $"{this.Name}.{(this.IsRedo ? "redo." : string.Empty)}{(String.IsNullOrEmpty(wrapper.Name) ? string.Empty : wrapper.Name + ".")}{randomGuidId}";
-
-
+                    numberOfTestRequests += testCase.Count.Value;
+                    string eventId = $"{this.Name}.{(this.IsRedo ? "redo." : string.Empty)}{(String.IsNullOrEmpty(testCase.Name) ? string.Empty : testCase.Name + ".")}{randomGuidId}";
 
                     awaitableTasks.Add(_logger.LogAsync(string.Empty, "Request Details", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Number Of Async Calls:  {wrapper.NumberofAsyncRepeats}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Client Http Request Timeout: {wrapper.LPSRequest.HttpRequestTimeout}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Method:  {wrapper.LPSRequest.HttpMethod.ToUpper()}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Version: {wrapper.LPSRequest.Httpversion}", LoggingLevel.INF));
-                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"URL: {wrapper.LPSRequest.URL}", LoggingLevel.INF));
-                    if (!string.IsNullOrEmpty(wrapper.LPSRequest.Payload) && (wrapper.LPSRequest.HttpMethod.ToUpper() == "PUT" || wrapper.LPSRequest.HttpMethod.ToUpper() == "POST" || wrapper.LPSRequest.HttpMethod.ToUpper() == "PATCH"))
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Request Count:  {testCase.Count}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Client Http Request Timeout: {testCase.LPSRequest.HttpRequestTimeout}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Method:  {testCase.LPSRequest.HttpMethod.ToUpper()}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"Http Version: {testCase.LPSRequest.Httpversion}", LoggingLevel.INF));
+                    awaitableTasks.Add(_logger.LogAsync(string.Empty, $"URL: {testCase.LPSRequest.URL}", LoggingLevel.INF));
+                    if (!string.IsNullOrEmpty(testCase.LPSRequest.Payload) && (testCase.LPSRequest.HttpMethod.ToUpper() == "PUT" || testCase.LPSRequest.HttpMethod.ToUpper() == "POST" || testCase.LPSRequest.HttpMethod.ToUpper() == "PATCH"))
                     {
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Body...", LoggingLevel.INF));
-                        awaitableTasks.Add(_logger.LogAsync(string.Empty, wrapper.LPSRequest.Payload, LoggingLevel.INF));
+                        awaitableTasks.Add(_logger.LogAsync(string.Empty, testCase.LPSRequest.Payload, LoggingLevel.INF));
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...End Request Body...", LoggingLevel.INF));
                     }
                     else
@@ -66,11 +64,11 @@ namespace LPS.Domain
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Empty Payload...", LoggingLevel.INF));
                     }
 
-                    if (wrapper.LPSRequest.HttpHeaders != null)
+                    if (testCase.LPSRequest.HttpHeaders != null)
                     {
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...Begin Request Headers...", LoggingLevel.INF));
 
-                        foreach (var header in wrapper.LPSRequest.HttpHeaders)
+                        foreach (var header in testCase.LPSRequest.HttpHeaders)
                         {
                             awaitableTasks.Add(_logger.LogAsync(string.Empty, $"{header.Key}: {header.Value}", LoggingLevel.INF));
                         }
@@ -82,12 +80,12 @@ namespace LPS.Domain
                         awaitableTasks.Add(_logger.LogAsync(string.Empty, "...No Headers Were Provided...", LoggingLevel.INF));
                     }
 
-                    awaitableTasks.Add(wrapperExecutecommand.ExecuteAsync(wrapper));
+                    awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(testCase));
                 }
 
+                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                 while (dto.NumberOfSentRequests != numberOfTestRequests)
                 {
-                    Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                     await Task.Delay(10);
                 }
                 Thread.CurrentThread.Priority = ThreadPriority.Normal;

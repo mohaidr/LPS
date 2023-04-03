@@ -15,17 +15,17 @@ namespace LPS.Domain
 
     public partial class LPSRequest
     {
-        private class ProtectedAccessWrapperExecuteCommand : LPSRequestWrapper.ExecuteCommand
+        private class ProtectedAccessLPSTestCaseExecuteCommand : LPSTestCase.ExecuteCommand
         {
-            public new int SafelyIncrementNumberofSentRequests(LPSRequestWrapper.ExecuteCommand dto)
+            public new int SafelyIncrementNumberofSentRequests(LPSTestCase.ExecuteCommand dto)
             {
                 return base.SafelyIncrementNumberofSentRequests(dto);
             }
-            public new int SafelyIncrementNumberOfFailedRequests(LPSRequestWrapper.ExecuteCommand dto)
+            public new int SafelyIncrementNumberOfFailedRequests(LPSTestCase.ExecuteCommand dto)
             {
                 return base.SafelyIncrementNumberOfFaildRequests(dto);
             }
-            public new int SafelyIncrementNumberOfSuccessfulRequests(LPSRequestWrapper.ExecuteCommand dto)
+            public new int SafelyIncrementNumberOfSuccessfulRequests(LPSTestCase.ExecuteCommand dto)
             {
                 return base.SafelyIncrementNumberOfSuccessfulRequests(dto);
             }
@@ -35,10 +35,10 @@ namespace LPS.Domain
         {
             public ExecuteCommand()
             {
-                LPSRequestWrapperExecuteCommand = new LPSRequestWrapper.ExecuteCommand();
+                LPSTestCaseExecuteCommand = new LPSTestCase.ExecuteCommand();
             }
 
-            public LPSRequestWrapper.ExecuteCommand LPSRequestWrapperExecuteCommand { get; set; }
+            public LPSTestCase.ExecuteCommand LPSTestCaseExecuteCommand { get; set; }
 
             async public Task ExecuteAsync(LPSRequest entity)
             {
@@ -51,7 +51,7 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 int callNumber = int.MinValue;
-                ProtectedAccessWrapperExecuteCommand command = new ProtectedAccessWrapperExecuteCommand();
+                ProtectedAccessLPSTestCaseExecuteCommand command = new ProtectedAccessLPSTestCaseExecuteCommand();
                 try
                 {
 
@@ -96,10 +96,10 @@ namespace LPS.Domain
                     }
 
                     var responseMessageTask = httpClient.SendAsync(httpRequestMessage);
-                    callNumber = command.SafelyIncrementNumberofSentRequests(dto.LPSRequestWrapperExecuteCommand);
+                    callNumber = command.SafelyIncrementNumberofSentRequests(dto.LPSTestCaseExecuteCommand);
                     var responseMessage = await responseMessageTask;
                     this.HasFailed = false;
-                    command.SafelyIncrementNumberOfSuccessfulRequests(dto.LPSRequestWrapperExecuteCommand);
+                    command.SafelyIncrementNumberOfSuccessfulRequests(dto.LPSTestCaseExecuteCommand);
                     await _logger.LogAsync(string.Empty, $"...Response for call # {callNumber}...\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LoggingLevel.INF);
                 }
                 catch (Exception ex)
@@ -109,7 +109,7 @@ namespace LPS.Domain
                         Console.WriteLine(ex);
                     }
 
-                    command.SafelyIncrementNumberOfFailedRequests(dto.LPSRequestWrapperExecuteCommand);
+                    command.SafelyIncrementNumberOfFailedRequests(dto.LPSTestCaseExecuteCommand);
                     this.HasFailed = true;
                     await _logger.LogAsync(string.Empty, @$"...Response for call # {callNumber} \n\t ...Call # {callNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LoggingLevel.ERR);
 

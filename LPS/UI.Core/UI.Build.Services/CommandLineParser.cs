@@ -11,18 +11,18 @@ using LPS.UI.Common;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    public class CommandLineParser: IParser<LPSTest.SetupCommand, LPSTest>
+    public class CommandLineParser: IParser<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
         public string[] CommandLineArgs { get; set; }
 
         ICustomLogger _logger;
-        LPSTest.SetupCommand _command;
-        public CommandLineParser(ICustomLogger logger, LPSTest.SetupCommand command)
+        LPSTestPlan.SetupCommand _command;
+        public CommandLineParser(ICustomLogger logger, LPSTestPlan.SetupCommand command)
         {
             _logger = logger;
             _command = command;
         }
-        public LPSTest.SetupCommand Command { get { return _command; } set { } }
+        public LPSTestPlan.SetupCommand Command { get { return _command; } set { } }
 
         public void Parse()
         {
@@ -38,7 +38,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 CommandLineOptions.HttpMethodOption,
                 CommandLineOptions.HttpversionOption,
                 CommandLineOptions.TimeoutOption,
-                CommandLineOptions.RepeatOption,
+                CommandLineOptions.RequestCountOption,
                 CommandLineOptions.UrlOption,
                 CommandLineOptions.HeaderOption,
                 CommandLineOptions.PayloadOption
@@ -64,11 +64,11 @@ namespace LPS.UI.Core.UI.Build.Services
                 CommandLineOptions.TestNameOption);
 
             addCommand.SetHandler(
-                (testName, lpsRequestWrapper) =>
+                (testName, lpsTestCase) =>
                 {
                     var serializer = new LpsSerializer();
                     _command = serializer.DeSerialize(File.ReadAllText($"{testName}.json"));
-                    _command.LPSRequestWrappers.Add(lpsRequestWrapper);
+                    _command.LPSTestCases.Add(lpsTestCase);
                     _command.IsValid = true;
                     string json = serializer.Serialize(_command);
                     File.WriteAllText($"{testName}.json", json);
@@ -78,9 +78,9 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 },
                 CommandLineOptions.TestNameOption,
-                new LPSRequestWrapperBinder(
+                new LPSTestCaseBinder(
                 CommandLineOptions.NameOption,
-                CommandLineOptions.RepeatOption,
+                CommandLineOptions.RequestCountOption,
                 CommandLineOptions.HttpMethodOption,
                 CommandLineOptions.HttpversionOption,
                 CommandLineOptions.TimeoutOption,

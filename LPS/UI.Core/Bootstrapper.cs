@@ -35,11 +35,11 @@ namespace LPS.UI.Core
 
             await _logger?.LogAsync("0000-0000-0000", "-------------- LPS V1 - App Started --------------", LoggingLevel.INF);
 
-            LPSTest.SetupCommand lpsTestCommand = new LPSTest.SetupCommand();
+            LPSTestPlan.SetupCommand lpsTestPlanSetupCommand = new LPSTestPlan.SetupCommand();
 
             if (_args != null && _args.Length > 0)
             {
-                var commandLineParser = new CommandLineParser(_logger, lpsTestCommand);
+                var commandLineParser = new CommandLineParser(_logger, lpsTestPlanSetupCommand);
                 commandLineParser.CommandLineArgs = _args;
                 commandLineParser.Parse();
                 Console.WriteLine("====================================================");
@@ -48,19 +48,19 @@ namespace LPS.UI.Core
             }
             else
             {
-                var manualBuild = new ManualBuild(new LPSTestValidator(lpsTestCommand));
-                manualBuild.Build(lpsTestCommand);
-                await new LpsRunner().Run(lpsTestCommand, _logger);
-                File.WriteAllText($"{lpsTestCommand.Name}.json", new LpsSerializer().Serialize(lpsTestCommand));
+                var manualBuild = new ManualBuild(new LPSTestPlanValidator(lpsTestPlanSetupCommand));
+                manualBuild.Build(lpsTestPlanSetupCommand);
+                await new LpsRunner().Run(lpsTestPlanSetupCommand, _logger);
+                File.WriteAllText($"{lpsTestPlanSetupCommand.Name}.json", new LpsSerializer().Serialize(lpsTestPlanSetupCommand));
                 string action;
                 while (true)
                 {
-                    Console.WriteLine("Press any key to exit, enter \"start over\" to start over or \"redo\" to repeat the same test ");
+                    Console.WriteLine("Press any key to exit, enter \"start over\" to start over or \"redo\" to trigger the same test ");
                     action = Console.ReadLine()?.Trim().ToLower();
                     if (action == "redo")
                     {
-                        var lpsTest = new LPSTest(lpsTestCommand, _logger);
-                        await new LPSTest.RedoCommand().ExecuteAsync(lpsTest);
+                        var lpsTest = new LPSTestPlan(lpsTestPlanSetupCommand, _logger);
+                        await new LPSTestPlan.RedoCommand().ExecuteAsync(lpsTest);
                         continue;
                     }
                     break;

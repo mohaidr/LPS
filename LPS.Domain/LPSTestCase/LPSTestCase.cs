@@ -12,21 +12,34 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSRequestWrapper : IValidEntity, IExecutable
+    public partial class LPSTestCase : IValidEntity, IExecutable
     {
         private ICustomLogger _logger;
+        /* D refers to Duration
+         * C refers to Cool Down
+         * B refers to Batch Size  
+         * R refers to Request Count
+         */
+        public enum IterationMode
+        {
+            DCR,
+            DCB,
+            DRB,
+            CRB,
+            CB,
+            R
+        }
 
-        private LPSRequestWrapper()
+        private LPSTestCase()
         {
         }
 
-        public LPSRequestWrapper(SetupCommand command, ICustomLogger logger)
+        public LPSTestCase(SetupCommand command, ICustomLogger logger)
         {
             _logger = logger;
             this.Setup(command);
         }
 
-        public int NumberofAsyncRepeats { get; private set; }
 
         private int _numberOfSuccessfulCalls;
         private int _numberOfFailedCalls;
@@ -55,8 +68,17 @@ namespace LPS.Domain
         }
 
         public LPSRequest LPSRequest { get; private set; }
+        public int? Count { get; private set; }
 
         public string Name { get; private set; }
         public bool IsValid { get; private set; }
+
+        public int? Duration { get; private set; }
+
+        public int? BatchSize { get; private set; }
+
+        public int? CoolDownTime { get; private set; }
+
+        public IterationMode? Mode { get; private set; }
     }
 }

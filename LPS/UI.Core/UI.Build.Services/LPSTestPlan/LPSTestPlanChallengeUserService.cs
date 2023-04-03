@@ -8,15 +8,15 @@ using LPS.UI.Common;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestChallengeUserService : IChallengeUserService<LPSTest.SetupCommand, LPSTest>
+    internal class LPSTestPlanChallengeUserService : IChallengeUserService<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
-        IValidator<LPSTest.SetupCommand, LPSTest> _validator;
-        LPSTest.SetupCommand _command;
-        public LPSTest.SetupCommand Command { get { return _command; } set { value = _command; } }
+        IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
+        LPSTestPlan.SetupCommand _command;
+        public LPSTestPlan.SetupCommand Command { get { return _command; } set { value = _command; } }
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
 
         private bool _skipOptionalFields;
-        public LPSTestChallengeUserService(bool skipOptionalFields, LPSTest.SetupCommand command, IValidator<LPSTest.SetupCommand, LPSTest> validator)
+        public LPSTestPlanChallengeUserService(bool skipOptionalFields, LPSTestPlan.SetupCommand command, IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -39,14 +39,14 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-                var lpsRequestWrapperCommand = new LPSRequestWrapper.SetupCommand();
-                LPSRequestWrapperValidator validator= new LPSRequestWrapperValidator(lpsRequestWrapperCommand);
-                LPSRequestWrapperChallengeUserService lpsRequestWrapperUserService = new LPSRequestWrapperChallengeUserService(SkipOptionalFields, lpsRequestWrapperCommand,validator);
-                lpsRequestWrapperUserService.Challenge();
+                var lpsTestCaseCommand = new LPSTestCase.SetupCommand();
+                LPSTestCaseValidator validator= new LPSTestCaseValidator(lpsTestCaseCommand);
+                LPSTestCaseChallengeUserService lpsTestCaseUserService = new LPSTestCaseChallengeUserService(SkipOptionalFields, lpsTestCaseCommand,validator);
+                lpsTestCaseUserService.Challenge();
 
-                Command.LPSRequestWrappers.Add(lpsRequestWrapperCommand);
+                Command.LPSTestCases.Add(lpsTestCaseCommand);
 
-                Console.WriteLine("Enter \"add\" to add new http request to the collection or click enter to start your test");
+                Console.WriteLine("Enter \"add\" to add new test case to your test plan");
 
                 string action = Console.ReadLine().Trim().ToLower();
                 if (action == "add")

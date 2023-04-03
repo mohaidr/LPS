@@ -4,17 +4,17 @@ using System;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class ManualBuild : IBuilderService<LPSTest.SetupCommand, LPSTest>
+    internal class ManualBuild : IBuilderService<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
-        IValidator<LPSTest.SetupCommand, LPSTest> _validator;
-        public ManualBuild(IValidator<LPSTest.SetupCommand, LPSTest> validator)
+        IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
+        public ManualBuild(IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
         {
             _validator= validator;
         }
 
         static bool skipOptionalFields = true;
 
-        public void Build(LPSTest.SetupCommand lpsTestCommand)
+        public void Build(LPSTestPlan.SetupCommand lpsTestCommand)
         {
             Console.WriteLine("To skip optional fields enter (Y), otherwise enter (N)");
             string decision = Console.ReadLine();
@@ -24,8 +24,8 @@ namespace LPS.UI.Core.UI.Build.Services
             else
                 skipOptionalFields = true;
 
-            Console.WriteLine("Start building your collection of requests");
-            new LPSTestChallengeUserService(skipOptionalFields, lpsTestCommand, _validator).Challenge();
+            Console.WriteLine("Start building your test plan");
+            new LPSTestPlanChallengeUserService(skipOptionalFields, lpsTestCommand, _validator).Challenge();
         }
     }
 }

@@ -13,17 +13,17 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSRequestWrapper
+    public partial class LPSTestCase
     {
    
-        public class Validator: IValidator<LPSRequestWrapper, LPSRequestWrapper.SetupCommand>
+        public class Validator: IValidator<LPSTestCase, LPSTestCase.SetupCommand>
         {
-            public Validator(LPSRequestWrapper entity , SetupCommand dto)
+            public Validator(LPSTestCase entity , SetupCommand dto)
             {
                 Validate(entity, dto);
             }
 
-            public void Validate(LPSRequestWrapper entity,SetupCommand dto)
+            public void Validate(LPSTestCase entity,SetupCommand dto)
             {
                 dto.IsValid = true;
                 Console.ForegroundColor = ConsoleColor.Yellow;
@@ -34,9 +34,16 @@ namespace LPS.Domain
                     dto.IsValid = false;
                 }
 
-                if (dto.NumberofAsyncRepeats <= 0)
+
+                if (!dto.Mode.HasValue)
                 {
-                    Console.WriteLine("The number of Async requests should be a valid integer");
+                    Console.WriteLine("Invalid combination, you have to use one of the below combinations");
+                    Console.WriteLine("\t- Duration && Cool Down Time && Number Of Requests");
+                    Console.WriteLine("\t- Duration && Cool Down Time && Batch Size");
+                    Console.WriteLine("\t- Duration && Number Of Requests && Batch Size");
+                    Console.WriteLine("\t- Cool Down Time && Number Of Requests && Batch Size");
+                    Console.WriteLine("\t- Cool Down Time && Batch Size. Requests will not stop until you stop it");
+                    Console.WriteLine("\t- Number Of Requests. Test will complete when all the requests are completed");
                     dto.IsValid = false;
                 }
 

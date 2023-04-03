@@ -6,14 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestWrapperValidator : IValidator<LPSRequestWrapper.SetupCommand, LPSRequestWrapper>
+    internal class LPSTestCaseValidator : IValidator<LPSTestCase.SetupCommand, LPSTestCase>
     {
-        public LPSRequestWrapperValidator(LPSRequestWrapper.SetupCommand command)
+        public LPSTestCaseValidator(LPSTestCase.SetupCommand command)
         {
             _command = command;
         }
-        LPSRequestWrapper.SetupCommand _command;
-        public LPSRequestWrapper.SetupCommand Command { get { return _command; } set { } }
+        LPSTestCase.SetupCommand _command;
+        public LPSTestCase.SetupCommand Command { get { return _command; } set { } }
         public bool Validate(string property)
         {
             switch (property)
@@ -24,9 +24,9 @@ namespace LPS.UI.Core.UI.Build.Services
                         return false;
                     }
                     break;
-                case "-repeat":
+                case "-requestCount":
 
-                    if (_command.NumberofAsyncRepeats <= 0)
+                    if (!_command.RequestCount.HasValue || _command.RequestCount <= 0)
                     {
                         return false;
                     }

@@ -39,7 +39,7 @@ namespace LPS.Domain
 
             public void Execute(LPSRequest entity)
             {
-                entity.Setup(this);
+                entity?.Setup(this);
             }
         }
 

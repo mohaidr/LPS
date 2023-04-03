@@ -6,11 +6,11 @@ using System.Text;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestWrapperChallengeUserService : IChallengeUserService<LPSRequestWrapper.SetupCommand, LPSRequestWrapper>
+    internal class LPSTestCaseChallengeUserService : IChallengeUserService<LPSTestCase.SetupCommand, LPSTestCase>
     {
-        IValidator<LPSRequestWrapper.SetupCommand, LPSRequestWrapper> _validator;
+        IValidator<LPSTestCase.SetupCommand, LPSTestCase> _validator;
 
-        public LPSRequestWrapperChallengeUserService(bool skipOptionalFields, LPSRequestWrapper.SetupCommand command, IValidator<LPSRequestWrapper.SetupCommand, LPSRequestWrapper> validator)
+        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSTestCase.SetupCommand command, IValidator<LPSTestCase.SetupCommand, LPSTestCase> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -19,8 +19,8 @@ namespace LPS.UI.Core.UI.Build.Services
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
         private bool _skipOptionalFields;
 
-        LPSRequestWrapper.SetupCommand _command;
-        public LPSRequestWrapper.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSTestCase.SetupCommand _command;
+        public LPSTestCase.SetupCommand Command { get { return _command; } set { value = _command; } }
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -37,12 +37,12 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-                if (!_validator.Validate("-repeat"))
+                if (!_validator.Validate("-requestCount"))
                 {
                     try
                     {
-                        Console.WriteLine("Enter the number of async calls, it should be a valid positive integer number");
-                        _command.NumberofAsyncRepeats = int.Parse(ChallengeService.Challenge("-repeat"));
+                        Console.WriteLine("Enter the number of requests");
+                        _command.RequestCount = int.Parse(ChallengeService.Challenge("-requestCount"));
                         continue;
                     }
                     catch
