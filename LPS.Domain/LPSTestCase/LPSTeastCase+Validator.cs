@@ -18,42 +18,52 @@ namespace LPS.Domain
    
         public class Validator: IValidator<LPSTestCase, LPSTestCase.SetupCommand>
         {
-            public Validator(LPSTestCase entity , SetupCommand dto)
+            public Validator(LPSTestCase entity , SetupCommand command)
             {
-                Validate(entity, dto);
+                Validate(entity, command);
             }
 
-            public void Validate(LPSTestCase entity,SetupCommand dto)
+            public void Validate(LPSTestCase entity,SetupCommand command)
             {
-                dto.IsValid = true;
+                command.IsValid = true;
                 Console.ForegroundColor = ConsoleColor.Yellow;
 
-                if (string.IsNullOrEmpty(dto.Name) || !Regex.IsMatch(dto.Name, @"^[\w.-]{2,}$"))
+                if (string.IsNullOrEmpty(command.Name) || !Regex.IsMatch(command.Name, @"^[\w.-]{2,}$"))
                 {
                     Console.WriteLine("Please Provide a Valid Name, The Name Should At least Be of 2 Charachters And Can Only Contains Letters, Numbers, ., _ and -");
-                    dto.IsValid = false;
+                    command.IsValid = false;
                 }
 
 
-                if (!dto.Mode.HasValue)
+                if (!command.Mode.HasValue)
                 {
                     Console.WriteLine("Invalid combination, you have to use one of the below combinations");
-                    Console.WriteLine("\t- Duration && Cool Down Time && Number Of Requests");
                     Console.WriteLine("\t- Duration && Cool Down Time && Batch Size");
-                    Console.WriteLine("\t- Duration && Number Of Requests && Batch Size");
                     Console.WriteLine("\t- Cool Down Time && Number Of Requests && Batch Size");
                     Console.WriteLine("\t- Cool Down Time && Batch Size. Requests will not stop until you stop it");
                     Console.WriteLine("\t- Number Of Requests. Test will complete when all the requests are completed");
-                    dto.IsValid = false;
+                    Console.WriteLine("\t- Duration. Test will complete once the duration expires");
+                    command.IsValid = false;
                 }
 
-                if (dto.LPSRequest != null)
+                if (command.Duration.HasValue && command.CoolDownTime.HasValue && command.CoolDownTime.Value > command.Duration.Value)
                 {
-                        new LPSRequest.Validator(null, dto.LPSRequest);
-                        if (!dto.LPSRequest.IsValid)
+                    Console.WriteLine("Cool Down Time can't be larger than the Duration");
+                }
+
+                if (command.RequestCount.HasValue && command.BatchSize.HasValue && command.BatchSize.Value > command.RequestCount.Value)
+                {
+                    Console.WriteLine("Batch Size can't be larger than the request count");
+                }
+
+
+                if (command.LPSRequest != null)
+                {
+                        new LPSRequest.Validator(null, command.LPSRequest);
+                        if (!command.LPSRequest.IsValid)
                         {
                             Console.WriteLine("Invalid Http Request");
-                            dto.IsValid = false;
+                            command.IsValid = false;
                         }
                 }
                 Console.ResetColor();

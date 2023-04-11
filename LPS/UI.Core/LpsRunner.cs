@@ -1,29 +1,54 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.UI.Core
 {
-    internal class LpsRunner
+    internal class LpsManager
     {
-        public async Task Run(LPSTestPlan.SetupCommand planCommand, ICustomLogger logger)
+        private ICustomLogger _logger; 
+        internal LpsManager(ICustomLogger logger) { 
+            _logger= logger;
+        }
+        private bool _endWatching;
+        public async Task Run(LPSTestPlan.SetupCommand planCommand)
         {
             if (planCommand.IsValid)
             {
-                await logger.LogAsync("0000-0000-0000", "New Test Has Been Started", LoggingLevel.INF);
+                CancellationTokenSource cts = new CancellationTokenSource();
+                var cancellationTask = WatchForCancellation(cts);
+                await _logger.LogAsync("0000-0000-0000", "New Test Has Been Started", LoggingLevel.INF);
 
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine("...Test has started...");
                 Console.ResetColor();
 
-                var lpsTest = new LPSTestPlan(planCommand, logger);
-                await new LPSTestPlan.ExecuteCommand().ExecuteAsync(lpsTest);
+                var lpsTest = new LPSTestPlan(planCommand, _logger);
+                await new LPSTestPlan.ExecuteCommand().ExecuteAsync(lpsTest, cts.Token);
 
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("...Test has completed...");
+                Console.WriteLine($"...Your Performance Test Plan {planCommand.Name} Has Executed Successfully...");
                 Console.ResetColor();
-                await logger.LogAsync("0000-0000-0000", "Test Has Completed", LoggingLevel.INF);
+                await _logger.LogAsync("0000-0000-0000", "Test Has Completed", LoggingLevel.INF);
+                _endWatching = true;
+            }
+        }
+
+        public async Task WatchForCancellation(CancellationTokenSource cts)
+        {
+            while (!_endWatching)
+            {
+                if (Console.KeyAvailable)
+                {
+                    ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                    if (keyInfo.Key == ConsoleKey.Escape)
+                    {
+                        cts.Cancel();
+                    }
+                }
+                await Task.Delay(1000);
             }
         }
     }

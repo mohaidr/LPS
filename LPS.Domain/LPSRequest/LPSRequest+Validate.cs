@@ -17,9 +17,9 @@ namespace LPS.Domain
     {
         public class Validator: IValidator<LPSRequest, SetupCommand>
         {
-            public Validator(LPSRequest entity, SetupCommand dto)
+            public Validator(LPSRequest entity, SetupCommand command)
             {
-                Validate(entity,dto);
+                Validate(entity,command);
             }
 
             public void Validate(LPSRequest entity, SetupCommand command)

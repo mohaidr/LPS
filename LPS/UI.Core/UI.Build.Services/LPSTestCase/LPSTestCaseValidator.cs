@@ -25,7 +25,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     }
                     break;
                 case "-requestCount":
-
                     if (!_command.RequestCount.HasValue || _command.RequestCount <= 0)
                     {
                         return false;

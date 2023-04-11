@@ -13,11 +13,11 @@ namespace LPS.Domain
         {
 
         }
-        public LPSTestPlan(SetupCommand dto, ICustomLogger logger)
+        public LPSTestPlan(SetupCommand command, ICustomLogger logger)
         {
             LPSTestCases = new List<LPSTestCase>();
             _logger = logger;
-            this.Setup(dto);
+            this.Setup(command);
         }
 
         public IList<LPSTestCase> LPSTestCases { get; private set; }
@@ -26,5 +26,9 @@ namespace LPS.Domain
         public bool IsRedo { get; private set; }
 
         public bool IsValid { get; private set; }
+
+        public int NumberOfClients { get; private set; }
+        public int? RampUpPeriod { get; private set; }
+
     }
 }

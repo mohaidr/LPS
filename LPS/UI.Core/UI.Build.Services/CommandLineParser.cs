@@ -91,7 +91,7 @@ namespace LPS.UI.Core.UI.Build.Services
             runCommand.SetHandler(async (testName) =>
             {
                 _command = new LpsSerializer().DeSerialize(File.ReadAllText($"{testName}.json"));
-                await new LpsRunner().Run(_command, _logger);
+                await new LpsManager(_logger).Run(_command);
             }, CommandLineOptions.TestNameOption);
 
             lpsCommand.Invoke(CommandLineArgs);

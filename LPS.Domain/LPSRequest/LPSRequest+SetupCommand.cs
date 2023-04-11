@@ -44,31 +44,31 @@ namespace LPS.Domain
         }
 
 
-        private void Setup(SetupCommand dto)
+        private void Setup(SetupCommand command)
         {
-            new Validator(this, dto);
+            new Validator(this, command);
 
-            if (dto.IsValid)
+            if (command.IsValid)
             {
-                this.HttpRequestTimeout = dto.TimeOut;
+                this.HttpRequestTimeout = command.TimeOut;
 
-                this.HttpMethod = dto.HttpMethod;
-
-
-                this.Httpversion = dto.Httpversion;
+                this.HttpMethod = command.HttpMethod;
 
 
-                this.URL = dto.URL;
+                this.Httpversion = command.Httpversion;
 
 
-                this.Payload = dto.Payload;
+                this.URL = command.URL;
+
+
+                this.Payload = command.Payload;
 
 
                 this.HttpHeaders = new Dictionary<string, string>();
 
-                if (dto.HttpHeaders != null)
+                if (command.HttpHeaders != null)
                 {
-                    foreach (var header in dto.HttpHeaders)
+                    foreach (var header in command.HttpHeaders)
                     {
                         this.HttpHeaders.Add(header.Key, header.Value);
                     }

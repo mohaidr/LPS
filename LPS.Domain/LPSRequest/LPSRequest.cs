@@ -21,16 +21,16 @@ namespace LPS.Domain
 
         }
 
-        public LPSRequest(LPSRequest.SetupCommand dto, ICustomLogger logger )
+        public LPSRequest(LPSRequest.SetupCommand command, ICustomLogger logger )
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
-            this.Setup(dto);
+            this.Setup(command);
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
             {
-                PooledConnectionLifetime = TimeSpan.FromSeconds(60),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(20),
-                MaxConnectionsPerServer = 1000,
+                PooledConnectionLifetime = TimeSpan.FromMinutes(4),
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
+                MaxConnectionsPerServer = 1,
             };
             httpClient = new HttpClient(socketsHandler);
             httpClient.Timeout = TimeSpan.FromMinutes(this.HttpRequestTimeout);

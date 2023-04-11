@@ -62,7 +62,8 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.Name = string.Empty;
+                _command.NumberOfClients = 0;
+                _command.RampUpPeriod= null ;   
             }
         }
     }

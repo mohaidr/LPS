@@ -18,17 +18,17 @@ namespace LPS.Domain
     {
         public class RedoCommand : IAsyncCommand<LPSTestPlan>
         {
-            async public Task ExecuteAsync(LPSTestPlan entity)
+            async public Task ExecuteAsync(LPSTestPlan entity, CancellationToken token)
             {
-                await entity.RedoAsync(this);
+                await entity.RedoAsync(this, token);
             }
         }
-        async private Task RedoAsync(RedoCommand dto)
+        async private Task RedoAsync(RedoCommand command, CancellationToken token)
         {
             if (this.IsValid)
             {
                 this.IsRedo = true;
-                await this.ExecuteAsync(new ExecuteCommand());
+                await this.ExecuteAsync(new ExecuteCommand(), token);
             }
         }
     }

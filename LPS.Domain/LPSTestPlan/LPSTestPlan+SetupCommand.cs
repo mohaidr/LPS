@@ -13,7 +13,8 @@ namespace LPS.Domain
 
             public SetupCommand()
             {
-                Name =  DateTime.Now.ToFileTime().ToString();
+                NumberOfClients = 1;
+                RampUpPeriod= 0;
                 LPSTestCases = new List<LPSTestCase.SetupCommand>();
             }
 
@@ -25,21 +26,24 @@ namespace LPS.Domain
             public List<LPSTestCase.SetupCommand> LPSTestCases { get; set; }
 
             public string Name { get; set; }
-
+            public int NumberOfClients { get; set; }
+            public int? RampUpPeriod { get; set; }
             public bool IsValid { get; set; }
         }
 
-        private void Setup(SetupCommand dto)
+        private void Setup(SetupCommand command)
         {
-            new Validator(this, dto);
+            new Validator(this, command);
 
-            if (dto.IsValid)
+            if (command.IsValid)
             {
-                this.Name = dto.Name;
+                this.Name = command.Name;
+                this.NumberOfClients= command.NumberOfClients;
+                this.RampUpPeriod= command.RampUpPeriod;
                 this.IsValid = true;
-                foreach (var command in dto.LPSTestCases)
+                foreach (var lpsTestCaseCommand in command.LPSTestCases)
                 {
-                    LPSTestCases.Add(new LPSTestCase(command, this._logger));
+                    LPSTestCases.Add(new LPSTestCase(lpsTestCaseCommand, this._logger));
                 }
             }
         }  

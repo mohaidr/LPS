@@ -18,35 +18,40 @@ namespace LPS.Domain
    
         public class Validator: IValidator<LPSTestPlan, LPSTestPlan.SetupCommand>
         {
-            public Validator(LPSTestPlan entity , SetupCommand dto)
+            public Validator(LPSTestPlan entity , SetupCommand command)
             {
-                Validate(entity, dto);
+                Validate(entity, command);
             }
 
-            public void Validate(LPSTestPlan entity,SetupCommand dto)
+            public void Validate(LPSTestPlan entity,SetupCommand command)
             {
-                dto.IsValid = true;
-                if (string.IsNullOrEmpty(dto.Name)  || !Regex.IsMatch(dto.Name, @"^[\w.-]{2,}$"))
+                command.IsValid = true;
+                if (string.IsNullOrEmpty(command.Name)  || !Regex.IsMatch(command.Name, @"^[\w.-]{2,}$"))
                 {
-                    dto.IsValid = false;
+                    command.IsValid = false;
                     Console.WriteLine("Invalid Test Name, The Name Should At least Be of 2 Charachters And Can Only Contains Letters, Numbers, ., _ and -");
                 }
-
-                if (dto.LPSTestCases != null && dto.LPSTestCases.Count>0)
+                if (command.NumberOfClients < 1)
                 {
-                    foreach (var command in dto.LPSTestCases)
+                    command.IsValid = false;
+                    Console.WriteLine("Number of user can't be less than 1, at least one user has to be created.");
+                }
+
+                if (command.LPSTestCases != null && command.LPSTestCases.Count>0)
+                {
+                    foreach (var lpsTestCaseCommand in command.LPSTestCases)
                     {
-                        new LPSTestCase.Validator(null, command);
-                        if (!command.IsValid)
+                        new LPSTestCase.Validator(null, lpsTestCaseCommand);
+                        if (!lpsTestCaseCommand.IsValid)
                         {
-                            Console.WriteLine($"The http request named {command.Name} has an invalid input, please review the above errors and fix them");
-                            dto.IsValid = false;
+                            Console.WriteLine($"The http request named {lpsTestCaseCommand.Name} has an invalid input, please review the above errors and fix them");
+                            command.IsValid = false;
                         }
                     }
                 }
                 else
                 {
-                    dto.IsValid = false;
+                    command.IsValid = false;
                     Console.WriteLine("Invalid async test, the test should at least contain one http request");
                 }
             }

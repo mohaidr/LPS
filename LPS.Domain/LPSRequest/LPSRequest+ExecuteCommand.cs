@@ -17,17 +17,17 @@ namespace LPS.Domain
     {
         private class ProtectedAccessLPSTestCaseExecuteCommand : LPSTestCase.ExecuteCommand
         {
-            public new int SafelyIncrementNumberofSentRequests(LPSTestCase.ExecuteCommand dto)
+            public new int SafelyIncrementNumberofSentRequests(LPSTestCase.ExecuteCommand command)
             {
-                return base.SafelyIncrementNumberofSentRequests(dto);
+                return base.SafelyIncrementNumberofSentRequests(command);
             }
-            public new int SafelyIncrementNumberOfFailedRequests(LPSTestCase.ExecuteCommand dto)
+            public new int SafelyIncrementNumberOfFailedRequests(LPSTestCase.ExecuteCommand command)
             {
-                return base.SafelyIncrementNumberOfFaildRequests(dto);
+                return base.SafelyIncrementNumberOfFailedRequests(command);
             }
-            public new int SafelyIncrementNumberOfSuccessfulRequests(LPSTestCase.ExecuteCommand dto)
+            public new int SafelyIncrementNumberOfSuccessfulRequests(LPSTestCase.ExecuteCommand command)
             {
-                return base.SafelyIncrementNumberOfSuccessfulRequests(dto);
+                return base.SafelyIncrementNumberOfSuccessfulRequests(command);
             }
         }
 
@@ -40,18 +40,18 @@ namespace LPS.Domain
 
             public LPSTestCase.ExecuteCommand LPSTestCaseExecuteCommand { get; set; }
 
-            async public Task ExecuteAsync(LPSRequest entity)
+            async public Task ExecuteAsync(LPSRequest entity, CancellationToken cancellationToken)
             {
-                await entity.ExecuteAsync(this);
+                await entity.ExecuteAsync(this, cancellationToken);
             }
         }
 
-        async private Task ExecuteAsync(ExecuteCommand dto)
+        async private Task ExecuteAsync(ExecuteCommand command, CancellationToken cancellationToken)
         {
             if (this.IsValid)
             {
                 int callNumber = int.MinValue;
-                ProtectedAccessLPSTestCaseExecuteCommand command = new ProtectedAccessLPSTestCaseExecuteCommand();
+                ProtectedAccessLPSTestCaseExecuteCommand protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
                 try
                 {
 
@@ -95,11 +95,11 @@ namespace LPS.Domain
 
                     }
 
-                    var responseMessageTask = httpClient.SendAsync(httpRequestMessage);
-                    callNumber = command.SafelyIncrementNumberofSentRequests(dto.LPSTestCaseExecuteCommand);
+                    var responseMessageTask = httpClient.SendAsync(httpRequestMessage, cancellationToken);
+                    callNumber = protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
                     var responseMessage = await responseMessageTask;
                     this.HasFailed = false;
-                    command.SafelyIncrementNumberOfSuccessfulRequests(dto.LPSTestCaseExecuteCommand);
+                    protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSTestCaseExecuteCommand);
                     await _logger.LogAsync(string.Empty, $"...Response for call # {callNumber}...\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LoggingLevel.INF);
                 }
                 catch (Exception ex)
@@ -109,10 +109,9 @@ namespace LPS.Domain
                         Console.WriteLine(ex);
                     }
 
-                    command.SafelyIncrementNumberOfFailedRequests(dto.LPSTestCaseExecuteCommand);
+                    protectedCommand.SafelyIncrementNumberOfFailedRequests(command.LPSTestCaseExecuteCommand);
                     this.HasFailed = true;
                     await _logger.LogAsync(string.Empty, @$"...Response for call # {callNumber} \n\t ...Call # {callNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LoggingLevel.ERR);
-
                 }
             }
         }

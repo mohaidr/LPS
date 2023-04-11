@@ -50,7 +50,8 @@ namespace LPS.UI.Core
             {
                 var manualBuild = new ManualBuild(new LPSTestPlanValidator(lpsTestPlanSetupCommand));
                 manualBuild.Build(lpsTestPlanSetupCommand);
-                await new LpsRunner().Run(lpsTestPlanSetupCommand, _logger);
+                var lpsManager = new LpsManager(_logger);
+                await lpsManager.Run(lpsTestPlanSetupCommand);
                 File.WriteAllText($"{lpsTestPlanSetupCommand.Name}.json", new LpsSerializer().Serialize(lpsTestPlanSetupCommand));
                 string action;
                 while (true)
@@ -59,9 +60,8 @@ namespace LPS.UI.Core
                     action = Console.ReadLine()?.Trim().ToLower();
                     if (action == "redo")
                     {
-                        var lpsTest = new LPSTestPlan(lpsTestPlanSetupCommand, _logger);
-                        await new LPSTestPlan.RedoCommand().ExecuteAsync(lpsTest);
-                        continue;
+                        lpsTestPlanSetupCommand.Name = string.Concat(lpsTestPlanSetupCommand.Name, ".Redo");
+                        await lpsManager.Run(lpsTestPlanSetupCommand);
                     }
                     break;
                 }

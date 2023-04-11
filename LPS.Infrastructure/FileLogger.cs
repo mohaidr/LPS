@@ -36,7 +36,7 @@ namespace LPS.Infrastructure.Logging
 
         private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        public string Location { get; set; } = "logs/load-test.Log";
+        public string Location { get; set; } = "logs/lps.Log";
         public void Log(string EventId, string DiagnosticMessage, LoggingLevel Level)
         {
             throw new NotImplementedException();

@@ -62,7 +62,7 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.Name = string.Empty;
+                //reset optional fields if there are any
             }
         }
     }

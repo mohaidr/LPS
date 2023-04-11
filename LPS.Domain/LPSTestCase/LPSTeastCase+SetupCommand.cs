@@ -20,7 +20,6 @@ namespace LPS.Domain
 
             public SetupCommand()
             {
-                Name = DateTime.Now.Ticks.ToString();
                 LPSRequest = new LPSRequest.SetupCommand();
             }
 
@@ -47,29 +46,12 @@ namespace LPS.Domain
             {
                 get
                 {
-
-                    if (Duration.HasValue && Duration.Value > 0
-                        && CoolDownTime.HasValue && CoolDownTime.Value > 0
-                        && RequestCount.HasValue && RequestCount.Value > 0
-                        && !BatchSize.HasValue)
-                    {
-                        return IterationMode.DCR;
-                    }
-                    else
                     if (Duration.HasValue && Duration.Value > 0
                         && CoolDownTime.HasValue && CoolDownTime.Value > 0
                         && BatchSize.HasValue && BatchSize.Value > 0
                         && !RequestCount.HasValue)
                     {
                         return IterationMode.DCB;
-                    }
-                    else
-                    if (Duration.HasValue && Duration.Value > 0
-                        && RequestCount.HasValue && RequestCount.Value > 0
-                        && BatchSize.HasValue && BatchSize.Value > 0
-                        && !CoolDownTime.HasValue)
-                    {
-                        return IterationMode.DRB;
                     }
                     else
                     if (CoolDownTime.HasValue && CoolDownTime.Value > 0
@@ -95,6 +77,14 @@ namespace LPS.Domain
                     {
                         return IterationMode.R;
                     }
+                    else
+                    if (Duration.HasValue && Duration.Value > 0
+                        && !RequestCount.HasValue
+                        && !BatchSize.HasValue
+                        && !CoolDownTime.HasValue)
+                    {
+                        return IterationMode.D;
+                    }
 
                     return null;
                 }
@@ -109,7 +99,7 @@ namespace LPS.Domain
 
             if (command.IsValid)
             {
-                this.Count = command.RequestCount;
+                this.RequestCount = command.RequestCount;
                 this.Name = command.Name;
                 this.Mode = command.Mode;
                 this.LPSRequest = new LPSRequest(command.LPSRequest, this._logger);
