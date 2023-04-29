@@ -5,10 +5,10 @@ using System;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestChallengeUserService : IChallengeUserService<LPSRequest.SetupCommand, LPSRequest>
+    internal class LPSRequestChallengeUserService : IChallengeUserService<LPSHttpRequest.SetupCommand, LPSHttpRequest>
     {
-        IValidator<LPSRequest.SetupCommand, LPSRequest> _validator;
-        public LPSRequestChallengeUserService(bool skipOptionalFields, LPSRequest.SetupCommand command, IValidator<LPSRequest.SetupCommand, LPSRequest> validator)
+        IValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> _validator;
+        public LPSRequestChallengeUserService(bool skipOptionalFields, LPSHttpRequest.SetupCommand command, IValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -17,8 +17,8 @@ namespace LPS.UI.Core.UI.Build.Services
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
         private bool _skipOptionalFields;
 
-        LPSRequest.SetupCommand _command;
-        public LPSRequest.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSHttpRequest.SetupCommand _command;
+        public LPSHttpRequest.SetupCommand Command { get { return _command; } set { value = _command; } }
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -40,18 +40,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.WriteLine("Enter a valid URL e.g (http(s)://example.com)");
                     _command.URL = ChallengeService.Challenge("-url");
                     continue;
-                }
-
-
-                if (!_validator.Validate("-timeout"))
-                {
-                    try
-                    {
-                        Console.WriteLine("Enter the HTTP request timeout value in minutes");
-                        _command.TimeOut = int.Parse(ChallengeService.Challenge("-timeout"));
-                        continue;
-                    }
-                    catch { }
                 }
                 if (!_validator.Validate("-httpversion"))
                 {
@@ -80,7 +68,6 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.TimeOut = -1;
                 _command.Httpversion = string.Empty;
             }
         }

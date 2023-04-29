@@ -16,19 +16,18 @@ using System.Xml.Linq;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    public class LPSTestCaseBinder : BinderBase<LPSTestCase.SetupCommand>
+    public class LPSTestCaseBinder : BinderBase<LPSHttpTestCase.SetupCommand>
     {
         private readonly Option<string> _nameOption;
         private readonly Option<int> _requestCountOption;
         private readonly Option<string> _httpMethodOption;
         private readonly Option<string> _httpversionOption;
-        private readonly Option<int> _timeoutOption;
         private readonly Option<string> _urlOption;
         private readonly Option<IList<string>> _headerOption;
         private readonly Option<string> _payloadOption;
 
         public LPSTestCaseBinder(Option<string> nameOption, Option<int> requestCountOption,
-            Option<string> httpMethodOption, Option<string> httpversionOption, Option<int> timeoutOption, Option<string> urlOption,
+            Option<string> httpMethodOption, Option<string> httpversionOption,  Option<string> urlOption,
             Option<IList<string>> headerOption, Option<string> payloadOption)
         {
             _nameOption = nameOption;
@@ -38,19 +37,17 @@ namespace LPS.UI.Core.UI.Build.Services
             _urlOption = urlOption;
             _headerOption = headerOption;
             _payloadOption = payloadOption;
-            _timeoutOption = timeoutOption;
         }
 
-        protected override LPSTestCase.SetupCommand GetBoundValue(BindingContext bindingContext) =>
-            new LPSTestCase.SetupCommand
+        protected override LPSHttpTestCase.SetupCommand GetBoundValue(BindingContext bindingContext) =>
+            new LPSHttpTestCase.SetupCommand
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
                 RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
-                LPSRequest = new LPSRequest.SetupCommand()
+                LPSRequest = new LPSHttpRequest.SetupCommand()
                 {
                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
                     Httpversion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
-                    TimeOut = bindingContext.ParseResult.GetValueForOption(_timeoutOption),
                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
                     Payload = bindingContext.ParseResult.GetValueForOption(_payloadOption)!=null ? InputPayloadService.ReadFromFile(bindingContext.ParseResult.GetValueForOption(_payloadOption)): string.Empty,
                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption))

@@ -12,45 +12,22 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSRequest : IValidEntity, IExecutable
+    public partial class LPSRequest : IValidEntity, IExecutable, IRequestable
     {
         private ICustomLogger _logger;
-        private HttpClient httpClient;
-        private LPSRequest()
+        protected LPSRequest()
         {
 
         }
 
-        public LPSRequest(LPSRequest.SetupCommand command, ICustomLogger logger )
+        public LPSRequest(LPSRequest.SetupCommand command, ICustomLogger logger)
         {
-            HttpHeaders = new Dictionary<string, string>();
-            _logger = logger;
-            this.Setup(command);
-            SocketsHttpHandler socketsHandler = new SocketsHttpHandler
-            {
-                PooledConnectionLifetime = TimeSpan.FromMinutes(4),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(2),
-                MaxConnectionsPerServer = 1,
-            };
-            httpClient = new HttpClient(socketsHandler);
-            httpClient.Timeout = TimeSpan.FromMinutes(this.HttpRequestTimeout);
+            _logger= logger;
         }
 
-        public string HttpMethod { get; private set; }
+        public bool IsValid { get; protected set; }
 
-        public string URL { get; private set; }
-
-        public string Payload { get; private set; }
-
-        public string Httpversion { get; private set; }
-
-        public Dictionary<string, string> HttpHeaders { get; private set; }
-
-        public int HttpRequestTimeout { get; private set; }
-
-        public bool IsValid { get; private set; }
-
-        public bool HasFailed { get; private set; }
+        public bool HasFailed { get; protected set; }
     }
 
 }

@@ -17,6 +17,27 @@ namespace LPS.UI.Core.UI.Build.Services
                 case "-testName":
                     Console.Write("Teast Name: ");
                     return Console.ReadLine().Trim();
+                case "-numberOfClients":
+                    Console.Write("Number Of Clients: ");
+                    return Console.ReadLine().Trim();
+                case "-clientTimeOut":
+                    Console.Write("Client Timeout (Seconds): ");
+                    return Console.ReadLine().Trim();                
+                case "-rampupPeriod":
+                    Console.Write("Rampup Period (Milliseconds): ");
+                    return Console.ReadLine().Trim();
+                case "-maxConnectionsPerServer":
+                    Console.Write("Max Connections Per Server: ");
+                    return Console.ReadLine().Trim();                
+                case "-pooledConnectionLifetime":
+                    Console.Write("Pooled Connection Life time (Minutes): ");
+                    return Console.ReadLine().Trim();
+                case "-pooledConnectionIdleTimeout":
+                    Console.Write("Pooled Connection Idle Timeout (Minutes): ");
+                    return Console.ReadLine().Trim();
+                case "-delayClientCreationUntilNeeded":
+                    Console.Write("Dleay Client Creation Until Needed (Y/N): ");
+                    return Console.ReadLine().Trim();
                 case "-requestname":
                     Console.Write("Request Name: ");
                     return Console.ReadLine().Trim();
@@ -25,9 +46,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     return Console.ReadLine().Trim();
                 case "-httpmethod":
                     Console.Write("Http Method: ");
-                    return Console.ReadLine().Trim();
-                case "-timeout":
-                    Console.Write("Timeout: ");
                     return Console.ReadLine().Trim();
                 case "-requestCount":
                     Console.Write("Request Count: ");

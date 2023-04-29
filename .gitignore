@@ -1,0 +1,8 @@
+*.cache
+*.vsidx
+*.v2
+*.CopyComplete
+*.BuildWithSkipAnalyzers
+netcoreapp3.1
+net6.0
+obj

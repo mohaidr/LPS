@@ -8,9 +8,17 @@ namespace LPS.UI.Core
 {
     internal class LpsManager
     {
-        private ICustomLogger _logger; 
-        internal LpsManager(ICustomLogger logger) { 
-            _logger= logger;
+        private ICustomLogger _logger;
+        ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
+        ILPSClientConfiguration<LPSHttpRequest> _config;
+        internal LpsManager(ICustomLogger logger,
+                ILPSClientManager<LPSHttpRequest,
+                ILPSClientService<LPSHttpRequest>> httpClientManager,
+                ILPSClientConfiguration<LPSHttpRequest> config)
+        {
+            _logger = logger;
+            _httpClientManager = httpClientManager;
+            _config = config;
         }
         private bool _endWatching;
         public async Task Run(LPSTestPlan.SetupCommand planCommand)
@@ -25,7 +33,7 @@ namespace LPS.UI.Core
                 Console.WriteLine("...Test has started...");
                 Console.ResetColor();
 
-                var lpsTest = new LPSTestPlan(planCommand, _logger);
+                var lpsTest = new LPSTestPlan(planCommand, _httpClientManager, _config, _logger);
                 await new LPSTestPlan.ExecuteCommand().ExecuteAsync(lpsTest, cts.Token);
 
                 Console.ForegroundColor = ConsoleColor.Green;

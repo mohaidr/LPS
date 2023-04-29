@@ -20,7 +20,6 @@ namespace LPS.Domain
 
             public SetupCommand()
             {
-                LPSRequest = new LPSRequest.SetupCommand();
             }
 
             public void Execute(LPSTestCase entity)
@@ -28,69 +27,9 @@ namespace LPS.Domain
                 entity?.Setup(this);
             }
 
-            public LPSRequest.SetupCommand LPSRequest { get; set; }
 
-            public int? RequestCount { get; set; }
-
-            public int? Duration { get; set; }
-
-            public int? BatchSize { get; set; }
-
-            public int? CoolDownTime { get; set; }
 
             public bool IsValid { get; set; }
-
-            public string Name { get; set; }
-
-            public IterationMode? Mode
-            {
-                get
-                {
-                    if (Duration.HasValue && Duration.Value > 0
-                        && CoolDownTime.HasValue && CoolDownTime.Value > 0
-                        && BatchSize.HasValue && BatchSize.Value > 0
-                        && !RequestCount.HasValue)
-                    {
-                        return IterationMode.DCB;
-                    }
-                    else
-                    if (CoolDownTime.HasValue && CoolDownTime.Value > 0
-                        && RequestCount.HasValue && RequestCount.Value > 0
-                        && BatchSize.HasValue && BatchSize.Value > 0
-                        && !Duration.HasValue)
-                    {
-                        return IterationMode.CRB;
-                    }
-                    else
-                    if (CoolDownTime.HasValue && CoolDownTime.Value > 0
-                        && BatchSize.HasValue && BatchSize.Value > 0
-                        && !Duration.HasValue
-                        && !RequestCount.HasValue)
-                    {
-                        return IterationMode.CB;
-                    }
-                    else
-                    if (RequestCount.HasValue && RequestCount.Value > 0
-                        && !Duration.HasValue
-                        && !BatchSize.HasValue
-                        && !CoolDownTime.HasValue)
-                    {
-                        return IterationMode.R;
-                    }
-                    else
-                    if (Duration.HasValue && Duration.Value > 0
-                        && !RequestCount.HasValue
-                        && !BatchSize.HasValue
-                        && !CoolDownTime.HasValue)
-                    {
-                        return IterationMode.D;
-                    }
-
-                    return null;
-                }
-
-            }
-
         }
 
         private void Setup(SetupCommand command)
@@ -99,14 +38,7 @@ namespace LPS.Domain
 
             if (command.IsValid)
             {
-                this.RequestCount = command.RequestCount;
-                this.Name = command.Name;
-                this.Mode = command.Mode;
-                this.LPSRequest = new LPSRequest(command.LPSRequest, this._logger);
-                this.Duration = command.Duration;
-                this.CoolDownTime = command.CoolDownTime; ;
-                this.BatchSize = command.BatchSize;
-                this.IsValid = true;
+
             }
         }
     }

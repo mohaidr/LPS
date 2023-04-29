@@ -3,11 +3,13 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.IO;
-using LPS.Infrastructure.Logging;
 using LPS.UI.Core;
 using System.Threading.Tasks;
 using LPS.DIExtensions;
 using Microsoft.Extensions.Logging;
+using LPS.Infrastructure.Logger;
+using LPS.Domain;
+using LPS.Infrastructure.Client;
 
 namespace LPS
 {
@@ -32,6 +34,9 @@ namespace LPS
                     //Dependency Injection goes Here
                     services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args }));
                     services.AddSingleton<ICustomLogger, FileLogger>();
+                    services.AddTransient<ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>>, LPSHttpClientManager>();
+                    services.AddTransient<ILPSClientService<LPSHttpRequest>, LPSHttpClientService>();
+                    services.AddTransient<ILPSClientConfiguration<LPSHttpRequest>, LPSHttpClientConfiguration>();
 
                     if (context.HostingEnvironment.IsProduction())
                     {

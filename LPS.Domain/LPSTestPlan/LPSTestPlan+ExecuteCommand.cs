@@ -40,13 +40,13 @@ namespace LPS.Domain
                 {
                     foreach (var testCase in this.LPSTestCases)
                     {
-                        LPSTestCase.ExecuteCommand testCaseExecutecommand = new LPSTestCase.ExecuteCommand() { LPSTestPlanExecuteCommand = command };
+                        LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand() { LPSTestPlanExecuteCommand = command };
                         awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(testCase, cancellationToken));
                     }
 
-                    if (this.RampUpPeriod.HasValue)
+                    if (this.RampUpPeriod>0)
                     { 
-                        await Task.Delay(this.RampUpPeriod.Value);
+                        await Task.Delay(this.RampUpPeriod);
                     }
                 }
                 await Task.WhenAll(awaitableTasks.ToArray());

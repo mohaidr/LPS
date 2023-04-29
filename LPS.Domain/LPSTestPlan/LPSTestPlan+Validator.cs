@@ -34,14 +34,42 @@ namespace LPS.Domain
                 if (command.NumberOfClients < 1)
                 {
                     command.IsValid = false;
-                    Console.WriteLine("Number of user can't be less than 1, at least one user has to be created.");
+                    Console.WriteLine("Number of clients can't be less than 1, at least one user has to be created.");
+                }
+                if (command.MaxConnectionsPerServer < 1)
+                {
+                    command.IsValid = false;
+                    Console.WriteLine("Max connections per server can't be less than 1.");
+                }
+
+                if (command.ClientTimeout < 1)
+                {
+                    command.IsValid = false;
+                    Console.WriteLine("Client Timeout can't be less than 1.");
+                }
+
+                if (command.PooledConnectionIdleTimeout < 1)
+                {
+                    command.IsValid = false;
+                    Console.WriteLine("Pooled connection idle timeout can't be less than 1 minute.");
+                }
+                if (command.PooledConnectionLifetime < 1)
+                {
+                    command.IsValid = false;
+                    Console.WriteLine("Pooled connection life time can't be less than 1 minute.");
+                }
+
+                if (!command.DelayClientCreationUntilIsNeeded.HasValue) 
+                { 
+                    command.IsValid = false;
+                    Console.WriteLine("Delay client creation until needed can't be empty.");
                 }
 
                 if (command.LPSTestCases != null && command.LPSTestCases.Count>0)
                 {
                     foreach (var lpsTestCaseCommand in command.LPSTestCases)
                     {
-                        new LPSTestCase.Validator(null, lpsTestCaseCommand);
+                        new LPSHttpTestCase.Validator(null, lpsTestCaseCommand);
                         if (!lpsTestCaseCommand.IsValid)
                         {
                             Console.WriteLine($"The http request named {lpsTestCaseCommand.Name} has an invalid input, please review the above errors and fix them");

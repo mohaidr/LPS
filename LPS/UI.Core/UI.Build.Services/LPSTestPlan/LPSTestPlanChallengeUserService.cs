@@ -39,9 +39,91 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-                var lpsTestCaseCommand = new LPSTestCase.SetupCommand();
-                LPSTestCaseValidator validator= new LPSTestCaseValidator(lpsTestCaseCommand);
-                LPSTestCaseChallengeUserService lpsTestCaseUserService = new LPSTestCaseChallengeUserService(SkipOptionalFields, lpsTestCaseCommand,validator);
+                if (!_validator.Validate("-numberOfClients"))
+                {
+                    Console.WriteLine("The number of clients to connect to your site. " +
+                        "The number should be a valid positive number greater than 0");
+                    try
+                    {
+                        _command.NumberOfClients = int.Parse(ChallengeService.Challenge("-numberOfClients"));
+                    }
+                    catch { }
+                    continue;
+                }
+
+                if (!_validator.Validate("-clientTimeOut"))
+                {
+                    Console.WriteLine("The number of seconds before the client times out." +
+                        "The number should be a valid positive number greater than 0");
+                    try
+                    {
+                        _command.ClientTimeout = int.Parse(ChallengeService.Challenge("-clientTimeOut"));
+                    }
+                    catch { }
+                    continue;
+                }
+
+                if (!_validator.Validate("-rampupPeriod"))
+                {
+                    Console.WriteLine("The time to wait until a new client connects to your site");
+                    try
+                    {
+                        _command.RampUpPeriod = int.Parse(ChallengeService.Challenge("-rampupPeriod"));
+                    }
+                    catch { }
+                    continue;
+                }
+
+                if (!_validator.Validate("-maxConnectionsPerServer"))
+                {
+                    Console.WriteLine("The maximum number of concurrent connections per server");
+                    try
+                    {
+                        _command.MaxConnectionsPerServer = int.Parse(ChallengeService.Challenge("-maxConnectionsPerServer"));
+                    }
+                    catch { }
+                    continue;
+                }
+
+                if (!_validator.Validate("-pooledConnectionLifetime"))
+                {
+                    Console.WriteLine("Defines the maximal connection lifetime in the pool, tracking its age from when the connection was established, regardless of how much time it spent idle or active. See this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionlifetime?view=net-8.0");
+                    try
+                    {
+                        _command.PooledConnectionLifetime = int.Parse(ChallengeService.Challenge("-pooledConnectionLifetime"));
+                    }
+                    catch { }
+                    continue;
+                }
+
+                if (!_validator.Validate("-pooledConnectionIdleTimeout"))
+                {
+                    Console.WriteLine("Defined the maximum idle time for a connection in the pool.See this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionidletimeout?view=net-8.0");
+                    try
+                    {
+                        _command.PooledConnectionIdleTimeout = int.Parse(ChallengeService.Challenge("-pooledConnectionIdleTimeout"));
+                    }
+                    catch { }
+                    continue;
+                }
+
+                if (!_validator.Validate("-delayClientCreationUntilNeeded"))
+                {
+                    Console.WriteLine("Delay the client creation until the client is needed");
+
+                    switch (ChallengeService.Challenge("-delayClientCreationUntilNeeded").ToUpper())
+                    {
+                        case "Y":
+                            _command.DelayClientCreationUntilIsNeeded = true; break;
+                        case "N":
+                            _command.DelayClientCreationUntilIsNeeded = false; break;
+                    }
+                    continue;
+                }
+
+                var lpsTestCaseCommand = new LPSHttpTestCase.SetupCommand();
+                LPSTestCaseValidator validator = new LPSTestCaseValidator(lpsTestCaseCommand);
+                LPSTestCaseChallengeUserService lpsTestCaseUserService = new LPSTestCaseChallengeUserService(SkipOptionalFields, lpsTestCaseCommand, validator);
                 lpsTestCaseUserService.Challenge();
 
                 Command.LPSTestCases.Add(lpsTestCaseCommand);
@@ -63,7 +145,6 @@ namespace LPS.UI.Core.UI.Build.Services
             if (!_skipOptionalFields)
             {
                 _command.NumberOfClients = 0;
-                _command.RampUpPeriod= null ;   
             }
         }
     }

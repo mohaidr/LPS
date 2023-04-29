@@ -11,16 +11,23 @@ using LPS.UI.Common;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    public class CommandLineParser: IParser<LPSTestPlan.SetupCommand, LPSTestPlan>
+    public class CommandLineParser : IParser<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
         public string[] CommandLineArgs { get; set; }
 
         ICustomLogger _logger;
         LPSTestPlan.SetupCommand _command;
-        public CommandLineParser(ICustomLogger logger, LPSTestPlan.SetupCommand command)
+        ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
+        ILPSClientConfiguration<LPSHttpRequest> _config;
+        public CommandLineParser(ICustomLogger logger,
+            ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
+            ILPSClientConfiguration<LPSHttpRequest> config,
+            LPSTestPlan.SetupCommand command)
         {
             _logger = logger;
             _command = command;
+            _config = config;
+            _httpClientManager = httpClientManager;
         }
         public LPSTestPlan.SetupCommand Command { get { return _command; } set { } }
 
@@ -37,7 +44,6 @@ namespace LPS.UI.Core.UI.Build.Services
                 CommandLineOptions.NameOption,
                 CommandLineOptions.HttpMethodOption,
                 CommandLineOptions.HttpversionOption,
-                CommandLineOptions.TimeoutOption,
                 CommandLineOptions.RequestCountOption,
                 CommandLineOptions.UrlOption,
                 CommandLineOptions.HeaderOption,
@@ -72,7 +78,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     _command.IsValid = true;
                     string json = serializer.Serialize(_command);
                     File.WriteAllText($"{testName}.json", json);
-                    Console.ForegroundColor= ConsoleColor.Green;
+                    Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("Request Has Been Added Successfully");
                     Console.ResetColor();
 
@@ -83,7 +89,6 @@ namespace LPS.UI.Core.UI.Build.Services
                 CommandLineOptions.RequestCountOption,
                 CommandLineOptions.HttpMethodOption,
                 CommandLineOptions.HttpversionOption,
-                CommandLineOptions.TimeoutOption,
                 CommandLineOptions.UrlOption,
                 CommandLineOptions.HeaderOption,
                 CommandLineOptions.PayloadOption));
@@ -91,7 +96,7 @@ namespace LPS.UI.Core.UI.Build.Services
             runCommand.SetHandler(async (testName) =>
             {
                 _command = new LpsSerializer().DeSerialize(File.ReadAllText($"{testName}.json"));
-                await new LpsManager(_logger).Run(_command);
+                await new LpsManager(_logger, _httpClientManager, _config).Run(_command);
             }, CommandLineOptions.TestNameOption);
 
             lpsCommand.Invoke(CommandLineArgs);

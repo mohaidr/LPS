@@ -6,15 +6,16 @@ using System.Text;
 using System.Threading;
 using System.Reflection.Emit;
 using LPS.Domain.Common;
+using LPS.Infrastructure.Logging;
 
-namespace LPS.Infrastructure.Logging
+namespace LPS.Infrastructure.Logger
 {
     public class FileLogger : IFileLogger
     {
         TextWriter SynchronizedTextWriter;
         public FileLogger()
         {
-            if (String.IsNullOrEmpty(Location))
+            if (string.IsNullOrEmpty(Location))
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("Logging has been disabled, Location Can't be empty");

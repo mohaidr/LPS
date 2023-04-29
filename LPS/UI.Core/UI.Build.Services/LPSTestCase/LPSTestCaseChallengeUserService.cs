@@ -6,11 +6,11 @@ using System.Text;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestCaseChallengeUserService : IChallengeUserService<LPSTestCase.SetupCommand, LPSTestCase>
+    internal class LPSTestCaseChallengeUserService : IChallengeUserService<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
     {
-        IValidator<LPSTestCase.SetupCommand, LPSTestCase> _validator;
+        IValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> _validator;
 
-        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSTestCase.SetupCommand command, IValidator<LPSTestCase.SetupCommand, LPSTestCase> validator)
+        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSHttpTestCase.SetupCommand command, IValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -19,8 +19,8 @@ namespace LPS.UI.Core.UI.Build.Services
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
         private bool _skipOptionalFields;
 
-        LPSTestCase.SetupCommand _command;
-        public LPSTestCase.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSHttpTestCase.SetupCommand _command;
+        public LPSHttpTestCase.SetupCommand Command { get { return _command; } set { value = _command; } }
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -43,12 +43,10 @@ namespace LPS.UI.Core.UI.Build.Services
                     {
                         Console.WriteLine("Enter the number of requests");
                         _command.RequestCount = int.Parse(ChallengeService.Challenge("-requestCount"));
-                        continue;
+
                     }
-                    catch
-                    {
-                        continue;
-                    }
+                    catch { }
+                    continue;
                 }
                 break;
             }

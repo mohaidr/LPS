@@ -18,13 +18,18 @@ namespace LPS.UI.Core
     internal class Bootstrapper : IBootStrapper
     {
         ICustomLogger _logger;
-        IConfiguration _config;
+        ILPSClientConfiguration<LPSHttpRequest> _config;
+        ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         string[] _args;
-        public Bootstrapper(ICustomLogger logger, IConfiguration config, dynamic cmdArgs)
+        public Bootstrapper(ICustomLogger logger,
+            ILPSClientConfiguration<LPSHttpRequest> config,
+            ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
+            dynamic cmdArgs)
         {
             _logger = logger;
             _config = config;
             _args = cmdArgs.args;
+            _httpClientManager = httpClientManager;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -39,7 +44,7 @@ namespace LPS.UI.Core
 
             if (_args != null && _args.Length > 0)
             {
-                var commandLineParser = new CommandLineParser(_logger, lpsTestPlanSetupCommand);
+                var commandLineParser = new CommandLineParser(_logger, _httpClientManager, _config, lpsTestPlanSetupCommand);
                 commandLineParser.CommandLineArgs = _args;
                 commandLineParser.Parse();
                 Console.WriteLine("====================================================");
@@ -50,7 +55,7 @@ namespace LPS.UI.Core
             {
                 var manualBuild = new ManualBuild(new LPSTestPlanValidator(lpsTestPlanSetupCommand));
                 manualBuild.Build(lpsTestPlanSetupCommand);
-                var lpsManager = new LpsManager(_logger);
+                var lpsManager = new LpsManager(_logger, _httpClientManager, _config);
                 await lpsManager.Run(lpsTestPlanSetupCommand);
                 File.WriteAllText($"{lpsTestPlanSetupCommand.Name}.json", new LpsSerializer().Serialize(lpsTestPlanSetupCommand));
                 string action;

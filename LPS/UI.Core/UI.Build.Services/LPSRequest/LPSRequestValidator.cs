@@ -6,14 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestValidator : IValidator<LPSRequest.SetupCommand, LPSRequest>
+    internal class LPSRequestValidator : IValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest>
     {
-        public LPSRequestValidator(LPSRequest.SetupCommand command)
+        public LPSRequestValidator(LPSHttpRequest.SetupCommand command)
         {
             _command = command;
         }
-        LPSRequest.SetupCommand _command;
-        public LPSRequest.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSHttpRequest.SetupCommand _command;
+        public LPSHttpRequest.SetupCommand Command { get { return _command; } set { value = _command; } }
         public bool Validate(string property)
         {
             string[] httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
@@ -29,12 +29,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     break;
                 case "-httpmethod":
                     if (_command.HttpMethod == null || !httpMethods.Any(httpMethod => httpMethod == _command.HttpMethod.ToUpper()))
-                    {
-                        return false;
-                    }
-                    break;
-                case "-timeout":
-                    if (_command.TimeOut <= 0)
                     {
                         return false;
                     }
