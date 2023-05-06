@@ -24,13 +24,11 @@ namespace LPS.Domain
             * B refers to Batch Size  
             * R refers to Request Count
             */
-            DCB,
-            CRB,
-            CB,
-            DC,
-            RC,
-            R,
-            D
+            DCB = 0,
+            CRB = 1,
+            CB = 2,
+            R = 3,
+            D = 4
         }
 
         private LPSHttpTestCase()

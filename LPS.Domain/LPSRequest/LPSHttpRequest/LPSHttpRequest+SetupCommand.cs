@@ -15,12 +15,13 @@ namespace LPS.Domain
 
     public partial class LPSHttpRequest
     {
-        new public class SetupCommand : ICommand<LPSHttpRequest>
+        new public class SetupCommand : ICommand<LPSHttpRequest>, IValidCommand
         {
             public SetupCommand()
             {
                 Httpversion = "1.1";
                 HttpHeaders = new Dictionary<string, string>();
+                ValidationErrors = new Dictionary<string, string>();
             }
 
             public string HttpMethod { get; set; }
@@ -33,6 +34,7 @@ namespace LPS.Domain
             public Dictionary<string, string> HttpHeaders { get; set; }
 
             public bool IsValid { get; set; }
+            public IDictionary<string, string> ValidationErrors { get; set; }
 
             public void Execute(LPSHttpRequest entity)
             {

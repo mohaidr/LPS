@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -104,7 +105,6 @@ namespace LPS.Domain
                 }
                 #endregion
 
-                int requestsCounter;
                 ILPSClientService<LPSHttpRequest> client;
                 bool clientIncorrectlyDelayed = this._httpClient == null && this.Plan.DelayClientCreationUntilIsNeeded.HasValue && !this.Plan.DelayClientCreationUntilIsNeeded.Value;
                 if (clientIncorrectlyDelayed)
@@ -130,10 +130,11 @@ namespace LPS.Domain
                 }
 
                 LPSHttpRequest.ExecuteCommand lpsRequestExecCommand = new LPSHttpRequest.ExecuteCommand() { LPSTestCaseExecuteCommand = command, HttpClientService = client };
+                int requestsCounter=0;
+
                 switch (this.Mode)
                 {
                     case IterationMode.DCB:
-                        requestsCounter = 0;
                         for (int i = 0; i < this.Duration.Value && !cancellationToken.IsCancellationRequested; i += this.CoolDownTime.Value)
                         {
                             for (int b = 0; b < this.BatchSize; b++)
@@ -145,7 +146,6 @@ namespace LPS.Domain
                         }
                         break;
                     case IterationMode.CRB:
-                        requestsCounter = 0;
                         for (int i = 0; i < this.RequestCount.Value && !cancellationToken.IsCancellationRequested; i += this.BatchSize.Value)
                         {
                             for (int b = 0; b < this.BatchSize; b++)
@@ -157,7 +157,6 @@ namespace LPS.Domain
                         }
                         break;
                     case IterationMode.CB:
-                        requestsCounter = 0;
                         while (!cancellationToken.IsCancellationRequested)
                         {
                             for (int b = 0; b < this.BatchSize; b++)
@@ -169,28 +168,42 @@ namespace LPS.Domain
                         }
                         break;
                     case IterationMode.R:
-                        requestsCounter = 0;
                         for (int i = 0; i < this.RequestCount && !cancellationToken.IsCancellationRequested; i++)
                         {
                             awaitableTasks.Add(lpsRequestExecCommand.ExecuteAsync(LPSHttpRequest, cancellationToken));
                             requestsCounter++;
                         }
+                        Console.WriteLine("Ready For Reporting");
+                        break;
+                    case IterationMode.D:
+                        Stopwatch stopwatch = new Stopwatch();
+                        stopwatch.Start();
+                        while (stopwatch.Elapsed.TotalSeconds < this.Duration.Value && !cancellationToken.IsCancellationRequested)
+                        {
+                            awaitableTasks.Add(lpsRequestExecCommand.ExecuteAsync(LPSHttpRequest, cancellationToken));
+                            requestsCounter++;
+                        }
+                        stopwatch.Stop();
                         break;
                     default:
-                        throw new ArgumentException("Invalid IterationMode specified");
+                        throw new ArgumentException("Invalid iteration mode was chosen");
                 }
-                _ = ReportAsync(command, this.LPSHttpRequest.URL, requestsCounter);
+                _ = ReportAsync(command, this.LPSHttpRequest.URL, requestsCounter, cancellationToken);
                 await Task.WhenAll(awaitableTasks);
                 Console.WriteLine($"All requests has been processed by {this.LPSHttpRequest.URL} with {command.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {command.NumberOfFailedToCompleteRequests} failed to complete requests");
             }
         }
-        private static async Task ReportAsync(ExecuteCommand dto, string url, int requestCount)
+        private static async Task ReportAsync(ExecuteCommand dto, string url, int requestCount, CancellationToken cancellationToken)
         {
             Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
             while ((dto.NumberOfSuccessfullyCompletedRequests + dto.NumberOfFailedToCompleteRequests) != requestCount)
             {
-                Console.WriteLine($"    Host: {url}, Successfully completed: {dto.NumberOfSuccessfullyCompletedRequests}, Faile to complete:{dto.NumberOfFailedToCompleteRequests}");
+                Console.WriteLine($"\tHost: {url}, Successfully completed: {dto.NumberOfSuccessfullyCompletedRequests}, Faile to complete:{dto.NumberOfFailedToCompleteRequests}");
                 await Task.Delay(5000);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    break;
+                }
             }
         }
     }

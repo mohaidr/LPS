@@ -28,7 +28,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     return _command.RampUpPeriod > 0;
                 case "-maxConnectionsPerServer":
                     return _command.MaxConnectionsPerServer > 0;
-                case "-pooledConnectionLifetime":
+                case "-pooledConnectionLifeTime":
                     return _command.PooledConnectionLifetime > 0;
                 case "-pooledConnectionIdleTimeout":
                     return _command.PooledConnectionIdleTimeout > 0;

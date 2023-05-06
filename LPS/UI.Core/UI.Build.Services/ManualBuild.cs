@@ -24,7 +24,6 @@ namespace LPS.UI.Core.UI.Build.Services
             else
                 skipOptionalFields = true;
 
-            Console.WriteLine("Start building your test plan");
             new LPSTestPlanChallengeUserService(skipOptionalFields, lpsTestCommand, _validator).Challenge();
         }
     }

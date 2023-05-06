@@ -18,14 +18,46 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             switch (property)
             {
-                case "-requestname":
+                case "-testCaseName":
                     if (string.IsNullOrEmpty(_command.Name) || !Regex.IsMatch(_command.Name, @"^[\w.-]{2,}$"))
                     {
                         return false;
                     }
                     break;
+                case "-iterationMode":
+                    if (!_command.Mode.HasValue)
+                    {
+                        return false;
+                    }
+                    break;
                 case "-requestCount":
-                    if (!_command.RequestCount.HasValue || _command.RequestCount <= 0)
+                    if ((!_command.RequestCount.HasValue || _command.RequestCount <= 0)
+                        || (_command.BatchSize.HasValue && _command.RequestCount.HasValue
+                        && _command.BatchSize.Value > _command.RequestCount.Value))
+                    {
+                        return false;
+                    }
+                    break;
+                case "-coolDownTime":
+                    if ((!_command.CoolDownTime.HasValue || _command.CoolDownTime <= 0)
+                        || (_command.Duration.HasValue && _command.CoolDownTime.HasValue
+                        && _command.CoolDownTime.Value > _command.Duration.Value))
+                    {
+                        return false;
+                    }
+                    break;
+                case "-batchSize":
+                    if ((!_command.BatchSize.HasValue || _command.BatchSize <= 0)
+                        || (_command.BatchSize.HasValue && _command.RequestCount.HasValue 
+                        && _command.BatchSize.Value> _command.RequestCount.Value))
+                    {
+                        return false;
+                    }
+                    break;
+                case "-duration":
+                    if ((!_command.Duration.HasValue || _command.Duration <= 0)
+                        || (_command.Duration.HasValue && _command.CoolDownTime.HasValue
+                        && _command.CoolDownTime.Value > _command.Duration.Value))
                     {
                         return false;
                     }

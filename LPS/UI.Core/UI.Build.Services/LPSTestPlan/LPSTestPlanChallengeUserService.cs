@@ -30,6 +30,9 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 ResetOptionalFields();
             }
+            Console.ForegroundColor= ConsoleColor.Cyan;
+                Console.WriteLine("=================== Create Your Test Plan ===================");
+            Console.ResetColor();
             while (true)
             {
                 if (!_validator.Validate("-testname"))
@@ -43,11 +46,13 @@ namespace LPS.UI.Core.UI.Build.Services
                 {
                     Console.WriteLine("The number of clients to connect to your site. " +
                         "The number should be a valid positive number greater than 0");
-                    try
+
+                    int numberOfClients;
+                    if (int.TryParse(ChallengeService.Challenge("-numberOfClients"), out numberOfClients))
                     {
-                        _command.NumberOfClients = int.Parse(ChallengeService.Challenge("-numberOfClients"));
+                        _command.NumberOfClients = numberOfClients;
                     }
-                    catch { }
+
                     continue;
                 }
 
@@ -55,55 +60,65 @@ namespace LPS.UI.Core.UI.Build.Services
                 {
                     Console.WriteLine("The number of seconds before the client times out." +
                         "The number should be a valid positive number greater than 0");
-                    try
+
+                    int clientTimeout;
+                    if (int.TryParse(ChallengeService.Challenge("-clientTimeOut"), out clientTimeout))
                     {
-                        _command.ClientTimeout = int.Parse(ChallengeService.Challenge("-clientTimeOut"));
+                        _command.ClientTimeout = clientTimeout;
                     }
-                    catch { }
+
                     continue;
                 }
 
                 if (!_validator.Validate("-rampupPeriod"))
                 {
                     Console.WriteLine("The time to wait until a new client connects to your site");
-                    try
+
+                    int rampupPeriod;
+                    if (int.TryParse(ChallengeService.Challenge("-rampupPeriod"), out rampupPeriod))
                     {
-                        _command.RampUpPeriod = int.Parse(ChallengeService.Challenge("-rampupPeriod"));
+                        _command.RampUpPeriod = rampupPeriod;
                     }
-                    catch { }
+
                     continue;
                 }
 
                 if (!_validator.Validate("-maxConnectionsPerServer"))
                 {
                     Console.WriteLine("The maximum number of concurrent connections per server");
-                    try
+
+                    int maxConnectionsPerServer;
+                    if (int.TryParse(ChallengeService.Challenge("-maxConnectionsPerServer"), out maxConnectionsPerServer))
                     {
-                        _command.MaxConnectionsPerServer = int.Parse(ChallengeService.Challenge("-maxConnectionsPerServer"));
+                        _command.MaxConnectionsPerServer = maxConnectionsPerServer;
                     }
-                    catch { }
+
                     continue;
                 }
 
-                if (!_validator.Validate("-pooledConnectionLifetime"))
+                if (!_validator.Validate("-pooledConnectionLifeTime"))
                 {
-                    Console.WriteLine("Defines the maximal connection lifetime in the pool, tracking its age from when the connection was established, regardless of how much time it spent idle or active. See this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionlifetime?view=net-8.0");
-                    try
+                    Console.WriteLine("Pooled connection life time defines the maximal connection lifetime in the pool, tracking its age from when the connection was established, regardless of how much time it spent idle or active.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionlifetime?view=net-8.0");
+
+                    int pooledConnectionLifetime;
+                    if (int.TryParse(ChallengeService.Challenge("-pooledConnectionLifeTime"), out pooledConnectionLifetime))
                     {
-                        _command.PooledConnectionLifetime = int.Parse(ChallengeService.Challenge("-pooledConnectionLifetime"));
+                        _command.PooledConnectionLifetime = pooledConnectionLifetime;
                     }
-                    catch { }
+
                     continue;
                 }
 
                 if (!_validator.Validate("-pooledConnectionIdleTimeout"))
                 {
-                    Console.WriteLine("Defined the maximum idle time for a connection in the pool.See this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionidletimeout?view=net-8.0");
-                    try
+                    Console.WriteLine("Pooled connection idle timeout defined the maximum idle time for a connection in the pool.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionidletimeout?view=net-8.0");
+
+                    int pooledConnectionIdleTimeout;
+                    if (int.TryParse(ChallengeService.Challenge("-pooledConnectionIdleTimeout"), out pooledConnectionIdleTimeout))
                     {
-                        _command.PooledConnectionIdleTimeout = int.Parse(ChallengeService.Challenge("-pooledConnectionIdleTimeout"));
+                        _command.PooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
                     }
-                    catch { }
+
                     continue;
                 }
 
@@ -121,12 +136,20 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("=================== Add Http Test Case ===================");
+                Console.ResetColor();
                 var lpsTestCaseCommand = new LPSHttpTestCase.SetupCommand();
                 LPSTestCaseValidator validator = new LPSTestCaseValidator(lpsTestCaseCommand);
                 LPSTestCaseChallengeUserService lpsTestCaseUserService = new LPSTestCaseChallengeUserService(SkipOptionalFields, lpsTestCaseCommand, validator);
                 lpsTestCaseUserService.Challenge();
 
                 Command.LPSTestCases.Add(lpsTestCaseCommand);
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("=================== Http Test Case Has Been Added ===================");
+                Console.ResetColor();
 
                 Console.WriteLine("Enter \"add\" to add new test case to your test plan");
 
@@ -137,6 +160,10 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 break;
             }
+
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("=================== Plan Has Been Created ===================");
+            Console.ResetColor();
             _command.IsValid = true;
         }
 

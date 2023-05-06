@@ -8,7 +8,7 @@ namespace LPS.Domain
 
     public partial class LPSTestPlan
     {
-        public class SetupCommand: ICommand<LPSTestPlan>
+        public class SetupCommand: ICommand<LPSTestPlan>, IValidCommand
         {
 
             public SetupCommand()
@@ -34,6 +34,7 @@ namespace LPS.Domain
             public int MaxConnectionsPerServer { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool IsValid { get; set; }
+            public IDictionary<string, string> ValidationErrors { get; set; }
         }
 
         private void Setup(SetupCommand command)

@@ -52,7 +52,7 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
-                int requestNumber = 0;
+                int requestNumber;
                 ProtectedAccessLPSTestCaseExecuteCommand protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
                 try
                 {

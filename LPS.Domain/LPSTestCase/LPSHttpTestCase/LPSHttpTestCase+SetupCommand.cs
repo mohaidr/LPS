@@ -15,7 +15,7 @@ namespace LPS.Domain
 
     public partial class LPSHttpTestCase
     {
-        new public class SetupCommand : ICommand<LPSHttpTestCase>
+        new public class SetupCommand : ICommand<LPSHttpTestCase>, IValidCommand
         {
 
             public SetupCommand()
@@ -43,55 +43,8 @@ namespace LPS.Domain
 
             public string Name { get; set; }
 
-            public IterationMode? Mode
-            {
-                get
-                {
-                    if (Duration.HasValue && Duration.Value > 0
-                        && CoolDownTime.HasValue && CoolDownTime.Value > 0
-                        && BatchSize.HasValue && BatchSize.Value > 0
-                        && !RequestCount.HasValue)
-                    {
-                        return IterationMode.DCB;
-                    }
-                    else
-                    if (CoolDownTime.HasValue && CoolDownTime.Value > 0
-                        && RequestCount.HasValue && RequestCount.Value > 0
-                        && BatchSize.HasValue && BatchSize.Value > 0
-                        && !Duration.HasValue)
-                    {
-                        return IterationMode.CRB;
-                    }
-                    else
-                    if (CoolDownTime.HasValue && CoolDownTime.Value > 0
-                        && BatchSize.HasValue && BatchSize.Value > 0
-                        && !Duration.HasValue
-                        && !RequestCount.HasValue)
-                    {
-                        return IterationMode.CB;
-                    }
-                    else
-                    if (RequestCount.HasValue && RequestCount.Value > 0
-                        && !Duration.HasValue
-                        && !BatchSize.HasValue
-                        && !CoolDownTime.HasValue)
-                    {
-                        return IterationMode.R;
-                    }
-                    else
-                    if (Duration.HasValue && Duration.Value > 0
-                        && !RequestCount.HasValue
-                        && !BatchSize.HasValue
-                        && !CoolDownTime.HasValue)
-                    {
-                        return IterationMode.D;
-                    }
-
-                    return null;
-                }
-
-            }
-
+            public IterationMode? Mode { get; set; }
+            public IDictionary<string, string> ValidationErrors { get; set ; }
         }
 
         private void Setup(SetupCommand command)
