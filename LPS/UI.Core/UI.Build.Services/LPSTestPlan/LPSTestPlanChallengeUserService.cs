@@ -23,7 +23,6 @@ namespace LPS.UI.Core.UI.Build.Services
             _validator = validator;
         }
 
-
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -171,7 +170,10 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.NumberOfClients = 0;
+                _command.ClientTimeout = 0;
+                _command.MaxConnectionsPerServer = 0;
+                _command.PooledConnectionIdleTimeout = 0;
+                _command.PooledConnectionLifetime = 0;
             }
         }
     }

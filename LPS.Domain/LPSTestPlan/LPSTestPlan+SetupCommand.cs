@@ -13,9 +13,11 @@ namespace LPS.Domain
 
             public SetupCommand()
             {
-                //NumberOfClients = 1;
-                //RampUpPeriod= 0;
                 LPSTestCases = new List<LPSHttpTestCase.SetupCommand>();
+                ClientTimeout = 240;
+                MaxConnectionsPerServer = 1000;
+                PooledConnectionIdleTimeout = 5;
+                PooledConnectionLifetime = 25;
             }
 
             public void Execute(LPSTestPlan entity)
