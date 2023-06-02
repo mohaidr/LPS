@@ -34,7 +34,6 @@ namespace LPS.Domain
                     command.IsValid = false;
                 }
 
-
                 if (command.Mode.HasValue)
                 {
                     bool invalidIterationModeCombination = false;
@@ -58,6 +57,7 @@ namespace LPS.Domain
                         {
                             command.IsValid = false;
                             invalidIterationModeCombination = true;
+
                         }
                     }
                     else if (command.Mode.Value == IterationMode.CB)
@@ -81,6 +81,7 @@ namespace LPS.Domain
                         {
                             command.IsValid = false;
                             invalidIterationModeCombination = true;
+
                         }
 
                     }
@@ -93,6 +94,7 @@ namespace LPS.Domain
                         {
                             command.IsValid = false;
                             invalidIterationModeCombination = true;
+
 
                         }
                     }

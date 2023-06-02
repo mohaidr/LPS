@@ -36,15 +36,27 @@ namespace LPS.UI.Core.UI.Build.Services
             var lpsCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
 
             Command createCommand = new Command("create", "Create a new test") {
-                CommandLineOptions.TestNameOption
+                CommandLineOptions.TestNameOption,
+                CommandLineOptions.NumberOfClients,
+                CommandLineOptions.MaxConnectionsPerServer,
+                CommandLineOptions.PoolConnectionIdelTimeout,
+                CommandLineOptions.PoolConnectionLifeTime,
+                CommandLineOptions.ClientTimeoutOption,
+                CommandLineOptions.RampupPeriod,
+                CommandLineOptions.DelayClientCreation
+
             };
             Command addCommand = new Command("add", "Add an http request")
             {
                 CommandLineOptions.TestNameOption,
-                CommandLineOptions.NameOption,
+                CommandLineOptions.CaseNameOption,
                 CommandLineOptions.HttpMethodOption,
                 CommandLineOptions.HttpversionOption,
                 CommandLineOptions.RequestCountOption,
+                CommandLineOptions.IterationModeOption,
+                CommandLineOptions.Duratiion,
+                CommandLineOptions.CoolDownTime,
+                CommandLineOptions.BatchSize,
                 CommandLineOptions.UrlOption,
                 CommandLineOptions.HeaderOption,
                 CommandLineOptions.PayloadOption
@@ -57,9 +69,23 @@ namespace LPS.UI.Core.UI.Build.Services
             lpsCommand.AddCommand(addCommand);
             lpsCommand.AddCommand(runCommand);
 
-            createCommand.SetHandler((testName) =>
+            createCommand.SetHandler((testName, 
+                numberofClients,
+                maxConnectionsPerServer,
+                poolConnectionIdelTimeout,
+                poolConnectionLifeTime, 
+                clientTimeoutOption,
+                rampUpPeriod,
+                delayClientCreation) =>
                 {
                     _command.Name = testName;
+                    _command.NumberOfClients= numberofClients;
+                    _command.DelayClientCreationUntilIsNeeded= delayClientCreation;
+                    _command.RampUpPeriod= rampUpPeriod;
+                    _command.MaxConnectionsPerServer= maxConnectionsPerServer;
+                    _command.ClientTimeout= clientTimeoutOption;
+                    _command.PooledConnectionIdleTimeout= poolConnectionIdelTimeout;
+                    _command.PooledConnectionLifetime= poolConnectionLifeTime;
                     string json = new LpsSerializer().Serialize(_command);
                     File.WriteAllText($"{testName}.json", json);
                     Console.ForegroundColor = ConsoleColor.Green;
@@ -67,7 +93,14 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.ResetColor();
 
                 },
-                CommandLineOptions.TestNameOption);
+                CommandLineOptions.TestNameOption, 
+                CommandLineOptions.NumberOfClients,
+                CommandLineOptions.MaxConnectionsPerServer,
+                CommandLineOptions.PoolConnectionIdelTimeout,
+                CommandLineOptions.PoolConnectionLifeTime,
+                CommandLineOptions.ClientTimeoutOption,
+                CommandLineOptions.RampupPeriod,
+                CommandLineOptions.DelayClientCreation);
 
             addCommand.SetHandler(
                 (testName, lpsTestCase) =>
@@ -81,12 +114,15 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("Request Has Been Added Successfully");
                     Console.ResetColor();
-
                 },
                 CommandLineOptions.TestNameOption,
                 new LPSTestCaseBinder(
-                CommandLineOptions.NameOption,
+                CommandLineOptions.CaseNameOption,
                 CommandLineOptions.RequestCountOption,
+                CommandLineOptions.IterationModeOption,
+                CommandLineOptions.Duratiion,
+                CommandLineOptions.CoolDownTime,
+                CommandLineOptions.BatchSize,
                 CommandLineOptions.HttpMethodOption,
                 CommandLineOptions.HttpversionOption,
                 CommandLineOptions.UrlOption,
