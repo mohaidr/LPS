@@ -155,7 +155,8 @@ namespace LPS.UI.Core.UI.Build.Services
                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
                     Httpversion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
-                    Payload = bindingContext.ParseResult.GetValueForOption(_payloadOption) != null ? InputPayloadService.ReadFromFile(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
+                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? 
+                        InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption))
                 },
             };

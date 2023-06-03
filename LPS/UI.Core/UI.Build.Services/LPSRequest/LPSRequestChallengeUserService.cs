@@ -59,7 +59,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
             if (_command.HttpMethod.ToUpper() == "PUT" || _command.HttpMethod.ToUpper() == "POST" || _command.HttpMethod.ToUpper() == "PATCH")
             {
-                Console.WriteLine("Add payload to the request, enter a valid path to read the payload from");
+                Console.WriteLine("Add payload to the request. Enter Path:[Path] to read the payload from a path file, URL:[URL] to read the payload from a URL or just add your payload inline");
                 _command.Payload = InputPayloadService.Challenge();
             }
         }
