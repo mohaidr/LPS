@@ -33,17 +33,19 @@ namespace LPS.Domain
 
         new public class ExecuteCommand : IAsyncCommand<LPSHttpRequest> 
         {
-            internal ILPSClientService<LPSHttpRequest> HttpClientService { get; set; }
+            private ILPSClientService<LPSHttpRequest> _httpClientService { get; set; }
 
-            public ExecuteCommand()
+            public ExecuteCommand(ILPSClientService<LPSHttpRequest> httpClientService)
             {
-                LPSTestCaseExecuteCommand = new LPSHttpTestCase.ExecuteCommand();
+                _httpClientService = httpClientService;
+                LPSTestCaseExecuteCommand = new LPSHttpTestCase.ExecuteCommand(_httpClientService);
             }
 
             public LPSHttpTestCase.ExecuteCommand LPSTestCaseExecuteCommand { get; set; }
 
             async public Task ExecuteAsync(LPSHttpRequest entity, CancellationToken cancellationToken)
             {
+                entity._httpClientService = this._httpClientService;
                 await entity.ExecuteAsync(this, cancellationToken);
             }
         }
@@ -56,13 +58,13 @@ namespace LPS.Domain
                 ProtectedAccessLPSTestCaseExecuteCommand protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
                 try
                 {
-                    if (command.HttpClientService == null)
+                    if (this._httpClientService == null)
                     {
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
 
                     requestNumber = protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
-                    var clientServiceTask = command.HttpClientService.Send(this, requestNumber.ToString(), cancellationToken);
+                    var clientServiceTask = this._httpClientService.Send(this, requestNumber.ToString(), cancellationToken);
                     await clientServiceTask;
                     this.HasFailed = false;
                     protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSTestCaseExecuteCommand);

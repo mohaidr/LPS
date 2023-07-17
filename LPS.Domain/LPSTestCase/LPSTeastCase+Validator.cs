@@ -6,11 +6,14 @@ namespace LPS.Domain
     public partial class LPSTestCase
     {
    
-        public class Validator: IValidator<LPSTestCase, SetupCommand>
+        public class Validator: IDomainValidator<LPSTestCase, SetupCommand>
         {
-            public Validator(LPSTestCase entity , SetupCommand command)
+            ILPSLogger _logger;
+            public Validator(LPSTestCase entity, SetupCommand command, ILPSLogger logger)
             {
                 Validate(entity, command);
+                _logger = logger;
+
             }
 
             public void Validate(LPSTestCase entity,SetupCommand command)

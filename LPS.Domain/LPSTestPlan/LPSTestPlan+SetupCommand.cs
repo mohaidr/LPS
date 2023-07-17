@@ -41,7 +41,7 @@ namespace LPS.Domain
 
         private void Setup(SetupCommand command)
         {
-            new Validator(this, command);
+            new Validator(this, command, _logger, _runtimeOperationIdProvider);
 
             if (command.IsValid)
             {
@@ -51,12 +51,23 @@ namespace LPS.Domain
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
                 this.MaxConnectionsPerServer= command.MaxConnectionsPerServer;
-                this.PooledConnectionLifetime= command.PooledConnectionLifetime;
+                this.PooledConnectionLifeTime= command.PooledConnectionLifetime;
                 this.PooledConnectionIdleTimeout= command.PooledConnectionIdleTimeout;
                 this.ClientTimeout= command.ClientTimeout;
+                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).Timeout = TimeSpan.FromSeconds(this.ClientTimeout);
+                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).PooledConnectionLifetime = TimeSpan.FromMinutes(this.PooledConnectionLifeTime);
+                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).PooledConnectionIdleTimeout = TimeSpan.FromMinutes(this.PooledConnectionIdleTimeout);
+                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).MaxConnectionsPerServer = this.MaxConnectionsPerServer;
+                if (!this.DelayClientCreationUntilIsNeeded.Value)
+                {
+                    for (int i = 0; i < this.NumberOfClients; i++)
+                    {
+                        _lpsClientManager.CreateAndQueueClient(_lpsClientConfig);
+                    }
+                }
                 foreach (var lpsTestCaseCommand in command.LPSTestCases)
                 {
-                    var lpsTestCase = new LPSHttpTestCase(_lpsClientManager, _config, this._logger);
+                    var lpsTestCase = new LPSHttpTestCase(this._logger, _runtimeOperationIdProvider);
                     lpsTestCase.Plan= this;
                     lpsTestCaseCommand.Execute(lpsTestCase);
                     LPSTestCases.Add(lpsTestCase);

@@ -14,13 +14,13 @@ namespace LPS.Domain
 
     public partial class LPSRequest : IValidEntity, IExecutable, IRequestable
     {
-        private ICustomLogger _logger;
+        private ILPSLogger _logger;
         protected LPSRequest()
         {
 
         }
 
-        public LPSRequest(LPSRequest.SetupCommand command, ICustomLogger logger)
+        public LPSRequest(LPSRequest.SetupCommand command, ILPSLogger logger)
         {
             _logger= logger;
         }

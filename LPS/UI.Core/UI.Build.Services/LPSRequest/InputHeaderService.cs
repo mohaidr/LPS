@@ -1,9 +1,11 @@
 ﻿using LPS.Extensions;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.CommandLine.Binding;
 using System.Linq;
 using System.Net.Http.Headers;
+using System.Xml.Linq;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
@@ -23,11 +25,13 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 try
                 {
+                    if (string.IsNullOrEmpty(input))
+                       continue;
                     kvp = input.Split(':').ToList<string>();
                     if (!httpheaders.ContainsKey(kvp.First().Trim()))
-                        httpheaders.Add(kvp.First().Trim(), string.Join(":", kvp.Where(str => str != kvp.First())));
+                        httpheaders.Add(kvp.First().Trim(), string.Join(":", kvp.Where(str => str != kvp.First())).Trim());
                     else
-                        httpheaders[kvp[0]] = string.Join(":", kvp.Where(str => str != kvp.First()));
+                        httpheaders[kvp[0].Trim()] = string.Join(":", kvp.Where(str => str != kvp.First())).Trim();
                 }
                 catch
                 {

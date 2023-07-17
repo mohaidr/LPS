@@ -8,7 +8,7 @@ namespace LPS.Domain
     public partial class LPSTestPlan : IAggregateRoot, IValidEntity, IExecutable
     {
 
-        private ICustomLogger _logger;
+        private ILPSLogger _logger;
         private LPSTestPlan()
         {
 
@@ -16,15 +16,18 @@ namespace LPS.Domain
 
         ILPSClientManager<LPSHttpRequest,
         ILPSClientService<LPSHttpRequest>> _lpsClientManager;
-        ILPSClientConfiguration<LPSHttpRequest> _config;
+        ILPSClientConfiguration<LPSHttpRequest> _lpsClientConfig;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+
         public LPSTestPlan(SetupCommand command, ILPSClientManager<LPSHttpRequest,
             ILPSClientService<LPSHttpRequest>> lpsClientManager,
-            ILPSClientConfiguration<LPSHttpRequest> config, ICustomLogger logger)
+            ILPSClientConfiguration<LPSHttpRequest> lpsClientConfig, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             LPSTestCases = new List<LPSHttpTestCase>();
-            _lpsClientManager = lpsClientManager;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;
-            _config = config;
+            _lpsClientManager = lpsClientManager;
+            _lpsClientConfig = lpsClientConfig;
             this.Setup(command);
         }
 
@@ -33,8 +36,12 @@ namespace LPS.Domain
 
         public bool IsRedo { get; private set; }
         public bool? DelayClientCreationUntilIsNeeded { get; private set; }
+        //ToDo: Implement RunInParallel
+        public bool? RunInParallel { get; private set; }
+        //ToDo: Implement CleanUp Cookies
+        public bool SameClientForEachTeastCase { get; private set; } = true;
         public int ClientTimeout { get; private set; }
-        public int PooledConnectionLifetime { get; private set; }
+        public int PooledConnectionLifeTime { get; private set; }
         public int PooledConnectionIdleTimeout { get; private set; }
         public int MaxConnectionsPerServer { get; private set; }
         public bool IsValid { get; private set; }

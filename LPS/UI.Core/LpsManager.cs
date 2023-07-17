@@ -8,17 +8,21 @@ namespace LPS.UI.Core
 {
     internal class LpsManager
     {
-        private ICustomLogger _logger;
+        private ILPSLogger _logger;
         ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequest> _config;
-        internal LpsManager(ICustomLogger logger,
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+
+        internal LpsManager(ILPSLogger logger,
                 ILPSClientManager<LPSHttpRequest,
                 ILPSClientService<LPSHttpRequest>> httpClientManager,
-                ILPSClientConfiguration<LPSHttpRequest> config)
+                ILPSClientConfiguration<LPSHttpRequest> config,
+                IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
             _httpClientManager = httpClientManager;
             _config = config;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         private bool _endWatching;
         public async Task Run(LPSTestPlan.SetupCommand planCommand)
@@ -27,19 +31,12 @@ namespace LPS.UI.Core
             {
                 CancellationTokenSource cts = new CancellationTokenSource();
                 var cancellationTask = WatchForCancellation(cts);
-                await _logger.LogAsync("0000-0000-0000", "New Test Has Been Started", LoggingLevel.INF);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Test has started", LPSLoggingLevel.Information);
 
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("...Test has started...");
-                Console.ResetColor();
-
-                var lpsTest = new LPSTestPlan(planCommand, _httpClientManager, _config, _logger);
+                var lpsTest = new LPSTestPlan(planCommand, _httpClientManager, _config, _logger, _runtimeOperationIdProvider);
                 await new LPSTestPlan.ExecuteCommand().ExecuteAsync(lpsTest, cts.Token);
 
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"...Your Performance Test Plan {planCommand.Name} Has Executed Successfully...");
-                Console.ResetColor();
-                await _logger.LogAsync("0000-0000-0000", "Test Has Completed", LoggingLevel.INF);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Test plan '{planCommand.Name}' execution has completed", LPSLoggingLevel.Information);
                 _endWatching = true;
             }
         }

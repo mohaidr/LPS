@@ -7,50 +7,83 @@ using System.Threading;
 using System.Reflection.Emit;
 using LPS.Domain.Common;
 using LPS.Infrastructure.Logging;
+using System.Linq;
 
 namespace LPS.Infrastructure.Logger
 {
     public class FileLogger : IFileLogger
     {
         TextWriter SynchronizedTextWriter;
-        public FileLogger()
+        public FileLogger(string logFilePath)
         {
-            if (string.IsNullOrEmpty(Location))
+            if (string.IsNullOrEmpty(logFilePath))
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine("Logging has been disabled, Location Can't be empty");
                 Console.ResetColor();
                 return;
             }
-
-            string directory = string.Concat($@"{Path.GetDirectoryName(Location)}");
+            this.LogFilePath= logFilePath;
+            string directory = string.Concat($@"{Path.GetDirectoryName(LogFilePath)}");
 
             if (!Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
             }
-            string fileName = Path.GetFileName(Location);
+            string fileName = Path.GetFileName(LogFilePath);
 
             SynchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
-
         }
 
         private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        public string Location { get; set; } = "logs/lps.Log";
-        public void Log(string EventId, string DiagnosticMessage, LoggingLevel Level)
+        private string LogFilePath { get; set; }
+        public bool EnableConsoleLogging { get; set; } 
+        public LPSLoggingLevel ConsoleLoggingLevel { get; set; }
+        public LPSLoggingLevel LoggingLevel { get; set; }
+        public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level)
         {
-            throw new NotImplementedException();
+            LogAsync(eventId, diagnosticMessage, LPSLoggingLevel.Warning).Wait();
         }
 
-        public async Task LogAsync(string EventId, string DiagnosticMessage, LoggingLevel Level)
+        public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level)
         {
             try
             {
                 await semaphoreSlim.WaitAsync();
                 string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss +3:00");
-                string entry = currentDateTime + " " + Level + " " + DiagnosticMessage;
-                await SynchronizedTextWriter.WriteLineAsync(entry);
+                if (level>= ConsoleLoggingLevel && EnableConsoleLogging)
+                {
+                    if (level == LPSLoggingLevel.Information)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Blue;
+                        Console.Write(level.ToString() + ": ");
+                        Console.ResetColor();
+                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                    }else if (level == LPSLoggingLevel.Warning)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.Write(level.ToString() + ": ");
+                        Console.ResetColor();
+                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                    }
+                    else if (level == LPSLoggingLevel.Error)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.Write(level.ToString()+" ");
+                        Console.ResetColor();
+                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                    }
+                    else if (level == LPSLoggingLevel.Critical)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkRed;
+                        Console.Write(level.ToString() + " ");
+                        Console.ResetColor();
+                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                    }
+
+                }
+                await SynchronizedTextWriter.WriteLineAsync($"{currentDateTime} {level} {correlationId} {diagnosticMessage}");
                 semaphoreSlim.Release();
             }
             catch (Exception ex)
@@ -60,7 +93,6 @@ namespace LPS.Infrastructure.Logger
                 Console.ResetColor();
             }
         }
-
 
         public async Task Flush()
         {

@@ -36,11 +36,32 @@ namespace LPS.Domain
             {
                 List<Task> awaitableTasks = new List<Task>();
 
+                #region Loggin Plan Details
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client Timeout:  {this.ClientTimeout}", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Max Connections Per Server:  {this.MaxConnectionsPerServer}", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Idle Timeout:  {this.PooledConnectionIdleTimeout}", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Life Time:  {this.PooledConnectionLifeTime}", LPSLoggingLevel.Verbos));
+                #endregion
+
+                ILPSClientService<LPSHttpRequest> httpClientService = null;
+
                 for (int i = 0; i < this.NumberOfClients; i++)
                 {
+                    if (!this.DelayClientCreationUntilIsNeeded.Value)
+                    {
+                        httpClientService = _lpsClientManager.DequeueClient();
+                    }
+                    else
+                    {
+                        httpClientService = _lpsClientManager.CreateInstance(_lpsClientConfig);
+                    }
                     foreach (var testCase in this.LPSTestCases)
                     {
-                        LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand() { LPSTestPlanExecuteCommand = command };
+                        LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService) { LPSTestPlanExecuteCommand = command };
                         awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(testCase, cancellationToken));
                     }
 
@@ -50,9 +71,6 @@ namespace LPS.Domain
                     }
                 }
                 await Task.WhenAll(awaitableTasks.ToArray());
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("...We are done :)...");
-                Console.ResetColor();
             }
         }
     }

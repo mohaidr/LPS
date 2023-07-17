@@ -38,9 +38,7 @@ namespace LPS.Infrastructure.Logging
                         }
                         else
                         {
-                            StreamWriter streamWriter = new StreamWriter(path, true, Encoding.Default, 65536)
-                            {
-                            };
+                            StreamWriter streamWriter = new StreamWriter(path, true, Encoding.Default, 65536);
                             textWriters.Add(path, streamWriter);
                             return TextWriter.Synchronized(streamWriter);
                         }

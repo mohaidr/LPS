@@ -15,42 +15,47 @@ namespace LPS.Domain
 
     public partial class LPSHttpRequest
     {
-        public new class Validator: IValidator<LPSHttpRequest, LPSHttpRequest.SetupCommand>
+        public new class Validator: IDomainValidator<LPSHttpRequest, LPSHttpRequest.SetupCommand>
         {
-            public Validator(LPSHttpRequest entity, LPSHttpRequest.SetupCommand command) 
+            ILPSLogger _logger;
+            IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            public Validator(LPSHttpRequest entity, LPSHttpRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) 
             {
                 Validate(entity, command);
+                _logger = logger;
+                _runtimeOperationIdProvider = runtimeOperationIdProvider;
+
             }
 
-            public void Validate(LPSHttpRequest entity, SetupCommand command)
+            public async void Validate(LPSHttpRequest entity, SetupCommand command)
             {
-                command.IsValid = true;
-                Console.ForegroundColor = ConsoleColor.Yellow;
                 if (command == null)
                 {
-                    Console.WriteLine("Invalid Entity Command");
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);
+                    throw new ArgumentNullException(nameof(command));
                 }
 
+                command.IsValid = true;
                 string[] httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
 
                 if (command.HttpMethod == null || !httpMethods.Any(httpMethod => httpMethod == command.HttpMethod.ToUpper()))
                 {
-                    Console.WriteLine("Invalid Http Method");
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid Http Method", LPSLoggingLevel.Warning);
+
                     command.IsValid = false;
                 }
 
                 if (command.Httpversion != "1.0" && command.Httpversion != "1.1")
                 {
-                    Console.WriteLine("Invalid Http Version, the value should be either 1.0 and 1.1");
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "invalid http version, 1.0 and 1.1 are supported versions", LPSLoggingLevel.Warning);
                     command.IsValid = false;
                 }
                 if (!(Uri.TryCreate(command.URL, UriKind.Absolute, out Uri uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps || uriResult.Scheme.Contains("ws"))))
                 {
-                    Console.WriteLine("Invalid URL");
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid URL", LPSLoggingLevel.Warning);
                     command.IsValid = false;
                 }
 
-                Console.ResetColor();
                 //TODO: Validate http headers
             }
         }

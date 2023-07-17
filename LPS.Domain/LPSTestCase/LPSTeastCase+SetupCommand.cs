@@ -34,7 +34,7 @@ namespace LPS.Domain
 
         private void Setup(SetupCommand command)
         {
-            _ = new Validator(this, command);
+            _ = new Validator(this, command, _logger);
 
             if (command.IsValid)
             {

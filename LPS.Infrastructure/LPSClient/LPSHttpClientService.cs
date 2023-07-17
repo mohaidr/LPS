@@ -12,22 +12,28 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Client
 {
-    public class LPSHttpClientService: ILPSClientService<LPSHttpRequest>
+    public class LPSHttpClientService : ILPSClientService<LPSHttpRequest>
     {
         private HttpClient httpClient;
-        private ICustomLogger _logger;
-
-        public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequest> config, ICustomLogger logger) 
+        private ILPSLogger _logger;
+        private static int _clientNumber;
+        public int Id { get; private set; }
+        public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequest> config, ILPSLogger logger) 
         {
-            _logger= logger;
+            _logger = logger;
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
             {
                 PooledConnectionLifetime = ((LPSHttpClientConfiguration)config).PooledConnectionLifetime,
                 PooledConnectionIdleTimeout = ((LPSHttpClientConfiguration)config).PooledConnectionIdleTimeout,
                 MaxConnectionsPerServer = ((LPSHttpClientConfiguration)config).MaxConnectionsPerServer,
+                UseCookies = true,
+                AllowAutoRedirect= true,
+                MaxAutomaticRedirections= 5,
             };
             httpClient = new HttpClient(socketsHandler);
             httpClient.Timeout = ((LPSHttpClientConfiguration)config).Timeout;
+            Id =   Interlocked.Increment(ref _clientNumber);
+            Console.WriteLine($"Client with {_clientNumber} was created");
         }
         public async Task Send(LPSHttpRequest lpsHttpRequest, string requestId, CancellationToken cancellationToken)
         {
@@ -63,33 +69,37 @@ namespace LPS.Infrastructure.Client
                         var requestHeader = httpRequestMessage.Headers;
                         if (requestHeader.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
                         {
-                            SetRequestHeader(httpRequestMessage, header.Key, header.Value.Trim());
+                            SetRequestHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
                         }
                         else
                         {
-                            SetUserHeader(httpRequestMessage, header.Key, header.Value.Trim());
+                            SetUserHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
                         }
                     }
                 }
 
                 var responseMessageTask = httpClient.SendAsync(httpRequestMessage, cancellationToken);
                 var responseMessage = await responseMessageTask;
-                await _logger.LogAsync(string.Empty, $"...Response for call # {requestId}...\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LoggingLevel.INF);
+                await _logger.LogAsync(string.Empty, $"...Response for call # {requestId}...\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LPSLoggingLevel.Verbos);
             }
             catch (Exception ex)
             {
-                if (ex.Message.Contains("Only one usage of each socket address") || (ex.InnerException != null && ex.InnerException.Message.Contains("Only one usage of each socket address")))
+                if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
-                    Console.WriteLine(ex);
+
+                    await _logger.LogAsync(string.Empty, @$"...Response for call # {requestId} \n\t ...Call # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
                 }
 
-                await _logger.LogAsync(string.Empty, @$"...Response for call # {requestId} \n\t ...Call # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LoggingLevel.ERR);
+                await _logger.LogAsync(string.Empty, @$"...Response for call # {requestId} \n\t ...Call # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
                 throw new Exception(ex.Message, ex.InnerException);
             }
         }
 
         private void SetContentHeader(HttpRequestMessage message, string name, string value)
         {
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
+                return;
+
             switch (name.ToLower())
             {
                 case "content-type":
@@ -123,9 +133,12 @@ namespace LPS.Infrastructure.Client
             }
         }
 
-
         private void SetRequestHeader(HttpRequestMessage message, string name, string value)
         {
+
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
+                return;
+
             string[] encodings;
             switch (name.Trim().ToLower())
             {
@@ -366,6 +379,9 @@ namespace LPS.Infrastructure.Client
 
         private void SetUserHeader(HttpRequestMessage message, string name, string value)
         {
+            if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
+                return;
+
             message.Headers.Add(name, value);
         }
 

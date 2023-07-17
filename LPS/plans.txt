@@ -1,0 +1,43 @@
+console logger option
+logging per client
+
+        //ToDo: Implement RunInParallel
+        public bool? RunInParallel { get; private set; }
+        //ToDo: Implement CleanUp Cookies
+
+Logging Correlation Ids
+provide an option to not run the test plan after creating it manually
+Exit app after command execution is completed
+
+Cookie manager to support custom cookies and support enabling disabling cookies per domain. For now cookies are enabled by defaults for all clients and all domains
+redirects - Http Redirections for now is enabled for all domains and all clients
+
+
+
+cache manager
+download embedded resources optionally 
+shared settings across all requests 
+support for http2
+Remove Completed Tasks
+
+command to run multiple plans
+
+private async Task RemoveCompletedTasks(List<Task> tasks, CancellationToken token)
+{
+    int sizeInBytes = int.MaxValue;
+    while (!token.IsCancellationRequested)
+    {
+        if (sizeInBytes > 10485760)
+        {
+            await _logger.LogAsync("1111111111", "Removing completed tasks, list is greater than 10 MB", LoggingLevel.WRN);
+
+            sizeInBytes = tasks.Count * Marshal.SizeOf(typeof(Task));
+            var completedTasks = tasks.Where(t => t.IsCompleted || t.IsCanceled || t.IsFaulted).ToList();
+            foreach (var task in completedTasks)
+            {
+                tasks.Remove(task);
+            }
+        }
+        await Task.Delay(20000);
+    }
+}

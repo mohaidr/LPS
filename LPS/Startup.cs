@@ -10,6 +10,7 @@ using Microsoft.Extensions.Logging;
 using LPS.Infrastructure.Logger;
 using LPS.Domain;
 using LPS.Infrastructure.Client;
+using System;
 
 namespace LPS
 {
@@ -20,23 +21,22 @@ namespace LPS
             var host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
-                    configBuilder.SetBasePath(Directory.GetCurrentDirectory())
+                    string projectDirectory = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory())));
+                    configBuilder.SetBasePath(projectDirectory)
                     .AddEnvironmentVariables();
+                    configBuilder.AddJsonFile(@"lpsSettings.json", optional: false, reloadOnChange: false);
+
                 })
-                .ConfigureLogging(logging =>
-                {
-                    logging.ClearProviders();
-                    logging.AddConsole(options => options.DisableColors = true);
-                    logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
-                })
+                .ConfigureLPSFileLogger()
                 .ConfigureServices((context, services) =>
                 {
                     //Dependency Injection goes Here
                     services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args }));
-                    services.AddSingleton<ICustomLogger, FileLogger>();
+                   // services.AddSingleton<ILPSLogger, FileLogger>();
                     services.AddTransient<ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>>, LPSHttpClientManager>();
                     services.AddTransient<ILPSClientService<LPSHttpRequest>, LPSHttpClientService>();
                     services.AddTransient<ILPSClientConfiguration<LPSHttpRequest>, LPSHttpClientConfiguration>();
+                    services.AddTransient<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
 
                     if (context.HostingEnvironment.IsProduction())
                     {
@@ -48,8 +48,9 @@ namespace LPS
                     }
                 })
                 .Build();
-
             await host.RunAsync();
         }
+
+
     }
 }

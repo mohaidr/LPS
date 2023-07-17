@@ -31,7 +31,7 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
-                await _logger.LogAsync("", "LPSTestCase Default Implementation Was Called ", LoggingLevel.WRN);
+                await _logger.LogAsync("0000-0000-0000", "LPSTestCase Default Implementation Was Called ", LPSLoggingLevel.Warning);
 
             }
         }

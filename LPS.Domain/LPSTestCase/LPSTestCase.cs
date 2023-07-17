@@ -14,13 +14,13 @@ namespace LPS.Domain
 
     public partial class LPSTestCase : IValidEntity, IExecutable
     {
-        private ICustomLogger _logger;
+        private ILPSLogger _logger;
 
         protected LPSTestCase()
         {
         }
 
-        public LPSTestCase(SetupCommand command, ICustomLogger logger)
+        public LPSTestCase(SetupCommand command, ILPSLogger logger)
         {
             _logger = logger;
             this.Setup(command);

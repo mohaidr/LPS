@@ -49,24 +49,14 @@ namespace LPS.Domain
 
         private void Setup(SetupCommand command)
         {
-            _ = new Validator(this, command);
+            _ = new Validator(this, command, _logger, _runtimeOperationIdProvider);
 
             if (command.IsValid)
             {
                 this.RequestCount = command.RequestCount;
                 this.Name = command.Name;
                 this.Mode = command.Mode;
-                ILPSClientService<LPSHttpRequest> client = null;
-                if (!this.Plan.DelayClientCreationUntilIsNeeded.Value)
-                {
-                    ((ILPSHttpClientConfiguration<LPSHttpRequest>)_config).Timeout = TimeSpan.FromSeconds(this.Plan.ClientTimeout);
-                    ((ILPSHttpClientConfiguration<LPSHttpRequest>)_config).PooledConnectionLifetime = TimeSpan.FromMinutes(this.Plan.PooledConnectionLifetime);
-                    ((ILPSHttpClientConfiguration<LPSHttpRequest>)_config).PooledConnectionIdleTimeout = TimeSpan.FromMinutes(this.Plan.PooledConnectionIdleTimeout);
-                    ((ILPSHttpClientConfiguration<LPSHttpRequest>)_config).MaxConnectionsPerServer = this.Plan.MaxConnectionsPerServer;
-                    client = _lpsClientManager.CreateInstance(_config);
-                }
-                _httpClient = client;
-                this.LPSHttpRequest = new LPSHttpRequest(command.LPSRequest, this._logger);
+                this.LPSHttpRequest = new LPSHttpRequest(command.LPSRequest, this._logger, _runtimeOperationIdProvider);
                 this.Duration = command.Duration;
                 this.CoolDownTime = command.CoolDownTime; ;
                 this.BatchSize = command.BatchSize;

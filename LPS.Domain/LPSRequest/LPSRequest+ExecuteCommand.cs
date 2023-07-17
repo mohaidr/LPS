@@ -30,7 +30,7 @@ namespace LPS.Domain
 
         protected async Task ExecuteAsync(ExecuteCommand command, CancellationToken cancellationToken)
         {
-            await _logger.LogAsync("", "LPSRequest Default Implementation Was Called ", LoggingLevel.WRN);
+            await _logger.LogAsync("", "LPSRequest Default Implementation Was Called ", LPSLoggingLevel.Warning);
         }
     }
 }

@@ -44,7 +44,7 @@ namespace LPS.Domain
 
         protected void Setup(SetupCommand command)
         {
-            new Validator(this, command);
+            new Validator(this, command, _logger, _runtimeOperationIdProvider);
 
             if (command.IsValid)
             {

@@ -14,16 +14,19 @@ namespace LPS.Domain
 
     public partial class LPSHttpRequest :LPSRequest
     {
-        private ICustomLogger _logger;
+        private ILPSLogger _logger;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private ILPSClientService<LPSHttpRequest> _httpClientService { get; set; }
         private LPSHttpRequest()
         {
 
         }
 
-        public LPSHttpRequest(LPSHttpRequest.SetupCommand command, ICustomLogger logger )
+        public LPSHttpRequest(LPSHttpRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
+            _runtimeOperationIdProvider= runtimeOperationIdProvider;
             this.Setup(command);
         }
 

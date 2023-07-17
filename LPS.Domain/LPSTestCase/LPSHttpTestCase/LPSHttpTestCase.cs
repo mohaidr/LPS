@@ -14,7 +14,8 @@ namespace LPS.Domain
 
     public partial class LPSHttpTestCase : LPSTestCase
     {
-        private ICustomLogger _logger;
+        private ILPSLogger _logger;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
 
         public enum IterationMode
         {
@@ -34,29 +35,23 @@ namespace LPS.Domain
         private LPSHttpTestCase()
         {
         }
+        ILPSClientService<LPSHttpRequest> _httpClient;
 
-        internal LPSHttpTestCase(ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> lpsClientManager,
-            ILPSClientConfiguration<LPSHttpRequest> config,
-            ICustomLogger logger) // internal constructor should only be defined in specific scenarios where there is a need for an instance that will be setup through the command
-                                  //This behaviour may change in the future. 
+        internal LPSHttpTestCase(
+            ILPSLogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider) // internal constructor should only be defined in specific scenarios where there is a need for an instance that will be setup through the command
+                                                                    //This behaviour may change in the future. 
         {
             _logger = logger;
-            _lpsClientManager = lpsClientManager;
-            _config = config;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
-        ILPSClientManager<LPSHttpRequest,
-        ILPSClientService<LPSHttpRequest>> _lpsClientManager;
-        ILPSClientConfiguration<LPSHttpRequest> _config;
-        ILPSClientService<LPSHttpRequest> _httpClient;
+
         public LPSHttpTestCase(SetupCommand command,
-            ILPSClientManager<LPSHttpRequest,ILPSClientService<LPSHttpRequest>> lpsClientManager,
-            ILPSClientConfiguration<LPSHttpRequest> config,
-            ICustomLogger logger)
+            ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
-            _lpsClientManager = lpsClientManager;
-            _config = config;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);
         }
 

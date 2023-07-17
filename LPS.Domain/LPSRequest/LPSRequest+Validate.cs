@@ -15,11 +15,14 @@ namespace LPS.Domain
 
     public partial class LPSRequest
     {
-        public class Validator: IValidator<LPSRequest, SetupCommand>
+        public class Validator: IDomainValidator<LPSRequest, SetupCommand>
         {
-            public Validator(LPSRequest entity, SetupCommand command)
+            ILPSLogger _logger;
+            public Validator(LPSRequest entity, SetupCommand command, ILPSLogger logger)
             {
-                Validate(entity,command);
+                Validate(entity, command);
+                _logger = logger;
+
             }
 
             public void Validate(LPSRequest entity, SetupCommand command)

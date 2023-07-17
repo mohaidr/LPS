@@ -15,19 +15,22 @@ namespace LPS.UI.Core.UI.Build.Services
     {
         public string[] CommandLineArgs { get; set; }
 
-        ICustomLogger _logger;
+        ILPSLogger _logger;
         LPSTestPlan.SetupCommand _command;
         ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequest> _config;
-        public CommandLineParser(ICustomLogger logger,
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public CommandLineParser(ILPSLogger logger,
             ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
             ILPSClientConfiguration<LPSHttpRequest> config,
-            LPSTestPlan.SetupCommand command)
+            LPSTestPlan.SetupCommand command,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
             _command = command;
             _config = config;
             _httpClientManager = httpClientManager;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         public LPSTestPlan.SetupCommand Command { get { return _command; } set { } }
 
@@ -91,7 +94,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("Test Has Been Created Successfully");
                     Console.ResetColor();
-
                 },
                 CommandLineOptions.TestNameOption, 
                 CommandLineOptions.NumberOfClients,
@@ -132,7 +134,7 @@ namespace LPS.UI.Core.UI.Build.Services
             runCommand.SetHandler(async (testName) =>
             {
                 _command = new LpsSerializer().DeSerialize(File.ReadAllText($"{testName}.json"));
-                await new LpsManager(_logger, _httpClientManager, _config).Run(_command);
+                await new LpsManager(_logger, _httpClientManager, _config, _runtimeOperationIdProvider).Run(_command);
             }, CommandLineOptions.TestNameOption);
 
             lpsCommand.Invoke(CommandLineArgs);

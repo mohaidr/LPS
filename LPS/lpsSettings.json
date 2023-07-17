@@ -1,0 +1,8 @@
+﻿{
+  "LPSFileLoggerConfig": {
+    "LogFilePath": "logs/mylog.Log",
+    "EnableConsoleLogging": true,
+    "LoggingLevel": "Verbos",
+    "ConsoleLogingLevel": "Information"
+  }
+}
