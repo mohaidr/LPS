@@ -6,7 +6,9 @@ namespace LPS.Domain.Common
 {
     public interface ILPSClientService<TRequest> where TRequest : IRequestable
     {
-        public int Id { get; }
+        public string Id { get; }
+        public string GuidId { get; }
+
         async Task Send(TRequest request, string requestId, CancellationToken cancellationToken) => await Task.CompletedTask; // default implementation
     }
 }

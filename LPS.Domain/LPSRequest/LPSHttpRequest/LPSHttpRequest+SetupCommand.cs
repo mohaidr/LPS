@@ -74,5 +74,27 @@ namespace LPS.Domain
             }
         }
 
+        internal void Clone(LPSHttpRequest cloneToEntity)
+        {
+            if (this.IsValid)
+            {
+                cloneToEntity.HttpMethod = this.HttpMethod;
+                cloneToEntity.Httpversion = this.Httpversion;
+                cloneToEntity.URL = this.URL;
+                cloneToEntity.Payload = this.Payload;
+                cloneToEntity.HttpHeaders = new Dictionary<string, string>();
+                if (this.HttpHeaders != null)
+                {
+                    foreach (var header in this.HttpHeaders)
+                    {
+                        cloneToEntity.HttpHeaders.Add(header.Key, header.Value);
+                    }
+                }
+                cloneToEntity.IsValid = true;
+            }
+        }
+
+
+
     }
 }

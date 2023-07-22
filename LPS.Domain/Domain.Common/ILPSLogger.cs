@@ -13,7 +13,7 @@ namespace LPS.Domain.Common
         Information,
         Warning,
         Error,
-        Critical
+        Critical,
     }
     public interface ILPSLogger
     {

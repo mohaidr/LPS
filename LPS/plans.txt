@@ -1,12 +1,11 @@
-console logger option
-logging per client
+console logger option - Done
+provide an option to not run the test plan after creating it manually - Done
+logging per client - done
 
-        //ToDo: Implement RunInParallel
-        public bool? RunInParallel { get; private set; }
-        //ToDo: Implement CleanUp Cookies
+//ToDo: Implement RunInParallel
+//ToDo: Implement CleanUp Cookies
+Logging Correlation Ids - done
 
-Logging Correlation Ids
-provide an option to not run the test plan after creating it manually
 Exit app after command execution is completed
 
 Cookie manager to support custom cookies and support enabling disabling cookies per domain. For now cookies are enabled by defaults for all clients and all domains
@@ -21,6 +20,7 @@ support for http2
 Remove Completed Tasks
 
 command to run multiple plans
+command to configure file logging option
 
 private async Task RemoveCompletedTasks(List<Task> tasks, CancellationToken token)
 {
@@ -41,3 +41,16 @@ private async Task RemoveCompletedTasks(List<Task> tasks, CancellationToken toke
         await Task.Delay(20000);
     }
 }
+
+
+
+Urgent
+__________________________________
+
+Logging Behavior
+Number of clients behavior  - Should I make my queue to track the number of requests per host per all clients? or change the way I deal with clients
+
+
+//ToDo: Implement RunInParallel
+//ToDo: Implement CleanUp Cookies
+

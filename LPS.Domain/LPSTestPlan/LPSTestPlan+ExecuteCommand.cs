@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
+using Newtonsoft.Json;
 
 namespace LPS.Domain
 {
@@ -59,10 +60,14 @@ namespace LPS.Domain
                     {
                         httpClientService = _lpsClientManager.CreateInstance(_lpsClientConfig);
                     }
+
+                    LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService) { LPSTestPlanExecuteCommand = command };
+
                     foreach (var testCase in this.LPSTestCases)
                     {
-                        LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService) { LPSTestPlanExecuteCommand = command };
-                        awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(testCase, cancellationToken));
+                        LPSHttpTestCase cloneTestCase = new LPSHttpTestCase(_logger, _runtimeOperationIdProvider);
+                        testCase.Clone(cloneTestCase);
+                        awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(cloneTestCase, cancellationToken));
                     }
 
                     if (this.RampUpPeriod>0)

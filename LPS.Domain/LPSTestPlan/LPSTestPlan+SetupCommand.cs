@@ -15,7 +15,6 @@ namespace LPS.Domain
             {
                 LPSTestCases = new List<LPSHttpTestCase.SetupCommand>();
                 ClientTimeout = 240;
-                MaxConnectionsPerServer = 1000;
                 PooledConnectionIdleTimeout = 5;
                 PooledConnectionLifetime = 25;
             }

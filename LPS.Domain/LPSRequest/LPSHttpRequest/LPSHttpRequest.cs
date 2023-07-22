@@ -16,10 +16,18 @@ namespace LPS.Domain
     {
         private ILPSLogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private ILPSClientService<LPSHttpRequest> _httpClientService { get; set; }
+        private ILPSClientService<LPSHttpRequest> _httpClientService;
         private LPSHttpRequest()
         {
 
+        }
+
+
+        internal LPSHttpRequest(ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        {
+            HttpHeaders = new Dictionary<string, string>();
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
         public LPSHttpRequest(LPSHttpRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)

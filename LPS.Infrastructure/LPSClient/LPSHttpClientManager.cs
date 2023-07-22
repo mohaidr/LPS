@@ -3,6 +3,7 @@ using LPS.Domain.Common;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
@@ -23,38 +24,55 @@ namespace LPS.Infrastructure.Client
 
         public ILPSClientService<LPSHttpRequest> CreateInstance(ILPSClientConfiguration<LPSHttpRequest> config)
         {
-            return new LPSHttpClientService(config, _logger);
+            var client = new LPSHttpClientService(config, _logger);
+            _logger.Log("0000-0000-0000", $"Client with Id {client.Id} has been created", LPSLoggingLevel.Information);
+            return client;
         }
 
         public void CreateAndQueueClient(ILPSClientConfiguration<LPSHttpRequest> config)
         {
-            _clientsQueue.Enqueue(new LPSHttpClientService(config, _logger));
+            var client = new LPSHttpClientService(config, _logger);
+            _clientsQueue.Enqueue(client);
+            _logger.Log( "0000-0000-0000", $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Information);
         }
 
         public ILPSClientService<LPSHttpRequest> DequeueClient()
         {
             if (_clientsQueue.Count > 0)
             {
-                return _clientsQueue.Dequeue();
+                var client = _clientsQueue.Dequeue();
+                _logger.Log("0000-0000-0000", $"Client with Id {client.Id} has been dequeued", LPSLoggingLevel.Information);
+                return client;
             }
             else
             {
+                _logger.Log("0000-0000-0000", $"Client Queue is empty", LPSLoggingLevel.Warning);
                 return null;
             }
         }
 
         public ILPSClientService<LPSHttpRequest> DequeueClient(ILPSClientConfiguration<LPSHttpRequest> config, bool byPassQueueIfEmpty )
         {
+            var stopWatch = new Stopwatch();
             if (_clientsQueue.Count > 0)
             {
-                return _clientsQueue.Dequeue();
+                var client = _clientsQueue.Dequeue();
+                _logger.Log("0000-0000-0000", $"Client with Id {client.Id} was dequeued", LPSLoggingLevel.Information);
+                return client;
             }
             else
             {
-                if(byPassQueueIfEmpty)
-                    return new LPSHttpClientService(config, _logger);
+                if (byPassQueueIfEmpty)
+                {
+                    var client = new LPSHttpClientService(config, _logger);
+                    _logger.Log("0000-0000-0000", $"Queue was empty but a client with Id {client.Id} was created", LPSLoggingLevel.Information);
+                    return client;
+                }
                 else
+                {
+                    _logger.Log("0000-0000-0000", $"Client Queue is empty", LPSLoggingLevel.Warning);
                     return null;
+                }
             }
         }
     }

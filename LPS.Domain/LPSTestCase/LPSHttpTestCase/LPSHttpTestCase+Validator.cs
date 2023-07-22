@@ -23,9 +23,9 @@ namespace LPS.Domain
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             public Validator(LPSHttpTestCase entity, SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
-                Validate(entity, command);
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
+                Validate(entity, command);
             }
 
             public async void Validate(LPSHttpTestCase entity, SetupCommand command)
@@ -141,7 +141,6 @@ namespace LPS.Domain
                     if (!command.LPSRequest.IsValid)
                     {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid Http Request", LPSLoggingLevel.Warning);
-
                         command.IsValid = false;
                     }
                 }

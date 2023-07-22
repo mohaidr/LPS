@@ -23,9 +23,9 @@ namespace LPS.Domain
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             public Validator(LPSTestPlan entity, SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
-                Validate(entity, command);
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
+                Validate(entity, command);
             }
 
             public async void Validate(LPSTestPlan entity,SetupCommand command)
@@ -73,7 +73,7 @@ namespace LPS.Domain
 
                 }
 
-                if (command.LPSTestCases != null && command.LPSTestCases.Count>0)
+                if (command.LPSTestCases != null || command.LPSTestCases.Count>0)
                 {
                     foreach (var lpsTestCaseCommand in command.LPSTestCases)
                     {

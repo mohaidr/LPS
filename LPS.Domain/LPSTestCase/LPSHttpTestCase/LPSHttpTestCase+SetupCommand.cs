@@ -63,5 +63,22 @@ namespace LPS.Domain
                 this.IsValid = true;
             }
         }
+
+        internal void Clone(LPSHttpTestCase cloneToEntity)
+        {
+            if (this.IsValid)
+            {
+                cloneToEntity.RequestCount = this.RequestCount;
+                cloneToEntity.Name = this.Name;
+                cloneToEntity.Mode = this.Mode;
+                cloneToEntity.LPSHttpRequest = new LPSHttpRequest(this._logger, _runtimeOperationIdProvider);
+                this.LPSHttpRequest.Clone(cloneToEntity.LPSHttpRequest);
+                cloneToEntity.Plan = this.Plan;
+                cloneToEntity.Duration = this.Duration;
+                cloneToEntity.CoolDownTime = this.CoolDownTime; ;
+                cloneToEntity.BatchSize = this.BatchSize;
+                cloneToEntity.IsValid = true;
+            }
+        }
     }
 }

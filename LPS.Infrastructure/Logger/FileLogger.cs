@@ -8,6 +8,7 @@ using System.Reflection.Emit;
 using LPS.Domain.Common;
 using LPS.Infrastructure.Logging;
 using System.Linq;
+using System.Diagnostics;
 
 namespace LPS.Infrastructure.Logger
 {
@@ -38,12 +39,18 @@ namespace LPS.Infrastructure.Logger
         private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
         private string LogFilePath { get; set; }
-        public bool EnableConsoleLogging { get; set; } 
+        public bool EnableConsoleLogging { get; set; }
+        public bool EnableConsoleErrorLogging { get; set; }
+
         public LPSLoggingLevel ConsoleLoggingLevel { get; set; }
         public LPSLoggingLevel LoggingLevel { get; set; }
         public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level)
         {
-            LogAsync(eventId, diagnosticMessage, LPSLoggingLevel.Warning).Wait();
+            var stopWatch = new Stopwatch();
+            stopWatch.Start();
+            LogAsync(eventId, diagnosticMessage, level).Wait();
+            _ = LogAsync(eventId, $"Syncronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos);
+            stopWatch.Stop();
         }
 
         public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level)
@@ -51,30 +58,39 @@ namespace LPS.Infrastructure.Logger
             try
             {
                 await semaphoreSlim.WaitAsync();
-                string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss +3:00");
+                string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss.fff +3:00");
                 if (level>= ConsoleLoggingLevel && EnableConsoleLogging)
                 {
+                    if (level == LPSLoggingLevel.Verbos)
+                    {
+                        Console.ForegroundColor = ConsoleColor.DarkBlue;
+                        Console.Write(level.ToString() + ": ");
+                        Console.ResetColor();
+                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                    }
+                    else
                     if (level == LPSLoggingLevel.Information)
                     {
                         Console.ForegroundColor = ConsoleColor.Blue;
                         Console.Write(level.ToString() + ": ");
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
-                    }else if (level == LPSLoggingLevel.Warning)
+                    }
+                    else if (level == LPSLoggingLevel.Warning)
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Write(level.ToString() + ": ");
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-                    else if (level == LPSLoggingLevel.Error)
+                    else if (level == LPSLoggingLevel.Error && EnableConsoleErrorLogging)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.Write(level.ToString()+" ");
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-                    else if (level == LPSLoggingLevel.Critical)
+                    else if (level == LPSLoggingLevel.Critical && EnableConsoleErrorLogging)
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
                         Console.Write(level.ToString() + " ");

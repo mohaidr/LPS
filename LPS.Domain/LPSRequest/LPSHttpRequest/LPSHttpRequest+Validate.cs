@@ -21,10 +21,9 @@ namespace LPS.Domain
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             public Validator(LPSHttpRequest entity, LPSHttpRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) 
             {
-                Validate(entity, command);
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
-
+                Validate(entity, command);
             }
 
             public async void Validate(LPSHttpRequest entity, SetupCommand command)

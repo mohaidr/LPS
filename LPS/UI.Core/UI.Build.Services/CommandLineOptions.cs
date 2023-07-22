@@ -187,12 +187,16 @@ namespace LPS.UI.Core.UI.Build.Services
             IterationModeOption.AddAlias("-im");
 
         }
+
+                            
+                    
+
         public static Option<string> TestNameOption = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
-        public static Option<int> NumberOfClients = new Option<int>("--numberOfClients", "") { IsRequired = true, };
-        public static Option<int> RampupPeriod = new Option<int>("--rampupPeriod", "") { IsRequired = false, };
-        public static Option<int> MaxConnectionsPerServer = new Option<int>("--maxConnectionsPerServer", () => 1000, "") { IsRequired = false, };
-        public static Option<int> PoolConnectionLifeTime = new Option<int>("--poolConnectionLifeTime", () => 25, "") { IsRequired = false, };
-        public static Option<int> PoolConnectionIdelTimeout = new Option<int>("--poolConnectionIdelTimeout", () => 5, "") { IsRequired = false, };
+        public static Option<int> NumberOfClients = new Option<int>("--numberOfClients", "Number of clients to execute the plan") { IsRequired = true, };
+        public static Option<int> RampupPeriod = new Option<int>("--rampupPeriod", "Time in millisencds to wait before creating starting a new client") { IsRequired = false, };
+        public static Option<int> MaxConnectionsPerServer = new Option<int>("--maxConnectionsPerServer", "max number of connections per client per server") { IsRequired = true, };
+        public static Option<int> PoolConnectionLifeTime = new Option<int>("--poolConnectionLifeTime", () => 25, "Pooled connection life time defines the maximal connection lifetime in the pool, tracking its age from when the connection was established, regardless of how much time it spent idle or active.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionlifetime?view=net-8.0") { IsRequired = false, };
+        public static Option<int> PoolConnectionIdelTimeout = new Option<int>("--poolConnectionIdelTimeout", () => 5, "Pooled connection idle timeout defines the maximum idle time for a connection in the pool.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionidletimeout?view=net-8.0") { IsRequired = false, };
         public static Option<int> ClientTimeoutOption = new Option<int>("--clientTimeout", () => 240, "Timeout") { IsRequired = false };
         public static Option<bool> DelayClientCreation = new Option<bool>("--delayClientCreation", () => false, "Delay Client Creation Until is Needed") { IsRequired = false };
         public static Option<string> CaseNameOption = new Option<string>("--caseName", "The name of the test case") { IsRequired = true };

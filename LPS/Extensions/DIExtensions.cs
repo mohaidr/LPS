@@ -23,6 +23,7 @@ namespace LPS.DIExtensions
             public string LogFilePath { get; set; }
             public LPSLoggingLevel ConsoleLogingLevel { get; set; }
             public bool EnableConsoleLogging { get; set; }
+            public bool EnableConsoleErrorLogging { get; set; }
             public LPSLoggingLevel LoggingLevel { get; set; }
         }
 
@@ -38,6 +39,7 @@ namespace LPS.DIExtensions
                 var fileLogger = new FileLogger(lpsFileConfig.LogFilePath);
 
                 fileLogger.EnableConsoleLogging = lpsFileConfig.EnableConsoleLogging;
+                fileLogger.EnableConsoleErrorLogging = lpsFileConfig.EnableConsoleErrorLogging;
                 fileLogger.ConsoleLoggingLevel = lpsFileConfig.ConsoleLogingLevel;
                 fileLogger.LoggingLevel = lpsFileConfig.LoggingLevel;
 
