@@ -7,8 +7,8 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class LPSRequestChallengeUserService : IChallengeUserService<LPSHttpRequest.SetupCommand, LPSHttpRequest>
     {
-        IValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> _validator;
-        public LPSRequestChallengeUserService(bool skipOptionalFields, LPSHttpRequest.SetupCommand command, IValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> validator)
+        IUserValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> _validator;
+        public LPSRequestChallengeUserService(bool skipOptionalFields, LPSHttpRequest.SetupCommand command, IUserValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;

@@ -11,6 +11,7 @@ using LPS.Infrastructure.Logger;
 using LPS.Domain;
 using LPS.Infrastructure.Client;
 using System;
+using System.Threading;
 
 namespace LPS
 {
@@ -18,21 +19,24 @@ namespace LPS
     {
         public static async Task ConfigureServices(string[] args)
         {
+            CancellationTokenSource cts = new CancellationTokenSource();
+            Console.CancelKeyPress += CancelKeyPressHandler;
+            var cancellationToken = cts.Token;
+            var cancellationTask = WatchForCancellation(cts);
+
             var host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
-                    string projectDirectory = Path.GetDirectoryName(Path.GetDirectoryName(Path.GetDirectoryName(Directory.GetCurrentDirectory())));
-                    configBuilder.SetBasePath(projectDirectory)
+                    configBuilder.SetBasePath(Directory.GetCurrentDirectory())
                     .AddEnvironmentVariables();
-                    configBuilder.AddJsonFile(@"lpsSettings.json", optional: false, reloadOnChange: false);
+                    configBuilder.AddJsonFile(@"config/lpsSettings.json", optional: false, reloadOnChange: false);
 
                 })
                 .ConfigureLPSFileLogger()
                 .ConfigureServices((context, services) =>
                 {
                     //Dependency Injection goes Here
-                    services.AddHostedService(p => p.ResolveWith<Bootstrapper>(new { args = args }));
-                   // services.AddSingleton<ILPSLogger, FileLogger>();
+                    services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args = args }));
                     services.AddTransient<ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>>, LPSHttpClientManager>();
                     services.AddTransient<ILPSClientService<LPSHttpRequest>, LPSHttpClientService>();
                     services.AddTransient<ILPSClientConfiguration<LPSHttpRequest>, LPSHttpClientConfiguration>();
@@ -48,9 +52,43 @@ namespace LPS
                     }
                 })
                 .Build();
-            await host.RunAsync();
+            await host.RunAsync(cancellationToken);
+            await cancellationTask;
         }
 
+        static bool cancelRequested = false;
+        private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
+        {
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC || e.SpecialKey == ConsoleSpecialKey.ControlBreak)
+            {
+                e.Cancel = true; // Set e.Cancel to true to cancel the default behavior (exit the application).
 
+                // Perform any custom actions you want before the application exits.
+                // For example, you can prompt the user to confirm the exit or save data.
+
+                // In this example, we'll just set a flag to indicate that the cancel was requested.
+                cancelRequested = true;
+            }
+
+        }
+        public static async Task WatchForCancellation(CancellationTokenSource cts)
+        {
+            while (!cancelRequested)
+            {
+                if (Console.KeyAvailable)// check for escape
+                {
+                    ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                    if (keyInfo.Key == ConsoleKey.Escape)
+                    {
+                        cts.Cancel();
+                        cancelRequested= true;
+                    }
+                }
+                await Task.Delay(1000);
+            }
+            if(!cancelRequested)
+                cts.Cancel();
+           Console.WriteLine("Cancel requested. \nExiting Gracefully.");
+        }
     }
 }

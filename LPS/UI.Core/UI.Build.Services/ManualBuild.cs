@@ -6,8 +6,8 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class ManualBuild : IBuilderService<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
-        IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
-        public ManualBuild(IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
+        IUserValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
+        public ManualBuild(IUserValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
         {
             _validator= validator;
         }

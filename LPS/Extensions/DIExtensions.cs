@@ -24,6 +24,7 @@ namespace LPS.DIExtensions
             public LPSLoggingLevel ConsoleLogingLevel { get; set; }
             public bool EnableConsoleLogging { get; set; }
             public bool EnableConsoleErrorLogging { get; set; }
+            public bool DisableFileLogging { get; set; }
             public LPSLoggingLevel LoggingLevel { get; set; }
         }
 
@@ -42,6 +43,8 @@ namespace LPS.DIExtensions
                 fileLogger.EnableConsoleErrorLogging = lpsFileConfig.EnableConsoleErrorLogging;
                 fileLogger.ConsoleLoggingLevel = lpsFileConfig.ConsoleLogingLevel;
                 fileLogger.LoggingLevel = lpsFileConfig.LoggingLevel;
+                fileLogger.DisableFileLogging = lpsFileConfig.DisableFileLogging;
+
 
                 // Register the custom logger instance as a singleton in the DI container
                 services.AddSingleton<ILPSLogger>(fileLogger);

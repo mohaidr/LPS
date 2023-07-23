@@ -73,43 +73,43 @@ namespace LPS.Domain
                 List<Task> awaitableTasks = new List<Task>();
 
                 #region Logging Request Details
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Request Details", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration Mode:  {this.Mode}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Request Count:  {this.RequestCount}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Duration:  {this.Duration}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Batch Size:  {this.BatchSize}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Cool Down Time:  {this.CoolDownTime}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Http Method:  {this.LPSHttpRequest.HttpMethod.ToUpper()}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Http Version: {this.LPSHttpRequest.Httpversion}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"URL: {this.LPSHttpRequest.URL}", LPSLoggingLevel.Verbos));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Request Details", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration Mode:  {this.Mode}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Request Count:  {this.RequestCount}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Duration:  {this.Duration}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Batch Size:  {this.BatchSize}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Cool Down Time:  {this.CoolDownTime}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Http Method:  {this.LPSHttpRequest.HttpMethod.ToUpper()}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Http Version: {this.LPSHttpRequest.Httpversion}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"URL: {this.LPSHttpRequest.URL}", LPSLoggingLevel.Verbos, cancellationToken));
                 if (!string.IsNullOrEmpty(this.LPSHttpRequest.Payload)
                     && (this.LPSHttpRequest.HttpMethod.ToUpper() == "PUT"
                     || this.LPSHttpRequest.HttpMethod.ToUpper() == "POST"
                     || this.LPSHttpRequest.HttpMethod.ToUpper() == "PATCH"))
                 {
-                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...Begin Request Body...", LPSLoggingLevel.Verbos));
-                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, this.LPSHttpRequest.Payload, LPSLoggingLevel.Verbos));
-                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...End Request Body...", LPSLoggingLevel.Verbos));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...Begin Request Body...", LPSLoggingLevel.Verbos, cancellationToken));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, this.LPSHttpRequest.Payload, LPSLoggingLevel.Verbos, cancellationToken));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...End Request Body...", LPSLoggingLevel.Verbos, cancellationToken));
                 }
                 else
                 {
-                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...Empty Payload...", LPSLoggingLevel.Verbos));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...Empty Payload...", LPSLoggingLevel.Verbos, cancellationToken));
                 }
 
                 if (this.LPSHttpRequest.HttpHeaders != null)
                 {
-                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...Begin Request Headers...", LPSLoggingLevel.Verbos));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...Begin Request Headers...", LPSLoggingLevel.Verbos, cancellationToken));
 
                     foreach (var header in this.LPSHttpRequest.HttpHeaders)
                     {
-                        awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"{header.Key}: {header.Value}", LPSLoggingLevel.Verbos));
+                        awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"{header.Key}: {header.Value}", LPSLoggingLevel.Verbos, cancellationToken));
                     }
 
-                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...End Request Headers...", LPSLoggingLevel.Verbos));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...End Request Headers...", LPSLoggingLevel.Verbos, cancellationToken));
                 }
                 else
                 {
-                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...No Headers Were Provided...", LPSLoggingLevel.Verbos));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "...No Headers Were Provided...", LPSLoggingLevel.Verbos, cancellationToken));
                 }
                 #endregion
 

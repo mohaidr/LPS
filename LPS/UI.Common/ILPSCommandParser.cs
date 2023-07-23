@@ -3,12 +3,13 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 
 namespace LPS.UI.Common
 {
-    internal interface IParser<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
+    internal interface ILPSCommandParser<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
     {
         TCommand Command { get; set; }
-        void Parse();
+        void Parse(CancellationToken cancellationToken);
     }
 }

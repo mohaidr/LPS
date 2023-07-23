@@ -3,6 +3,7 @@
     "LogFilePath": "logs/mylog.Log",
     "EnableConsoleLogging": true,
     "EnableConsoleErrorLogging": false,
+    "DisableFileLogging": false,
     "LoggingLevel": "Verbos",
     "ConsoleLogingLevel": "Information"
   }

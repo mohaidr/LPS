@@ -6,7 +6,7 @@ using System.Text.RegularExpressions;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestCaseValidator : IValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
+    internal class LPSTestCaseValidator : IUserValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
     {
         public LPSTestCaseValidator(LPSHttpTestCase.SetupCommand command)
         {

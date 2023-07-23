@@ -8,9 +8,9 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class LPSTestCaseChallengeUserService : IChallengeUserService<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
     {
-        IValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> _validator;
+        IUserValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> _validator;
 
-        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSHttpTestCase.SetupCommand command, IValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> validator)
+        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSHttpTestCase.SetupCommand command, IUserValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;

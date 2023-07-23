@@ -10,13 +10,13 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class LPSTestPlanChallengeUserService : IChallengeUserService<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
-        IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
+        IUserValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
         LPSTestPlan.SetupCommand _command;
         public LPSTestPlan.SetupCommand Command { get { return _command; } set { value = _command; } }
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
 
         private bool _skipOptionalFields;
-        public LPSTestPlanChallengeUserService(bool skipOptionalFields, LPSTestPlan.SetupCommand command, IValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
+        public LPSTestPlanChallengeUserService(bool skipOptionalFields, LPSTestPlan.SetupCommand command, IUserValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;

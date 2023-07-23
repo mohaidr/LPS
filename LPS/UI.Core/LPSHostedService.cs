@@ -16,14 +16,14 @@ using System.Runtime.CompilerServices;
 
 namespace LPS.UI.Core
 {
-    internal class Bootstrapper : IBootStrapper
+    internal class LPSHostedService : ILPSHostedService
     {
         ILPSLogger _logger;
         ILPSClientConfiguration<LPSHttpRequest> _config;
         ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         string[] _args;
-        public Bootstrapper(ILPSLogger logger,
+        public LPSHostedService(ILPSLogger logger,
             ILPSClientConfiguration<LPSHttpRequest> config,
             ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
             IRuntimeOperationIdProvider runtimeOperationIdProvider, 
@@ -44,9 +44,9 @@ namespace LPS.UI.Core
 
             if (_args != null && _args.Length > 0)
             {
-                var commandLineParser = new CommandLineParser(_logger, _httpClientManager, _config, lpsTestPlanSetupCommand, _runtimeOperationIdProvider);
+                var commandLineParser = new LPSCommandParser(_logger, _httpClientManager, _config, _runtimeOperationIdProvider, lpsTestPlanSetupCommand);
                 commandLineParser.CommandLineArgs = _args;
-                commandLineParser.Parse();
+                commandLineParser.Parse(cancellationToken);
                 await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Information);
             }
             else
@@ -59,32 +59,11 @@ namespace LPS.UI.Core
                 bool runTest = Console.ReadLine().ToLower().Trim() == "y";
                 if (runTest)
                 {
+                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _runtimeOperationIdProvider);
+                    await lpsManager.Run(lpsTestPlanSetupCommand, cancellationToken);
+                }
 
-                    var lpsManager = new LpsManager(_logger, _httpClientManager, _config, _runtimeOperationIdProvider);
-                    await lpsManager.Run(lpsTestPlanSetupCommand);
-                    string action;
-                    while (true)
-                    {
-                        Console.WriteLine("Press any key to exit, enter \"start over\" to start over or \"redo\" to trigger the same test ");
-                        action = Console.ReadLine()?.Trim().ToLower();
-                        if (action == "redo")
-                        {
-                            lpsTestPlanSetupCommand.Name = string.Concat(lpsTestPlanSetupCommand.Name, ".Redo");
-                            await lpsManager.Run(lpsTestPlanSetupCommand);
-                            continue;
-                        }
-                        break;
-                    }
-                    if (action == "start over")
-                    {
-                        _args = new string[] { };
-                        await StartAsync(new CancellationToken());
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"You may use the command lps run -tn {lpsTestPlanSetupCommand.Name} to execute the plan");
-                }
+                Console.WriteLine($"You can use the command lps run -tn {lpsTestPlanSetupCommand.Name} to execute the plan");
             }
             await _logger.Flush();
         }

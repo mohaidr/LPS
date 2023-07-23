@@ -41,19 +41,20 @@ namespace LPS.Infrastructure.Logger
         private string LogFilePath { get; set; }
         public bool EnableConsoleLogging { get; set; }
         public bool EnableConsoleErrorLogging { get; set; }
+        public bool DisableFileLogging { get; set; }
 
         public LPSLoggingLevel ConsoleLoggingLevel { get; set; }
         public LPSLoggingLevel LoggingLevel { get; set; }
-        public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level)
+        public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken cancellationToken = default)
         {
             var stopWatch = new Stopwatch();
             stopWatch.Start();
-            LogAsync(eventId, diagnosticMessage, level).Wait();
-            _ = LogAsync(eventId, $"Syncronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos);
+            LogAsync(eventId, diagnosticMessage, level, cancellationToken).Wait();
+            _ = LogAsync(eventId, $"Syncronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos, cancellationToken);
             stopWatch.Stop();
         }
 
-        public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level)
+        public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -99,7 +100,13 @@ namespace LPS.Infrastructure.Logger
                     }
 
                 }
-                await SynchronizedTextWriter.WriteLineAsync($"{currentDateTime} {level} {correlationId} {diagnosticMessage}");
+                if (!DisableFileLogging)
+                {
+                    StringBuilder stringBuilder = new StringBuilder();
+                    stringBuilder.Append($"{currentDateTime} {level} {correlationId} {diagnosticMessage}");
+                    await SynchronizedTextWriter.WriteLineAsync(stringBuilder, cancellationToken);
+                }
+                
                 semaphoreSlim.Release();
             }
             catch (Exception ex)

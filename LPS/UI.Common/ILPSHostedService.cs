@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LPS.UI.Common
 {
-    internal interface IBootStrapper: IHostedService
+    internal interface ILPSHostedService: IHostedService
     {
     }
 }

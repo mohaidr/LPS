@@ -8,10 +8,11 @@ using Newtonsoft.Json;
 using System.CommandLine.Binding;
 using LPS.Domain.Common;
 using LPS.UI.Common;
+using System.Threading;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    public class CommandLineParser : IParser<LPSTestPlan.SetupCommand, LPSTestPlan>
+    public class LPSCommandParser : ILPSCommandParser<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
         public string[] CommandLineArgs { get; set; }
 
@@ -20,11 +21,11 @@ namespace LPS.UI.Core.UI.Build.Services
         ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequest> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public CommandLineParser(ILPSLogger logger,
+        public LPSCommandParser(ILPSLogger logger,
             ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
             ILPSClientConfiguration<LPSHttpRequest> config,
-            LPSTestPlan.SetupCommand command,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            LPSTestPlan.SetupCommand command)
         {
             _logger = logger;
             _command = command;
@@ -34,7 +35,7 @@ namespace LPS.UI.Core.UI.Build.Services
         }
         public LPSTestPlan.SetupCommand Command { get { return _command; } set { } }
 
-        public void Parse()
+        public void Parse(CancellationToken cancellationToken)
         {
             var lpsCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
 
@@ -134,7 +135,7 @@ namespace LPS.UI.Core.UI.Build.Services
             runCommand.SetHandler(async (testName) =>
             {
                 _command = new LpsSerializer().DeSerialize(File.ReadAllText($"{testName}.json"));
-                await new LpsManager(_logger, _httpClientManager, _config, _runtimeOperationIdProvider).Run(_command);
+                await new LPSManager(_logger, _httpClientManager, _config, _runtimeOperationIdProvider).Run(_command, cancellationToken);
             }, CommandLineOptions.TestNameOption);
 
             lpsCommand.Invoke(CommandLineArgs);
