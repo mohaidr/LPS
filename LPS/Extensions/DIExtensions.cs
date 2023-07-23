@@ -6,6 +6,7 @@ using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.Json;
 
 namespace LPS.DIExtensions
 {
@@ -42,8 +43,14 @@ namespace LPS.DIExtensions
                 fileLogger.EnableConsoleLogging = lpsFileConfig.EnableConsoleLogging;
                 fileLogger.EnableConsoleErrorLogging = lpsFileConfig.EnableConsoleErrorLogging;
                 fileLogger.ConsoleLoggingLevel = lpsFileConfig.ConsoleLogingLevel;
-                fileLogger.LoggingLevel = lpsFileConfig.LoggingLevel;
                 fileLogger.DisableFileLogging = lpsFileConfig.DisableFileLogging;
+                fileLogger.LoggingLevel = lpsFileConfig.LoggingLevel;
+
+                // Print Logger Options
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                string jsonString = JsonSerializer.Serialize(fileLogger);
+                Console.WriteLine($"Logger Options: {jsonString}");
+                Console.ResetColor();
 
 
                 // Register the custom logger instance as a singleton in the DI container

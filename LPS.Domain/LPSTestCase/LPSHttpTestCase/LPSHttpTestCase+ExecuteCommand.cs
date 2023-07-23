@@ -190,11 +190,10 @@ namespace LPS.Domain
         private async Task ReportAsync(ExecuteCommand execCommand, string url, TaskCompletionSource<bool> TaskCompletionSource, CancellationToken cancellationToken)
         {
             Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
-            await Task.Delay(500);
             while (!TaskCompletionSource.Task.IsCompleted && !cancellationToken.IsCancellationRequested)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client: {_httpClientService.Id}  has Successfully completed {execCommand.NumberOfSuccessfullyCompletedRequests} requests to the host {url} and failed to complete {execCommand.NumberOfFailedToCompleteRequests} requests", LPSLoggingLevel.Information);
-                await Task.Delay(10000, cancellationToken);
+                await Task.Delay(5000, cancellationToken);
             }
         }
     }

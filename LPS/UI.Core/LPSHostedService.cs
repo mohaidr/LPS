@@ -38,7 +38,7 @@ namespace LPS.UI.Core
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App Started  --------------", LPSLoggingLevel.Information);  
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Information);  
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
             LPSTestPlan.SetupCommand lpsTestPlanSetupCommand = new LPSTestPlan.SetupCommand();
 
@@ -47,7 +47,7 @@ namespace LPS.UI.Core
                 var commandLineParser = new LPSCommandParser(_logger, _httpClientManager, _config, _runtimeOperationIdProvider, lpsTestPlanSetupCommand);
                 commandLineParser.CommandLineArgs = _args;
                 commandLineParser.Parse(cancellationToken);
-                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- Command execution has completed  --------------", LPSLoggingLevel.Information);
             }
             else
             {
@@ -65,11 +65,12 @@ namespace LPS.UI.Core
 
                 Console.WriteLine($"You can use the command lps run -tn {lpsTestPlanSetupCommand.Name} to execute the plan");
             }
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Information);
+
             await _logger.Flush();
         }
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            Console.WriteLine("App Closed");
             await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Closed  --------------", LPSLoggingLevel.Information);
             await _logger?.Flush();
         }

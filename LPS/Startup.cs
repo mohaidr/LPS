@@ -22,8 +22,7 @@ namespace LPS
             CancellationTokenSource cts = new CancellationTokenSource();
             Console.CancelKeyPress += CancelKeyPressHandler;
             var cancellationToken = cts.Token;
-            var cancellationTask = WatchForCancellation(cts);
-
+            _= WatchForCancellationAsync(cts);
             var host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
@@ -51,12 +50,12 @@ namespace LPS
                         // add development dependencies
                     }
                 })
+                .UseConsoleLifetime(options => options.SuppressStatusMessages = true)
                 .Build();
-            await host.RunAsync(cancellationToken);
-            await cancellationTask;
+            await host.StartAsync(cancellationToken);
         }
 
-        static bool cancelRequested = false;
+        static bool _cancelRequested = false;
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
         {
             if (e.SpecialKey == ConsoleSpecialKey.ControlC || e.SpecialKey == ConsoleSpecialKey.ControlBreak)
@@ -67,13 +66,12 @@ namespace LPS
                 // For example, you can prompt the user to confirm the exit or save data.
 
                 // In this example, we'll just set a flag to indicate that the cancel was requested.
-                cancelRequested = true;
+                _cancelRequested = true;
             }
-
         }
-        public static async Task WatchForCancellation(CancellationTokenSource cts)
+        public static async Task WatchForCancellationAsync(CancellationTokenSource cts)
         {
-            while (!cancelRequested)
+            while (!_cancelRequested)
             {
                 if (Console.KeyAvailable)// check for escape
                 {
@@ -81,14 +79,13 @@ namespace LPS
                     if (keyInfo.Key == ConsoleKey.Escape)
                     {
                         cts.Cancel();
-                        cancelRequested= true;
+                        _cancelRequested= true;
                     }
                 }
                 await Task.Delay(1000);
             }
-            if(!cancelRequested)
+            if(!_cancelRequested)
                 cts.Cancel();
-           Console.WriteLine("Cancel requested. \nExiting Gracefully.");
         }
     }
 }
