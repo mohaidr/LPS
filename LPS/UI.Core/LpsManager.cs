@@ -25,12 +25,12 @@ namespace LPS.UI.Core
         }
         public async Task Run(LPSTestPlan.SetupCommand planCommand, CancellationToken cancellationToken)
         {
-            if (planCommand.IsValid)
+            var lpsTest = new LPSTestPlan(planCommand, _httpClientManager, _config, _logger, _runtimeOperationIdProvider);
+            if (lpsTest.IsValid)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Test has started", LPSLoggingLevel.Information);
-                var lpsTest = new LPSTestPlan(planCommand, _httpClientManager, _config, _logger, _runtimeOperationIdProvider);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{planCommand.Name}' execution has started", LPSLoggingLevel.Information);
                 await new LPSTestPlan.ExecuteCommand().ExecuteAsync(lpsTest, cancellationToken);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Test plan '{planCommand.Name}' execution has completed", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{planCommand.Name}' execution has completed", LPSLoggingLevel.Information);
             }
         }
 

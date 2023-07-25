@@ -116,7 +116,7 @@ namespace LPS.Domain
 
                 LPSHttpRequest.ExecuteCommand lpsRequestExecCommand = new LPSHttpRequest.ExecuteCommand(this._httpClientService) { LPSTestCaseExecuteCommand = command };
                 TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
-                var reportTask = ReportAsync(command, this.LPSHttpRequest.URL, taskCompletionSource, cancellationToken);
+                _ = ReportAsync(command, this.LPSHttpRequest.URL, taskCompletionSource, cancellationToken);
                 Stopwatch stopwatch;
                 int numberOfSentRequests = 0;
                 switch (this.Mode)
@@ -181,7 +181,6 @@ namespace LPS.Domain
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {numberOfSentRequests} request to complete", LPSLoggingLevel.Information);
                 await Task.WhenAll(awaitableTasks);
                 taskCompletionSource.SetResult(true);
-                await reportTask;
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has completed all the requests to {this.LPSHttpRequest.URL} with {command.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {command.NumberOfFailedToCompleteRequests} failed to complete requests", LPSLoggingLevel.Information);
             }
         }
@@ -193,7 +192,7 @@ namespace LPS.Domain
             while (!TaskCompletionSource.Task.IsCompleted && !cancellationToken.IsCancellationRequested)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client: {_httpClientService.Id}  has Successfully completed {execCommand.NumberOfSuccessfullyCompletedRequests} requests to the host {url} and failed to complete {execCommand.NumberOfFailedToCompleteRequests} requests", LPSLoggingLevel.Information);
-                await Task.Delay(5000, cancellationToken);
+                await Task.Delay(10000, cancellationToken);
             }
         }
     }

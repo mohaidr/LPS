@@ -47,7 +47,7 @@ namespace LPS.UI.Core
                 var commandLineParser = new LPSCommandParser(_logger, _httpClientManager, _config, _runtimeOperationIdProvider, lpsTestPlanSetupCommand);
                 commandLineParser.CommandLineArgs = _args;
                 commandLineParser.Parse(cancellationToken);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- Command execution has completed  --------------", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Information);
             }
             else
             {

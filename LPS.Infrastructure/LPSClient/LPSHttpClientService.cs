@@ -1,5 +1,6 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common;
+using LPS.Infrastructure.Logger;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -19,9 +20,11 @@ namespace LPS.Infrastructure.Client
         private static int _clientNumber;
         public string Id { get; private set; }
         public string GuidId { get; private set; }
-        public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequest> config, ILPSLogger logger) 
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequest> config, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) 
         {
             _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
             {
                 PooledConnectionLifetime = ((LPSHttpClientConfiguration)config).PooledConnectionLifetime,
@@ -81,16 +84,16 @@ namespace LPS.Infrastructure.Client
 
                 var responseMessageTask = httpClient.SendAsync(httpRequestMessage, cancellationToken);
                 var responseMessage = await responseMessageTask;
-                await _logger.LogAsync("0000-0000-0000", $"Client: {Id} - Request # {requestId}\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LPSLoggingLevel.Verbos);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestId}\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LPSLoggingLevel.Verbos);
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
-                    await _logger.LogAsync("0000-0000-0000", @$"Client: {Id} - Request # {requestId} \n\t  The request # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {requestId} \n\t  The request # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
                 }
 
-                await _logger.LogAsync("0000-0000-0000", @$"...Client: {Id} - Request # {requestId} \n\t The request # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestId} \n\t The request # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
                 throw new Exception(ex.Message, ex.InnerException);
             }
         }
