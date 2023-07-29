@@ -17,6 +17,8 @@ namespace LPS.Domain
                 ClientTimeout = 240;
                 PooledConnectionIdleTimeout = 5;
                 PooledConnectionLifetime = 25;
+                DelayClientCreationUntilIsNeeded = false;
+                RunInParallel = false;
             }
 
             public void Execute(LPSTestPlan entity)
@@ -34,6 +36,7 @@ namespace LPS.Domain
             public int PooledConnectionIdleTimeout { get; set; }
             public int MaxConnectionsPerServer { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
+            public bool? RunInParallel { get; set; }
             public bool IsValid { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set; }
         }
@@ -53,6 +56,7 @@ namespace LPS.Domain
                 this.PooledConnectionLifeTime= command.PooledConnectionLifetime;
                 this.PooledConnectionIdleTimeout= command.PooledConnectionIdleTimeout;
                 this.ClientTimeout= command.ClientTimeout;
+                this.RunInParallel = command.RunInParallel;
                 ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).Timeout = TimeSpan.FromSeconds(this.ClientTimeout);
                 ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).PooledConnectionLifetime = TimeSpan.FromMinutes(this.PooledConnectionLifeTime);
                 ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).PooledConnectionIdleTimeout = TimeSpan.FromMinutes(this.PooledConnectionIdleTimeout);

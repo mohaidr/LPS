@@ -69,7 +69,14 @@ namespace LPS.Domain
                 if (!command.DelayClientCreationUntilIsNeeded.HasValue) 
                 { 
                     command.IsValid = false;
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Delay client creation until needed can't be empty.", LPSLoggingLevel.Warning);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Delay client creation until needed must have a value.", LPSLoggingLevel.Warning);
+
+                }
+
+                if (!command.RunInParallel.HasValue)
+                {
+                    command.IsValid = false;
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Run in parallel must have a value.", LPSLoggingLevel.Warning);
 
                 }
 

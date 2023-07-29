@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
@@ -36,7 +38,6 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 List<Task> awaitableTasks = new List<Task>();
-
                 #region Loggin Plan Details
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbos, cancellationToken));
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbos, cancellationToken));
@@ -50,6 +51,24 @@ namespace LPS.Domain
 
                 ILPSClientService<LPSHttpRequest> httpClientService = null;
 
+                async Task ExecCaseAsync()
+                {
+                    LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService) { LPSTestPlanExecuteCommand = command };
+                    foreach (var testCase in this.LPSTestCases)
+                    {
+                        LPSHttpTestCase cloneTestCase = new LPSHttpTestCase(_logger, _runtimeOperationIdProvider);
+                        testCase.Clone(cloneTestCase);
+                        if (this.RunInParallel.HasValue && this.RunInParallel.Value)
+                        {
+                            awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(cloneTestCase, cancellationToken));
+                        }
+                        else
+                        {
+                            await testCaseExecutecommand.ExecuteAsync(cloneTestCase, cancellationToken);
+                        }
+                    }
+                }
+
                 for (int i = 0; i < this.NumberOfClients && !cancellationToken.IsCancellationRequested; i++)
                 {
                     if (!this.DelayClientCreationUntilIsNeeded.Value)
@@ -61,14 +80,7 @@ namespace LPS.Domain
                         httpClientService = _lpsClientManager.CreateInstance(_lpsClientConfig);
                     }
 
-                    LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService) { LPSTestPlanExecuteCommand = command };
-
-                    foreach (var testCase in this.LPSTestCases)
-                    {
-                        LPSHttpTestCase cloneTestCase = new LPSHttpTestCase(_logger, _runtimeOperationIdProvider);
-                        testCase.Clone(cloneTestCase);
-                        awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(cloneTestCase, cancellationToken));
-                    }
+                    awaitableTasks.Add(ExecCaseAsync());
 
                     if (this.RampUpPeriod>0)
                     { 

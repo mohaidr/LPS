@@ -177,8 +177,8 @@ namespace LPS.Domain
                     default:
                         throw new ArgumentException("Invalid iteration mode was chosen");
                 }
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {numberOfSentRequests} to {this.LPSHttpRequest.URL}", LPSLoggingLevel.Information);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {numberOfSentRequests} request to complete", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {numberOfSentRequests} request(s) to {this.LPSHttpRequest.URL}", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Information);
                 await Task.WhenAll(awaitableTasks);
                 taskCompletionSource.SetResult(true);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has completed all the requests to {this.LPSHttpRequest.URL} with {command.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {command.NumberOfFailedToCompleteRequests} failed to complete requests", LPSLoggingLevel.Information);
@@ -191,7 +191,7 @@ namespace LPS.Domain
             Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
             while (!TaskCompletionSource.Task.IsCompleted && !cancellationToken.IsCancellationRequested)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client: {_httpClientService.Id}  has Successfully completed {execCommand.NumberOfSuccessfullyCompletedRequests} requests to the host {url} and failed to complete {execCommand.NumberOfFailedToCompleteRequests} requests", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client: {_httpClientService.Id} has Successfully completed {execCommand.NumberOfSuccessfullyCompletedRequests} requests to the host {url} and failed to complete {execCommand.NumberOfFailedToCompleteRequests} requests", LPSLoggingLevel.Information);
                 await Task.Delay(10000, cancellationToken);
             }
         }

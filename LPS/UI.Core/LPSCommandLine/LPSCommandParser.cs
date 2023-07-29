@@ -10,7 +10,7 @@ using LPS.Domain.Common;
 using LPS.UI.Common;
 using System.Threading;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.LPSCommandLine
 {
     public class LPSCommandParser : ILPSCommandParser<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
@@ -41,13 +41,14 @@ namespace LPS.UI.Core.UI.Build.Services
 
             Command createCommand = new Command("create", "Create a new test") {
                 CommandLineOptions.TestNameOption,
-                CommandLineOptions.NumberOfClients,
-                CommandLineOptions.MaxConnectionsPerServer,
-                CommandLineOptions.PoolConnectionIdelTimeout,
-                CommandLineOptions.PoolConnectionLifeTime,
+                CommandLineOptions.NumberOfClientsOption,
+                CommandLineOptions.MaxConnectionsPerServerption,
+                CommandLineOptions.PoolConnectionIdelTimeoutOption,
+                CommandLineOptions.PoolConnectionLifeTimeOption,
                 CommandLineOptions.ClientTimeoutOption,
-                CommandLineOptions.RampupPeriod,
-                CommandLineOptions.DelayClientCreation
+                CommandLineOptions.RampupPeriodOption,
+                CommandLineOptions.DelayClientCreation,
+                CommandLineOptions.RunInParaller
 
             };
             Command addCommand = new Command("add", "Add an http request")
@@ -73,37 +74,33 @@ namespace LPS.UI.Core.UI.Build.Services
             lpsCommand.AddCommand(addCommand);
             lpsCommand.AddCommand(runCommand);
 
-            createCommand.SetHandler((testName, 
-                numberofClients,
-                maxConnectionsPerServer,
-                poolConnectionIdelTimeout,
-                poolConnectionLifeTime, 
-                clientTimeoutOption,
-                rampUpPeriod,
-                delayClientCreation) =>
+            createCommand.SetHandler((lpaTestPlan) =>
                 {
-                    _command.Name = testName;
-                    _command.NumberOfClients= numberofClients;
-                    _command.DelayClientCreationUntilIsNeeded= delayClientCreation;
-                    _command.RampUpPeriod= rampUpPeriod;
-                    _command.MaxConnectionsPerServer= maxConnectionsPerServer;
-                    _command.ClientTimeout= clientTimeoutOption;
-                    _command.PooledConnectionIdleTimeout= poolConnectionIdelTimeout;
-                    _command.PooledConnectionLifetime= poolConnectionLifeTime;
+                    _command.Name = lpaTestPlan.Name;
+                    _command.NumberOfClients = lpaTestPlan.NumberOfClients;
+                    _command.DelayClientCreationUntilIsNeeded = lpaTestPlan.DelayClientCreationUntilIsNeeded;
+                    _command.RampUpPeriod = lpaTestPlan.RampUpPeriod;
+                    _command.MaxConnectionsPerServer = lpaTestPlan.MaxConnectionsPerServer;
+                    _command.ClientTimeout = lpaTestPlan.ClientTimeout;
+                    _command.PooledConnectionIdleTimeout = lpaTestPlan.PooledConnectionIdleTimeout;
+                    _command.PooledConnectionLifetime = lpaTestPlan.PooledConnectionLifetime;
+                    _command.RunInParallel = lpaTestPlan.RunInParallel;
                     string json = new LpsSerializer().Serialize(_command);
-                    File.WriteAllText($"{testName}.json", json);
+                    File.WriteAllText($"{lpaTestPlan.Name}.json", json);
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("Test Has Been Created Successfully");
                     Console.ResetColor();
                 },
-                CommandLineOptions.TestNameOption, 
-                CommandLineOptions.NumberOfClients,
-                CommandLineOptions.MaxConnectionsPerServer,
-                CommandLineOptions.PoolConnectionIdelTimeout,
-                CommandLineOptions.PoolConnectionLifeTime,
-                CommandLineOptions.ClientTimeoutOption,
-                CommandLineOptions.RampupPeriod,
-                CommandLineOptions.DelayClientCreation);
+                new LPSTestPlanCommandBinder(
+                     CommandLineOptions.TestNameOption,
+                     CommandLineOptions.NumberOfClientsOption,
+                     CommandLineOptions.RampupPeriodOption,
+                     CommandLineOptions.MaxConnectionsPerServerption,
+                     CommandLineOptions.PoolConnectionLifeTimeOption,
+                     CommandLineOptions.PoolConnectionIdelTimeoutOption,
+                     CommandLineOptions.ClientTimeoutOption,
+                     CommandLineOptions.DelayClientCreation,
+                     CommandLineOptions.RunInParaller)); 
 
             addCommand.SetHandler(
                 (testName, lpsTestCase) =>
@@ -119,7 +116,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.ResetColor();
                 },
                 CommandLineOptions.TestNameOption,
-                new LPSTestCaseBinder(
+                new LPSTestCaseCommandBinder(
                 CommandLineOptions.CaseNameOption,
                 CommandLineOptions.RequestCountOption,
                 CommandLineOptions.IterationModeOption,

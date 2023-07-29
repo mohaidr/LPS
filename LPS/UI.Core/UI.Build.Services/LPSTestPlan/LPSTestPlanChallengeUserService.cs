@@ -43,7 +43,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 if (!_validator.Validate("-numberOfClients"))
                 {
-                    Console.WriteLine("The number of clients to connect to your site. " +
+                    Console.WriteLine("The number of clients to run your test cases. " +
                         "The number should be a valid positive number greater than 0");
 
                     int numberOfClients;
@@ -52,6 +52,33 @@ namespace LPS.UI.Core.UI.Build.Services
                         _command.NumberOfClients = numberOfClients;
                     }
 
+                    continue;
+                }
+              
+                if (!_validator.Validate("-rampupPeriod"))
+                {
+                    Console.WriteLine("The time to wait until a new client connects to your site");
+
+                    int rampupPeriod;
+                    if (int.TryParse(ChallengeService.Challenge("-rampupPeriod"), out rampupPeriod))
+                    {
+                        _command.RampUpPeriod = rampupPeriod;
+                    }
+
+                    continue;
+                }
+                
+                if (!_validator.Validate("-delayClientCreationUntilNeeded"))
+                {
+                    Console.WriteLine("Delay the client creation until the client is needed");
+
+                    switch (ChallengeService.Challenge("-delayClientCreationUntilNeeded").ToUpper())
+                    {
+                        case "Y":
+                            _command.DelayClientCreationUntilIsNeeded = true; break;
+                        case "N":
+                            _command.DelayClientCreationUntilIsNeeded = false; break;
+                    }
                     continue;
                 }
 
@@ -64,19 +91,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     if (int.TryParse(ChallengeService.Challenge("-clientTimeOut"), out clientTimeout))
                     {
                         _command.ClientTimeout = clientTimeout;
-                    }
-
-                    continue;
-                }
-
-                if (!_validator.Validate("-rampupPeriod"))
-                {
-                    Console.WriteLine("The time to wait until a new client connects to your site");
-
-                    int rampupPeriod;
-                    if (int.TryParse(ChallengeService.Challenge("-rampupPeriod"), out rampupPeriod))
-                    {
-                        _command.RampUpPeriod = rampupPeriod;
                     }
 
                     continue;
@@ -121,20 +135,20 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-                if (!_validator.Validate("-delayClientCreationUntilNeeded"))
+                if (!_validator.Validate("-runInParallel"))
                 {
-                    Console.WriteLine("Delay the client creation until the client is needed");
+                    Console.WriteLine("Would you like to run your test cases in parallel");
 
-                    switch (ChallengeService.Challenge("-delayClientCreationUntilNeeded").ToUpper())
+                    switch (ChallengeService.Challenge("-runInParallel").ToUpper())
                     {
                         case "Y":
-                            _command.DelayClientCreationUntilIsNeeded = true; break;
+                            _command.RunInParallel = true; break;
                         case "N":
-                            _command.DelayClientCreationUntilIsNeeded = false; break;
+                            _command.RunInParallel = false; break;
                     }
+
                     continue;
                 }
-
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("=================== Add Http Test Case ===================");
@@ -173,6 +187,8 @@ namespace LPS.UI.Core.UI.Build.Services
                 _command.ClientTimeout = 0;
                 _command.PooledConnectionIdleTimeout = 0;
                 _command.PooledConnectionLifetime = 0;
+                _command.DelayClientCreationUntilIsNeeded = null;
+                _command.RunInParallel = null;
             }
         }
     }

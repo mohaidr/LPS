@@ -6,13 +6,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.LPSCommandLine;
 using LPS.Domain;
-using Microsoft.Extensions.Hosting;
 using LPS.Domain.Common;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using System.IO;
-using System.Runtime.CompilerServices;
 
 namespace LPS.UI.Core
 {

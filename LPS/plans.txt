@@ -1,15 +1,9 @@
 ======== Urgent List ========
 
-Number of clients behavior  - Should I make my queue to track the number of requests per host per all clients? or change the way I deal with clients
-
-
-Logging Behavior
 
 
 //ToDo: Implement RunInParallel
 //ToDo: Implement CleanUp Cookies
-
-Exit app after command execution is completed
 
 command to run multiple plans
 command to configure file logging options
@@ -17,13 +11,14 @@ command to configure file logging options
 
 ======== To Do List ========
 
+support for http2
+
 Cookie manager to support custom cookies and support enabling disabling cookies per domain. For now cookies are enabled by defaults for all clients and all domains
 redirects - Http Redirections for now is enabled for all domains and all clients
 
 cache manager
 download embedded resources optionally 
 shared settings across all requests 
-support for http2
 Remove Completed Tasks
 
 
@@ -54,5 +49,6 @@ console logger option - Done
 provide an option to not run the test plan after creating it manually - Done
 logging per client - done
 Logging Correlation Ids - done
-
-
+Number of clients behavior  - Should I make my queue to track the number of requests per host per all clients? or change the way I deal with clients - Done
+Logging Behavior - Done
+Exit app after command execution is completed - Done

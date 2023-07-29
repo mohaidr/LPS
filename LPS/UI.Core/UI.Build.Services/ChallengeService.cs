@@ -47,6 +47,10 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.Write("Dleay Client Creation Until Needed (Y/N): ");
                     input = Console.ReadLine().Trim();
                     break;
+                case "-runInParallel":
+                    Console.Write("Run In Parallel  (Y/N): ");
+                    input = Console.ReadLine().Trim();
+                    break;
                 case "-testCaseName":
                     Console.Write("Test Case Name: ");
                     input = Console.ReadLine().Trim();

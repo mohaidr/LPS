@@ -34,6 +34,8 @@ namespace LPS.UI.Core.UI.Build.Services
                     return _command.PooledConnectionIdleTimeout > 0;
                 case "-delayClientCreationUntilNeeded":
                     return _command.DelayClientCreationUntilIsNeeded.HasValue;
+                case "-runInParallel":
+                    return _command.RunInParallel.HasValue;
                 default:
                     break;
             }

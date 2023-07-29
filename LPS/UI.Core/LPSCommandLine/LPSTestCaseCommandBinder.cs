@@ -1,25 +1,16 @@
-﻿using LPS.Extensions;
-using LPS.Domain;
+﻿using LPS.Domain;
+using LPS.UI.Core.UI.Build.Services;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.CommandLine;
 using System.CommandLine.Binding;
-using LPS.UI.Core.UI.Build.Services;
-using System.Net.Http;
-using System.Net;
-using System.Reflection.PortableExecutable;
-using System.Threading;
-using System.Xml.Linq;
+using System.CommandLine;
+using System.Linq;
+using System.Text;
 using System.CommandLine.Parsing;
-using System.ComponentModel.DataAnnotations;
-using static LPS.Domain.LPSHttpTestCase;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.LPSCommandLine
 {
-    public class LPSTestCaseBinder : BinderBase<LPSHttpTestCase.SetupCommand>
+    public class LPSTestCaseCommandBinder : BinderBase<LPSHttpTestCase.SetupCommand>
     {
         private readonly Option<string> _nameOption;
         private readonly Option<int?> _requestCountOption;
@@ -33,21 +24,21 @@ namespace LPS.UI.Core.UI.Build.Services
         private readonly Option<string> _payloadOption;
         Option<LPSHttpTestCase.IterationMode> _iterationModeOption;
 
-        public LPSTestCaseBinder(Option<string> nameOption, Option<int?> requestCountOption,
+        public LPSTestCaseCommandBinder(Option<string> nameOption, Option<int?> requestCountOption,
             Option<LPSHttpTestCase.IterationMode> iterationModeOption,
             Option<int?> duratiion,
             Option<int?> coolDownTime,
             Option<int?> batchSizem,
-            Option<string> httpMethodOption, 
-            Option<string> httpversionOption, 
+            Option<string> httpMethodOption,
+            Option<string> httpversionOption,
             Option<string> urlOption,
-            Option<IList<string>> headerOption, 
+            Option<IList<string>> headerOption,
             Option<string> payloadOption)
         {
             _nameOption = nameOption;
             _iterationModeOption = iterationModeOption;
             _duration = duratiion;
-            _batchSize= batchSizem;
+            _batchSize = batchSizem;
             _coolDownTime = coolDownTime;
 
             #region validators
@@ -58,14 +49,14 @@ namespace LPS.UI.Core.UI.Build.Services
                 int? requestCount = result.Parent.Children.OfType<OptionResult>()
                     .FirstOrDefault(r => r.Symbol == _requestCountOption)?.GetValueOrDefault<int?>();
                 int? duration = result.Parent.Children.OfType<OptionResult>()
-                    .FirstOrDefault(r => r.Symbol == _duration)?.GetValueOrDefault<int?>(); 
+                    .FirstOrDefault(r => r.Symbol == _duration)?.GetValueOrDefault<int?>();
                 int? batchSize = result.Parent.Children.OfType<OptionResult>()
                     .FirstOrDefault(r => r.Symbol == _batchSize)?.GetValueOrDefault<int?>();
-                int?  coolDownTime = result.Parent.Children.OfType<OptionResult>()
+                int? coolDownTime = result.Parent.Children.OfType<OptionResult>()
                     .FirstOrDefault(r => r.Symbol == _coolDownTime)?.GetValueOrDefault<int?>();
 
                 bool invalidIterationModeCombination = false;
-                if (mode.Value == IterationMode.DCB)
+                if (mode.Value == LPSHttpTestCase.IterationMode.DCB)
                 {
                     if (!duration.HasValue || duration.Value <= 0
                         || !coolDownTime.HasValue || coolDownTime.Value <= 0
@@ -75,7 +66,7 @@ namespace LPS.UI.Core.UI.Build.Services
                         invalidIterationModeCombination = true;
                     }
                 }
-                else if (mode.Value == IterationMode.CRB)
+                else if (mode.Value == LPSHttpTestCase.IterationMode.CRB)
                 {
                     if (!coolDownTime.HasValue || coolDownTime.Value <= 0
                         || !requestCount.HasValue || requestCount.Value <= 0
@@ -85,7 +76,7 @@ namespace LPS.UI.Core.UI.Build.Services
                         invalidIterationModeCombination = true;
                     }
                 }
-                else if (mode.Value == IterationMode.CB)
+                else if (mode.Value == LPSHttpTestCase.IterationMode.CB)
                 {
                     if (!coolDownTime.HasValue || coolDownTime.Value <= 0
                         || !batchSize.HasValue || batchSize.Value <= 0
@@ -96,26 +87,26 @@ namespace LPS.UI.Core.UI.Build.Services
 
                     }
                 }
-                else if (mode.Value == IterationMode.R)
+                else if (mode.Value == LPSHttpTestCase.IterationMode.R)
                 {
                     if (!requestCount.HasValue || requestCount.Value <= 0
                         || duration.HasValue
                         || batchSize.HasValue
                         || coolDownTime.HasValue)
                     {
-                     
+
                         invalidIterationModeCombination = true;
                     }
 
                 }
-                else if (mode.Value == IterationMode.D)
+                else if (mode.Value == LPSHttpTestCase.IterationMode.D)
                 {
                     if (!duration.HasValue || duration.Value <= 0
                         || requestCount.HasValue
                         || batchSize.HasValue
                         || coolDownTime.HasValue)
                     {
-                      
+
                         invalidIterationModeCombination = true;
 
                     }
@@ -155,61 +146,10 @@ namespace LPS.UI.Core.UI.Build.Services
                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
                     Httpversion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
-                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? 
-                        InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
+                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ?
+                    InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption))
                 },
             };
     }
-
-    public class CommandLineOptions
-    {
-        static CommandLineOptions()
-        {
-            TestNameOption.AddAlias("-tn");
-            NumberOfClients.AddAlias("-nc");
-            RampupPeriod.AddAlias("-rp");
-            MaxConnectionsPerServer.AddAlias("-mcps");
-            PoolConnectionLifeTime.AddAlias("-pclt");
-            PoolConnectionIdelTimeout.AddAlias("-pcit");
-            DelayClientCreation.AddAlias("dcc");
-            ClientTimeoutOption.AddAlias("-cto");
-            CaseNameOption.AddAlias("-cn");
-            RequestCountOption.AddAlias("-rc");
-            Duratiion.AddAlias("-d");
-            BatchSize.AddAlias("-bs");
-            CoolDownTime.AddAlias("-cdt");
-            HttpMethodOption.AddAlias("-hm");
-            HttpversionOption.AddAlias("-hv");
-            UrlOption.AddAlias("-u");
-            HeaderOption.AddAlias("-h");
-            PayloadOption.AddAlias("-p");
-            IterationModeOption.AddAlias("-im");
-
-        }
-
-                            
-                    
-
-        public static Option<string> TestNameOption = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
-        public static Option<int> NumberOfClients = new Option<int>("--numberOfClients", "Number of clients to execute the plan") { IsRequired = true, };
-        public static Option<int> RampupPeriod = new Option<int>("--rampupPeriod", "Time in millisencds to wait before creating starting a new client") { IsRequired = false, };
-        public static Option<int> MaxConnectionsPerServer = new Option<int>("--maxConnectionsPerServer", "max number of connections per client per server") { IsRequired = true, };
-        public static Option<int> PoolConnectionLifeTime = new Option<int>("--poolConnectionLifeTime", () => 25, "Pooled connection life time defines the maximal connection lifetime in the pool, tracking its age from when the connection was established, regardless of how much time it spent idle or active.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionlifetime?view=net-8.0") { IsRequired = false, };
-        public static Option<int> PoolConnectionIdelTimeout = new Option<int>("--poolConnectionIdelTimeout", () => 5, "Pooled connection idle timeout defines the maximum idle time for a connection in the pool.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionidletimeout?view=net-8.0") { IsRequired = false, };
-        public static Option<int> ClientTimeoutOption = new Option<int>("--clientTimeout", () => 240, "Timeout") { IsRequired = false };
-        public static Option<bool> DelayClientCreation = new Option<bool>("--delayClientCreation", () => false, "Delay Client Creation Until is Needed") { IsRequired = false };
-        public static Option<string> CaseNameOption = new Option<string>("--caseName", "The name of the test case") { IsRequired = true };
-        public static Option<LPSHttpTestCase.IterationMode> IterationModeOption = new Option<LPSHttpTestCase.IterationMode>("--iterationMode", "The Test Iteration Mode") { IsRequired = false, };
-        public static Option<int?> RequestCountOption = new Option<int?>("--requestCount", "The number of requests") { IsRequired = false, };
-        public static Option<int?> Duratiion = new Option<int?>("--duration", "Test time in seconds") { IsRequired = false, };
-        public static Option<int?> CoolDownTime = new Option<int?>("--coolDownTime", "The time to cooldown during the test") { IsRequired = false, };
-        public static Option<int?> BatchSize = new Option<int?>("--batchsize", "The number of requests to be sent in a batch") { IsRequired = false, };
-        public static Option<string> HttpMethodOption = new Option<string>("--method", "HTTP method") { IsRequired = true };
-        public static Option<string> HttpversionOption = new Option<string>("--version", () => "1.1", "HTTP version") { IsRequired = false };
-        public static Option<string> UrlOption = new Option<string>("--url", "URL") { IsRequired = true };
-        public static Option<IList<string>> HeaderOption = new Option<IList<string>>("--header", "Header") { IsRequired = false, AllowMultipleArgumentsPerToken = true, };
-        public static Option<string> PayloadOption = new Option<string>("--payload", "Request Payload, can be a path to a file or inline text") { IsRequired = false, };
-    }
 }
-
