@@ -50,7 +50,7 @@ namespace LPS.Infrastructure.Logger
             var stopWatch = new Stopwatch();
             stopWatch.Start();
             LogAsync(eventId, diagnosticMessage, level, cancellationToken).Wait();
-            _ = LogAsync(eventId, $"Syncronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos, cancellationToken);
+            _ = LogAsync(eventId, $"Synchronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos, cancellationToken);
             stopWatch.Stop();
         }
 

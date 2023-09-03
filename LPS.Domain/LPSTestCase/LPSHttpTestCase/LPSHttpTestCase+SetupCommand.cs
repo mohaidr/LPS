@@ -68,6 +68,7 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
+                cloneToEntity.Id = this.Id;
                 cloneToEntity.RequestCount = this.RequestCount;
                 cloneToEntity.Name = this.Name;
                 cloneToEntity.Mode = this.Mode;

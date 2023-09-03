@@ -4,6 +4,7 @@ using LPS.Infrastructure.Logger;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -39,7 +40,7 @@ namespace LPS.Infrastructure.Client
             Id =   Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
-        public async Task Send(LPSHttpRequest lpsHttpRequest, string requestId, CancellationToken cancellationToken)
+        public async Task SendAsync(LPSHttpRequest lpsHttpRequest, string requestNumber, CancellationToken cancellationToken)
         {
             try
             {
@@ -58,7 +59,7 @@ namespace LPS.Infrastructure.Client
                 {
 
                     if (supportsContent)
-                    {
+                    {   
                         var contentHeaders = httpRequestMessage.Content.Headers;
 
                         if (contentHeaders.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
@@ -83,17 +84,37 @@ namespace LPS.Infrastructure.Client
                 }
 
                 var responseMessageTask = httpClient.SendAsync(httpRequestMessage, cancellationToken);
-                var responseMessage = await responseMessageTask;
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestId}\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\t Response Body: {responseMessage.Content.ReadAsStringAsync().Result}\n\t Response Headers: {responseMessage.Headers}", LPSLoggingLevel.Verbos);
+
+                var response = await responseMessageTask;
+                string contentType = response.Content.Headers.ContentType.MediaType;
+                string fileExtension = GetFileExtension(contentType);
+                string directoryName = $"{_runtimeOperationIdProvider.OperationId}.Resources";
+                if (!Directory.Exists(directoryName))
+                {
+                    Directory.CreateDirectory(directoryName);
+                }
+                string fileName = $"{directoryName}/{Id}.{requestNumber}.{lpsHttpRequest.Id}{fileExtension}";
+
+                using (Stream contentStream = await response.Content.ReadAsStreamAsync())
+                using (FileStream fileStream = File.Create(fileName))
+                {
+                    byte[] buffer = new byte[8192]; // Adjust the buffer size as needed
+                    int bytesRead;
+                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                    {
+                        await fileStream.WriteAsync(buffer, 0, bytesRead);
+                    }
+                }
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestNumber}\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\t Response Body: {fileName}\n\t Response Headers: {response.Headers}", LPSLoggingLevel.Verbos);
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {requestId} \n\t  The request # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {requestNumber} \n\t  The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestId} \n\t The request # {requestId} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestNumber} \n\t The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
                 throw new Exception(ex.Message, ex.InnerException);
             }
         }
@@ -388,6 +409,46 @@ namespace LPS.Infrastructure.Client
             message.Headers.Add(name, value);
         }
 
+        static string GetFileExtension(string contentType)
+        {
+            switch (contentType)
+            {
+                case "image/jpeg":
+                    return ".jpg";
+                case "image/png":
+                    return ".png";
+                case "application/pdf":
+                    return ".pdf";
+                case "text/plain":
+                    return ".txt";
+                case "application/msword":
+                    return ".doc";
+                case "application/vnd.ms-excel":
+                    return ".xls";
+                case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+                    return ".xlsx";
+                case "application/vnd.ms-powerpoint":
+                    return ".ppt";
+                case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+                    return ".pptx";
+                case "application/xml":
+                case "text/xml":
+                    return ".xml";
+                case "text/javascript":
+                case "application/javascript":
+                case "application/x-javascript":
+                    return ".js";
+                case "text/css":
+                    return ".css";
+                case "text/html":
+                    return ".html";
+                case "application/json":
+                    return ".json";
+                // Add more content type mappings as needed
+                default:
+                    return ".bin";
+            }
+        }
     }
 }
 

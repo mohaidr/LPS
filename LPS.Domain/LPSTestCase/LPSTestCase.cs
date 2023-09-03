@@ -26,6 +26,7 @@ namespace LPS.Domain
             this.Setup(command);
         }
 
+        public Guid Id { get; protected set; }
         public string Name { get; protected set; }
         public bool IsValid { get; protected set; }
 

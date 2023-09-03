@@ -35,10 +35,10 @@ namespace LPS.Domain
         {
             private ILPSClientService<LPSHttpRequest> _httpClientService { get; set; }
 
-            public ExecuteCommand(ILPSClientService<LPSHttpRequest> httpClientService)
+            public ExecuteCommand(ILPSClientService<LPSHttpRequest> httpClientService, LPSHttpTestCase.ExecuteCommand caseExecCommand)
             {
                 _httpClientService = httpClientService;
-                LPSTestCaseExecuteCommand = new LPSHttpTestCase.ExecuteCommand(_httpClientService);
+                LPSTestCaseExecuteCommand = caseExecCommand;
             }
 
             public LPSHttpTestCase.ExecuteCommand LPSTestCaseExecuteCommand { get; set; }
@@ -64,7 +64,7 @@ namespace LPS.Domain
                     }
 
                     requestNumber = protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
-                    var clientServiceTask = this._httpClientService.Send(this, requestNumber.ToString(), cancellationToken);
+                    var clientServiceTask = this._httpClientService.SendAsync(this, requestNumber.ToString(), cancellationToken);
                     await clientServiceTask;
                     this.HasFailed = false;
                     protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSTestCaseExecuteCommand);

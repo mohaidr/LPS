@@ -112,3 +112,49 @@ https://en.wikipedia.org/wiki/Plane_(Unicode)
 https://en.wikipedia.org/wiki/Code_point#:~:text=In%20character%20encoding%20terminology%2C%20a%20code%20point%2C%20codepoint,whitespace%E2%80%94but%20sometimes%20represent%20symbols%2C%20control%20characters%2C%20or%20formatting.
 https://www.youtube.com/watch?v=Vy2r21kli0Q&t=461s
 https://www.wise-geek.com/what-is-a-code-point.htm
+
+Maximum connection limit in .net frame work 4.7
+https://learn.microsoft.com/en-us/answers/questions/585468/maximum-connection-limit-in-net-frame-work-4-7
+
+
+ASP.NET Core Best Practices
+https://learn.microsoft.com/en-us/aspnet/core/fundamentals/best-practices?view=aspnetcore-7.0
+
+
+C# Synchronization Primitives
+https://chat.openai.com/share/8e8c11f4-9061-4720-8f25-86d3e43e61dc
+
+
+TCP States
+https://iponwire.com/tcp-states-explained/
+
+What is low an slow attack 
+https://www.cloudflare.com/learning/ddos/ddos-low-and-slow-attack/
+
+
+Socket Stress Attack
+https://github.com/defuse/sockstress
+
+Syn flood attack
+https://www.cloudflare.com/learning/ddos/syn-flood-ddos-attack/
+
+
+.NET Core HttpClient Best Practices
+https://bytedev.medium.com/net-core-httpclient-best-practices-4c1b20e32c6
+
+
+TCP Window and MSS
+
+https://learn.microsoft.com/en-us/troubleshoot/windows-server/networking/description-tcp-features
+
+https://cabulous.medium.com/tcp-send-window-receive-window-and-how-it-works-8629a4fad9ec
+
+https://cordero.me/tcp-throughput-calculations/
+
+https://stackoverflow.com/questions/5208215/what-is-the-maximum-window-size-in-segments-of-a-tcp-connection#:~:text=%28max%20window%20size%2Asize%20of%201%20segment%29%20%2F%20RTT,without%20the%20need%20to%20increase%20the%20window%20size.
+
+Default Received Buffer Size
+https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.maxresponsecontentbuffersize?view=net-7.0
+https://stackoverflow.com/questions/18720435/httpclient-buffer-size-limit-exceeded
+
+Take a look at protocol buffers https://protobuf.dev/overview/

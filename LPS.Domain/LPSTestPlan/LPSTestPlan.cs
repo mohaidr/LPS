@@ -28,9 +28,11 @@ namespace LPS.Domain
             _logger = logger;
             _lpsClientManager = lpsClientManager;
             _lpsClientConfig = lpsClientConfig;
+            Id = Guid.NewGuid();
             this.Setup(command);
         }
 
+        public Guid Id { get; protected set; }
         public IList<LPSHttpTestCase> LPSTestCases { get; private set; }
         public string Name { set; private get; }
 

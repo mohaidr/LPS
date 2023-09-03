@@ -9,6 +9,6 @@ namespace LPS.Domain.Common
         public string Id { get; }
         public string GuidId { get; }
 
-        async Task Send(TRequest request, string requestId, CancellationToken cancellationToken) => await Task.CompletedTask; // default implementation
+        async Task SendAsync(TRequest request, string requestId, CancellationToken cancellationToken) => await Task.CompletedTask; // default implementation
     }
 }

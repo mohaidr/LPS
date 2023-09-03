@@ -52,6 +52,7 @@ namespace LPS.Domain
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            Id = Guid.NewGuid();
             this.Setup(command);
         }
 

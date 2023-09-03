@@ -78,6 +78,7 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
+                cloneToEntity.Id= this.Id;
                 cloneToEntity.HttpMethod = this.HttpMethod;
                 cloneToEntity.Httpversion = this.Httpversion;
                 cloneToEntity.URL = this.URL;

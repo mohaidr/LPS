@@ -19,7 +19,6 @@ namespace LPS.Domain
         private ILPSClientService<LPSHttpRequest> _httpClientService;
         private LPSHttpRequest()
         {
-
         }
 
 
@@ -35,9 +34,9 @@ namespace LPS.Domain
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider= runtimeOperationIdProvider;
+            Id = Guid.NewGuid();
             this.Setup(command);
         }
-
         public string HttpMethod { get; private set; }
 
         public string URL { get; private set; }

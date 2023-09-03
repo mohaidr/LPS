@@ -24,6 +24,7 @@ namespace LPS.Domain
         {
             _logger= logger;
         }
+        public Guid Id { get; protected set; }
 
         public bool IsValid { get; protected set; }
 

@@ -14,12 +14,12 @@ namespace LPS.Domain
     {
         new public class ExecuteCommand : IAsyncCommand<LPSHttpTestCase>
         {
-            private readonly ProtectedAccessTestExecuteCommand protectedAccessTestExecuteCommand = new ProtectedAccessTestExecuteCommand();
-            private class ProtectedAccessTestExecuteCommand : LPSTestPlan.ExecuteCommand
+            private readonly ProtectedAccessTestPlanExecuteCommand protectedAccessTestPlanExecuteCommand = new ProtectedAccessTestPlanExecuteCommand();
+            private class ProtectedAccessTestPlanExecuteCommand : LPSTestPlan.ExecuteCommand
             {
-                public new int SafelyIncrementNumberofSentRequests(LPSTestPlan.ExecuteCommand dto)
+                public new int SafelyIncrementNumberofSentRequests(LPSTestPlan.ExecuteCommand command)
                 {
-                    return base.SafelyIncrementNumberofSentRequests(dto);
+                    return base.SafelyIncrementNumberofSentRequests(command);
                 }
             }
             public LPSTestPlan.ExecuteCommand LPSTestPlanExecuteCommand { get; set; }
@@ -30,10 +30,10 @@ namespace LPS.Domain
             {
 
             }
-            public ExecuteCommand(ILPSClientService<LPSHttpRequest> httpClientService)
+            public ExecuteCommand(ILPSClientService<LPSHttpRequest> httpClientService, LPSTestPlan.ExecuteCommand planExecCommand)
             {
                 _httpClientService = httpClientService;
-                LPSTestPlanExecuteCommand = new LPSTestPlan.ExecuteCommand();
+                LPSTestPlanExecuteCommand = planExecCommand;
             }
 
             async public Task ExecuteAsync(LPSHttpTestCase entity, CancellationToken cancellationToken)
@@ -46,9 +46,9 @@ namespace LPS.Domain
             private int _numberOfFailedToCompleteRequests;
             private int _numberOfSentRequests;
 
-            protected int SafelyIncrementNumberOfSuccessfulRequests(ExecuteCommand dto)
+            protected int SafelyIncrementNumberOfSuccessfulRequests(ExecuteCommand execCommand)
             {
-                return Interlocked.Increment(ref dto._numberOfSuccessfullyCompletedRequests);
+              return Interlocked.Increment(ref execCommand._numberOfSuccessfullyCompletedRequests);
             }
 
             protected int SafelyIncrementNumberOfFailedRequests(ExecuteCommand execCommand)
@@ -58,7 +58,7 @@ namespace LPS.Domain
 
             protected int SafelyIncrementNumberofSentRequests(ExecuteCommand execCommand)
             {
-                protectedAccessTestExecuteCommand.SafelyIncrementNumberofSentRequests(execCommand.LPSTestPlanExecuteCommand);
+                protectedAccessTestPlanExecuteCommand.SafelyIncrementNumberofSentRequests(execCommand.LPSTestPlanExecuteCommand);
                 return Interlocked.Increment(ref execCommand._numberOfSentRequests);
             }
 
@@ -114,7 +114,7 @@ namespace LPS.Domain
                 #endregion
 
 
-                LPSHttpRequest.ExecuteCommand lpsRequestExecCommand = new LPSHttpRequest.ExecuteCommand(this._httpClientService) { LPSTestCaseExecuteCommand = command };
+                LPSHttpRequest.ExecuteCommand lpsRequestExecCommand = new LPSHttpRequest.ExecuteCommand(this._httpClientService, command) ;
                 TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
                 _ = ReportAsync(command, this.LPSHttpRequest.URL, taskCompletionSource, cancellationToken);
                 Stopwatch stopwatch;
@@ -188,11 +188,13 @@ namespace LPS.Domain
         //TODO: This logic has to be moved to a seprate reporting service in the infrastructure layer
         private async Task ReportAsync(ExecuteCommand execCommand, string url, TaskCompletionSource<bool> TaskCompletionSource, CancellationToken cancellationToken)
         {
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Start reporting which will run every 10 Seconds", LPSLoggingLevel.Information);
+
             Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
             while (!TaskCompletionSource.Task.IsCompleted && !cancellationToken.IsCancellationRequested)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client: {_httpClientService.Id} has Successfully completed {execCommand.NumberOfSuccessfullyCompletedRequests} requests to the host {url} and failed to complete {execCommand.NumberOfFailedToCompleteRequests} requests", LPSLoggingLevel.Information);
                 await Task.Delay(10000, cancellationToken);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has Successfully completed {execCommand.NumberOfSuccessfullyCompletedRequests} requests to the host {url} and failed to complete {execCommand.NumberOfFailedToCompleteRequests} requests", LPSLoggingLevel.Information);
             }
         }
     }
