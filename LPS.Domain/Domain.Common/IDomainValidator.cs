@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common
 {
-    public interface IDomainValidator<TEntity, TCommand> where TEntity: IExecutable where TCommand: ICommand<TEntity>
+    public interface IDomainValidator<TEntity, TCommand> where TEntity: IDomainEntity where TCommand: ICommand<TEntity>
     {
        void Validate(TEntity entity, TCommand dto);
     }

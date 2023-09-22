@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common
 {
-    public interface IAsyncCommand<TEntity> where TEntity: IExecutable
+    public interface IAsyncCommand<TEntity> where TEntity: IDomainEntity
     {
         Task ExecuteAsync(TEntity entity, CancellationToken cancellationToken);
     }

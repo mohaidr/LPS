@@ -6,7 +6,7 @@ using System.Text;
 
 namespace LPS.UI.Common
 {
-    internal interface IUserValidator<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
+    internal interface IUserValidator<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IDomainEntity
     {
         TCommand Command { get; set; }
         bool Validate (string ptoprtty);

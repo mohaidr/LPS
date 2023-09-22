@@ -12,10 +12,9 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpTestCase : LPSTestCase
+    public partial class LPSHttpTestCase : LPSTestCase, IBusinessEntity
     {
-        private ILPSLogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+
 
         public enum IterationMode
         {
@@ -52,7 +51,6 @@ namespace LPS.Domain
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            Id = Guid.NewGuid();
             this.Setup(command);
         }
 
@@ -82,7 +80,6 @@ namespace LPS.Domain
                 }
             }
         }
-        public LPSTestPlan Plan { get; internal set; } // internal set only for specific relationships this may change when start working in Repos and DB
         public LPSHttpRequest LPSHttpRequest { get; private set; }
         public int? RequestCount { get; private set; }
 

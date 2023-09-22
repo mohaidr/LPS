@@ -13,20 +13,20 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSRequest
+    public partial class LPSResponse
     {
-        public class Validator: IDomainValidator<LPSRequest, SetupCommand>
+        public class Validator: IDomainValidator<LPSResponse, SetupCommand>
         {
             ILPSLogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            public Validator(LPSRequest entity, SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public Validator(LPSResponse entity, SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 Validate(entity, command);
             }
 
-            public void Validate(LPSRequest entity, SetupCommand command)
+            public void Validate(LPSResponse entity, SetupCommand command)
             {
                 command.IsValid = true;
                 //add validation logic if needed

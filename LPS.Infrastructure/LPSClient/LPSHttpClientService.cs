@@ -3,6 +3,7 @@ using LPS.Domain.Common;
 using LPS.Infrastructure.Logger;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -24,6 +25,7 @@ namespace LPS.Infrastructure.Client
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequest> config, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) 
         {
+            
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
@@ -40,7 +42,7 @@ namespace LPS.Infrastructure.Client
             Id =   Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
-        public async Task SendAsync(LPSHttpRequest lpsHttpRequest, string requestNumber, CancellationToken cancellationToken)
+       public async Task SendAsync(LPSHttpRequest lpsHttpRequest, string requestNumber, CancellationToken cancellationToken)  
         {
             try
             {
@@ -82,12 +84,14 @@ namespace LPS.Infrastructure.Client
                         }
                     }
                 }
-
+                Stopwatch watch = Stopwatch.StartNew();
+                TimeSpan timeToGetFullResponse;
                 var responseMessageTask = httpClient.SendAsync(httpRequestMessage, cancellationToken);
 
                 var response = await responseMessageTask;
                 string contentType = response.Content.Headers.ContentType.MediaType;
-                string fileExtension = GetFileExtension(contentType);
+                MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
+                string fileExtension = mimeType.ToFileExtension();
                 string directoryName = $"{_runtimeOperationIdProvider.OperationId}.Resources";
                 if (!Directory.Exists(directoryName))
                 {
@@ -104,17 +108,29 @@ namespace LPS.Infrastructure.Client
                     {
                         await fileStream.WriteAsync(buffer, 0, bytesRead);
                     }
+                    timeToGetFullResponse = watch.Elapsed;
+                    watch.Stop();
                 }
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestNumber}\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\t Response Body: {fileName}\n\t Response Headers: {response.Headers}", LPSLoggingLevel.Verbos);
+                LPSHttpResponse.SetupCommand lpsResponseCommand = new LPSHttpResponse.SetupCommand
+                {
+                    StatusCode = response.StatusCode,
+                    LocationToResponse = fileName,
+                    IsSuccessStatusCode = response.IsSuccessStatusCode,
+                    ResponseContentHeaders = response.Content.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                    ResponseHeaders = response.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                    MIMEType = mimeType
+                };
+                lpsHttpRequest.LPSHttpResponses.Add(new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider));
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion}\n\tTotal Time: {timeToGetFullResponse.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {fileName}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos);
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {requestNumber} \n\t  The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion} \n\t  The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestNumber} \n\t The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion} \n\t The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
                 throw new Exception(ex.Message, ex.InnerException);
             }
         }
@@ -339,7 +355,6 @@ namespace LPS.Infrastructure.Client
                     break;
                 case "proxy-authorization":
                     AuthenticationHeaderValue authHeaderValue;
-
                     if (AuthenticationHeaderValue.TryParse(value, out authHeaderValue))
                     {
                         message.Headers.ProxyAuthorization = authHeaderValue;
@@ -397,7 +412,7 @@ namespace LPS.Infrastructure.Client
                     }
                     break;
                 default:
-                    throw new NotSupportedException($"header {name} is an unsupported request header, the current supported headers are (authorization, accept, accept-charset, accept-encoding, accept-language, connection, host, transfer-encoding, user-agent, )");
+                    throw new NotSupportedException($"header {name} is an unsupported request header.");
             }
         }
 
@@ -407,47 +422,6 @@ namespace LPS.Infrastructure.Client
                 return;
 
             message.Headers.Add(name, value);
-        }
-
-        static string GetFileExtension(string contentType)
-        {
-            switch (contentType)
-            {
-                case "image/jpeg":
-                    return ".jpg";
-                case "image/png":
-                    return ".png";
-                case "application/pdf":
-                    return ".pdf";
-                case "text/plain":
-                    return ".txt";
-                case "application/msword":
-                    return ".doc";
-                case "application/vnd.ms-excel":
-                    return ".xls";
-                case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
-                    return ".xlsx";
-                case "application/vnd.ms-powerpoint":
-                    return ".ppt";
-                case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
-                    return ".pptx";
-                case "application/xml":
-                case "text/xml":
-                    return ".xml";
-                case "text/javascript":
-                case "application/javascript":
-                case "application/x-javascript":
-                    return ".js";
-                case "text/css":
-                    return ".css";
-                case "text/html":
-                    return ".html";
-                case "application/json":
-                    return ".json";
-                // Add more content type mappings as needed
-                default:
-                    return ".bin";
-            }
         }
     }
 }

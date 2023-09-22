@@ -71,7 +71,6 @@ namespace LPS.Domain
                 foreach (var lpsTestCaseCommand in command.LPSTestCases)
                 {
                     var lpsTestCase = new LPSHttpTestCase(this._logger, _runtimeOperationIdProvider);
-                    lpsTestCase.Plan= this;
                     lpsTestCaseCommand.Execute(lpsTestCase);
                     LPSTestCases.Add(lpsTestCase);
                 }

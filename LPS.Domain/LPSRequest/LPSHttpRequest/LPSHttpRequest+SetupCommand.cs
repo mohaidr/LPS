@@ -40,26 +40,23 @@ namespace LPS.Domain
             {
                 entity?.Setup(this);
             }
+
+            internal LPSRequest.SetupCommand LPSRequestSetUpCommand;
+
         }
 
         protected void Setup(SetupCommand command)
         {
+            //Set the inherited properties through the parent entity setup command
+            command.LPSRequestSetUpCommand = new LPSRequest.SetupCommand() {};
+            command.LPSRequestSetUpCommand.Execute(this);
             new Validator(this, command, _logger, _runtimeOperationIdProvider);
-
-            if (command.IsValid)
+            if (command.IsValid && command.LPSRequestSetUpCommand.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
-
-
                 this.Httpversion = command.Httpversion;
-
-
                 this.URL = command.URL;
-
-
                 this.Payload = command.Payload;
-
-
                 this.HttpHeaders = new Dictionary<string, string>();
 
                 if (command.HttpHeaders != null)

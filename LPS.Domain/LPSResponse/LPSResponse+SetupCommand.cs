@@ -12,9 +12,10 @@ using LPS.Domain.Common;
 
 namespace LPS.Domain
 {
-    public partial class LPSRequest
+
+    public partial class LPSResponse
     {
-        public class SetupCommand : ICommand<LPSRequest>, IValidCommand
+        public class SetupCommand : ICommand<LPSResponse>, IValidCommand
         {
             public SetupCommand()
             {
@@ -23,7 +24,7 @@ namespace LPS.Domain
             public bool IsValid { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set; }
 
-            public void Execute(LPSRequest entity)
+            public void Execute(LPSResponse entity)
             {
                 entity?.Setup(this);
             }

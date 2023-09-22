@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace LPS.UI.Common
 {
-    internal interface ILPSCommandParser<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
+    internal interface ILPSCommandParser<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IDomainEntity
     {
         TCommand Command { get; set; }
         void Parse(CancellationToken cancellationToken);

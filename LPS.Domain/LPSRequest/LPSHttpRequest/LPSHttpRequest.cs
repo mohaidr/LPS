@@ -12,13 +12,13 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpRequest :LPSRequest
+    public partial class LPSHttpRequest :LPSRequest, IBusinessEntity
     {
-        private ILPSLogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+
         private ILPSClientService<LPSHttpRequest> _httpClientService;
         private LPSHttpRequest()
         {
+            LPSHttpResponses = new List<LPSHttpResponse>();
         }
 
 
@@ -26,6 +26,7 @@ namespace LPS.Domain
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
+            LPSHttpResponses = new List<LPSHttpResponse>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
@@ -33,8 +34,7 @@ namespace LPS.Domain
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
-            _runtimeOperationIdProvider= runtimeOperationIdProvider;
-            Id = Guid.NewGuid();
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);
         }
         public string HttpMethod { get; private set; }
@@ -46,5 +46,8 @@ namespace LPS.Domain
         public string Httpversion { get; private set; }
 
         public Dictionary<string, string> HttpHeaders { get; private set; }
+
+        //Same request might be executed multiple times so may have different response for each execution.
+        public List<LPSHttpResponse> LPSHttpResponses { get; private set; }
     }
 }

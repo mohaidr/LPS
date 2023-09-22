@@ -1,21 +1,22 @@
 ======== Urgent List ========
 
-how to handle the response payload
 download embedded resources
-support for http2
+Gather the logs of each request and its associated response in one log entry
+correctly calculate the time taken to start and complete a request
+Provide Statistics
 command to run multiple plans
 command to configure file logging options
-correctly calculate the time taken to start and complete a request
+Put all test plans in one folder
 
 ======== To Do List ========
 //ToDo: Implement CleanUp Cookies
 
-
+Review the desgin relationships
+support for http2
 Cookie manager to support custom cookies and support enabling disabling cookies per domain. For now cookies are enabled by defaults for all clients and all domains
 redirects - Http Redirections for now is enabled for all domains and all clients
 
 cache manager
-download embedded resources optionally 
 shared settings across all requests 
 Remove Completed Tasks
 
@@ -57,3 +58,4 @@ Number of clients behavior  - Should I make my queue to track the number of requ
 Logging Behavior - Done
 Exit app after command execution is completed - Done
 Implement RunInParallel
+Handle Response Payload As Bytes and read it as soon as it arrives

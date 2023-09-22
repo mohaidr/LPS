@@ -6,8 +6,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common
 {
-    public interface ICommand<TEntity> where TEntity: IDomainEntity
+    public interface IDomainEntity
     {
-        void Execute(TEntity entity);
     }
 }

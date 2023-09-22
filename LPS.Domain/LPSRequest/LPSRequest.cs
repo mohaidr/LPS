@@ -11,18 +11,20 @@ using LPS.Domain.Common;
 
 namespace LPS.Domain
 {
-
-    public partial class LPSRequest : IValidEntity, IExecutable, IRequestable
+    //This should be a Non-Entity Superclass
+    public partial class LPSRequest : IValidEntity, ILPSRequestEntity
     {
-        private ILPSLogger _logger;
+        protected ILPSLogger _logger;
+        protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected LPSRequest()
         {
 
         }
 
-        public LPSRequest(LPSRequest.SetupCommand command, ILPSLogger logger)
+        public LPSRequest(LPSRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger= logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         public Guid Id { get; protected set; }
 

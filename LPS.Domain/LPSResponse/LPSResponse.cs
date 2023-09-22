@@ -12,24 +12,21 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
     //This should be a Non-Entity Superclass
-    public partial class LPSTestCase : IValidEntity, IDomainEntity
+    public partial class LPSResponse : IValidEntity, ILPSResponseEntity
     {
         protected ILPSLogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-
-        protected LPSTestCase()
+        protected LPSResponse()
         {
+
         }
 
-        public LPSTestCase(SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public LPSResponse(LPSResponse.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            _logger = logger;
-            this.Setup(command);
+            _logger= logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
-
         public Guid Id { get; protected set; }
-        public string Name { get; protected set; }
         public bool IsValid { get; protected set; }
     }
 }

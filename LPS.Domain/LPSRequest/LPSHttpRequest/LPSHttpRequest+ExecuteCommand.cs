@@ -31,7 +31,7 @@ namespace LPS.Domain
             }
         }
 
-        new public class ExecuteCommand : IAsyncCommand<LPSHttpRequest> 
+        public class ExecuteCommand : IAsyncCommand<LPSHttpRequest> 
         {
             private ILPSClientService<LPSHttpRequest> _httpClientService { get; set; }
 
@@ -62,7 +62,7 @@ namespace LPS.Domain
                     {
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
-
+                    
                     requestNumber = protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
                     var clientServiceTask = this._httpClientService.SendAsync(this, requestNumber.ToString(), cancellationToken);
                     await clientServiceTask;

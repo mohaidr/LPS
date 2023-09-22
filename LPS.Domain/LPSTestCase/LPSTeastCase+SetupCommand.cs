@@ -27,18 +27,18 @@ namespace LPS.Domain
                 entity?.Setup(this);
             }
 
-
-
             public bool IsValid { get; set; }
+            public string Name { get; set; }
+
         }
 
         private void Setup(SetupCommand command)
         {
-            _ = new Validator(this, command, _logger);
-
+            new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid)
             {
-
+                Id = Guid.NewGuid();
+                this.Name= command.Name;
             }
         }
     }

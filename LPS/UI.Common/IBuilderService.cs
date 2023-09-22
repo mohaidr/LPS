@@ -6,7 +6,7 @@ using System.Text;
 
 namespace LPS.UI.Common
 {
-    internal interface IBuilderService<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
+    internal interface IBuilderService<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IDomainEntity
     {
         void Build(TCommand command);
     }

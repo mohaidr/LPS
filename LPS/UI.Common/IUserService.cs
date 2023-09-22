@@ -5,7 +5,7 @@ using System.Text;
 
 namespace LPS.UI.Common
 {
-    internal interface IChallengeUserService<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IExecutable
+    internal interface IChallengeUserService<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IDomainEntity
     {
         bool SkipOptionalFields { get; set; }
         TCommand Command { get; set; }

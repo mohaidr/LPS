@@ -28,18 +28,10 @@ namespace LPS.Domain
                 Validate(entity, command);
             }
 
-            public async void Validate(LPSHttpTestCase entity, SetupCommand command)
+            public void Validate(LPSHttpTestCase entity, SetupCommand command)
             {
                 command.IsValid = true;
                 Console.ForegroundColor = ConsoleColor.Yellow;
-
-                if (string.IsNullOrEmpty(command.Name) || !Regex.IsMatch(command.Name, @"^[\w.-]{2,}$"))
-                {
-
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Please Provide a Valid Name, The Name Should At least Be of 2 Charachters And Can Only Contains Letters, Numbers, ., _ and -", LPSLoggingLevel.Warning);
-
-                    command.IsValid = false;
-                }
 
                 if (command.Mode.HasValue)
                 {
@@ -108,7 +100,7 @@ namespace LPS.Domain
                     if (invalidIterationModeCombination == true)
                     {
 
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid combination, you have to use one of the below combinations" +
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid combination, you have to use one of the below combinations" +
                             "\t- Duration && Cool Down Time && Batch Size" +
                             "\t- Cool Down Time && Number Of Requests && Batch Size" +
                             "\t- Cool Down Time && Batch Size. Requests will not stop until you stop it" +
@@ -119,19 +111,19 @@ namespace LPS.Domain
                 else
                 {
                     command.IsValid = false;
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Iteration mode can't be null", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Iteration mode can't be null", LPSLoggingLevel.Warning);
                 }
 
                 if (command.Duration.HasValue && command.CoolDownTime.HasValue && command.CoolDownTime.Value > command.Duration.Value)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Cool Down Time can't be larger than the Duration", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Cool Down Time can't be larger than the Duration", LPSLoggingLevel.Warning);
 
                     command.IsValid = false;
                 }
 
                 if (command.RequestCount.HasValue && command.BatchSize.HasValue && command.BatchSize.Value > command.RequestCount.Value)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Batch Size can't be larger than the request count", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Batch Size can't be larger than the request count", LPSLoggingLevel.Warning);
                     command.IsValid = false;
                 }
 
@@ -140,12 +132,11 @@ namespace LPS.Domain
                     new LPSHttpRequest.Validator(null, command.LPSRequest, _logger, _runtimeOperationIdProvider);
                     if (!command.LPSRequest.IsValid)
                     {
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid Http Request", LPSLoggingLevel.Warning);
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Http Request", LPSLoggingLevel.Warning);
                         command.IsValid = false;
                     }
                 }
                 Console.ResetColor();
-
             }
         }
     }

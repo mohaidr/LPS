@@ -26,11 +26,11 @@ namespace LPS.Domain
                 Validate(entity, command);
             }
 
-            public async void Validate(LPSHttpRequest entity, SetupCommand command)
+            public void Validate(LPSHttpRequest entity, SetupCommand command)
             {
                 if (command == null)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);
                     throw new ArgumentNullException(nameof(command));
                 }
 
@@ -39,19 +39,20 @@ namespace LPS.Domain
 
                 if (command.HttpMethod == null || !httpMethods.Any(httpMethod => httpMethod == command.HttpMethod.ToUpper()))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid Http Method", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Http Method", LPSLoggingLevel.Warning);
 
                     command.IsValid = false;
                 }
 
                 if (command.Httpversion != "1.0" && command.Httpversion != "1.1")
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "invalid http version, 1.0 and 1.1 are supported versions", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "invalid http version, 1.0 and 1.1 are supported versions", LPSLoggingLevel.Warning);
                     command.IsValid = false;
                 }
+                
                 if (!(Uri.TryCreate(command.URL, UriKind.Absolute, out Uri uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps || uriResult.Scheme.Contains("ws"))))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Invalid URL", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid URL", LPSLoggingLevel.Warning);
                     command.IsValid = false;
                 }
 

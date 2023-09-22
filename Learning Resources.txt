@@ -158,3 +158,11 @@ https://learn.microsoft.com/en-us/dotnet/api/system.net.http.httpclient.maxrespo
 https://stackoverflow.com/questions/18720435/httpclient-buffer-size-limit-exceeded
 
 Take a look at protocol buffers https://protobuf.dev/overview/
+
+
+
+Entity Mapping
+https://docs.oracle.com/cd/E19798-01/821-1841/bnbqr/index.html
+https://docs.oracle.com/cd/E19798-01/821-1841/bnbqv/index.html#:~:text=In%20this%20strategy%2C%20which%20corresponds,fields%20specific%20to%20that%20subclass.
+https://www.logicbig.com/tutorials/java-ee-tutorial/jpa/non-entity-super-class.html#:~:text=A%20non-entity%20superclass%20%28abstract%20or%20concrete%29%20provides%20only,or%20%40MappedSuperclass%20are%20used%20on%20the%20class%20level.
+https://www.logicbig.com/tutorials/java-ee-tutorial/jpa/table-per-class-inheritance.html

@@ -5,7 +5,7 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
     //TODO: Refactor this to base and subclasses 
-    public partial class LPSTestPlan : IAggregateRoot, IValidEntity, IExecutable
+    public partial class LPSTestPlan : IAggregateRoot, IValidEntity, IDomainEntity
     {
 
         private ILPSLogger _logger;
@@ -47,7 +47,6 @@ namespace LPS.Domain
         public int PooledConnectionIdleTimeout { get; private set; }
         public int MaxConnectionsPerServer { get; private set; }
         public bool IsValid { get; private set; }
-
         public int NumberOfClients { get; private set; }
         public int RampUpPeriod { get; private set; }
     }

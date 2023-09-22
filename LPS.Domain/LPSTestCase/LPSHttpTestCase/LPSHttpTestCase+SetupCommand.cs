@@ -21,6 +21,7 @@ namespace LPS.Domain
             public SetupCommand()
             {
                 LPSRequest = new LPSHttpRequest.SetupCommand();
+                LPSTestCaseSetUpCommand = new LPSTestCase.SetupCommand(); 
             }
 
             public void Execute(LPSHttpTestCase entity)
@@ -29,7 +30,6 @@ namespace LPS.Domain
             }
 
             public LPSHttpRequest.SetupCommand LPSRequest { get; set; }
-            public LPSTestPlan.SetupCommand Plan { get; private set; }
 
             public int? RequestCount { get; set; }
 
@@ -45,16 +45,22 @@ namespace LPS.Domain
 
             public IterationMode? Mode { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set ; }
+
+            // This will represrnt the parent entity SetupCommand. 
+            // There will be no inheritance between Commands and Validators to avoid complexity and to tight every entity to its own commands
+            // Only handled internal, public callers should not know about it
+            internal LPSTestCase.SetupCommand LPSTestCaseSetUpCommand;
         }
 
         private void Setup(SetupCommand command)
         {
-            _ = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-
-            if (command.IsValid)
+            //Set the inherited properties through the parent entity setup command
+            command.LPSTestCaseSetUpCommand = new LPSTestCase.SetupCommand() { Name = command.Name };
+            command.LPSTestCaseSetUpCommand.Execute(this);
+            new Validator(this, command, _logger, _runtimeOperationIdProvider);
+            if (command.IsValid && command.LPSTestCaseSetUpCommand.IsValid)
             {
                 this.RequestCount = command.RequestCount;
-                this.Name = command.Name;
                 this.Mode = command.Mode;
                 this.LPSHttpRequest = new LPSHttpRequest(command.LPSRequest, this._logger, _runtimeOperationIdProvider);
                 this.Duration = command.Duration;
@@ -74,7 +80,6 @@ namespace LPS.Domain
                 cloneToEntity.Mode = this.Mode;
                 cloneToEntity.LPSHttpRequest = new LPSHttpRequest(this._logger, _runtimeOperationIdProvider);
                 this.LPSHttpRequest.Clone(cloneToEntity.LPSHttpRequest);
-                cloneToEntity.Plan = this.Plan;
                 cloneToEntity.Duration = this.Duration;
                 cloneToEntity.CoolDownTime = this.CoolDownTime; ;
                 cloneToEntity.BatchSize = this.BatchSize;

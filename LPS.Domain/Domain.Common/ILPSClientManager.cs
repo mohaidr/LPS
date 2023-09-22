@@ -2,7 +2,7 @@
 
 namespace LPS.Domain.Common
 {
-    public interface ILPSClientManager<T1, T2> where T1 : IRequestable where T2: ILPSClientService<T1>
+    public interface ILPSClientManager<T1, T2> where T1 : ILPSRequestEntity where T2: ILPSClientService<T1>
     {
         T2 CreateInstance(ILPSClientConfiguration<T1> config);
 
@@ -15,7 +15,7 @@ namespace LPS.Domain.Common
 
     }
 
-    public interface ILPSHttpClientManager<T1, T2>: ILPSClientManager<T1, T2> where T1 : IRequestable where T2 : ILPSClientService<T1>
+    public interface ILPSHttpClientManager<T1, T2>: ILPSClientManager<T1, T2> where T1 : ILPSRequestEntity where T2 : ILPSClientService<T1>
     {
        
     }
