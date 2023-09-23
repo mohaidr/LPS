@@ -56,6 +56,12 @@ namespace LPS.Domain
                     command.IsValid = false;
                 }
 
+                if (!command.DownloadHtmlEmbeddedResources.HasValue)
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "DownloadHtmlEmbeddedResources must be (Y/N)", LPSLoggingLevel.Warning);
+                    command.IsValid = false;
+                }
+
                 //TODO: Validate http headers
             }
         }

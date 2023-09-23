@@ -21,7 +21,6 @@ namespace LPS.Domain
             LPSHttpResponses = new List<LPSHttpResponse>();
         }
 
-
         internal LPSHttpRequest(ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
@@ -49,5 +48,7 @@ namespace LPS.Domain
 
         //Same request might be executed multiple times so may have different response for each execution.
         public List<LPSHttpResponse> LPSHttpResponses { get; private set; }
+
+        public bool DownloadHtmlEmbeddedResources { get; private set; }
     }
 }

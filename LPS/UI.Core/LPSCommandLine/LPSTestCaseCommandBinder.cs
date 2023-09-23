@@ -18,6 +18,7 @@ namespace LPS.UI.Core.LPSCommandLine
         public static Option<int?> _coolDownTime;
         public static Option<int?> _batchSize;
         private readonly Option<string> _httpMethodOption;
+        private readonly Option<bool> _downloadHtmlEmbeddedResourcesOption;
         private readonly Option<string> _httpversionOption;
         private readonly Option<string> _urlOption;
         private readonly Option<IList<string>> _headerOption;
@@ -33,7 +34,8 @@ namespace LPS.UI.Core.LPSCommandLine
             Option<string> httpversionOption,
             Option<string> urlOption,
             Option<IList<string>> headerOption,
-            Option<string> payloadOption)
+            Option<string> payloadOption, 
+            Option<bool> downloadHtmlEmbeddedResourcesOption)
         {
             _nameOption = nameOption;
             _iterationModeOption = iterationModeOption;
@@ -130,6 +132,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _urlOption = urlOption;
             _headerOption = headerOption;
             _payloadOption = payloadOption;
+            _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption;
         }
 
         protected override LPSHttpTestCase.SetupCommand GetBoundValue(BindingContext bindingContext) =>
@@ -145,10 +148,11 @@ namespace LPS.UI.Core.LPSCommandLine
                 {
                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
                     Httpversion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
+                    DownloadHtmlEmbeddedResources = bindingContext.ParseResult.GetValueForOption(_downloadHtmlEmbeddedResourcesOption),
                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
                     Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ?
                     InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
-                    HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption))
+                    HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),
                 },
             };
     }

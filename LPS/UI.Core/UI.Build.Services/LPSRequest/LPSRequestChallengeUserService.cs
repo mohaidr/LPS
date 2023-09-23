@@ -28,7 +28,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
             while (true)
             {
-                if (!_validator.Validate("-httpmethod"))
+                if (!_validator.Validate("-httpMethod"))
                 {
                     Console.WriteLine("Enter a Valid Http Method");
                     _command.HttpMethod = ChallengeService.Challenge("-httpmethod");
@@ -41,13 +41,30 @@ namespace LPS.UI.Core.UI.Build.Services
                     _command.URL = ChallengeService.Challenge("-url");
                     continue;
                 }
-                if (!_validator.Validate("-httpversion"))
+                if (!_validator.Validate("-httpVersion"))
                 {
                     Console.WriteLine("Enter a valid http version, currently we only supports 1.0 and 1.1");
                     _command.Httpversion = ChallengeService.Challenge("-httpversion");
                     continue;
                 }
-
+                if (!_validator.Validate("-downloadHtmlEmbeddedResources"))
+                {
+                    Console.WriteLine("If the server returns text/html, would you like to download the html embedded resources");
+                    string input = ChallengeService.Challenge("-downloadHtmlEmbeddedResources");
+                    switch (input.ToLower())
+                    {
+                        case "y":
+                            Command.DownloadHtmlEmbeddedResources = true;
+                            break;
+                        case "n":
+                            Command.DownloadHtmlEmbeddedResources = false;
+                            break;
+                        default:
+                            Command.DownloadHtmlEmbeddedResources = null;
+                            break;
+                    }
+                    continue;
+                }
                 break;
             }
 
@@ -69,6 +86,7 @@ namespace LPS.UI.Core.UI.Build.Services
             if (!_skipOptionalFields)
             {
                 _command.Httpversion = string.Empty;
+                _command.DownloadHtmlEmbeddedResources = null;
             }
         }
     }

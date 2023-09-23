@@ -127,7 +127,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 CommandLineOptions.HttpversionOption,
                 CommandLineOptions.UrlOption,
                 CommandLineOptions.HeaderOption,
-                CommandLineOptions.PayloadOption));
+                CommandLineOptions.PayloadOption,
+                CommandLineOptions.DownloadHtmlEmbeddedResources));
 
             runCommand.SetHandler(async (testName) =>
             {

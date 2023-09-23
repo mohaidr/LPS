@@ -20,6 +20,7 @@ namespace LPS.Domain
             public SetupCommand()
             {
                 Httpversion = "1.1";
+                DownloadHtmlEmbeddedResources= false;
                 HttpHeaders = new Dictionary<string, string>();
                 ValidationErrors = new Dictionary<string, string>();
             }
@@ -35,7 +36,7 @@ namespace LPS.Domain
 
             public bool IsValid { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set; }
-
+            public bool? DownloadHtmlEmbeddedResources { get; set; }
             public void Execute(LPSHttpRequest entity)
             {
                 entity?.Setup(this);
@@ -58,6 +59,7 @@ namespace LPS.Domain
                 this.URL = command.URL;
                 this.Payload = command.Payload;
                 this.HttpHeaders = new Dictionary<string, string>();
+                this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.Value;
 
                 if (command.HttpHeaders != null)
                 {

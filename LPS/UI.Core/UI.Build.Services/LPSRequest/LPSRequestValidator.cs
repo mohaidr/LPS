@@ -21,13 +21,13 @@ namespace LPS.UI.Core.UI.Build.Services
             switch (property)
             {
             
-                case "-httpversion":
+                case "-httpVersion":
                     if (_command.Httpversion != "1.0" && _command.Httpversion != "1.1")
                     {
                         return false;
                     }
                     break;
-                case "-httpmethod":
+                case "-httpMethod":
                     if (_command.HttpMethod == null || !httpMethods.Any(httpMethod => httpMethod == _command.HttpMethod.ToUpper()))
                     {
                         return false;
@@ -39,6 +39,8 @@ namespace LPS.UI.Core.UI.Build.Services
                         return false;
                     }
                     break;
+                case "-downloadHtmlEmbeddedResources":
+                    return Command.DownloadHtmlEmbeddedResources.HasValue;
             }
             return true;
         }
