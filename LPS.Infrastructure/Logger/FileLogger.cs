@@ -14,9 +14,34 @@ namespace LPS.Infrastructure.Logger
 {
     public class FileLogger : IFileLogger
     {
-        TextWriter SynchronizedTextWriter;
-        public FileLogger(string logFilePath)
+        TextWriter _synchronizedTextWriter;
+
+        public string LogFilePath { get { return _logFilePath; } }
+
+        public bool EnableConsoleLogging { get { return _enableConsoleLogging; } }
+
+        public bool EnableConsoleErrorLogging { get { return _enableConsoleErrorLogging; } }
+
+        public bool DisableFileLogging { get { return _disableFileLogging; } }
+
+        public LPSLoggingLevel ConsoleLoggingLevel { get { return _consoleLoggingLevel; } }
+
+        public LPSLoggingLevel LoggingLevel { get { return _loggingLevel; } }
+
+        private string _logFilePath;
+        private bool _enableConsoleLogging;
+        private bool _enableConsoleErrorLogging;
+        private bool _disableFileLogging;
+        private LPSLoggingLevel _consoleLoggingLevel;
+        private LPSLoggingLevel _loggingLevel;
+
+        public FileLogger(string logFilePath, LPSLoggingLevel loggingLevel, LPSLoggingLevel consoleLoggingLevel, bool enableConsoleLogging = true, bool enableConsoleErrorLogging = false, bool disableFileLogging = false)
         {
+            _loggingLevel = loggingLevel;
+            _consoleLoggingLevel = consoleLoggingLevel;
+            _enableConsoleLogging = enableConsoleLogging;
+            _enableConsoleErrorLogging = enableConsoleErrorLogging;
+            _disableFileLogging = disableFileLogging;
             if (string.IsNullOrEmpty(logFilePath))
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
@@ -24,43 +49,36 @@ namespace LPS.Infrastructure.Logger
                 Console.ResetColor();
                 return;
             }
-            this.LogFilePath= logFilePath;
-            string directory = string.Concat($@"{Path.GetDirectoryName(LogFilePath)}");
+            this._logFilePath = logFilePath;
+            string directory = string.Concat($@"{Path.GetDirectoryName(_logFilePath)}");
 
             if (!Directory.Exists(directory))
             {
                 Directory.CreateDirectory(directory);
             }
-            string fileName = Path.GetFileName(LogFilePath);
+            string fileName = Path.GetFileName(_logFilePath);
 
-            SynchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
+            _synchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
         }
 
         private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        private string LogFilePath { get; set; }
-        public bool EnableConsoleLogging { get; set; }
-        public bool EnableConsoleErrorLogging { get; set; }
-        public bool DisableFileLogging { get; set; }
-
-        public LPSLoggingLevel ConsoleLoggingLevel { get; set; }
-        public LPSLoggingLevel LoggingLevel { get; set; }
-        public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken cancellationToken = default)
+        public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level, ICancellationTokenWrapper cancellationTokenWrapper = default)
         {
             var stopWatch = new Stopwatch();
             stopWatch.Start();
-            LogAsync(eventId, diagnosticMessage, level, cancellationToken).Wait();
-            _ = LogAsync(eventId, $"Synchronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos, cancellationToken);
+            LogAsync(eventId, diagnosticMessage, level, cancellationTokenWrapper).Wait();
+            _ = LogAsync(eventId, $"Synchronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
             stopWatch.Stop();
         }
 
-        public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken cancellationToken = default)
+        public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level, ICancellationTokenWrapper cancellationTokenWrapper = default)
         {
             try
             {
                 await semaphoreSlim.WaitAsync();
                 string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss.fff +3:00");
-                if (level>= ConsoleLoggingLevel && EnableConsoleLogging)
+                if (level >= _consoleLoggingLevel && _enableConsoleLogging)
                 {
                     if (level == LPSLoggingLevel.Verbos)
                     {
@@ -84,14 +102,14 @@ namespace LPS.Infrastructure.Logger
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-                    else if (level == LPSLoggingLevel.Error && EnableConsoleErrorLogging)
+                    else if (level == LPSLoggingLevel.Error && _enableConsoleErrorLogging)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
-                        Console.Write(level.ToString()+" ");
+                        Console.Write(level.ToString() + " ");
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-                    else if (level == LPSLoggingLevel.Critical && EnableConsoleErrorLogging)
+                    else if (level == LPSLoggingLevel.Critical && _enableConsoleErrorLogging)
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
                         Console.Write(level.ToString() + " ");
@@ -100,26 +118,30 @@ namespace LPS.Infrastructure.Logger
                     }
 
                 }
-                if (!DisableFileLogging)
+                if (!_disableFileLogging && level >= _loggingLevel)
                 {
                     StringBuilder stringBuilder = new StringBuilder();
                     stringBuilder.Append($"{currentDateTime} {level} {correlationId} {diagnosticMessage}");
-                    await SynchronizedTextWriter.WriteLineAsync(stringBuilder, cancellationToken);
+                    if (cancellationTokenWrapper != default)
+                        await _synchronizedTextWriter.WriteLineAsync(stringBuilder, cancellationTokenWrapper.CancellationToken);
+                    else
+                        await _synchronizedTextWriter.WriteLineAsync(stringBuilder);
+
                 }
-                
+
                 semaphoreSlim.Release();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Warning: Logging Failed \n {ex.Message}");
+                Console.WriteLine($"Warning: Logging Failed \n {ex.Message} {ex.InnerException?.Message}");
                 Console.ResetColor();
             }
         }
 
         public async Task Flush()
         {
-            await SynchronizedTextWriter.FlushAsync();
+            await _synchronizedTextWriter.FlushAsync();
         }
 
     }

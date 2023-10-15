@@ -42,7 +42,7 @@ namespace LPS.Infrastructure.Client
             Id = Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
-        public async Task SendAsync(LPSHttpRequest lpsHttpRequest, string requestNumber, CancellationToken cancellationToken)
+        public async Task SendAsync(LPSHttpRequest lpsHttpRequest, string requestNumber, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             try
             {
@@ -86,7 +86,7 @@ namespace LPS.Infrastructure.Client
                 }
                 Stopwatch watch = Stopwatch.StartNew();
                 TimeSpan timeToGetFullResponse;
-                var responseMessageTask = httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+                var responseMessageTask = httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead , cancellationTokenWrapper.CancellationToken);
 
                 var response = await responseMessageTask;
                 string contentType = response.Content.Headers.ContentType.MediaType;
@@ -102,7 +102,7 @@ namespace LPS.Infrastructure.Client
                 using (Stream contentStream = await response.Content.ReadAsStreamAsync())
                 using (FileStream fileStream = File.Create(fileName))
                 {
-                    byte[] buffer = new byte[8192]; // Adjust the buffer size as needed
+                    byte[] buffer = new byte[1048576]; // Adjust the buffer size as needed
                     int bytesRead;
                     while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                     {
@@ -123,25 +123,25 @@ namespace LPS.Infrastructure.Client
                 };
                 lpsHttpRequest.LPSHttpResponses.Add(new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider));
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion}\n\tTotal Time: {timeToGetFullResponse.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {fileName}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion}\n\tTotal Time: {timeToGetFullResponse.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {fileName}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
                
                 if (contentType == "text/html" && response.IsSuccessStatusCode && lpsHttpRequest.DownloadHtmlEmbeddedResources)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion}", LPSLoggingLevel.Verbos);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
                     string htmlContent = await File.ReadAllTextAsync(fileName, Encoding.UTF8);
                     HtmlDocument doc = new HtmlDocument();
                     doc.LoadHtml(htmlContent);
-                    await DownloadHtmlEmbeddedResources(doc, lpsHttpRequest.URL, httpClient, cancellationToken);
+                    await DownloadHtmlEmbeddedResources(doc, lpsHttpRequest.URL, httpClient, cancellationTokenWrapper);
                 }
             }
             catch (Exception ex)
             {
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion} \n\t  The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion} \n\t  The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, cancellationTokenWrapper);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion} \n\t The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion} \n\t The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
                 throw new Exception(ex.Message, ex.InnerException);
             }
         }
@@ -435,7 +435,7 @@ namespace LPS.Infrastructure.Client
             message.Headers.Add(name, value);
         }
 
-        private async Task DownloadHtmlEmbeddedResources(HtmlDocument doc, string baseUrl, HttpClient client, CancellationToken cancellationToken)
+        private async Task DownloadHtmlEmbeddedResources(HtmlDocument doc, string baseUrl, HttpClient client, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             // XPath expressions to select different types of resources
             string[] resourceXPaths = { "//img", "//link[@rel='stylesheet']", "//script" };
@@ -450,8 +450,8 @@ namespace LPS.Infrastructure.Client
                         string resourceUrl = resourceNode.GetAttributeValue("src", "");
                         if (!string.IsNullOrEmpty(resourceUrl) && !resourceUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
                         {
-                            byte[] resourceData = await client.GetByteArrayAsync(new Uri(new Uri(baseUrl), resourceUrl), cancellationToken);
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloaded: {resourceUrl}", LPSLoggingLevel.Verbos, cancellationToken);
+                            byte[] resourceData = await client.GetByteArrayAsync(new Uri(new Uri(baseUrl), resourceUrl), cancellationTokenWrapper.CancellationToken);
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloaded: {resourceUrl}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
                         }
                     }
                 }

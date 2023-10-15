@@ -21,9 +21,11 @@ namespace LPS.UI.Core.LPSCommandLine
         ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequest> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        ILPSResourceTracker _resourceUsageTracker;
         public LPSCommandParser(ILPSLogger logger,
             ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
             ILPSClientConfiguration<LPSHttpRequest> config,
+            ILPSResourceTracker resourceUsageTracker,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             LPSTestPlan.SetupCommand command)
         {
@@ -31,6 +33,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _command = command;
             _config = config;
             _httpClientManager = httpClientManager;
+            _resourceUsageTracker = resourceUsageTracker;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         public LPSTestPlan.SetupCommand Command { get { return _command; } set { } }
@@ -133,7 +136,7 @@ namespace LPS.UI.Core.LPSCommandLine
             runCommand.SetHandler(async (testName) =>
             {
                 _command = new LpsSerializer().DeSerialize(File.ReadAllText($"{testName}.json"));
-                await new LPSManager(_logger, _httpClientManager, _config, _runtimeOperationIdProvider).Run(_command, cancellationToken);
+                await new LPSManager(_logger, _httpClientManager, _config, _resourceUsageTracker, _runtimeOperationIdProvider).Run(_command, cancellationToken);
             }, CommandLineOptions.TestNameOption);
 
             lpsCommand.Invoke(CommandLineArgs);

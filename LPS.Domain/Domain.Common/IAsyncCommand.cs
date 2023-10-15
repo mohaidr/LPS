@@ -9,6 +9,6 @@ namespace LPS.Domain.Common
 {
     public interface IAsyncCommand<TEntity> where TEntity: IDomainEntity
     {
-        Task ExecuteAsync(TEntity entity, CancellationToken cancellationToken);
+        Task ExecuteAsync(TEntity entity, ICancellationTokenWrapper cancellationTokenWrapper);
     }
 }

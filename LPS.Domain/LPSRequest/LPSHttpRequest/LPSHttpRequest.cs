@@ -21,19 +21,25 @@ namespace LPS.Domain
             LPSHttpResponses = new List<LPSHttpResponse>();
         }
 
-        internal LPSHttpRequest(ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        internal LPSHttpRequest(ILPSLogger logger,
+            ILPSResourceTracker resourceUsageTracker,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             LPSHttpResponses = new List<LPSHttpResponse>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _resourceUsageTracker = resourceUsageTracker;
         }
 
-        public LPSHttpRequest(LPSHttpRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public LPSHttpRequest(LPSHttpRequest.SetupCommand command, ILPSLogger logger,
+            ILPSResourceTracker resourceUsageTracker,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _resourceUsageTracker = resourceUsageTracker;
             this.Setup(command);
         }
         public string HttpMethod { get; private set; }

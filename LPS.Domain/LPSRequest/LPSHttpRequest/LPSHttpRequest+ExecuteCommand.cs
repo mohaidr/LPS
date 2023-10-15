@@ -43,17 +43,18 @@ namespace LPS.Domain
 
             public LPSHttpTestCase.ExecuteCommand LPSTestCaseExecuteCommand { get; set; }
 
-            async public Task ExecuteAsync(LPSHttpRequest entity, CancellationToken cancellationToken)
+            async public Task ExecuteAsync(LPSHttpRequest entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
                 entity._httpClientService = this._httpClientService;
-                await entity.ExecuteAsync(this, cancellationToken);
+                await entity.ExecuteAsync(this, cancellationTokenWrapper);
             }
         }
 
-        async private Task ExecuteAsync(ExecuteCommand command, CancellationToken cancellationToken)
+        async private Task ExecuteAsync(ExecuteCommand command, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             if (this.IsValid)
             {
+                _resourceUsageTracker.Balance();
                 int requestNumber;
                 ProtectedAccessLPSTestCaseExecuteCommand protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
                 try
@@ -64,7 +65,7 @@ namespace LPS.Domain
                     }
                     
                     requestNumber = protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
-                    var clientServiceTask = this._httpClientService.SendAsync(this, requestNumber.ToString(), cancellationToken);
+                    var clientServiceTask = _httpClientService.SendAsync(this, requestNumber.ToString(), cancellationTokenWrapper);
                     await clientServiceTask;
                     this.HasFailed = false;
                     protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSTestCaseExecuteCommand);

@@ -16,15 +16,19 @@ namespace LPS.Domain
     {
         protected ILPSLogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        protected ILPSResourceTracker _resourceUsageTracker;
         protected LPSRequest()
         {
 
         }
 
-        public LPSRequest(LPSRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public LPSRequest(LPSRequest.SetupCommand command, ILPSLogger logger,
+            ILPSResourceTracker resourceUsageTracker,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger= logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _resourceUsageTracker = resourceUsageTracker;
         }
         public Guid Id { get; protected set; }
 

@@ -15,10 +15,10 @@ namespace LPS.Domain
     {
         public class ExecuteCommand : IAsyncCommand<LPSTestPlan>
         {
-            async public Task ExecuteAsync(LPSTestPlan entity, CancellationToken cancellationToken)
+            async public Task ExecuteAsync(LPSTestPlan entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
                 Reset();
-                await entity.ExecuteAsync(this, cancellationToken);
+                await entity.ExecuteAsync(this, cancellationTokenWrapper);
             }
 
             private void Reset()
@@ -33,7 +33,7 @@ namespace LPS.Domain
                 return Interlocked.Increment(ref command._numberOfSentRequests);
             }
         }
-        async private Task ExecuteAsync(ExecuteCommand command, CancellationToken cancellationToken)
+        async private Task ExecuteAsync(ExecuteCommand command, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             
             if (this.IsValid)
@@ -41,19 +41,20 @@ namespace LPS.Domain
                 List<Task> awaitableTasks = new List<Task>();
 
                 #region Loggin Plan Details
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbos, cancellationToken));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbos, cancellationToken));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbos, cancellationToken));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbos, cancellationToken));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client Timeout:  {this.ClientTimeout}", LPSLoggingLevel.Verbos));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Max Connections Per Server:  {this.MaxConnectionsPerServer}", LPSLoggingLevel.Verbos, cancellationToken));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Idle Timeout:  {this.PooledConnectionIdleTimeout}", LPSLoggingLevel.Verbos, cancellationToken));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Life Time:  {this.PooledConnectionLifeTime}", LPSLoggingLevel.Verbos, cancellationToken));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client Timeout:  {this.ClientTimeout}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Max Connections Per Server:  {this.MaxConnectionsPerServer}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Idle Timeout:  {this.PooledConnectionIdleTimeout}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Life Time:  {this.PooledConnectionLifeTime}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
                 #endregion
                
 
-                for (int i = 0; i < this.NumberOfClients && !cancellationToken.IsCancellationRequested; i++)
+                for (int i = 0; i < this.NumberOfClients && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i++)
                 {
+                    _resourceUsageTracker.Balance();
                     ILPSClientService<LPSHttpRequest> httpClientService = null;
                     if (!this.DelayClientCreationUntilIsNeeded.Value)
                     {
@@ -67,25 +68,25 @@ namespace LPS.Domain
                     awaitableTasks.Add(ExecCaseAsync(httpClientService));
                     if (this.RampUpPeriod>0)
                     { 
-                        await Task.Delay(this.RampUpPeriod, cancellationToken);
+                        await Task.Delay(this.RampUpPeriod, cancellationTokenWrapper.CancellationToken);
                     }
                 }
 
                 #region Local method to loop through the plan test cases and execute them async or sequentially 
-                async Task ExecCaseAsync(ILPSClientService<LPSHttpRequest> httpClientService) // a race condition may happen here and causes the wrong httpClient to be captured if the httpClientService state changes before the await is called 
+                async Task ExecCaseAsync(ILPSClientService<LPSHttpRequest> httpClientService) // a race condition may happen here and causes the wrong httpClient to be captured if the httpClientService state changes before the "await" is called 
                 {
                     foreach (var testCase in this.LPSTestCases)
                     {
                         LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService, command);
-                        LPSHttpTestCase cloneToTestCase = new LPSHttpTestCase(_logger, _runtimeOperationIdProvider); //use internal constructor designed for internal usage
+                        LPSHttpTestCase cloneToTestCase = new LPSHttpTestCase(_logger, _resourceUsageTracker, _runtimeOperationIdProvider); //use internal constructor designed for internal usage
                         testCase.Clone(cloneToTestCase);
                         if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                         {
-                            awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(cloneToTestCase, cancellationToken));
+                            awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(cloneToTestCase, cancellationTokenWrapper));
                         }
                         else
                         {
-                            await testCaseExecutecommand.ExecuteAsync(cloneToTestCase, cancellationToken);
+                            await testCaseExecutecommand.ExecuteAsync(cloneToTestCase, cancellationTokenWrapper);
                         }
                     }
                 }

@@ -62,7 +62,7 @@ namespace LPS.Domain
             {
                 this.RequestCount = command.RequestCount;
                 this.Mode = command.Mode;
-                this.LPSHttpRequest = new LPSHttpRequest(command.LPSRequest, this._logger, _runtimeOperationIdProvider);
+                this.LPSHttpRequest = new LPSHttpRequest(command.LPSRequest, _logger, _resourceUsageTracker, _runtimeOperationIdProvider);
                 this.Duration = command.Duration;
                 this.CoolDownTime = command.CoolDownTime; ;
                 this.BatchSize = command.BatchSize;
@@ -78,7 +78,7 @@ namespace LPS.Domain
                 cloneToEntity.RequestCount = this.RequestCount;
                 cloneToEntity.Name = this.Name;
                 cloneToEntity.Mode = this.Mode;
-                cloneToEntity.LPSHttpRequest = new LPSHttpRequest(this._logger, _runtimeOperationIdProvider);
+                cloneToEntity.LPSHttpRequest = new LPSHttpRequest(_logger, _resourceUsageTracker, _runtimeOperationIdProvider);
                 this.LPSHttpRequest.Clone(cloneToEntity.LPSHttpRequest);
                 cloneToEntity.Duration = this.Duration;
                 cloneToEntity.CoolDownTime = this.CoolDownTime; ;

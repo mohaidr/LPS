@@ -18,16 +18,20 @@ namespace LPS.Domain
         ILPSClientService<LPSHttpRequest>> _lpsClientManager;
         ILPSClientConfiguration<LPSHttpRequest> _lpsClientConfig;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        ILPSResourceTracker _resourceUsageTracker;
 
         public LPSTestPlan(SetupCommand command, ILPSClientManager<LPSHttpRequest,
             ILPSClientService<LPSHttpRequest>> lpsClientManager,
-            ILPSClientConfiguration<LPSHttpRequest> lpsClientConfig, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            ILPSClientConfiguration<LPSHttpRequest> lpsClientConfig, ILPSLogger logger,
+            ILPSResourceTracker resourceUsageTracker,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             LPSTestCases = new List<LPSHttpTestCase>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;
             _lpsClientManager = lpsClientManager;
             _lpsClientConfig = lpsClientConfig;
+            _resourceUsageTracker= resourceUsageTracker;
             Id = Guid.NewGuid();
             this.Setup(command);
         }
@@ -38,7 +42,6 @@ namespace LPS.Domain
 
         public bool IsRedo { get; private set; }
         public bool? DelayClientCreationUntilIsNeeded { get; private set; }
-        //ToDo: Implement RunInParallel
         public bool? RunInParallel { get; private set; }
         //ToDo: Implement CleanUp Cookies
         public bool SameClientForEachTeastCase { get; private set; } = true;

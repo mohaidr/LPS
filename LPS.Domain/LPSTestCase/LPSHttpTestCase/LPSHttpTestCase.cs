@@ -38,18 +38,23 @@ namespace LPS.Domain
         private ILPSClientService<LPSHttpRequest> _httpClientService;
         internal LPSHttpTestCase(
             ILPSLogger logger,
+            ILPSResourceTracker resourceUsageTracker,
             IRuntimeOperationIdProvider runtimeOperationIdProvider) // internal constructor should only be defined in specific scenarios where there is a need for an instance that will be setup through the command
                                                                     //This behaviour may change in the future. 
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _resourceUsageTracker = resourceUsageTracker;
         }
 
 
         public LPSHttpTestCase(SetupCommand command,
-            ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            ILPSLogger logger,
+            ILPSResourceTracker resourceUsageTracker,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
+            _resourceUsageTracker = resourceUsageTracker;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);
         }

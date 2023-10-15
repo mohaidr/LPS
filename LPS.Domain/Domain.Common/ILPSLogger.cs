@@ -18,11 +18,8 @@ namespace LPS.Domain.Common
     }
     public interface ILPSLogger
     {
-        public bool EnableConsoleLogging { get; set; }
-        public LPSLoggingLevel ConsoleLoggingLevel { get; set; }
-        public LPSLoggingLevel LoggingLevel { get; set; }
-        void Log(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, CancellationToken cancellationToken = default);
-        Task LogAsync(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, CancellationToken cancellationToken = default);
+        void Log(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, ICancellationTokenWrapper cancellationTokenWrapper = default);
+        Task LogAsync(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, ICancellationTokenWrapper cancellationTokenWrapper = default);
         public Task Flush();
     }
 }
