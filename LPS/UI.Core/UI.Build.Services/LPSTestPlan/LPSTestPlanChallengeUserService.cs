@@ -82,59 +82,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-                if (!_validator.Validate("-clientTimeOut"))
-                {
-                    Console.WriteLine("The number of seconds before the client times out." +
-                        "The number should be a valid positive number greater than 0");
-
-                    int clientTimeout;
-                    if (int.TryParse(ChallengeService.Challenge("-clientTimeOut"), out clientTimeout))
-                    {
-                        _command.ClientTimeout = clientTimeout;
-                    }
-
-                    continue;
-                }
-
-                if (!_validator.Validate("-maxConnectionsPerServer"))
-                {
-                    Console.WriteLine("The maximum number of concurrent connections per client per server.\nSetting this property to high value may exhaust your machine resources if the number of clients is high or the targeted server is slow");
-
-                    int maxConnectionsPerServer;
-                    if (int.TryParse(ChallengeService.Challenge("-maxConnectionsPerServer"), out maxConnectionsPerServer))
-                    {
-                        _command.MaxConnectionsPerServer = maxConnectionsPerServer;
-                    }
-
-                    continue;
-                }
-
-                if (!_validator.Validate("-pooledConnectionLifeTime"))
-                {
-                    Console.WriteLine("Pooled connection life time defines the maximal connection lifetime in the pool, tracking its age from when the connection was established, regardless of how much time it spent idle or active.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionlifetime?view=net-8.0");
-
-                    int pooledConnectionLifetime;
-                    if (int.TryParse(ChallengeService.Challenge("-pooledConnectionLifeTime"), out pooledConnectionLifetime))
-                    {
-                        _command.PooledConnectionLifetime = pooledConnectionLifetime;
-                    }
-
-                    continue;
-                }
-
-                if (!_validator.Validate("-pooledConnectionIdleTimeout"))
-                {
-                    Console.WriteLine("Pooled connection idle timeout defines the maximum idle time for a connection in the pool.\nSee this link for more details https://learn.microsoft.com/en-us/dotnet/api/system.net.http.socketshttphandler.pooledconnectionidletimeout?view=net-8.0");
-
-                    int pooledConnectionIdleTimeout;
-                    if (int.TryParse(ChallengeService.Challenge("-pooledConnectionIdleTimeout"), out pooledConnectionIdleTimeout))
-                    {
-                        _command.PooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
-                    }
-
-                    continue;
-                }
-
                 if (!_validator.Validate("-runInParallel"))
                 {
                     Console.WriteLine("Would you like to run your test cases in parallel");
@@ -184,9 +131,6 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.ClientTimeout = 0;
-                _command.PooledConnectionIdleTimeout = 0;
-                _command.PooledConnectionLifetime = 0;
                 _command.DelayClientCreationUntilIsNeeded = null;
                 _command.RunInParallel = null;
             }

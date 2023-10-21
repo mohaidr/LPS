@@ -21,11 +21,11 @@ namespace LPS.UI.Core.LPSCommandLine
         ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequest> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        ILPSResourceTracker _resourceUsageTracker;
+        ILPSWatchdog _atchdog;
         public LPSCommandParser(ILPSLogger logger,
             ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
             ILPSClientConfiguration<LPSHttpRequest> config,
-            ILPSResourceTracker resourceUsageTracker,
+            ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             LPSTestPlan.SetupCommand command)
         {
@@ -33,7 +33,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _command = command;
             _config = config;
             _httpClientManager = httpClientManager;
-            _resourceUsageTracker = resourceUsageTracker;
+            _atchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         public LPSTestPlan.SetupCommand Command { get { return _command; } set { } }
@@ -83,10 +83,6 @@ namespace LPS.UI.Core.LPSCommandLine
                     _command.NumberOfClients = lpaTestPlan.NumberOfClients;
                     _command.DelayClientCreationUntilIsNeeded = lpaTestPlan.DelayClientCreationUntilIsNeeded;
                     _command.RampUpPeriod = lpaTestPlan.RampUpPeriod;
-                    _command.MaxConnectionsPerServer = lpaTestPlan.MaxConnectionsPerServer;
-                    _command.ClientTimeout = lpaTestPlan.ClientTimeout;
-                    _command.PooledConnectionIdleTimeout = lpaTestPlan.PooledConnectionIdleTimeout;
-                    _command.PooledConnectionLifetime = lpaTestPlan.PooledConnectionLifetime;
                     _command.RunInParallel = lpaTestPlan.RunInParallel;
                     string json = new LpsSerializer().Serialize(_command);
                     File.WriteAllText($"{lpaTestPlan.Name}.json", json);
@@ -98,10 +94,6 @@ namespace LPS.UI.Core.LPSCommandLine
                      CommandLineOptions.TestNameOption,
                      CommandLineOptions.NumberOfClientsOption,
                      CommandLineOptions.RampupPeriodOption,
-                     CommandLineOptions.MaxConnectionsPerServerption,
-                     CommandLineOptions.PoolConnectionLifeTimeOption,
-                     CommandLineOptions.PoolConnectionIdelTimeoutOption,
-                     CommandLineOptions.ClientTimeoutOption,
                      CommandLineOptions.DelayClientCreation,
                      CommandLineOptions.RunInParaller)); 
 
@@ -136,7 +128,7 @@ namespace LPS.UI.Core.LPSCommandLine
             runCommand.SetHandler(async (testName) =>
             {
                 _command = new LpsSerializer().DeSerialize(File.ReadAllText($"{testName}.json"));
-                await new LPSManager(_logger, _httpClientManager, _config, _resourceUsageTracker, _runtimeOperationIdProvider).Run(_command, cancellationToken);
+                await new LPSManager(_logger, _httpClientManager, _config, _atchdog, _runtimeOperationIdProvider).Run(_command, cancellationToken);
             }, CommandLineOptions.TestNameOption);
 
             lpsCommand.Invoke(CommandLineArgs);

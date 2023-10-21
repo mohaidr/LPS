@@ -30,22 +30,24 @@ namespace LPS.Infrastructure.Client
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
             {
-                PooledConnectionLifetime = ((LPSHttpClientConfiguration)config).PooledConnectionLifetime,
-                PooledConnectionIdleTimeout = ((LPSHttpClientConfiguration)config).PooledConnectionIdleTimeout,
-                MaxConnectionsPerServer = ((LPSHttpClientConfiguration)config).MaxConnectionsPerServer,
+                PooledConnectionLifetime = ((ILPSHttpClientConfiguration<LPSHttpRequest>)config).PooledConnectionLifetime,
+                PooledConnectionIdleTimeout = ((ILPSHttpClientConfiguration<LPSHttpRequest>)config).PooledConnectionIdleTimeout,
+                MaxConnectionsPerServer = ((ILPSHttpClientConfiguration<LPSHttpRequest>)config).MaxConnectionsPerServer,
                 UseCookies = true,
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 5,
             };
             httpClient = new HttpClient(socketsHandler);
-            httpClient.Timeout = ((LPSHttpClientConfiguration)config).Timeout;
+            httpClient.Timeout = ((ILPSHttpClientConfiguration<LPSHttpRequest>)config).Timeout;
             Id = Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
         public async Task SendAsync(LPSHttpRequest lpsHttpRequest, string requestNumber, ICancellationTokenWrapper cancellationTokenWrapper)
         {
+            var requestUri = new Uri(lpsHttpRequest.URL);
             try
             {
+                LPSConnectionEventSource.Log.ConnectionEstablished(requestUri.Host);
                 var httpRequestMessage = new HttpRequestMessage();
                 httpRequestMessage.RequestUri = new Uri(lpsHttpRequest.URL);
                 httpRequestMessage.Method = new HttpMethod(lpsHttpRequest.HttpMethod);
@@ -86,10 +88,10 @@ namespace LPS.Infrastructure.Client
                 }
                 Stopwatch watch = Stopwatch.StartNew();
                 TimeSpan timeToGetFullResponse;
-                var responseMessageTask = httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead , cancellationTokenWrapper.CancellationToken);
-
+                var responseMessageTask = httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationTokenWrapper.CancellationToken);
                 var response = await responseMessageTask;
-                string contentType = response.Content.Headers.ContentType.MediaType;
+                string contentType = response?.Content?.Headers?.ContentType?.MediaType;
+
                 MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
                 string fileExtension = mimeType.ToFileExtension();
                 string directoryName = $"{_runtimeOperationIdProvider.OperationId}.Resources";
@@ -117,14 +119,14 @@ namespace LPS.Infrastructure.Client
                     StatusCode = response.StatusCode,
                     LocationToResponse = fileName,
                     IsSuccessStatusCode = response.IsSuccessStatusCode,
-                    ResponseContentHeaders = response.Content.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
-                    ResponseHeaders = response.Headers.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                    ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                    ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     MIMEType = mimeType
                 };
                 lpsHttpRequest.LPSHttpResponses.Add(new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider));
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion}\n\tTotal Time: {timeToGetFullResponse.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {fileName}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
-               
+
                 if (contentType == "text/html" && response.IsSuccessStatusCode && lpsHttpRequest.DownloadHtmlEmbeddedResources)
                 {
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
@@ -143,6 +145,9 @@ namespace LPS.Infrastructure.Client
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {requestNumber} {lpsHttpRequest.HttpMethod} {lpsHttpRequest.URL} Http/{lpsHttpRequest.Httpversion} \n\t The request # {requestNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
                 throw new Exception(ex.Message, ex.InnerException);
+            }
+            finally {
+                LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host);
             }
         }
 

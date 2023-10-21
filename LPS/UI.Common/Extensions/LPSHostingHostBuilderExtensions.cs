@@ -1,6 +1,8 @@
-﻿using LPS.Domain.Common;
+﻿using LPS.Domain;
+using LPS.Domain.Common;
+using LPS.Infrastructure.Client;
 using LPS.Infrastructure.Logger;
-using LPS.Infrastructure.ResourceUsageTracker;
+using LPS.Infrastructure.Watchdog;
 using LPS.UI.Common.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,18 +24,18 @@ namespace LPS.UI.Common.Extensions
     public static class LPSHostingHostBuilderExtensions
     {
 
-       public static IHostBuilder ConfigureLPSFileLogger(this IHostBuilder hostBuilder, LPSFileLoggerConfiguration lpsFileConfig = null)
+        public static IHostBuilder ConfigureLPSFileLogger(this IHostBuilder hostBuilder, LPSFileLoggerOptions lpsFileOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
-                if (lpsFileConfig == null)
-                    lpsFileConfig = hostContext.Configuration.GetSection("LPSFileLoggerConfiguration").Get<LPSFileLoggerConfiguration>();
+                if (lpsFileOptions == null)
+                    lpsFileOptions = hostContext.Configuration.GetSection("LPSFileLoggerConfiguration").Get<LPSFileLoggerOptions>();
 
                 // Create an instance of your custom logger implementation
-                var fileLogger = new FileLogger(lpsFileConfig.LogFilePath, lpsFileConfig.LoggingLevel, 
-                    lpsFileConfig.ConsoleLogingLevel, lpsFileConfig.EnableConsoleLogging,
-                    lpsFileConfig.EnableConsoleErrorLogging, lpsFileConfig.DisableFileLogging);
+                var fileLogger = new FileLogger(lpsFileOptions.LogFilePath, lpsFileOptions.LoggingLevel,
+                    lpsFileOptions.ConsoleLogingLevel, lpsFileOptions.EnableConsoleLogging,
+                    lpsFileOptions.EnableConsoleErrorLogging, lpsFileOptions.DisableFileLogging);
 
                 // Print Logger Options
                 Console.ForegroundColor = ConsoleColor.Magenta;
@@ -49,31 +51,58 @@ namespace LPS.UI.Common.Extensions
             return hostBuilder;
         }
 
-       public static IHostBuilder ConfigureLPSResourceTracker(this IHostBuilder hostBuilder, LPSResourceTrackerConfiguration usageTrackerConfiguration = null)
+        public static IHostBuilder ConfigureLPSWatchdog(this IHostBuilder hostBuilder, LPSWatchDogOptions watchdogOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
-                if (usageTrackerConfiguration == null)
-                    usageTrackerConfiguration = hostContext.Configuration.GetSection("LPSResourceTrackerConfiguration").Get<LPSResourceTrackerConfiguration>();
+                if (watchdogOptions == null)
+                    watchdogOptions = hostContext.Configuration.GetSection("LPSWatchdogConfiguration").Get<LPSWatchDogOptions>();
 
                 // Create an instance of your custom logger implementation
-                var resourceUsageTracker = new LPSResourceTracker(usageTrackerConfiguration.MaxMemoryMB, 
-                    usageTrackerConfiguration.MaxCPUPercentage,
-                    usageTrackerConfiguration.CoolDownMemoryMB, 
-                    usageTrackerConfiguration.CoolDownCPUPercentage,
-                    usageTrackerConfiguration.CoolDownRetryTimeInSeconds, 
-                    usageTrackerConfiguration.SuspensionMode);
+                var watchdog = new LPSWatchdog(watchdogOptions.MaxMemoryMB,
+                    watchdogOptions.MaxCPUPercentage,
+                    watchdogOptions.CoolDownMemoryMB,
+                    watchdogOptions.CoolDownCPUPercentage,
+                    watchdogOptions.MaxConnectionsCountPerHostName,
+                    watchdogOptions.CoolDownConnectionsCountPerHostName,
+                    watchdogOptions.CoolDownRetryTimeInSeconds,
+                    watchdogOptions.SuspensionMode);
 
                 // Print Logger Options
                 Console.ForegroundColor = ConsoleColor.Magenta;
-                string jsonString = JsonSerializer.Serialize(resourceUsageTracker);
+                string jsonString = JsonSerializer.Serialize(watchdog);
                 Console.WriteLine($"Usage Tracker Configuration: {jsonString}");
+                Console.ResetColor();
+                // Register the custom logger instance as a singleton in the DI container
+                services.AddSingleton<ILPSWatchdog>(watchdog);
+
+            });
+            return hostBuilder;
+        }
+
+        public static IHostBuilder ConfigureLPSHttpClient(this IHostBuilder hostBuilder, LPSHttpClientOptions lpsHttpClientOptions = null)
+        {
+            hostBuilder.ConfigureServices((hostContext, services) =>
+            {
+                // Read the custom logger configuration from the appsettings.json file or any other configuration source
+                if (lpsHttpClientOptions == null)
+                    lpsHttpClientOptions = hostContext.Configuration.GetSection("LPSHttpClientConfiguration").Get<LPSHttpClientOptions>();
+
+                // Create an instance of your custom logger implementation
+                var lpsHttpClientConfiguration = new LPSHttpClientConfiguration(TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionLifeTimeInSeconds),
+                   TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionIdleTimeoutInSeconds), lpsHttpClientOptions.MaxConnectionsPerServer,
+                    TimeSpan.FromSeconds(lpsHttpClientOptions.ClientTimeoutInSeconds));
+
+                // Print Logger Options
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                string jsonString = JsonSerializer.Serialize(lpsHttpClientConfiguration);
+                Console.WriteLine($"LPS Http Client Configuration: {jsonString}");
                 Console.ResetColor();
 
 
                 // Register the custom logger instance as a singleton in the DI container
-                services.AddSingleton<ILPSResourceTracker>(resourceUsageTracker);
+                services.AddSingleton<ILPSClientConfiguration<LPSHttpRequest>>(lpsHttpClientConfiguration);
 
             });
             return hostBuilder;

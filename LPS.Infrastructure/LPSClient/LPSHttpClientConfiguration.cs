@@ -10,9 +10,22 @@ namespace LPS.Infrastructure.Client
 {
     public class LPSHttpClientConfiguration: ILPSHttpClientConfiguration<LPSHttpRequest>
     {
-       public TimeSpan PooledConnectionLifetime { get; set; }
-       public TimeSpan PooledConnectionIdleTimeout { get; set; }
-       public int MaxConnectionsPerServer { get; set; }
-       public TimeSpan Timeout { get; set; }
+        private TimeSpan _pooledConnectionLifetime;
+        private TimeSpan _pooledConnectionIdleTimeout;
+        private int _maxConnectionsPerServer;
+        private TimeSpan _timeout;
+        public LPSHttpClientConfiguration(TimeSpan pooledConnectionLifetime, TimeSpan pooledConnectionIdleTimeout,
+           int maxConnectionsPerServer, TimeSpan timeout) 
+        {
+            _pooledConnectionLifetime = pooledConnectionLifetime;
+            _pooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
+            _maxConnectionsPerServer = maxConnectionsPerServer;
+            _timeout = timeout;
+        }
+
+       public TimeSpan PooledConnectionLifetime { get { return _pooledConnectionLifetime; } }
+       public TimeSpan PooledConnectionIdleTimeout { get { return _pooledConnectionIdleTimeout; } }
+       public int MaxConnectionsPerServer { get { return _maxConnectionsPerServer; } }
+       public TimeSpan Timeout { get { return _timeout; } }
     }
 }

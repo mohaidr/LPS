@@ -11,8 +11,8 @@ namespace LPS.Domain.Common
         Cooling,
         Hot
     }
-    public interface ILPSResourceTracker
+    public interface ILPSWatchdog
     {
-        public ResourceState Balance();
+        public Task<ResourceState> Balance(string source);
     }
 }

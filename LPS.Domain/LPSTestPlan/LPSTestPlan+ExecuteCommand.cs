@@ -45,16 +45,11 @@ namespace LPS.Domain
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client Timeout:  {this.ClientTimeout}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Max Connections Per Server:  {this.MaxConnectionsPerServer}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Idle Timeout:  {this.PooledConnectionIdleTimeout}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Pooled Connection Life Time:  {this.PooledConnectionLifeTime}", LPSLoggingLevel.Verbos, cancellationTokenWrapper));
                 #endregion
                
 
                 for (int i = 0; i < this.NumberOfClients && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i++)
                 {
-                    _resourceUsageTracker.Balance();
                     ILPSClientService<LPSHttpRequest> httpClientService = null;
                     if (!this.DelayClientCreationUntilIsNeeded.Value)
                     {
@@ -77,8 +72,10 @@ namespace LPS.Domain
                 {
                     foreach (var testCase in this.LPSTestCases)
                     {
+                        string hostName = new Uri(testCase.LPSHttpRequest.URL).Host;
+                        await _watchdog.Balance(hostName);
                         LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService, command);
-                        LPSHttpTestCase cloneToTestCase = new LPSHttpTestCase(_logger, _resourceUsageTracker, _runtimeOperationIdProvider); //use internal constructor designed for internal usage
+                        LPSHttpTestCase cloneToTestCase = new LPSHttpTestCase(_logger, _watchdog, _runtimeOperationIdProvider); //use internal constructor designed for internal usage
                         testCase.Clone(cloneToTestCase);
                         if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                         {

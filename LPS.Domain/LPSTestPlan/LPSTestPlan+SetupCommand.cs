@@ -14,9 +14,6 @@ namespace LPS.Domain
             public SetupCommand()
             {
                 LPSTestCases = new List<LPSHttpTestCase.SetupCommand>();
-                ClientTimeout = 240;
-                PooledConnectionIdleTimeout = 5;
-                PooledConnectionLifetime = 25;
                 DelayClientCreationUntilIsNeeded = false;
                 RunInParallel = false;
             }
@@ -31,10 +28,6 @@ namespace LPS.Domain
             public string Name { get; set; }
             public int NumberOfClients { get; set; }
             public int RampUpPeriod { get; set; }
-            public int ClientTimeout { get; set; }
-            public int PooledConnectionLifetime { get; set; }
-            public int PooledConnectionIdleTimeout { get; set; }
-            public int MaxConnectionsPerServer { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
             public bool IsValid { get; set; }
@@ -52,15 +45,7 @@ namespace LPS.Domain
                 this.RampUpPeriod= command.RampUpPeriod;
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
-                this.MaxConnectionsPerServer= command.MaxConnectionsPerServer;
-                this.PooledConnectionLifeTime= command.PooledConnectionLifetime;
-                this.PooledConnectionIdleTimeout= command.PooledConnectionIdleTimeout;
-                this.ClientTimeout= command.ClientTimeout;
                 this.RunInParallel = command.RunInParallel;
-                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).Timeout = TimeSpan.FromSeconds(this.ClientTimeout);
-                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).PooledConnectionLifetime = TimeSpan.FromMinutes(this.PooledConnectionLifeTime);
-                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).PooledConnectionIdleTimeout = TimeSpan.FromMinutes(this.PooledConnectionIdleTimeout);
-                ((ILPSHttpClientConfiguration<LPSHttpRequest>)_lpsClientConfig).MaxConnectionsPerServer = this.MaxConnectionsPerServer;
                 if (!this.DelayClientCreationUntilIsNeeded.Value)
                 {
                     for (int i = 0; i < this.NumberOfClients; i++)
@@ -70,7 +55,7 @@ namespace LPS.Domain
                 }
                 foreach (var lpsTestCaseCommand in command.LPSTestCases)
                 {
-                    var lpsTestCase = new LPSHttpTestCase(this._logger, _resourceUsageTracker, _runtimeOperationIdProvider);
+                    var lpsTestCase = new LPSHttpTestCase(this._logger, _watchdog, _runtimeOperationIdProvider);
                     lpsTestCaseCommand.Execute(lpsTestCase);
                     LPSTestCases.Add(lpsTestCase);
                 }

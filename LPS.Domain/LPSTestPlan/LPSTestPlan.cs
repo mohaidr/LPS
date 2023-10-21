@@ -18,12 +18,12 @@ namespace LPS.Domain
         ILPSClientService<LPSHttpRequest>> _lpsClientManager;
         ILPSClientConfiguration<LPSHttpRequest> _lpsClientConfig;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        ILPSResourceTracker _resourceUsageTracker;
+        ILPSWatchdog _watchdog;
 
         public LPSTestPlan(SetupCommand command, ILPSClientManager<LPSHttpRequest,
             ILPSClientService<LPSHttpRequest>> lpsClientManager,
             ILPSClientConfiguration<LPSHttpRequest> lpsClientConfig, ILPSLogger logger,
-            ILPSResourceTracker resourceUsageTracker,
+            ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             LPSTestCases = new List<LPSHttpTestCase>();
@@ -31,7 +31,7 @@ namespace LPS.Domain
             _logger = logger;
             _lpsClientManager = lpsClientManager;
             _lpsClientConfig = lpsClientConfig;
-            _resourceUsageTracker= resourceUsageTracker;
+            _watchdog= watchdog;
             Id = Guid.NewGuid();
             this.Setup(command);
         }
@@ -45,10 +45,6 @@ namespace LPS.Domain
         public bool? RunInParallel { get; private set; }
         //ToDo: Implement CleanUp Cookies
         public bool SameClientForEachTeastCase { get; private set; } = true;
-        public int ClientTimeout { get; private set; }
-        public int PooledConnectionLifeTime { get; private set; }
-        public int PooledConnectionIdleTimeout { get; private set; }
-        public int MaxConnectionsPerServer { get; private set; }
         public bool IsValid { get; private set; }
         public int NumberOfClients { get; private set; }
         public int RampUpPeriod { get; private set; }

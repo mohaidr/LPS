@@ -8,9 +8,9 @@ namespace LPS.Domain.Common
 
     public interface ILPSHttpClientConfiguration<T>: ILPSClientConfiguration<T> where T : ILPSRequestEntity
     {
-        public TimeSpan PooledConnectionLifetime { get; set; }
-        public TimeSpan PooledConnectionIdleTimeout { get; set; }
-        public int MaxConnectionsPerServer { get; set; }
-        public TimeSpan Timeout { get; set; }
+        public TimeSpan PooledConnectionLifetime { get; }
+        public TimeSpan PooledConnectionIdleTimeout { get; }
+        public int MaxConnectionsPerServer { get; }
+        public TimeSpan Timeout { get; }
     }
 }

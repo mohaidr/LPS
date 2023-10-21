@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Common.Options
 {
-    public class LPSFileLoggerConfiguration
+    public class LPSFileLoggerOptions
     {
         public string LogFilePath { get; set; }
         public LPSLoggingLevel ConsoleLogingLevel { get; set; }

@@ -82,7 +82,7 @@ public static class MimeTypeExtensions
 
     public static MimeType FromContentType(string contentType)
     {
-        if (ContentTypeToMimeType.TryGetValue(contentType, out MimeType mimeType))
+        if (contentType!= null && ContentTypeToMimeType.TryGetValue(contentType, out MimeType mimeType))
         {
             return mimeType;
         }

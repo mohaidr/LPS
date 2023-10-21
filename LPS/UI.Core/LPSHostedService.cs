@@ -19,12 +19,12 @@ namespace LPS.UI.Core
         ILPSClientConfiguration<LPSHttpRequest> _config;
         ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        ILPSResourceTracker _resourceUsageTracker;
+        ILPSWatchdog _watchdog;
         string[] _args;
         public LPSHostedService(ILPSLogger logger,
             ILPSClientConfiguration<LPSHttpRequest> config,
             ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
-            ILPSResourceTracker resourceUsageTracker,
+            ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider, 
             dynamic cmdArgs)
         {
@@ -32,7 +32,7 @@ namespace LPS.UI.Core
             _config = config;
             _args = cmdArgs.args;
             _httpClientManager = httpClientManager;
-            _resourceUsageTracker= resourceUsageTracker;
+            _watchdog= watchdog;
             _runtimeOperationIdProvider= runtimeOperationIdProvider;
         }
 
@@ -44,7 +44,7 @@ namespace LPS.UI.Core
 
             if (_args != null && _args.Length > 0)
             {
-                var commandLineParser = new LPSCommandParser(_logger, _httpClientManager, _config, _resourceUsageTracker, _runtimeOperationIdProvider, lpsTestPlanSetupCommand);
+                var commandLineParser = new LPSCommandParser(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, lpsTestPlanSetupCommand);
                 commandLineParser.CommandLineArgs = _args;
                 commandLineParser.Parse(cancellationToken);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Information);
@@ -59,7 +59,7 @@ namespace LPS.UI.Core
                 bool runTest = Console.ReadLine().ToLower().Trim() == "y";
                 if (runTest)
                 {
-                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _resourceUsageTracker, _runtimeOperationIdProvider);
+                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider);
                     await lpsManager.Run(lpsTestPlanSetupCommand, cancellationToken);
                 }
 

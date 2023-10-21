@@ -22,27 +22,11 @@ namespace LPS.UI.Core.UI.Build.Services
                 case "-numberOfClients":
                     Console.Write("Number Of Clients: ");
                     input = Console.ReadLine().Trim();
-                    break;
-                case "-clientTimeOut":
-                    Console.Write("Client Timeout (Seconds): ");
-                    input = Console.ReadLine().Trim();
-                    break;                
+                    break;             
                 case "-rampupPeriod":
                     Console.Write("Rampup Period (Milliseconds): ");
                     input = Console.ReadLine().Trim();
-                    break;
-                case "-maxConnectionsPerServer":
-                    Console.Write("Max Connections Per Server: ");
-                    input = Console.ReadLine().Trim();
-                    break;                
-                case "-pooledConnectionLifeTime":
-                    Console.Write("Pooled Connection Life time (Minutes): ");
-                    input = Console.ReadLine().Trim();
-                    break;
-                case "-pooledConnectionIdleTimeout":
-                    Console.Write("Pooled Connection Idle Timeout (Minutes): ");
-                    input = Console.ReadLine().Trim();
-                    break;
+                    break;              
                 case "-delayClientCreationUntilNeeded":
                     Console.Write("Dleay Client Creation Until Needed (Y/N): ");
                     input = Console.ReadLine().Trim();

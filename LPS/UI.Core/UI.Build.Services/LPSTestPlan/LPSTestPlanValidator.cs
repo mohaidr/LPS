@@ -22,16 +22,8 @@ namespace LPS.UI.Core.UI.Build.Services
                     return !(string.IsNullOrEmpty(_command.Name) || !Regex.IsMatch(_command.Name, @"^[\w.-]{2,}$"));
                 case "-numberOfClients":
                     return _command.NumberOfClients > 0;
-                case "-clientTimeOut":
-                    return _command.ClientTimeout > 0;
                 case "-rampupPeriod":
                     return _command.RampUpPeriod > 0;
-                case "-maxConnectionsPerServer":
-                    return _command.MaxConnectionsPerServer > 0;
-                case "-pooledConnectionLifeTime":
-                    return _command.PooledConnectionLifetime > 0;
-                case "-pooledConnectionIdleTimeout":
-                    return _command.PooledConnectionIdleTimeout > 0;
                 case "-delayClientCreationUntilNeeded":
                     return _command.DelayClientCreationUntilIsNeeded.HasValue;
                 case "-runInParallel":

@@ -28,14 +28,14 @@ namespace LPS
 
                 })
                 .ConfigureLPSFileLogger()
-                .ConfigureLPSResourceTracker()
+                .ConfigureLPSWatchdog()
+                .ConfigureLPSHttpClient()
                 .ConfigureServices((context, services) =>
                 {
                     //Dependency Injection goes Here
                     services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args = args }));
                     services.AddSingleton<ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>>, LPSHttpClientManager>();
                     services.AddSingleton<ILPSClientService<LPSHttpRequest>, LPSHttpClientService>();
-                    services.AddSingleton<ILPSClientConfiguration<LPSHttpRequest>, LPSHttpClientConfiguration>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
 
                     if (context.HostingEnvironment.IsProduction())
@@ -49,6 +49,7 @@ namespace LPS
                 })
                 .UseConsoleLifetime(options => options.SuppressStatusMessages = true)
                 .Build();
+
             return host;
         }
     }

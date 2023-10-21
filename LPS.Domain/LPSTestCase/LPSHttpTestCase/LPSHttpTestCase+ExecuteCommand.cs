@@ -69,7 +69,6 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
-               // List<Task> awaitableTasks = new List<Task>();
 
                 #region Logging Request Details
                 string logEntry = string.Empty;
@@ -123,6 +122,7 @@ namespace LPS.Domain
                 _ = ReportAsync(command, this.Name, taskCompletionSource, cancellationTokenWrapper);
                 Stopwatch stopwatch;
                 int numberOfSentRequests = 0;
+                string hostName = new Uri(this.LPSHttpRequest.URL).Host;
                 switch (this.Mode)
                 {
                     case IterationMode.DCB:
@@ -130,46 +130,46 @@ namespace LPS.Domain
                         stopwatch.Start();
                         while (stopwatch.Elapsed.TotalSeconds < this.Duration.Value && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
                         {
-                           // _resourceUsageTracker.Balance();
                             for (int b = 0; b < this.BatchSize && stopwatch.Elapsed.TotalSeconds < this.Duration.Value; b++)
                             {
                                 _=lpsRequestExecCommand.ExecuteAsync(LPSHttpRequest, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds , cancellationTokenWrapper.CancellationToken);
+                           await _watchdog.Balance(hostName);
                         }
                         stopwatch.Stop();
                         break;
                     case IterationMode.CRB:
                         for (int i = 0; i < this.RequestCount.Value && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i += this.BatchSize.Value)
                         {
-                          //  _resourceUsageTracker.Balance();
                             for (int b = 0; b < this.BatchSize; b++)
                             {
                                 _=lpsRequestExecCommand.ExecuteAsync(LPSHttpRequest, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, cancellationTokenWrapper.CancellationToken);
+                            await _watchdog.Balance(hostName);
                         }
                         break;
                     case IterationMode.CB:
                         while (!cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
                         {
-                           // _resourceUsageTracker.Balance();
                             for (int b = 0; b < this.BatchSize; b++)
                             {
                                 _=lpsRequestExecCommand.ExecuteAsync(LPSHttpRequest, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, cancellationTokenWrapper.CancellationToken);
+                            await _watchdog.Balance(hostName);
                         }
                         break;
                     case IterationMode.R:
                         for (int i = 0; i < this.RequestCount && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i++)
                         {
-                           // _resourceUsageTracker.Balance();
                             _ = lpsRequestExecCommand.ExecuteAsync(LPSHttpRequest, cancellationTokenWrapper);
                             numberOfSentRequests++;
+                            await _watchdog.Balance(hostName);
                         }
                         break;
                     case IterationMode.D:
@@ -177,9 +177,9 @@ namespace LPS.Domain
                         stopwatch.Start();
                         while (stopwatch.Elapsed.TotalSeconds < this.Duration.Value && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
                         {
-                            _resourceUsageTracker.Balance();
                             _ = lpsRequestExecCommand.ExecuteAsync(LPSHttpRequest, cancellationTokenWrapper);
                             numberOfSentRequests++;
+                            await _watchdog.Balance(hostName);
                         }
                         stopwatch.Stop();
                         break;
@@ -188,11 +188,12 @@ namespace LPS.Domain
                 }
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {numberOfSentRequests} request(s) to {this.LPSHttpRequest.URL}", LPSLoggingLevel.Information, cancellationTokenWrapper);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Information, cancellationTokenWrapper);
-                //await Task.WhenAll(awaitableTasks);
 
-                while (command.NumberOfSuccessfullyCompletedRequests + NumberOfFailedCalls < numberOfSentRequests)
+                //TODO: Change this logic to event driven to avoid unnecessary conext switching every 1 second
+                //Also the approach of knowing if the test has completed by counters may not be the best so look for some other solution
+                while (command.NumberOfSuccessfullyCompletedRequests + command.NumberOfFailedToCompleteRequests < numberOfSentRequests)
                 {
-                    await Task.Delay(5000);
+                    await Task.Delay(1000);
                 }
 
                 taskCompletionSource.SetResult(true);
@@ -204,8 +205,6 @@ namespace LPS.Domain
         private async Task ReportAsync(ExecuteCommand execCommand, string name, TaskCompletionSource<bool> TaskCompletionSource, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Start reporting which will run every 10 Seconds", LPSLoggingLevel.Information, cancellationTokenWrapper);
-
-            Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
             while (!TaskCompletionSource.Task.IsCompleted && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(10000, cancellationTokenWrapper.CancellationToken);

@@ -41,30 +41,6 @@ namespace LPS.Domain
                     command.IsValid = false;
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "Number of clients can't be less than 1, at least one user has to be created.", LPSLoggingLevel.Warning);
                 }
-                if (command.MaxConnectionsPerServer < 1)
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Max connections per server can't be less than 1.", LPSLoggingLevel.Warning);
-                }
-
-                if (command.ClientTimeout < 1)
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Client Timeout can't be less than 1.", LPSLoggingLevel.Warning);
-                }
-
-                if (command.PooledConnectionIdleTimeout < 1)
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Pooled connection idle timeout can't be less than 1 minute.", LPSLoggingLevel.Warning);
-
-                }
-                if (command.PooledConnectionLifetime < 1)
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Pooled connection life time can't be less than 1 minute.", LPSLoggingLevel.Warning);
-
-                }
 
                 if (!command.DelayClientCreationUntilIsNeeded.HasValue) 
                 { 

@@ -7,12 +7,20 @@
     "LoggingLevel": "Verbos",
     "ConsoleLogingLevel": "Information"
   },
-  "LPSResourceTrackerConfiguration": {
-    "MaxMemoryMB": "3000",
-    "MaxCPUPercentage": "70",
-    "CoolDownMemoryMB": "1500",
-    "CoolDownCPUPercentage": "35",
-    "CoolDownRetryTimeInSeconds": "60",
+  "LPSWatchdogConfiguration": {
+    "MaxMemoryMB": "4000",
+    "MaxCPUPercentage": "75",
+    "CoolDownMemoryMB": "2800",
+    "CoolDownCPUPercentage": "60",
+    "MaxConnectionsCountPerHostName": "9000",
+    "CoolDownConnectionsCountPerHostName": "1000",
+    "CoolDownRetryTimeInSeconds": "1",
     "SuspensionMode": "Any" /* Any || All*/
+  },
+  "LPSHttpClientConfiguration": {
+    "PooledConnectionLifeTimeInSeconds": "1500",
+    "PooledConnectionIdleTimeoutInSeconds": "300",
+    "MaxConnectionsPerServer": "1000",
+    "ClientTimeoutInSeconds": "240"
   }
 }

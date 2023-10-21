@@ -54,7 +54,8 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
-                _resourceUsageTracker.Balance();
+                string hostName = new Uri(this.URL).Host;
+                await _watchdog.Balance(hostName);
                 int requestNumber;
                 ProtectedAccessLPSTestCaseExecuteCommand protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
                 try
