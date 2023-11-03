@@ -6,14 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestValidator : IUserValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest>
+    internal class LPSRequestProfileValidator : IUserValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
     {
-        public LPSRequestValidator(LPSHttpRequest.SetupCommand command)
+        public LPSRequestProfileValidator(LPSHttpRequestProfile.SetupCommand command)
         {
             _command = command;
         }
-        LPSHttpRequest.SetupCommand _command;
-        public LPSHttpRequest.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSHttpRequestProfile.SetupCommand _command;
+        public LPSHttpRequestProfile.SetupCommand Command { get { return _command; } set { value = _command; } }
         public bool Validate(string property)
         {
             string[] httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
@@ -41,6 +41,8 @@ namespace LPS.UI.Core.UI.Build.Services
                     break;
                 case "-downloadHtmlEmbeddedResources":
                     return Command.DownloadHtmlEmbeddedResources.HasValue;
+                case "-saveResponse":
+                    return Command.SaveResponse.HasValue;
             }
             return true;
         }

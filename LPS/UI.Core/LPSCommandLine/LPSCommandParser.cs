@@ -18,13 +18,13 @@ namespace LPS.UI.Core.LPSCommandLine
 
         ILPSLogger _logger;
         LPSTestPlan.SetupCommand _command;
-        ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
-        ILPSClientConfiguration<LPSHttpRequest> _config;
+        ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> _httpClientManager;
+        ILPSClientConfiguration<LPSHttpRequestProfile> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _atchdog;
         public LPSCommandParser(ILPSLogger logger,
-            ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
-            ILPSClientConfiguration<LPSHttpRequest> config,
+            ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> httpClientManager,
+            ILPSClientConfiguration<LPSHttpRequestProfile> config,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             LPSTestPlan.SetupCommand command)
@@ -67,7 +67,9 @@ namespace LPS.UI.Core.LPSCommandLine
                 CommandLineOptions.BatchSize,
                 CommandLineOptions.UrlOption,
                 CommandLineOptions.HeaderOption,
-                CommandLineOptions.PayloadOption
+                CommandLineOptions.PayloadOption,
+                CommandLineOptions.DownloadHtmlEmbeddedResources,
+                CommandLineOptions.SaveResponse
             };
             Command runCommand = new Command("run", "Run existing test") {
                CommandLineOptions.TestNameOption,
@@ -87,7 +89,7 @@ namespace LPS.UI.Core.LPSCommandLine
                     string json = new LpsSerializer().Serialize(_command);
                     File.WriteAllText($"{lpaTestPlan.Name}.json", json);
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Test Has Been Created Successfully");
+                    Console.WriteLine("Your test plan has been created successfully");
                     Console.ResetColor();
                 },
                 new LPSTestPlanCommandBinder(
@@ -107,7 +109,7 @@ namespace LPS.UI.Core.LPSCommandLine
                     string json = serializer.Serialize(_command);
                     File.WriteAllText($"{testName}.json", json);
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Request Has Been Added Successfully");
+                    Console.WriteLine("Your test case has been added successfully");
                     Console.ResetColor();
                 },
                 CommandLineOptions.TestNameOption,
@@ -123,7 +125,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 CommandLineOptions.UrlOption,
                 CommandLineOptions.HeaderOption,
                 CommandLineOptions.PayloadOption,
-                CommandLineOptions.DownloadHtmlEmbeddedResources));
+                CommandLineOptions.DownloadHtmlEmbeddedResources,
+                CommandLineOptions.SaveResponse));
 
             runCommand.SetHandler(async (testName) =>
             {

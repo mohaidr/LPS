@@ -75,6 +75,10 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.Write("Download Html Embedded Resources (Y/N): ");
                     input = Console.ReadLine().Trim();
                     break;
+                case "-saveResponse":
+                    Console.Write("Save Responses (Y/N): ");
+                    input = Console.ReadLine().Trim();
+                    break;
                 default:
                     Console.ForegroundColor = ConsoleColor.Yellow; 
                         Console.WriteLine("Invalid Challenge");

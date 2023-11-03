@@ -102,7 +102,7 @@ namespace LPS.UI.Common.Extensions
 
 
                 // Register the custom logger instance as a singleton in the DI container
-                services.AddSingleton<ILPSClientConfiguration<LPSHttpRequest>>(lpsHttpClientConfiguration);
+                services.AddSingleton<ILPSClientConfiguration<LPSHttpRequestProfile>>(lpsHttpClientConfiguration);
 
             });
             return hostBuilder;

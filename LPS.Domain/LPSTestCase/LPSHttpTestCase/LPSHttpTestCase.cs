@@ -35,7 +35,7 @@ namespace LPS.Domain
         {
         }
 
-        private ILPSClientService<LPSHttpRequest> _httpClientService;
+        private ILPSClientService<LPSHttpRequestProfile> _httpClientService;
         internal LPSHttpTestCase(
             ILPSLogger logger,
             ILPSWatchdog watchdog,
@@ -85,7 +85,7 @@ namespace LPS.Domain
                 }
             }
         }
-        public LPSHttpRequest LPSHttpRequest { get; private set; }
+        public LPSHttpRequestProfile LPSHttpRequestProfile { get; private set; }
         public int? RequestCount { get; private set; }
 
         public int? Duration { get; private set; }

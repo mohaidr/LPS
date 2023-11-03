@@ -40,6 +40,6 @@ namespace LPS.Domain
         public Dictionary<string, string> ResponseContentHeaders { get; private set; }
         public Dictionary<string, string> ResponseHeaders { get; private set; }
         public bool IsSuccessStatusCode { get; private set; }
-        public LPSHttpRequest LPSHttpRequest { get; private set; }
+        public LPSHttpRequestProfile LPSHttpRequestProfile { get; private set; }
     }
 }

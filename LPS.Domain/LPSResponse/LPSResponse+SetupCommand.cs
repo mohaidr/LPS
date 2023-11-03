@@ -36,7 +36,6 @@ namespace LPS.Domain
             _= new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid)
             {
-                Id = Guid.NewGuid();
                 this.IsValid = true;
             }
         }

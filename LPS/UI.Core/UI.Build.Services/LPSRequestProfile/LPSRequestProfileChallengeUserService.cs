@@ -5,10 +5,10 @@ using System;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestChallengeUserService : IChallengeUserService<LPSHttpRequest.SetupCommand, LPSHttpRequest>
+    internal class LPSRequestProfileChallengeUserService : IChallengeUserService<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
     {
-        IUserValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> _validator;
-        public LPSRequestChallengeUserService(bool skipOptionalFields, LPSHttpRequest.SetupCommand command, IUserValidator<LPSHttpRequest.SetupCommand, LPSHttpRequest> validator)
+        IUserValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile> _validator;
+        public LPSRequestProfileChallengeUserService(bool skipOptionalFields, LPSHttpRequestProfile.SetupCommand command, IUserValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -17,8 +17,8 @@ namespace LPS.UI.Core.UI.Build.Services
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
         private bool _skipOptionalFields;
 
-        LPSHttpRequest.SetupCommand _command;
-        public LPSHttpRequest.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSHttpRequestProfile.SetupCommand _command;
+        public LPSHttpRequestProfile.SetupCommand Command { get { return _command; } set { value = _command; } }
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -65,6 +65,24 @@ namespace LPS.UI.Core.UI.Build.Services
                     }
                     continue;
                 }
+                if (!_validator.Validate("-saveResponse"))
+                {
+                    Console.WriteLine("Would you like to save the http responses");
+                    string input = ChallengeService.Challenge("-saveResponse");
+                    switch (input.ToLower())
+                    {
+                        case "y":
+                            Command.SaveResponse = true;
+                            break;
+                        case "n":
+                            Command.SaveResponse = false;
+                            break;
+                        default:
+                            Command.SaveResponse = null;
+                            break;
+                    }
+                    continue;
+                }
                 break;
             }
 
@@ -87,6 +105,7 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 _command.Httpversion = string.Empty;
                 _command.DownloadHtmlEmbeddedResources = null;
+                _command.SaveResponse = null;
             }
         }
     }

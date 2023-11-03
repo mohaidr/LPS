@@ -115,9 +115,9 @@ namespace LPS.UI.Core.UI.Build.Services
                 break;
             }
 
-            LPSRequestValidator validator = new LPSRequestValidator(_command.LPSRequest);
-            LPSRequestChallengeUserService lpsRequestUserService = new LPSRequestChallengeUserService(SkipOptionalFields, _command.LPSRequest, validator);
-            lpsRequestUserService.Challenge();
+            LPSRequestProfileValidator validator = new LPSRequestProfileValidator(_command.LPSRequestProfile);
+            LPSRequestProfileChallengeUserService lpsRequestProfileUserService = new LPSRequestProfileChallengeUserService(SkipOptionalFields, _command.LPSRequestProfile, validator);
+            lpsRequestProfileUserService.Challenge();
         }
 
         public void ResetOptionalFields()

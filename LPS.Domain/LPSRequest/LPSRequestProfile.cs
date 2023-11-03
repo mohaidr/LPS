@@ -12,21 +12,22 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
     //This should be a Non-Entity Superclass
-    public partial class LPSRequest : IValidEntity, ILPSRequestEntity
+    public partial class LPSRequestProfile : IValidEntity, ILPSRequestEntity
     {
         protected ILPSLogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected ILPSWatchdog _watchdog;
-        protected LPSRequest()
+        protected LPSRequestProfile()
         {
-
+            Id = Guid.NewGuid();
         }
 
-        public LPSRequest(LPSRequest.SetupCommand command, ILPSLogger logger,
+        public LPSRequestProfile(LPSRequestProfile.SetupCommand command, ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            _logger= logger;
+            Id = Guid.NewGuid();
+            _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
         }

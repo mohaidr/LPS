@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Client
 {
-    public class LPSHttpClientConfiguration: ILPSHttpClientConfiguration<LPSHttpRequest>
+    public class LPSHttpClientConfiguration: ILPSHttpClientConfiguration<LPSHttpRequestProfile>
     {
         private TimeSpan _pooledConnectionLifetime;
         private TimeSpan _pooledConnectionIdleTimeout;

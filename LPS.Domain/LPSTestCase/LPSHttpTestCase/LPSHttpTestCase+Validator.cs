@@ -127,10 +127,10 @@ namespace LPS.Domain
                     command.IsValid = false;
                 }
 
-                if (command.LPSRequest != null)
+                if (command.LPSRequestProfile != null)
                 {
-                    new LPSHttpRequest.Validator(null, command.LPSRequest, _logger, _runtimeOperationIdProvider);
-                    if (!command.LPSRequest.IsValid)
+                    new LPSHttpRequestProfile.Validator(null, command.LPSRequestProfile, _logger, _runtimeOperationIdProvider);
+                    if (!command.LPSRequestProfile.IsValid)
                     {
                         _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Http Request", LPSLoggingLevel.Warning);
                         command.IsValid = false;

@@ -3,17 +3,17 @@
     "LogFilePath": "logs/mylog.Log",
     "EnableConsoleLogging": true,
     "EnableConsoleErrorLogging": false,
-    "DisableFileLogging": true,
+    "DisableFileLogging": false,
     "LoggingLevel": "Verbos",
     "ConsoleLogingLevel": "Information"
   },
   "LPSWatchdogConfiguration": {
-    "MaxMemoryMB": "4000",
-    "MaxCPUPercentage": "75",
-    "CoolDownMemoryMB": "2800",
+    "MaxMemoryMB": "6000",
+    "MaxCPUPercentage": "70",
+    "CoolDownMemoryMB": "4000",
     "CoolDownCPUPercentage": "60",
-    "MaxConnectionsCountPerHostName": "9000",
-    "CoolDownConnectionsCountPerHostName": "1000",
+    "MaxConnectionsCountPerHostName": "14000",
+    "CoolDownConnectionsCountPerHostName": "13000",
     "CoolDownRetryTimeInSeconds": "1",
     "SuspensionMode": "Any" /* Any || All*/
   },

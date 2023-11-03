@@ -12,27 +12,25 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpRequest :LPSRequest, IBusinessEntity
+    public partial class LPSHttpRequestProfile :LPSRequestProfile, IBusinessEntity
     {
 
-        private ILPSClientService<LPSHttpRequest> _httpClientService;
-        private LPSHttpRequest()
+        private ILPSClientService<LPSHttpRequestProfile> _httpClientService;
+        private LPSHttpRequestProfile()
         {
-            LPSHttpResponses = new List<LPSHttpResponse>();
         }
 
-        internal LPSHttpRequest(ILPSLogger logger,
+        internal LPSHttpRequestProfile(ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
-            LPSHttpResponses = new List<LPSHttpResponse>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
         }
 
-        public LPSHttpRequest(LPSHttpRequest.SetupCommand command, ILPSLogger logger,
+        public LPSHttpRequestProfile(LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
@@ -52,9 +50,7 @@ namespace LPS.Domain
 
         public Dictionary<string, string> HttpHeaders { get; private set; }
 
-        //Same request might be executed multiple times so may have different response for each execution.
-        public List<LPSHttpResponse> LPSHttpResponses { get; private set; }
-
         public bool DownloadHtmlEmbeddedResources { get; private set; }
+        public bool SaveResponse { get; private set; }
     }
 }

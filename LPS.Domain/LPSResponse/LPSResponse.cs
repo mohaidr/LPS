@@ -18,12 +18,13 @@ namespace LPS.Domain
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected LPSResponse()
         {
-
+            Id = Guid.NewGuid();
         }
 
         public LPSResponse(LPSResponse.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            _logger= logger;
+            Id = Guid.NewGuid();
+            _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         public Guid Id { get; protected set; }

@@ -12,9 +12,9 @@ using LPS.Domain.Common;
 
 namespace LPS.Domain
 {
-    public partial class LPSRequest
+    public partial class LPSRequestProfile
     {
-        public class SetupCommand : ICommand<LPSRequest>, IValidCommand
+        public class SetupCommand : ICommand<LPSRequestProfile>, IValidCommand
         {
             public SetupCommand()
             {
@@ -23,7 +23,7 @@ namespace LPS.Domain
             public bool IsValid { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set; }
 
-            public void Execute(LPSRequest entity)
+            public void Execute(LPSRequestProfile entity)
             {
                 entity?.Setup(this);
             }
@@ -35,7 +35,6 @@ namespace LPS.Domain
             _= new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid)
             {
-                Id = Guid.NewGuid();
                 this.IsValid = true;
             }
         }

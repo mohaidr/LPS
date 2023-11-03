@@ -34,8 +34,8 @@ namespace LPS
                 {
                     //Dependency Injection goes Here
                     services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args = args }));
-                    services.AddSingleton<ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>>, LPSHttpClientManager>();
-                    services.AddSingleton<ILPSClientService<LPSHttpRequest>, LPSHttpClientService>();
+                    services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>>, LPSHttpClientManager>();
+                    services.AddSingleton<ILPSClientService<LPSHttpRequestProfile>, LPSHttpClientService>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
 
                     if (context.HostingEnvironment.IsProduction())

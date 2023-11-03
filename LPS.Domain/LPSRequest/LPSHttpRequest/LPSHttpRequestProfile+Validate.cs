@@ -13,20 +13,20 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpRequest
+    public partial class LPSHttpRequestProfile
     {
-        public new class Validator: IDomainValidator<LPSHttpRequest, LPSHttpRequest.SetupCommand>
+        public new class Validator: IDomainValidator<LPSHttpRequestProfile, LPSHttpRequestProfile.SetupCommand>
         {
             ILPSLogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            public Validator(LPSHttpRequest entity, LPSHttpRequest.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) 
+            public Validator(LPSHttpRequestProfile entity, LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) 
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 Validate(entity, command);
             }
 
-            public void Validate(LPSHttpRequest entity, SetupCommand command)
+            public void Validate(LPSHttpRequestProfile entity, SetupCommand command)
             {
                 if (command == null)
                 {
@@ -59,6 +59,12 @@ namespace LPS.Domain
                 if (!command.DownloadHtmlEmbeddedResources.HasValue)
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "DownloadHtmlEmbeddedResources must be (Y/N)", LPSLoggingLevel.Warning);
+                    command.IsValid = false;
+                }
+
+                if (!command.SaveResponse.HasValue)
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "SaveResponse must be (Y/N)", LPSLoggingLevel.Warning);
                     command.IsValid = false;
                 }
 

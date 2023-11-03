@@ -1,6 +1,5 @@
 ======== Urgent List ========
 
-Resource Usage Tracker
 command to configure file logging options
 Gather the logs of each request and its associated response in one log entry
 correctly calculate the time taken to start and complete a request
@@ -61,4 +60,6 @@ Exit app after command execution is completed - Done
 Implement RunInParallel
 Handle Response Payload As Bytes and read it as soon as it arrives
 download embedded resources
+Resource Usage Tracker
+
 

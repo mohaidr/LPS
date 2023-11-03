@@ -30,6 +30,7 @@ namespace LPS.Domain
             public Dictionary<string, string> ResponseHeaders { get; set; }
             public bool IsSuccessStatusCode { get; set; }
             public bool IsValid { get; set; }
+            public Guid LPSHttpRequestProfileId { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set; }
 
             public void Execute(LPSHttpResponse entity)

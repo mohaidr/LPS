@@ -16,14 +16,14 @@ namespace LPS.UI.Core
     internal class LPSHostedService : ILPSHostedService
     {
         ILPSLogger _logger;
-        ILPSClientConfiguration<LPSHttpRequest> _config;
-        ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> _httpClientManager;
+        ILPSClientConfiguration<LPSHttpRequestProfile> _config;
+        ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> _httpClientManager;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
         string[] _args;
         public LPSHostedService(ILPSLogger logger,
-            ILPSClientConfiguration<LPSHttpRequest> config,
-            ILPSClientManager<LPSHttpRequest, ILPSClientService<LPSHttpRequest>> httpClientManager,
+            ILPSClientConfiguration<LPSHttpRequestProfile> config,
+            ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> httpClientManager,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider, 
             dynamic cmdArgs)

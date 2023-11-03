@@ -44,6 +44,7 @@ namespace LPS.UI.Core.LPSCommandLine
             PayloadOption.AddAlias("-p");
             IterationModeOption.AddAlias("-im");
             DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
+            SaveResponse.AddAlias("-sr");
         }
 
         public static Option<string> TestNameOption = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
@@ -64,7 +65,8 @@ namespace LPS.UI.Core.LPSCommandLine
         public static Option<string> HttpMethodOption = new Option<string>("--method", "HTTP method") { IsRequired = true };
         public static Option<string> HttpversionOption = new Option<string>("--version", () => "1.1", "HTTP version") { IsRequired = false };
         public static Option<string> UrlOption = new Option<string>("--url", "URL") { IsRequired = true };
-        public static Option<bool> DownloadHtmlEmbeddedResources = new Option<bool>("--downloadHtmlEmbeddedResources", "Set to true if you want to download the HTML embedded resources and false otherwise") { IsRequired = false };
+        public static Option<bool> DownloadHtmlEmbeddedResources = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true if you want to download the HTML embedded resources or false otherwise") { IsRequired = false };
+        public static Option<bool> SaveResponse = new Option<bool>("--saveResponse", () => false, "Set to true if you want to save the http response or false otherwise") { IsRequired = false };
         public static Option<IList<string>> HeaderOption = new Option<IList<string>>("--header", "Header") { IsRequired = false, AllowMultipleArgumentsPerToken = true, };
         public static Option<string> PayloadOption = new Option<string>("--payload", "Request Payload, can be a path to a file or inline text") { IsRequired = false, };
     }

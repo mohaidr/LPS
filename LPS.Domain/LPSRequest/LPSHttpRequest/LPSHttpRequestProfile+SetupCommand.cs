@@ -13,14 +13,15 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpRequest
+    public partial class LPSHttpRequestProfile
     {
-        new public class SetupCommand : ICommand<LPSHttpRequest>, IValidCommand
+        new public class SetupCommand : ICommand<LPSHttpRequestProfile>, IValidCommand
         {
             public SetupCommand()
             {
                 Httpversion = "1.1";
                 DownloadHtmlEmbeddedResources= false;
+                SaveResponse= false;
                 HttpHeaders = new Dictionary<string, string>();
                 ValidationErrors = new Dictionary<string, string>();
             }
@@ -37,22 +38,23 @@ namespace LPS.Domain
             public bool IsValid { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
-            public void Execute(LPSHttpRequest entity)
+            public bool? SaveResponse { get; set; }
+            public void Execute(LPSHttpRequestProfile entity)
             {
                 entity?.Setup(this);
             }
 
-            internal LPSRequest.SetupCommand LPSRequestSetUpCommand;
+            internal LPSRequestProfile.SetupCommand LPSRequestProfileSetUpCommand;
 
         }
 
         protected void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setup command
-            command.LPSRequestSetUpCommand = new LPSRequest.SetupCommand() {};
-            command.LPSRequestSetUpCommand.Execute(this);
+            command.LPSRequestProfileSetUpCommand = new LPSRequestProfile.SetupCommand() {};
+            command.LPSRequestProfileSetUpCommand.Execute(this);
             new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && command.LPSRequestSetUpCommand.IsValid)
+            if (command.IsValid && command.LPSRequestProfileSetUpCommand.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
                 this.Httpversion = command.Httpversion;
@@ -60,7 +62,7 @@ namespace LPS.Domain
                 this.Payload = command.Payload;
                 this.HttpHeaders = new Dictionary<string, string>();
                 this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.Value;
-
+                this.SaveResponse = command.SaveResponse.Value;
                 if (command.HttpHeaders != null)
                 {
                     foreach (var header in command.HttpHeaders)
@@ -73,7 +75,7 @@ namespace LPS.Domain
             }
         }
 
-        internal void Clone(LPSHttpRequest cloneToEntity)
+        internal void Clone(LPSHttpRequestProfile cloneToEntity)
         {
             if (this.IsValid)
             {
@@ -82,6 +84,8 @@ namespace LPS.Domain
                 cloneToEntity.Httpversion = this.Httpversion;
                 cloneToEntity.URL = this.URL;
                 cloneToEntity.Payload = this.Payload;
+                cloneToEntity.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
+                cloneToEntity.SaveResponse = this.SaveResponse;
                 cloneToEntity.HttpHeaders = new Dictionary<string, string>();
                 if (this.HttpHeaders != null)
                 {

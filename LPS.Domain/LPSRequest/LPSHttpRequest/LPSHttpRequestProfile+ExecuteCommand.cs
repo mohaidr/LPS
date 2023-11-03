@@ -13,7 +13,7 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpRequest
+    public partial class LPSHttpRequestProfile
     {
         private class ProtectedAccessLPSTestCaseExecuteCommand : LPSHttpTestCase.ExecuteCommand
         {
@@ -31,11 +31,11 @@ namespace LPS.Domain
             }
         }
 
-        public class ExecuteCommand : IAsyncCommand<LPSHttpRequest> 
+        public class ExecuteCommand : IAsyncCommand<LPSHttpRequestProfile> 
         {
-            private ILPSClientService<LPSHttpRequest> _httpClientService { get; set; }
+            private ILPSClientService<LPSHttpRequestProfile> _httpClientService { get; set; }
 
-            public ExecuteCommand(ILPSClientService<LPSHttpRequest> httpClientService, LPSHttpTestCase.ExecuteCommand caseExecCommand)
+            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile> httpClientService, LPSHttpTestCase.ExecuteCommand caseExecCommand)
             {
                 _httpClientService = httpClientService;
                 LPSTestCaseExecuteCommand = caseExecCommand;
@@ -43,7 +43,7 @@ namespace LPS.Domain
 
             public LPSHttpTestCase.ExecuteCommand LPSTestCaseExecuteCommand { get; set; }
 
-            async public Task ExecuteAsync(LPSHttpRequest entity, ICancellationTokenWrapper cancellationTokenWrapper)
+            async public Task ExecuteAsync(LPSHttpRequestProfile entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
                 entity._httpClientService = this._httpClientService;
                 await entity.ExecuteAsync(this, cancellationTokenWrapper);

@@ -19,12 +19,14 @@ namespace LPS.Domain
         protected ILPSWatchdog _watchdog;
         protected LPSTestCase()
         {
+            Id = Guid.NewGuid();
         }
 
         public LPSTestCase(SetupCommand command, ILPSLogger logger, 
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            Id = Guid.NewGuid();
             _logger = logger;            
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
