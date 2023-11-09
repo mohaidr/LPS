@@ -12,7 +12,7 @@ namespace LPS.UI.Common.Options
         public string LogFilePath { get; set; }
         public LPSLoggingLevel ConsoleLogingLevel { get; set; }
         public bool EnableConsoleLogging { get; set; }
-        public bool EnableConsoleErrorLogging { get; set; }
+        public bool DisableConsoleErrorLogging { get; set; }
         public bool DisableFileLogging { get; set; }
         public LPSLoggingLevel LoggingLevel { get; set; }
     }

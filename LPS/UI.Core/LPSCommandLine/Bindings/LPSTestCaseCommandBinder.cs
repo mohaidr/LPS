@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
 
-namespace LPS.UI.Core.LPSCommandLine
+namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
     public class LPSTestCaseCommandBinder : BinderBase<LPSHttpTestCase.SetupCommand>
     {
@@ -26,7 +26,7 @@ namespace LPS.UI.Core.LPSCommandLine
         private readonly Option<string> _payloadOption;
         Option<LPSHttpTestCase.IterationMode> _iterationModeOption;
 
-        public LPSTestCaseCommandBinder(Option<string> nameOption, 
+        public LPSTestCaseCommandBinder(Option<string> nameOption,
             Option<int?> requestCountOption,
             Option<LPSHttpTestCase.IterationMode> iterationModeOption,
             Option<int?> duratiion,
@@ -36,8 +36,8 @@ namespace LPS.UI.Core.LPSCommandLine
             Option<string> httpversionOption,
             Option<string> urlOption,
             Option<IList<string>> headerOption,
-            Option<string> payloadOption, 
-            Option<bool> downloadHtmlEmbeddedResourcesOption, 
+            Option<string> payloadOption,
+            Option<bool> downloadHtmlEmbeddedResourcesOption,
             Option<bool> saveResponseOption)
         {
             _nameOption = nameOption;

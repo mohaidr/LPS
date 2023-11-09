@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
 
-namespace LPS.UI.Core.LPSCommandLine
+namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
     public class LPSTestPlanCommandBinder : BinderBase<LPSTestPlan.SetupCommand>
     {
@@ -28,8 +28,8 @@ namespace LPS.UI.Core.LPSCommandLine
             _testNameOption = testNameOption;
             _numberOfClientsOption = numberOfClientsOption;
             _rampupPeriodOption = rampupPeriodOption;
-            _delayClientCreationOption= delayClientCreationOption;
-            _runInParallerOption=runInParallerOption;
+            _delayClientCreationOption = delayClientCreationOption;
+            _runInParallerOption = runInParallerOption;
         }
 
         protected override LPSTestPlan.SetupCommand GetBoundValue(BindingContext bindingContext) =>

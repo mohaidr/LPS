@@ -15,13 +15,14 @@ using System.Xml.Linq;
 using System.CommandLine.Parsing;
 using System.ComponentModel.DataAnnotations;
 using static LPS.Domain.LPSHttpTestCase;
+using LPS.Domain.Common;
 
 namespace LPS.UI.Core.LPSCommandLine
 {
 
-    public class CommandLineOptions
+    public class LPSCommandLineOptions
     {
-        static CommandLineOptions()
+        static LPSCommandLineOptions()
         {
             TestNameOption.AddAlias("-tn");
             NumberOfClientsOption.AddAlias("-nc");
@@ -45,6 +46,12 @@ namespace LPS.UI.Core.LPSCommandLine
             IterationModeOption.AddAlias("-im");
             DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
             SaveResponse.AddAlias("-sr");
+            LogFilePathOption.AddAlias("-lfp");
+            DisableFileLoggingOption.AddAlias("-dfl");
+            EnableConsoleLoggingOption.AddAlias("-ecl");
+            DisableConsoleErrorLoggingOption.AddAlias("-dcel");
+            LoggingLevelOption.AddAlias("-ll");
+            ConsoleLoggingLevelOption.AddAlias("-cll");
         }
 
         public static Option<string> TestNameOption = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
@@ -65,10 +72,16 @@ namespace LPS.UI.Core.LPSCommandLine
         public static Option<string> HttpMethodOption = new Option<string>("--method", "HTTP method") { IsRequired = true };
         public static Option<string> HttpversionOption = new Option<string>("--version", () => "1.1", "HTTP version") { IsRequired = false };
         public static Option<string> UrlOption = new Option<string>("--url", "URL") { IsRequired = true };
-        public static Option<bool> DownloadHtmlEmbeddedResources = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true if you want to download the HTML embedded resources or false otherwise") { IsRequired = false };
-        public static Option<bool> SaveResponse = new Option<bool>("--saveResponse", () => false, "Set to true if you want to save the http response or false otherwise") { IsRequired = false };
+        public static Option<bool> DownloadHtmlEmbeddedResources = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true to download the HTML embedded resources or false otherwise") { IsRequired = false };
+        public static Option<bool> SaveResponse = new Option<bool>("--saveResponse", () => false, "Set to true to save the http response or false otherwise") { IsRequired = false };
         public static Option<IList<string>> HeaderOption = new Option<IList<string>>("--header", "Header") { IsRequired = false, AllowMultipleArgumentsPerToken = true, };
         public static Option<string> PayloadOption = new Option<string>("--payload", "Request Payload, can be a path to a file or inline text") { IsRequired = false, };
+        public static Option<string> LogFilePathOption = new Option<string>("--LogFilePath", "A path value to the log file") { IsRequired = true, };
+        public static Option<bool> EnableConsoleLoggingOption = new Option<bool>("--EnableConsoleLogging", () => true, "Set to true to enable console logging and false otherwise") { IsRequired = false };
+        public static Option<bool> DisableConsoleErrorLoggingOption = new Option<bool>("--DisableConsoleErrorLogging", () => true, "Set to true to disable console error logging and false otherwise") { IsRequired = false };
+        public static Option<bool> DisableFileLoggingOption = new Option<bool>("--DisableFileLogging", () => false, "Set to true to disable file logging and false otherwise") { IsRequired = false };
+        public static Option<LPSLoggingLevel> LoggingLevelOption = new Option<LPSLoggingLevel>("--LoggingLevel", () => LPSLoggingLevel.Verbos, "The logging level") { IsRequired = false, };
+        public static Option<LPSLoggingLevel> ConsoleLoggingLevelOption = new Option<LPSLoggingLevel>("--ConsoleLoggingLevel", () => LPSLoggingLevel.Information, "The logging level on console") { IsRequired = false, };
     }
 }
 

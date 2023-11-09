@@ -12,6 +12,10 @@ using LPS.Infrastructure.Client;
 using System;
 using System.Threading;
 using LPS.UI.Common.Extensions;
+using System.Reflection;
+using LPS.UI.Common;
+using LPS.UI.Common.Options;
+using Microsoft.Extensions.Options;
 
 namespace LPS
 {
@@ -22,23 +26,24 @@ namespace LPS
             var host = Host.CreateDefaultBuilder()
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
-                    configBuilder.SetBasePath(Directory.GetCurrentDirectory())
-                    .AddEnvironmentVariables();
-                    configBuilder.AddJsonFile(@"config/lpsSettings.json", optional: false, reloadOnChange: false);
-
+                    configBuilder.AddEnvironmentVariables();
+                    string lpsAppSettings = LPSAppConstants.AppSettingsFileLocation;
+                    configBuilder.AddJsonFile(lpsAppSettings, optional: false, reloadOnChange: false);
                 })
                 .ConfigureLPSFileLogger()
                 .ConfigureLPSWatchdog()
                 .ConfigureLPSHttpClient()
-                .ConfigureServices((context, services) =>
+                .ConfigureServices((hostContext, services) =>
                 {
-                    //Dependency Injection goes Here
-                    services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args = args }));
+                    services.ConfigureWritable<LPSFileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), LPSAppConstants.AppSettingsFileLocation);
+                    services.ConfigureWritable<LPSWatchDogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), LPSAppConstants.AppSettingsFileLocation);
+                    services.ConfigureWritable<LPSHttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), LPSAppConstants.AppSettingsFileLocation);
+                    services.AddSingleton<LPSAppSettingsWritableOptions>();
+                    services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
                     services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>>, LPSHttpClientManager>();
                     services.AddSingleton<ILPSClientService<LPSHttpRequestProfile>, LPSHttpClientService>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
-
-                    if (context.HostingEnvironment.IsProduction())
+                    if (hostContext.HostingEnvironment.IsProduction())
                     {
                         //add production dependencies
                     }

@@ -9,6 +9,7 @@ using LPS.Domain.Common;
 using LPS.Infrastructure.Logging;
 using System.Linq;
 using System.Diagnostics;
+using Microsoft.Extensions.Options;
 
 namespace LPS.Infrastructure.Logger
 {
@@ -18,9 +19,9 @@ namespace LPS.Infrastructure.Logger
 
         public string LogFilePath { get { return _logFilePath; } }
 
-        public bool EnableConsoleLogging { get { return _enableConsoleLogging; } }
+        public bool EnableConsoleLogging { get { return _disableConsoleLogging; } }
 
-        public bool EnableConsoleErrorLogging { get { return _enableConsoleErrorLogging; } }
+        public bool DisableConsoleErrorLogging { get { return _disableConsoleErrorLogging; } }
 
         public bool DisableFileLogging { get { return _disableFileLogging; } }
 
@@ -29,18 +30,18 @@ namespace LPS.Infrastructure.Logger
         public LPSLoggingLevel LoggingLevel { get { return _loggingLevel; } }
 
         private string _logFilePath;
-        private bool _enableConsoleLogging;
-        private bool _enableConsoleErrorLogging;
+        private bool _disableConsoleLogging;
+        private bool _disableConsoleErrorLogging;
         private bool _disableFileLogging;
         private LPSLoggingLevel _consoleLoggingLevel;
         private LPSLoggingLevel _loggingLevel;
 
-        public FileLogger(string logFilePath, LPSLoggingLevel loggingLevel, LPSLoggingLevel consoleLoggingLevel, bool enableConsoleLogging = true, bool enableConsoleErrorLogging = false, bool disableFileLogging = false)
+        public FileLogger(string logFilePath, LPSLoggingLevel loggingLevel, LPSLoggingLevel consoleLoggingLevel, bool disableConsoleLogging = true, bool disableConsoleErrorLogging = false, bool disableFileLogging = false)
         {
             _loggingLevel = loggingLevel;
             _consoleLoggingLevel = consoleLoggingLevel;
-            _enableConsoleLogging = enableConsoleLogging;
-            _enableConsoleErrorLogging = enableConsoleErrorLogging;
+            _disableConsoleLogging = disableConsoleLogging;
+            _disableConsoleErrorLogging = disableConsoleErrorLogging;
             _disableFileLogging = disableFileLogging;
             if (string.IsNullOrEmpty(logFilePath))
             {
@@ -78,7 +79,7 @@ namespace LPS.Infrastructure.Logger
             {
                 await semaphoreSlim.WaitAsync();
                 string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss.fff +3:00");
-                if (level >= _consoleLoggingLevel && _enableConsoleLogging)
+                if (level >= _consoleLoggingLevel && _disableConsoleLogging)
                 {
                     if (level == LPSLoggingLevel.Verbos)
                     {
@@ -102,14 +103,14 @@ namespace LPS.Infrastructure.Logger
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-                    else if (level == LPSLoggingLevel.Error && _enableConsoleErrorLogging)
+                    else if (level == LPSLoggingLevel.Error && !_disableConsoleErrorLogging)
                     {
                         Console.ForegroundColor = ConsoleColor.Red;
                         Console.Write(level.ToString() + " ");
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-                    else if (level == LPSLoggingLevel.Critical && _enableConsoleErrorLogging)
+                    else if (level == LPSLoggingLevel.Critical && _disableConsoleErrorLogging)
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
                         Console.Write(level.ToString() + " ");

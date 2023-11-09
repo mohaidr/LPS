@@ -1,26 +1,28 @@
-﻿{
-  "LPSFileLoggerConfiguration": {
-    "LogFilePath": "logs/mylog.Log",
-    "EnableConsoleLogging": true,
-    "EnableConsoleErrorLogging": false,
-    "DisableFileLogging": false,
-    "LoggingLevel": "Verbos",
-    "ConsoleLogingLevel": "Information"
-  },
-  "LPSWatchdogConfiguration": {
-    "MaxMemoryMB": "6000",
-    "MaxCPUPercentage": "70",
-    "CoolDownMemoryMB": "4000",
-    "CoolDownCPUPercentage": "60",
-    "MaxConnectionsCountPerHostName": "14000",
-    "CoolDownConnectionsCountPerHostName": "13000",
-    "CoolDownRetryTimeInSeconds": "1",
-    "SuspensionMode": "Any" /* Any || All*/
-  },
-  "LPSHttpClientConfiguration": {
-    "PooledConnectionLifeTimeInSeconds": "1500",
-    "PooledConnectionIdleTimeoutInSeconds": "300",
-    "MaxConnectionsPerServer": "1000",
-    "ClientTimeoutInSeconds": "240"
+{
+  "LPSAppSettings": {
+    "LPSFileLoggerConfiguration": {
+      "LogFilePath": "logs/mylog.Log",
+      "ConsoleLogingLevel": 1,
+      "EnableConsoleLogging": true,
+      "DisableConsoleErrorLogging": true,
+      "DisableFileLogging": false,
+      "LoggingLevel": 0
+    },
+    "LPSWatchdogConfiguration": {
+      "MaxMemoryMB": "6000",
+      "MaxCPUPercentage": "70",
+      "CoolDownMemoryMB": "4000",
+      "CoolDownCPUPercentage": "60",
+      "MaxConnectionsCountPerHostName": "14000",
+      "CoolDownConnectionsCountPerHostName": "13000",
+      "CoolDownRetryTimeInSeconds": "1",
+      "SuspensionMode": "Any"
+    },
+    "LPSHttpClientConfiguration": {
+      "PooledConnectionLifeTimeInSeconds": "1500",
+      "PooledConnectionIdleTimeoutInSeconds": "300",
+      "MaxConnectionsPerServer": "1000",
+      "ClientTimeoutInSeconds": "240"
+    }
   }
 }

@@ -7,6 +7,7 @@ using LPS.UI.Common.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -30,19 +31,18 @@ namespace LPS.UI.Common.Extensions
             {
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
                 if (lpsFileOptions == null)
-                    lpsFileOptions = hostContext.Configuration.GetSection("LPSFileLoggerConfiguration").Get<LPSFileLoggerOptions>();
+                    lpsFileOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration").Get<LPSFileLoggerOptions>();
 
                 // Create an instance of your custom logger implementation
                 var fileLogger = new FileLogger(lpsFileOptions.LogFilePath, lpsFileOptions.LoggingLevel,
                     lpsFileOptions.ConsoleLogingLevel, lpsFileOptions.EnableConsoleLogging,
-                    lpsFileOptions.EnableConsoleErrorLogging, lpsFileOptions.DisableFileLogging);
+                    lpsFileOptions.DisableConsoleErrorLogging, lpsFileOptions.DisableFileLogging);
 
                 // Print Logger Options
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 string jsonString = JsonSerializer.Serialize(fileLogger);
                 Console.WriteLine($"Logger Options: {jsonString}");
                 Console.ResetColor();
-
 
                 // Register the custom logger instance as a singleton in the DI container
                 services.AddSingleton<ILPSLogger>(fileLogger);
@@ -57,7 +57,7 @@ namespace LPS.UI.Common.Extensions
             {
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
                 if (watchdogOptions == null)
-                    watchdogOptions = hostContext.Configuration.GetSection("LPSWatchdogConfiguration").Get<LPSWatchDogOptions>();
+                    watchdogOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration").Get<LPSWatchDogOptions>();
 
                 // Create an instance of your custom logger implementation
                 var watchdog = new LPSWatchdog(watchdogOptions.MaxMemoryMB,
@@ -87,7 +87,11 @@ namespace LPS.UI.Common.Extensions
             {
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
                 if (lpsHttpClientOptions == null)
-                    lpsHttpClientOptions = hostContext.Configuration.GetSection("LPSHttpClientConfiguration").Get<LPSHttpClientOptions>();
+                {
+                    lpsHttpClientOptions = hostContext.Configuration
+                    .GetSection("LPSAppSettings:LPSHttpClientConfiguration")
+                    .Get<LPSHttpClientOptions>();
+                }
 
                 // Create an instance of your custom logger implementation
                 var lpsHttpClientConfiguration = new LPSHttpClientConfiguration(TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionLifeTimeInSeconds),
