@@ -124,7 +124,7 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                //reset optional fields if there are any
+                //reset optional fields if there is any
             }
         }
     }

@@ -1,7 +1,7 @@
 {
   "LPSAppSettings": {
     "LPSFileLoggerConfiguration": {
-      "LogFilePath": "logs/mylog.Log",
+      "LogFilePath": "logs/fixedlpslog.Log",
       "ConsoleLogingLevel": 1,
       "EnableConsoleLogging": true,
       "DisableConsoleErrorLogging": true,

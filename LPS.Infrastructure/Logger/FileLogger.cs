@@ -130,13 +130,16 @@ namespace LPS.Infrastructure.Logger
 
                 }
 
-                semaphoreSlim.Release();
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Yellow;
                 Console.WriteLine($"Warning: Logging Failed \n {ex.Message} {ex.InnerException?.Message}");
                 Console.ResetColor();
+            }
+            finally
+            {
+                semaphoreSlim.Release();
             }
         }
 

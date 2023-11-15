@@ -8,7 +8,9 @@ namespace LPS.UI.Common
 {
     internal interface IUserValidator<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IDomainEntity
     {
-        TCommand Command { get; set; }
+        TCommand Command { get;}
         bool Validate (string ptoprtty);
+        Dictionary<string, string> ValidationErrors { get; }
     }
+
 }
