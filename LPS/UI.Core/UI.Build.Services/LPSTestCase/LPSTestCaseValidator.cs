@@ -15,6 +15,7 @@ namespace LPS.UI.Core.UI.Build.Services
         public LPSTestCaseValidator(LPSHttpTestCase.SetupCommand command)
         {
             _command = command;
+            _validationErrors = new Dictionary<string, string>();
         }
         public Dictionary<string, string> ValidationErrors => _validationErrors;
 
@@ -29,7 +30,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     AddValidationMessage(isValid, property, _command.Name);
                     break;
                 case "-iterationMode":
-                    isValid = !_command.Mode.HasValue;
+                    isValid = _command.Mode.HasValue;
                     break;
                 case "-requestCount":
                     isValid = !((!_command.RequestCount.HasValue || _command.RequestCount <= 0)
@@ -44,7 +45,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     AddValidationMessage(isValid, property, _command.CoolDownTime);
                     break;
                 case "-batchSize":
-                    isValid = ((!_command.BatchSize.HasValue || _command.BatchSize <= 0)
+                    isValid = !((!_command.BatchSize.HasValue || _command.BatchSize <= 0)
                          || (_command.BatchSize.HasValue && _command.RequestCount.HasValue
                          && _command.BatchSize.Value > _command.RequestCount.Value));
                         AddValidationMessage(isValid, property, _command.BatchSize);
