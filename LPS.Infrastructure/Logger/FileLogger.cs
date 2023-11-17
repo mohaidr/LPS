@@ -110,7 +110,7 @@ namespace LPS.Infrastructure.Logger
                         Console.ResetColor();
                         Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-                    else if (level == LPSLoggingLevel.Critical && _disableConsoleErrorLogging)
+                    else if (level == LPSLoggingLevel.Critical && !_disableConsoleErrorLogging)
                     {
                         Console.ForegroundColor = ConsoleColor.DarkRed;
                         Console.Write(level.ToString() + " ");

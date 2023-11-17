@@ -13,8 +13,8 @@
       "MaxCPUPercentage": "70",
       "CoolDownMemoryMB": "4000",
       "CoolDownCPUPercentage": "60",
-      "MaxConnectionsCountPerHostName": "14000",
-      "CoolDownConnectionsCountPerHostName": "13000",
+      "MaxConnectionsCountPerHostName": "2000",
+      "CoolDownConnectionsCountPerHostName": "1000",
       "CoolDownRetryTimeInSeconds": "1",
       "SuspensionMode": "Any"
     },
