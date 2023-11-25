@@ -8,9 +8,9 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class LPSTestCaseChallengeUserService : IChallengeUserService<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
     {
-        IUserValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> _validator;
+        ILPSBaseValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> _validator;
 
-        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSHttpTestCase.SetupCommand command, IUserValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> validator)
+        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSHttpTestCase.SetupCommand command, ILPSBaseValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -29,14 +29,14 @@ namespace LPS.UI.Core.UI.Build.Services
             }
             while (true)
             {
-                if (!_validator.Validate("-testCaseName"))
+                if (!_validator.Validate(nameof(Command.Name)))
                 {
-                    Console.WriteLine("Give your test case a name, it should at least be of 2 charachters and can only contain letters, numbers, ., _ and -");
+                    Console.WriteLine("Give your test case a name, it should between 1 and 20 charachters");
                     _command.Name = ChallengeService.Challenge("-testCaseName");
                     continue;
                 }
 
-                if (!_validator.Validate("-iterationMode"))
+                if (!_validator.Validate(nameof(Command.Mode)))
                 {
                     Console.WriteLine("Choose Your Iteration Mode, Accepted Values are (DCB,CRB,CB,R,D)");
                     Console.WriteLine("\t- D stands for duration. C stands for Cool Down, R stands for Request Count, B stands for Batch Size ");
@@ -46,20 +46,18 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.WriteLine("\t- R - Test will complete when all the requests are completed or you press escape");
                     Console.WriteLine("\t- D - Test will complete once the duration expires or you press escape");
 
-                    LPSHttpTestCase.IterationMode mode;
-                    if (Enum.TryParse(ChallengeService.Challenge("-iterationMode"), out mode))
+                    if (Enum.TryParse(ChallengeService.Challenge("-iterationMode"), out LPSHttpTestCase.IterationMode mode))
                     {
                         _command.Mode = mode;
                     }
                     continue;
-
                 }
 
-                if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.DCB
-                    || _command.Mode.Value == LPSHttpTestCase.IterationMode.D)
+               /* if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.DCB
+                    || _command.Mode.Value == LPSHttpTestCase.IterationMode.D)*/
                 {
 
-                    if (!_validator.Validate("-duration"))
+                    if (!_validator.Validate(nameof(Command.Duration)))
                     {
                         Console.WriteLine("Enter the duration");
                         int duration;
@@ -71,10 +69,10 @@ namespace LPS.UI.Core.UI.Build.Services
                     }
                 }
 
-                if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.CRB
-                    || _command.Mode.Value == LPSHttpTestCase.IterationMode.R)
+               /* if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.CRB
+                    || _command.Mode.Value == LPSHttpTestCase.IterationMode.R)*/
                 {
-                    if (!_validator.Validate("-requestCount"))
+                    if (!_validator.Validate(nameof(Command.RequestCount)))
                     {
                         Console.WriteLine("Enter the number of requests");
                         int requestCount;
@@ -86,11 +84,11 @@ namespace LPS.UI.Core.UI.Build.Services
                     }
                 }
 
-                if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.DCB
+               /* if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.DCB
                 || _command.Mode.Value == LPSHttpTestCase.IterationMode.CRB
-                || _command.Mode.Value == LPSHttpTestCase.IterationMode.CB)
+                || _command.Mode.Value == LPSHttpTestCase.IterationMode.CB)*/
                 {
-                    if (!_validator.Validate("-batchSize"))
+                    if (!_validator.Validate(nameof(Command.BatchSize)))
                     {
                         Console.WriteLine("Enter the batch size value. Batch size should be less than the request count");
                         int batchSize;
@@ -100,7 +98,7 @@ namespace LPS.UI.Core.UI.Build.Services
                         }
                         continue;
                     }
-                    if (!_validator.Validate("-coolDownTime"))
+                    if (!_validator.Validate(nameof(Command.CoolDownTime)))
                     {
                         Console.WriteLine("Enter the cool down time. Cool down time should be less than the duration");
                         int coolDownTime;

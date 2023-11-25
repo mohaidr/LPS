@@ -1,92 +1,44 @@
-﻿using LPS.UI.Common;
-using LPS.Domain;
+﻿using LPS.Domain;
 using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Collections.Generic;
+using System.Net;
+using FluentValidation;
+using FluentValidation.Results;
+using LPS.UI.Common;
+using System.Text;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestProfileValidator : IUserValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
+    internal class LPSRequestProfileValidator : LPSBaseValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
     {
-        LPSHttpRequestProfile.SetupCommand _command;
-        Dictionary<string, string> _validationErrors;
 
+        LPSHttpRequestProfile.SetupCommand _command;
+        ValidationResult _validationResults;
+        private string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
         public LPSRequestProfileValidator(LPSHttpRequestProfile.SetupCommand command)
         {
             _command = command;
-            _validationErrors = new Dictionary<string, string>();
-        }
-        public Dictionary<string, string> ValidationErrors => _validationErrors;
-
-        public LPSHttpRequestProfile.SetupCommand Command { get { return _command; }}
-        public bool Validate(string property)
-        {
-            string[] httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-            bool isValid = true;
-            switch (property)
+            RuleFor(command => command.Httpversion).Must(version => version == "1.0" || version == "1.1")
+                .WithMessage("Invalid Http version. Supported versions are 1.0 and 1.1");
+            RuleFor(command => command.HttpMethod).Must(httpMethod => _httpMethods.Any(method => method == httpMethod))
+                .WithMessage("Invalid Http Method");
+            RuleFor(command => command.URL).Must(url =>
             {
+                Uri result;
+                return Uri.TryCreate(url, UriKind.Absolute, out result)
+                && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+            }).WithMessage("Invalid URL");
+            RuleFor(command => command.DownloadHtmlEmbeddedResources)
+                .NotNull()
+                .WithMessage("DownloadHtmlEmbeddedResources property can't be null");
+            RuleFor(command => command.SaveResponse)
+                .NotNull()
+                .WithMessage("SaveResponse property can't be null");
 
-                case "-httpVersion":
-                    if (_command.Httpversion != "1.0" && _command.Httpversion != "1.1")
-                    {
-                        isValid = false;
-                    }
-                    AddValidationMessage(isValid, property, _command.Httpversion);
-                    break;
-                case "-httpMethod":
-                    if (_command.HttpMethod == null || !httpMethods.Any(httpMethod => httpMethod == _command.HttpMethod.ToUpper()))
-                    {
-                        isValid = false;
-                    }
-                    AddValidationMessage(isValid, property, _command.HttpMethod);
-                    break;
-                case "-url":
-                    if (!(Uri.TryCreate(_command.URL, UriKind.Absolute, out Uri uriResult) && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps || uriResult.Scheme.Contains("ws"))))
-                    {
-                        isValid = false;
-                    }
-                    AddValidationMessage(isValid, property, _command.URL);
-                    break;
-                case "-downloadHtmlEmbeddedResources":
-                    isValid = Command.DownloadHtmlEmbeddedResources.HasValue;
-                    AddValidationMessage(isValid, property, _command.DownloadHtmlEmbeddedResources);
-                    break;
-
-                case "-saveResponse":
-                    isValid = Command.SaveResponse.HasValue;
-                    AddValidationMessage(isValid, property, _command.SaveResponse);
-                    break;
-
-            }
-
-            return isValid;
         }
 
-        public void ValidateAndThrow(string property)
-        {
-            if (!Validate(property))
-            {
-                throw new ArgumentException(_validationErrors[property]);
-            }
-        }
-        public LPSRequestProfileValidator Validate(List<string> properties)
-        {
-            return this;
-        }
-        private void AddValidationMessage(bool isValid, string propertyName, object propertyValue)
-        {
-            if (!isValid)
-            {
-                _validationErrors.Add(propertyName, $"{propertyValue} is invalid");
-            }
-            else
-            {
-                if (_validationErrors.ContainsKey(propertyName))
-                {
-                    _validationErrors.Remove(propertyName);
-                }
-            }
-        }
+        public override LPSHttpRequestProfile.SetupCommand Command { get { return _command; } }
     }
 }

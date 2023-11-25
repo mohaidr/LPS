@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("LPS")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8158493de01277bc5d1b4c256bc9eac98e523b2e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ffd04a2e647b037d8ac8d45bdf16e1bc9837eee2")]
 [assembly: System.Reflection.AssemblyProductAttribute("LPS")]
 [assembly: System.Reflection.AssemblyTitleAttribute("LPS")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

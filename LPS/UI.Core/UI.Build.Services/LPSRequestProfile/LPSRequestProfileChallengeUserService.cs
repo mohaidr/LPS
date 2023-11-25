@@ -7,8 +7,8 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class LPSRequestProfileChallengeUserService : IChallengeUserService<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
     {
-        IUserValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile> _validator;
-        public LPSRequestProfileChallengeUserService(bool skipOptionalFields, LPSHttpRequestProfile.SetupCommand command, IUserValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile> validator)
+        ILPSBaseValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile> _validator;
+        public LPSRequestProfileChallengeUserService(bool skipOptionalFields, LPSHttpRequestProfile.SetupCommand command, ILPSBaseValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -28,26 +28,26 @@ namespace LPS.UI.Core.UI.Build.Services
 
             while (true)
             {
-                if (!_validator.Validate("-httpMethod"))
+                if (!_validator.Validate(nameof(Command.HttpMethod)))
                 {
                     Console.WriteLine("Enter a Valid Http Method");
                     _command.HttpMethod = ChallengeService.Challenge("-httpmethod");
                     continue;
                 }
 
-                if (!_validator.Validate("-url"))
+                if (!_validator.Validate(nameof(Command.URL)))
                 {
                     Console.WriteLine("Enter a valid URL e.g (http(s)://example.com)");
                     _command.URL = ChallengeService.Challenge("-url");
                     continue;
                 }
-                if (!_validator.Validate("-httpVersion"))
+                if (!_validator.Validate(nameof(Command.Httpversion)))
                 {
                     Console.WriteLine("Enter a valid http version, currently we only supports 1.0 and 1.1");
                     _command.Httpversion = ChallengeService.Challenge("-httpversion");
                     continue;
                 }
-                if (!_validator.Validate("-downloadHtmlEmbeddedResources"))
+                if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)))
                 {
                     Console.WriteLine("If the server returns text/html, would you like to download the html embedded resources");
                     string input = ChallengeService.Challenge("-downloadHtmlEmbeddedResources");
@@ -65,7 +65,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     }
                     continue;
                 }
-                if (!_validator.Validate("-saveResponse"))
+                if (!_validator.Validate(nameof(Command.SaveResponse)))
                 {
                     Console.WriteLine("Would you like to save the http responses");
                     string input = ChallengeService.Challenge("-saveResponse");

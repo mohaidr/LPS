@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -19,7 +20,6 @@ namespace LPS.Domain
             public SetupCommand()
             {
             }
-
             public bool IsValid { get; set; }
             public IDictionary<string, string> ValidationErrors { get; set; }
 

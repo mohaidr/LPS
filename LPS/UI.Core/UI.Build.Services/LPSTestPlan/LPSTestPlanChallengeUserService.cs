@@ -10,13 +10,13 @@ namespace LPS.UI.Core.UI.Build.Services
 {
     internal class LPSTestPlanChallengeUserService : IChallengeUserService<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
-        IUserValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
+        ILPSBaseValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
         LPSTestPlan.SetupCommand _command;
         public LPSTestPlan.SetupCommand Command { get { return _command; } set { value = _command; } }
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
 
         private bool _skipOptionalFields;
-        public LPSTestPlanChallengeUserService(bool skipOptionalFields, LPSTestPlan.SetupCommand command, IUserValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
+        public LPSTestPlanChallengeUserService(bool skipOptionalFields, LPSTestPlan.SetupCommand command, ILPSBaseValidator<LPSTestPlan.SetupCommand, LPSTestPlan> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -34,14 +34,14 @@ namespace LPS.UI.Core.UI.Build.Services
             Console.ResetColor();
             while (true)
             {
-                if (!_validator.Validate("-testname"))
+                if (!_validator.Validate(nameof(Command.Name)))
                 {
-                    Console.WriteLine("Test name should at least be of 2 charachters and can only contains letters, numbers, ., _ and -");
+                    Console.WriteLine("Test name should be between 1 and 20 characters");
                     _command.Name = ChallengeService.Challenge("-testName");
                     continue;
                 }
 
-                if (!_validator.Validate("-numberOfClients"))
+                if (!_validator.Validate(nameof(Command.NumberOfClients)))
                 {
                     Console.WriteLine("The number of clients to run your test cases. " +
                         "The number should be a valid positive number greater than 0");
@@ -54,8 +54,8 @@ namespace LPS.UI.Core.UI.Build.Services
 
                     continue;
                 }
-              
-                if (!_validator.Validate("-rampupPeriod"))
+
+                if (!_validator.Validate(nameof(Command.RampUpPeriod)))
                 {
                     Console.WriteLine("The time to wait until a new client connects to your site");
 
@@ -67,8 +67,8 @@ namespace LPS.UI.Core.UI.Build.Services
 
                     continue;
                 }
-                
-                if (!_validator.Validate("-delayClientCreationUntilNeeded"))
+
+                if (!_validator.Validate(nameof(Command.DelayClientCreationUntilIsNeeded)))
                 {
                     Console.WriteLine("Delay the client creation until the client is needed");
 
@@ -82,7 +82,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-                if (!_validator.Validate("-runInParallel"))
+                if (!_validator.Validate(nameof(Command.RunInParallel)))
                 {
                     Console.WriteLine("Would you like to run your test cases in parallel");
 

@@ -6,11 +6,12 @@ using System.Text;
 
 namespace LPS.UI.Common
 {
-    internal interface IUserValidator<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IDomainEntity
+    internal interface ILPSBaseValidator<TCommand, TEntity> where TCommand : ICommand<TEntity> where TEntity : IDomainEntity
     {
         TCommand Command { get;}
         bool Validate (string ptoprtty);
-        Dictionary<string, string> ValidationErrors { get; }
+        void ValidateAndThrow(string property);
+        Dictionary<string, List<string>> ValidationErrors { get; }
     }
 
 }
