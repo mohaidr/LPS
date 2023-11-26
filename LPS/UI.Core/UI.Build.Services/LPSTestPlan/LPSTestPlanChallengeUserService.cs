@@ -36,7 +36,7 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
-                    Console.WriteLine("Test name should be between 1 and 20 characters");
+                    Console.WriteLine("Test name should be between 1 and 20 characters and does not accept special characters");
                     _command.Name = ChallengeService.Challenge("-testName");
                     continue;
                 }

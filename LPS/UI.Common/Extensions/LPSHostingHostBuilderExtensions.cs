@@ -86,7 +86,7 @@ namespace LPS.UI.Common.Extensions
                 // Print Logger Options
                 Console.ForegroundColor = ConsoleColor.Magenta;
                 string jsonString = JsonSerializer.Serialize(watchdog);
-                Console.WriteLine($"Usage Tracker Configuration: {jsonString}");
+                Console.WriteLine($"Watchdog Configuration: {jsonString}");
                 Console.ResetColor();
                 // Register the custom logger instance as a singleton in the DI container
                 services.AddSingleton<ILPSWatchdog>(watchdog);

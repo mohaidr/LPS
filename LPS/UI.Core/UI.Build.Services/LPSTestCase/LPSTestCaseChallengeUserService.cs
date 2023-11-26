@@ -53,61 +53,50 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-               /* if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.DCB
-                    || _command.Mode.Value == LPSHttpTestCase.IterationMode.D)*/
-                {
 
-                    if (!_validator.Validate(nameof(Command.Duration)))
+                if (!_validator.Validate(nameof(Command.Duration)))
+                {
+                    Console.WriteLine("Enter the duration");
+                    int duration;
+                    if (int.TryParse(ChallengeService.Challenge("-duration"), out duration))
                     {
-                        Console.WriteLine("Enter the duration");
-                        int duration;
-                        if (int.TryParse(ChallengeService.Challenge("-duration"), out duration))
-                        {
-                            _command.Duration = duration;
-                        }
-                        continue;
+                        _command.Duration = duration;
                     }
+                    continue;
                 }
 
-               /* if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.CRB
-                    || _command.Mode.Value == LPSHttpTestCase.IterationMode.R)*/
+
+                if (!_validator.Validate(nameof(Command.RequestCount)))
                 {
-                    if (!_validator.Validate(nameof(Command.RequestCount)))
+                    Console.WriteLine("Enter the number of requests");
+                    int requestCount;
+                    if (int.TryParse(ChallengeService.Challenge("-requestCount"), out requestCount))
                     {
-                        Console.WriteLine("Enter the number of requests");
-                        int requestCount;
-                        if (int.TryParse(ChallengeService.Challenge("-requestCount"), out requestCount))
-                        {
-                            _command.RequestCount = requestCount;
-                        }
-                        continue;
+                        _command.RequestCount = requestCount;
                     }
+                    continue;
                 }
 
-               /* if (_command.Mode.HasValue && _command.Mode.Value == LPSHttpTestCase.IterationMode.DCB
-                || _command.Mode.Value == LPSHttpTestCase.IterationMode.CRB
-                || _command.Mode.Value == LPSHttpTestCase.IterationMode.CB)*/
+
+                if (!_validator.Validate(nameof(Command.BatchSize)))
                 {
-                    if (!_validator.Validate(nameof(Command.BatchSize)))
+                    Console.WriteLine("Enter the batch size value. Batch size should be less than the request count");
+                    int batchSize;
+                    if (int.TryParse(ChallengeService.Challenge("-batchSize"), out batchSize))
                     {
-                        Console.WriteLine("Enter the batch size value. Batch size should be less than the request count");
-                        int batchSize;
-                        if (int.TryParse(ChallengeService.Challenge("-batchSize"), out batchSize))
-                        {
-                            _command.BatchSize = batchSize;
-                        }
-                        continue;
+                        _command.BatchSize = batchSize;
                     }
-                    if (!_validator.Validate(nameof(Command.CoolDownTime)))
+                    continue;
+                }
+                if (!_validator.Validate(nameof(Command.CoolDownTime)))
+                {
+                    Console.WriteLine("Enter the cool down time. Cool down time should be less than the duration");
+                    int coolDownTime;
+                    if (int.TryParse(ChallengeService.Challenge("-coolDownTime"), out coolDownTime))
                     {
-                        Console.WriteLine("Enter the cool down time. Cool down time should be less than the duration");
-                        int coolDownTime;
-                        if (int.TryParse(ChallengeService.Challenge("-coolDownTime"), out coolDownTime))
-                        {
-                            _command.CoolDownTime = coolDownTime;
-                        }
-                        continue;
+                        _command.CoolDownTime = coolDownTime;
                     }
+                    continue;
                 }
 
                 break;
