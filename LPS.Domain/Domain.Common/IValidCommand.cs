@@ -6,9 +6,9 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common
 {
-    public interface IValidCommand
+    public interface IValidCommand<TEntity> 
     {
-        bool IsValid { get; }
-        IDictionary<string, string> ValidationErrors { get; set; }
+        bool IsValid { get; set; }
+        IDictionary<string, List<string>> ValidationErrors { get; set; }
     }
 }

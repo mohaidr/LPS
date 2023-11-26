@@ -38,7 +38,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.WriteLine("Enter header in a valid format e.g (headerName: headerValue) or enter done to start filling the payload");
                 }
             }
-            return httpheaders.Clone();
+            return httpheaders.DeepClone();
         }
 
         public static Dictionary<string, string> Parse(IList<string> headers)
@@ -63,7 +63,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.ResetColor();
                 }
             }
-            return httpheaders.Clone();
+            return httpheaders.DeepClone();
         }
 
     }

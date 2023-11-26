@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using LPS.Domain;
 using LPS.Domain.Common;
 using LPS.UI.Common;
+using LPS.UI.Common.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,8 +12,8 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Core
 {
-    public abstract class LPSBaseValidator<TCommand, TEntity> : AbstractValidator<TCommand>, ILPSBaseValidator<TCommand, TEntity>
-        where TCommand : ICommand<TEntity>
+    public abstract class LPSCommandBaseValidator<TCommand, TEntity> : AbstractValidator<TCommand>, ILPSBaseValidator<TCommand, TEntity>
+        where TCommand : IValidCommand<TEntity>
         where TEntity : IDomainEntity
     {
         public abstract TCommand Command { get; }
@@ -29,12 +30,16 @@ namespace LPS.UI.Core
         public bool Validate(string property)
         {
             _validationResults = Validate(Command);
+            Command.IsValid = _validationResults.IsValid;
+            Command.ValidationErrors = ValidationErrors.DeepClone();
             return !_validationResults.Errors.Any(error => error.PropertyName == property);
         }
 
         public void ValidateAndThrow(string property)
         {
             _validationResults = Validate(Command);
+            Command.IsValid = _validationResults.IsValid;
+            Command.ValidationErrors = ValidationErrors.DeepClone();
             if (!_validationResults.Errors.Any(error => error.PropertyName == property))
             {
                 StringBuilder errorMessage = new StringBuilder("Validation failed. Details:\n");
@@ -44,6 +49,12 @@ namespace LPS.UI.Core
                 }
                 throw new LPSValidationException(errorMessage.ToString());
             }
+        }
+
+        public ValidationResult Validate()
+        {
+            _validationResults = base.Validate(Command);
+            return _validationResults;
         }
     }
 }

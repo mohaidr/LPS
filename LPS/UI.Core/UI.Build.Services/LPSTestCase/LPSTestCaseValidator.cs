@@ -10,7 +10,7 @@ using Newtonsoft.Json.Linq;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestCaseValidator : LPSBaseValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
+    internal class LPSTestCaseValidator : LPSCommandBaseValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
     {
         LPSHttpTestCase.SetupCommand _command;
 
@@ -19,9 +19,11 @@ namespace LPS.UI.Core.UI.Build.Services
             _command = command;
 
             RuleFor(command => command.Name)
-            .NotEmpty()
+            .NotNull().NotEmpty()
+            .Matches("^[a-zA-Z0-9 _-]+$")
+            .WithMessage("The test case name does not accept special charachters and should be between 1 and 20 characters")
             .Length(1, 20)
-            .WithMessage("The Test Case Name Should be between 1 and 20 characters");
+            .WithMessage("The test case should be between 1 and 20 characters");
 
             RuleFor(command => command.Mode)
             .NotNull()
@@ -34,6 +36,7 @@ namespace LPS.UI.Core.UI.Build.Services
             .Null()
             .When(command => command.Mode != LPSHttpTestCase.IterationMode.CRB && command.Mode != LPSHttpTestCase.IterationMode.R, ApplyConditionTo.CurrentValidator)
             .GreaterThan(command => command.BatchSize)
+            .WithMessage("Request Count Must Be Greater Than The BatchSize")
             .When(command => command.BatchSize.HasValue, ApplyConditionTo.CurrentValidator);
 
             RuleFor(command => command.Duration)
@@ -43,8 +46,8 @@ namespace LPS.UI.Core.UI.Build.Services
             .Null()
             .When(command => command.Mode != LPSHttpTestCase.IterationMode.D && command.Mode != LPSHttpTestCase.IterationMode.DCB, ApplyConditionTo.CurrentValidator)
             .GreaterThan(command => command.CoolDownTime)
+             .WithMessage("Duration Must Be Greater Than The Cool Down Time")
             .When(command => command.CoolDownTime.HasValue, ApplyConditionTo.CurrentValidator);
-
 
             RuleFor(command => command.BatchSize)
             .NotNull()
@@ -53,9 +56,8 @@ namespace LPS.UI.Core.UI.Build.Services
             .Null()
             .When(command => command.Mode != LPSHttpTestCase.IterationMode.DCB && command.Mode != LPSHttpTestCase.IterationMode.CRB && command.Mode != LPSHttpTestCase.IterationMode.CB, ApplyConditionTo.CurrentValidator)
             .LessThan(command => command.RequestCount)
-            .When(command => command.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);
-            Console.WriteLine(_command.Duration);
-           
+            .WithMessage("Batch Size Must Be Less Than The Request Count")
+            .When(command => command.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);           
 
             RuleFor(command => command.CoolDownTime)
             .NotNull()
@@ -64,6 +66,7 @@ namespace LPS.UI.Core.UI.Build.Services
             .Null()
             .When(command => command.Mode != LPSHttpTestCase.IterationMode.DCB && command.Mode!= LPSHttpTestCase.IterationMode.CRB && command.Mode != LPSHttpTestCase.IterationMode.CB, ApplyConditionTo.CurrentValidator)
             .LessThan(command => command.Duration)
+            .WithMessage("Cool Down Time Must Be Less Than The Duration")
             .When(command => command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
         }
 

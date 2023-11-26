@@ -12,7 +12,7 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpTestCase : LPSTestCase, IBusinessEntity
+    public partial class LPSHttpTestCase : LPSTestCase, IBusinessEntity, ICloneable
     {
 
 
@@ -36,11 +36,10 @@ namespace LPS.Domain
         }
 
         private ILPSClientService<LPSHttpRequestProfile> _httpClientService;
-        internal LPSHttpTestCase(
+        private LPSHttpTestCase(
             ILPSLogger logger,
             ILPSWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider) // internal constructor should only be defined in specific scenarios where there is a need for an instance that will be setup through the command
-                                                                    //This behaviour may change in the future. 
+            IRuntimeOperationIdProvider runtimeOperationIdProvider) 
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;

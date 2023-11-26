@@ -81,7 +81,7 @@ namespace LPS.UI.Core.LPSCommandLine
         public static Option<bool> DisableConsoleErrorLoggingOption = new Option<bool>("--DisableConsoleErrorLogging", () => true, "Set to true to disable console error logging and false otherwise") { IsRequired = false };
         public static Option<bool> DisableFileLoggingOption = new Option<bool>("--DisableFileLogging", () => false, "Set to true to disable file logging and false otherwise") { IsRequired = false };
         public static Option<LPSLoggingLevel> LoggingLevelOption = new Option<LPSLoggingLevel>("--LoggingLevel", () => LPSLoggingLevel.Verbos, "The logging level") { IsRequired = false, };
-        public static Option<LPSLoggingLevel> ConsoleLoggingLevelOption = new Option<LPSLoggingLevel>("--ConsoleLoggingLevel", () => LPSLoggingLevel.Information, "The logging level on console") { IsRequired = false, };
+        public static Option<LPSLoggingLevel> ConsoleLoggingLevelOption = new Option<LPSLoggingLevel>("--ConsoleLoggingLevel", () => LPSLoggingLevel.Information, "The logging level on console") { IsRequired = false,};
     }
 }
 

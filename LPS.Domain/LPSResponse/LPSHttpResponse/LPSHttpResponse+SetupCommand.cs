@@ -16,11 +16,11 @@ namespace LPS.Domain
 
     public partial class LPSHttpResponse
     {
-        new public class SetupCommand : ICommand<LPSHttpResponse>, IValidCommand
+        new public class SetupCommand : ICommand<LPSHttpResponse>, IValidCommand<LPSHttpResponse>
         {
             public SetupCommand()
             {
-
+                ValidationErrors = new Dictionary<string, List<string>>();
             }
 
             public MimeType MIMEType { get; set; }
@@ -31,7 +31,7 @@ namespace LPS.Domain
             public bool IsSuccessStatusCode { get; set; }
             public bool IsValid { get; set; }
             public Guid LPSHttpRequestProfileId { get; set; }
-            public IDictionary<string, string> ValidationErrors { get; set; }
+            public IDictionary<string, List<string>> ValidationErrors { get; set; }
 
             public void Execute(LPSHttpResponse entity)
             {

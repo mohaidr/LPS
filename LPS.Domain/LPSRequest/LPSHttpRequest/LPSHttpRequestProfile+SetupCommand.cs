@@ -15,7 +15,7 @@ namespace LPS.Domain
 
     public partial class LPSHttpRequestProfile
     {
-        new public class SetupCommand : ICommand<LPSHttpRequestProfile>, IValidCommand
+        new public class SetupCommand : ICommand<LPSHttpRequestProfile>, IValidCommand<LPSHttpRequestProfile>
         {
             public SetupCommand()
             {
@@ -23,7 +23,7 @@ namespace LPS.Domain
                 DownloadHtmlEmbeddedResources= false;
                 SaveResponse= false;
                 HttpHeaders = new Dictionary<string, string>();
-                ValidationErrors = new Dictionary<string, string>();
+                ValidationErrors = new Dictionary<string, List<string>>();
             }
 
             public string HttpMethod { get; set; }
@@ -36,7 +36,7 @@ namespace LPS.Domain
             public Dictionary<string, string> HttpHeaders { get; set; }
 
             public bool IsValid { get; set; }
-            public IDictionary<string, string> ValidationErrors { get; set; }
+            public IDictionary<string, List<string>> ValidationErrors { get; set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
             public bool? SaveResponse { get; set; }
             public void Execute(LPSHttpRequestProfile entity)
@@ -75,8 +75,9 @@ namespace LPS.Domain
             }
         }
 
-        internal void Clone(LPSHttpRequestProfile cloneToEntity)
+        public object Clone()
         {
+            LPSHttpRequestProfile cloneToEntity = new LPSHttpRequestProfile(_logger, _watchdog, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 cloneToEntity.Id= this.Id;
@@ -96,9 +97,7 @@ namespace LPS.Domain
                 }
                 cloneToEntity.IsValid = true;
             }
+            return cloneToEntity;
         }
-
-
-
     }
 }

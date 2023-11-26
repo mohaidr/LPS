@@ -12,7 +12,7 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpRequestProfile :LPSRequestProfile, IBusinessEntity
+    public partial class LPSHttpRequestProfile :LPSRequestProfile, IBusinessEntity, ICloneable
     {
 
         private ILPSClientService<LPSHttpRequestProfile> _httpClientService;
@@ -20,7 +20,7 @@ namespace LPS.Domain
         {
         }
 
-        internal LPSHttpRequestProfile(ILPSLogger logger,
+        private LPSHttpRequestProfile(ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
@@ -52,5 +52,6 @@ namespace LPS.Domain
 
         public bool DownloadHtmlEmbeddedResources { get; private set; }
         public bool SaveResponse { get; private set; }
+
     }
 }

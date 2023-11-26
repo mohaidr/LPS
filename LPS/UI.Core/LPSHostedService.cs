@@ -13,6 +13,7 @@ using System.IO;
 using LPS.UI.Core.LPSCommandLine.Commands;
 using Microsoft.Extensions.Options;
 using LPS.UI.Common.Options;
+using LPS.UI.Common.Helpers;
 
 namespace LPS.UI.Core
 {
@@ -57,7 +58,7 @@ namespace LPS.UI.Core
             {
                 var manualBuild = new ManualBuild(new LPSTestPlanValidator(lpsTestPlanSetupCommand));
                 manualBuild.Build(lpsTestPlanSetupCommand);
-                File.WriteAllText($"{lpsTestPlanSetupCommand.Name}.json", new LpsSerializer().Serialize(lpsTestPlanSetupCommand));
+                File.WriteAllText($"{lpsTestPlanSetupCommand.Name}.json", LPSSerializationHelper.Serialize(lpsTestPlanSetupCommand));
 
                 Console.WriteLine("Enter (Y) if you want to run the test or (N) if you want to run the test through commmands later");
                 bool runTest = Console.ReadLine().Equals("y", StringComparison.OrdinalIgnoreCase);

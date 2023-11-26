@@ -75,8 +75,7 @@ namespace LPS.Domain
                         string hostName = new Uri(testCase.LPSHttpRequestProfile.URL).Host;
                         await _watchdog.Balance(hostName);
                         LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService, command);
-                        LPSHttpTestCase cloneToTestCase = new LPSHttpTestCase(_logger, _watchdog, _runtimeOperationIdProvider); //use internal constructor designed for internal usage
-                        testCase.Clone(cloneToTestCase);
+                        LPSHttpTestCase cloneToTestCase = (LPSHttpTestCase)testCase.Clone();
                         if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                         {
                             awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(cloneToTestCase, cancellationTokenWrapper));

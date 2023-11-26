@@ -57,15 +57,30 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _lpsCreateCliCommand = new LPSCreateCLICommand(_lpsRootCliCommand, _command, _args);
             _lpsAddCliCommand = new LPSAddCLICommand(_lpsRootCliCommand, _command, _args);
             _lpsRunCliCommand = new LPSRunCLICommand(_lpsRootCliCommand, _command, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog, _args);
-            _lpsLoggerCliCommand = new LPSLoggerCLICommand(_lpsRootCliCommand, _appSettings.LPSFileLoggerOptions, _args);
+            _lpsLoggerCliCommand = new LPSLoggerCLICommand(_lpsRootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions, _args);
         }
 
         public void Execute(CancellationToken cancellationToken)
         {
-            _lpsCreateCliCommand.Execute(cancellationToken);
-            _lpsAddCliCommand.Execute(cancellationToken);
-            _lpsRunCliCommand.Execute(cancellationToken);
-            _lpsLoggerCliCommand.Execute(cancellationToken);
+            string joinedCommand = string.Join(" ", _args);
+
+            if (joinedCommand.StartsWith("create", StringComparison.OrdinalIgnoreCase))
+            {
+                _lpsCreateCliCommand.Execute(cancellationToken);
+            }
+            else if (joinedCommand.StartsWith("add", StringComparison.OrdinalIgnoreCase))
+            {
+                _lpsAddCliCommand.Execute(cancellationToken);
+            }
+            else if (joinedCommand.StartsWith("run", StringComparison.OrdinalIgnoreCase))
+            {
+                _lpsRunCliCommand.Execute(cancellationToken);
+            }
+            else if (joinedCommand.StartsWith("logger", StringComparison.OrdinalIgnoreCase))
+
+            {
+                _lpsLoggerCliCommand.Execute(cancellationToken);
+            }
         }
     }
 }

@@ -19,7 +19,7 @@ namespace LPS.Infrastructure.Logger
 
         public string LogFilePath { get { return _logFilePath; } }
 
-        public bool EnableConsoleLogging { get { return _disableConsoleLogging; } }
+        public bool EnableConsoleLogging { get { return _enableConsoleLogging; } }
 
         public bool DisableConsoleErrorLogging { get { return _disableConsoleErrorLogging; } }
 
@@ -30,27 +30,21 @@ namespace LPS.Infrastructure.Logger
         public LPSLoggingLevel LoggingLevel { get { return _loggingLevel; } }
 
         private string _logFilePath;
-        private bool _disableConsoleLogging;
+        private bool _enableConsoleLogging;
         private bool _disableConsoleErrorLogging;
         private bool _disableFileLogging;
         private LPSLoggingLevel _consoleLoggingLevel;
         private LPSLoggingLevel _loggingLevel;
-
-        public FileLogger(string logFilePath, LPSLoggingLevel loggingLevel, LPSLoggingLevel consoleLoggingLevel, bool disableConsoleLogging = true, bool disableConsoleErrorLogging = false, bool disableFileLogging = false)
+        private int _loggingCancellationCount;
+        private string _cancellationErrorMessage;
+        public FileLogger(string logFilePath, LPSLoggingLevel loggingLevel, LPSLoggingLevel consoleLoggingLevel, bool enableConsoleLogging = true, bool disableConsoleErrorLogging = true, bool disableFileLogging = false)
         {
             _loggingLevel = loggingLevel;
             _consoleLoggingLevel = consoleLoggingLevel;
-            _disableConsoleLogging = disableConsoleLogging;
+            _enableConsoleLogging = enableConsoleLogging;
             _disableConsoleErrorLogging = disableConsoleErrorLogging;
             _disableFileLogging = disableFileLogging;
-            if (string.IsNullOrEmpty(logFilePath))
-            {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine("Logging has been disabled, Location Can't be empty");
-                Console.ResetColor();
-                return;
-            }
-            this._logFilePath = logFilePath;
+            SetLogFilePath(logFilePath);
             string directory = string.Concat($@"{Path.GetDirectoryName(_logFilePath)}");
 
             if (!Directory.Exists(directory))
@@ -60,6 +54,36 @@ namespace LPS.Infrastructure.Logger
             string fileName = Path.GetFileName(_logFilePath);
 
             _synchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
+        }
+
+        private void SetLogFilePath(string logFilePath)
+        {
+            if (string.IsNullOrWhiteSpace(logFilePath))
+            {
+                throw new ArgumentException("Log file path cannot be null or empty.", nameof(logFilePath));
+            }
+
+            // Check if the provided path contains a directory
+            string directory = Path.GetDirectoryName(logFilePath);
+
+            // If no directory is provided, use a default directory "logs"
+            if (string.IsNullOrEmpty(directory))
+            {
+                directory = "logs";
+                // Create the default directory if it doesn't exist
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+            }
+            else if (!Directory.Exists(directory))
+            {
+                // Create the specified directory if it doesn't exist
+                Directory.CreateDirectory(directory);
+            }
+
+            // Combine the directory and file name to get the complete log file path
+            _logFilePath = Path.Combine(directory, Path.GetFileName(logFilePath));
         }
 
         private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
@@ -79,7 +103,7 @@ namespace LPS.Infrastructure.Logger
             {
                 await semaphoreSlim.WaitAsync();
                 string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss.fff +3:00");
-                if (level >= _consoleLoggingLevel && _disableConsoleLogging)
+                if (level >= _consoleLoggingLevel && _enableConsoleLogging)
                 {
                     if (level == LPSLoggingLevel.Verbos)
                     {
@@ -133,9 +157,19 @@ namespace LPS.Infrastructure.Logger
             }
             catch (Exception ex)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Warning: Logging Failed \n {ex.Message} {ex.InnerException?.Message}");
-                Console.ResetColor();
+
+                if ( cancellationTokenWrapper.CancellationToken.IsCancellationRequested && ex.Message != null && ex.Message.Equals("A task was canceled.", StringComparison.OrdinalIgnoreCase))
+                {
+                    _loggingCancellationCount++;
+                    _cancellationErrorMessage = $"{ex.Message} {ex.InnerException?.Message}";
+
+                }
+                else
+                {
+                   Console.ForegroundColor = ConsoleColor.Yellow;
+                   Console.WriteLine($"Warning: Logging Failed \n {ex.Message} {ex.InnerException?.Message}");
+                   Console.ResetColor();
+                }
             }
             finally
             {
@@ -145,6 +179,12 @@ namespace LPS.Infrastructure.Logger
 
         public async Task Flush()
         {
+            if (_loggingCancellationCount > 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"The error '{_cancellationErrorMessage}' has been reported {_loggingCancellationCount} times");
+                Console.ResetColor();
+            }
             await _synchronizedTextWriter.FlushAsync();
         }
 

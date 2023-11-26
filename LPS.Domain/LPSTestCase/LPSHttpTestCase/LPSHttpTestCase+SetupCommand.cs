@@ -15,13 +15,14 @@ namespace LPS.Domain
 
     public partial class LPSHttpTestCase
     {
-        new public class SetupCommand : ICommand<LPSHttpTestCase>, IValidCommand
+        new public class SetupCommand : ICommand<LPSHttpTestCase>, IValidCommand<LPSHttpTestCase>
         {
 
             public SetupCommand()
             {
                 LPSRequestProfile = new LPSHttpRequestProfile.SetupCommand();
-                LPSTestCaseSetUpCommand = new LPSTestCase.SetupCommand(); 
+                LPSTestCaseSetUpCommand = new LPSTestCase.SetupCommand();
+                ValidationErrors = new Dictionary<string, List<string>>();
             }
 
             public void Execute(LPSHttpTestCase entity)
@@ -44,7 +45,7 @@ namespace LPS.Domain
             public string Name { get; set; }
 
             public IterationMode? Mode { get; set; }
-            public IDictionary<string, string> ValidationErrors { get; set ; }
+            public IDictionary<string, List<string>> ValidationErrors { get; set ; }
 
             // This will represrnt the parent entity SetupCommand. 
             // There will be no inheritance between Commands and Validators to avoid complexity and to tight every entity to its own commands
@@ -70,21 +71,22 @@ namespace LPS.Domain
             }
         }
 
-        internal void Clone(LPSHttpTestCase cloneToEntity)
+        public object Clone()
         {
+            LPSHttpTestCase cloneToEntity = new LPSHttpTestCase(_logger, _watchdog, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 cloneToEntity.Id = this.Id;
                 cloneToEntity.RequestCount = this.RequestCount;
                 cloneToEntity.Name = this.Name;
                 cloneToEntity.Mode = this.Mode;
-                cloneToEntity.LPSHttpRequestProfile = new LPSHttpRequestProfile(_logger, _watchdog, _runtimeOperationIdProvider);
-                this.LPSHttpRequestProfile.Clone(cloneToEntity.LPSHttpRequestProfile);
+                cloneToEntity.LPSHttpRequestProfile = (LPSHttpRequestProfile)this.LPSHttpRequestProfile.Clone();
                 cloneToEntity.Duration = this.Duration;
                 cloneToEntity.CoolDownTime = this.CoolDownTime; ;
                 cloneToEntity.BatchSize = this.BatchSize;
                 cloneToEntity.IsValid = true;
             }
+            return cloneToEntity;
         }
     }
 }

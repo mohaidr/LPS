@@ -1,6 +1,7 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common;
 using LPS.UI.Common;
+using LPS.UI.Common.Helpers;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -54,11 +55,11 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         public void Execute(CancellationToken cancellationToken)
         {
-
             _runCommand.SetHandler(async (testName) =>
             {
-                _planSetupCommand = new LpsSerializer().DeSerialize(File.ReadAllText($"{testName}.json"));
-                await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider).Run(_planSetupCommand, cancellationToken);
+                _planSetupCommand = LPSSerializationHelper.Deserialize<LPSTestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
+                await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider)
+                .Run(_planSetupCommand, cancellationToken);
             }, LPSCommandLineOptions.TestNameOption);
             _rootLpsCliCommand.Invoke(_args);
         }

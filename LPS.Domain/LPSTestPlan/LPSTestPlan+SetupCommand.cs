@@ -8,7 +8,7 @@ namespace LPS.Domain
 
     public partial class LPSTestPlan
     {
-        public class SetupCommand: ICommand<LPSTestPlan>, IValidCommand
+        public class SetupCommand: ICommand<LPSTestPlan>, IValidCommand<LPSTestPlan>
         {
 
             public SetupCommand()
@@ -16,6 +16,7 @@ namespace LPS.Domain
                 LPSTestCases = new List<LPSHttpTestCase.SetupCommand>();
                 DelayClientCreationUntilIsNeeded = false;
                 RunInParallel = false;
+                ValidationErrors = new Dictionary<string, List<string>>();
             }
 
             public void Execute(LPSTestPlan entity)
@@ -31,7 +32,7 @@ namespace LPS.Domain
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
             public bool IsValid { get; set; }
-            public IDictionary<string, string> ValidationErrors { get; set; }
+            public IDictionary<string, List<string>> ValidationErrors { get; set; }
         }
 
         private void Setup(SetupCommand command)
@@ -55,8 +56,7 @@ namespace LPS.Domain
                 }
                 foreach (var lpsTestCaseCommand in command.LPSTestCases)
                 {
-                    var lpsTestCase = new LPSHttpTestCase(this._logger, _watchdog, _runtimeOperationIdProvider);
-                    lpsTestCaseCommand.Execute(lpsTestCase);
+                    var lpsTestCase = new LPSHttpTestCase(lpsTestCaseCommand, this._logger, _watchdog, _runtimeOperationIdProvider);
                     LPSTestCases.Add(lpsTestCase);
                 }
             }

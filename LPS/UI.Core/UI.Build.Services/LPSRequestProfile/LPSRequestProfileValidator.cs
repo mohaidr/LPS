@@ -11,7 +11,7 @@ using System.Text;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSRequestProfileValidator : LPSBaseValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
+    internal class LPSRequestProfileValidator : LPSCommandBaseValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
     {
 
         LPSHttpRequestProfile.SetupCommand _command;
@@ -22,7 +22,7 @@ namespace LPS.UI.Core.UI.Build.Services
             _command = command;
             RuleFor(command => command.Httpversion).Must(version => version == "1.0" || version == "1.1")
                 .WithMessage("Invalid Http version. Supported versions are 1.0 and 1.1");
-            RuleFor(command => command.HttpMethod).Must(httpMethod => _httpMethods.Any(method => method == httpMethod))
+            RuleFor(command => command.HttpMethod).Must(httpMethod => _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
                 .WithMessage("Invalid Http Method");
             RuleFor(command => command.URL).Must(url =>
             {

@@ -4,6 +4,7 @@ using LPS.Infrastructure.Client;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Watchdog;
 using LPS.UI.Common.Options;
+using LPS.UI.Core.UI.Build.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -29,14 +30,27 @@ namespace LPS.UI.Common.Extensions
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
+                var loggerValidator = new LPSFileLoggerValidator();
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
+                FileLogger fileLogger;
                 if (lpsFileOptions == null)
                     lpsFileOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration").Get<LPSFileLoggerOptions>();
 
-                // Create an instance of your custom logger implementation
-                var fileLogger = new FileLogger(lpsFileOptions.LogFilePath, lpsFileOptions.LoggingLevel,
-                    lpsFileOptions.ConsoleLogingLevel, lpsFileOptions.EnableConsoleLogging,
-                    lpsFileOptions.DisableConsoleErrorLogging, lpsFileOptions.DisableFileLogging);
+                var validationResults = loggerValidator.Validate(lpsFileOptions);
+
+                if (!validationResults.IsValid)
+                {
+                    fileLogger = new FileLogger("lps-logs.log", LPSLoggingLevel.Verbos, LPSLoggingLevel.Information);
+                    fileLogger.Log("0000-0000-0000-0000", "Logger options are not valid, the default settings were applies", LPSLoggingLevel.Warning);
+                    validationResults.PrintValidationErrors();
+                }
+                else
+                {
+                    // Create an instance of your custom logger implementation
+                    fileLogger = new FileLogger(lpsFileOptions.LogFilePath, lpsFileOptions.LoggingLevel,
+                        lpsFileOptions.ConsoleLogingLevel, lpsFileOptions.EnableConsoleLogging,
+                        lpsFileOptions.DisableConsoleErrorLogging, lpsFileOptions.DisableFileLogging);
+                }
 
                 // Print Logger Options
                 Console.ForegroundColor = ConsoleColor.Magenta;

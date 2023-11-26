@@ -8,7 +8,7 @@ using FluentValidation;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestPlanValidator : LPSBaseValidator<LPSTestPlan.SetupCommand, LPSTestPlan>
+    internal class LPSTestPlanValidator : LPSCommandBaseValidator<LPSTestPlan.SetupCommand, LPSTestPlan>
     {
         LPSTestPlan.SetupCommand _command;
         public LPSTestPlanValidator(LPSTestPlan.SetupCommand command)
@@ -16,9 +16,11 @@ namespace LPS.UI.Core.UI.Build.Services
             _command = command;
 
             RuleFor(command => command.Name)
-                .NotNull()
-                .NotEmpty().Length(1, 20)
-                .WithMessage("The Name Should be between 1 and 20 characters");
+            .NotNull().NotEmpty()
+            .Matches("^[a-zA-Z0-9 _-]+$")
+            .WithMessage("The plan name does not accept special charachters and should be between 1 and 20 characters")
+            .Length(1, 20)
+            .WithMessage("The plan name should be between 1 and 20 characters");
 
             RuleFor(command => command.NumberOfClients)
             .NotNull()

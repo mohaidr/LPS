@@ -15,13 +15,15 @@ namespace LPS.Domain
 {
     public partial class LPSRequestProfile
     {
-        public class SetupCommand : ICommand<LPSRequestProfile>, IValidCommand
+        public class SetupCommand : ICommand<LPSRequestProfile>, IValidCommand<LPSRequestProfile>
         {
             public SetupCommand()
             {
+                ValidationErrors = new Dictionary<string, List<string>>();
+
             }
             public bool IsValid { get; set; }
-            public IDictionary<string, string> ValidationErrors { get; set; }
+            public IDictionary<string, List<string>> ValidationErrors { get; set; }
 
             public void Execute(LPSRequestProfile entity)
             {

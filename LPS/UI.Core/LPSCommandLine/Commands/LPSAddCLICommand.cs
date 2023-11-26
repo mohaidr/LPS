@@ -1,6 +1,11 @@
-﻿using LPS.Domain;
+﻿using FluentValidation;
+using FluentValidation.Results;
+using LPS.Domain;
 using LPS.UI.Common;
+using LPS.UI.Common.Extensions;
+using LPS.UI.Common.Helpers;
 using LPS.UI.Core.LPSCommandLine.Bindings;
+using LPS.UI.Core.UI.Build.Services;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -52,15 +57,41 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _addCommand.SetHandler((testName, lpsTestCase) =>
             {
-                var serializer = new LpsSerializer();
-                _planSetupCommand = serializer.DeSerialize(File.ReadAllText($"{testName}.json"));
-                _planSetupCommand.LPSTestCases.Add(lpsTestCase);
-                _planSetupCommand.IsValid = true;
-                string json = serializer.Serialize(_planSetupCommand);
-                File.WriteAllText($"{testName}.json", json);
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Your test case has been added successfully");
-                Console.ResetColor();
+                bool isValidPlan, isValidTestCase, isValidRequestProfile;
+                ValidationResult results;
+                _planSetupCommand = LPSSerializationHelper.Deserialize<LPSTestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
+                var planValidator = new LPSTestPlanValidator(_planSetupCommand);
+                results = planValidator.Validate();
+                isValidPlan = results.IsValid;
+                if (!isValidPlan)
+                {
+                    results.PrintValidationErrors();
+                }
+                var lpsTestCaseValidator = new LPSTestCaseValidator(lpsTestCase);
+                results = lpsTestCaseValidator.Validate();
+                isValidTestCase = results.IsValid;
+                if (!isValidTestCase)
+                {
+                    results.PrintValidationErrors();
+                }
+                var lpsRequestProfileValidator = new LPSRequestProfileValidator(lpsTestCase.LPSRequestProfile);
+                results = lpsRequestProfileValidator.Validate();
+                isValidRequestProfile = results.IsValid;
+                if (!isValidRequestProfile)
+                {
+                    results.PrintValidationErrors();
+                }
+
+                if (isValidTestCase && isValidPlan && isValidRequestProfile)
+                {
+                    _planSetupCommand.LPSTestCases.Add(lpsTestCase);
+                    _planSetupCommand.IsValid = true;
+                    string json = LPSSerializationHelper.Serialize(_planSetupCommand);
+                    File.WriteAllText($"{testName}.json", json);
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Your test case has been added successfully");
+                    Console.ResetColor();
+                }
             },
             LPSCommandLineOptions.TestNameOption,
             new LPSTestCaseCommandBinder(

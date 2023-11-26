@@ -1,6 +1,10 @@
-﻿using LPS.Domain;
+﻿using FluentValidation.Results;
+using LPS.Domain;
 using LPS.UI.Common;
+using LPS.UI.Common.Extensions;
+using LPS.UI.Common.Helpers;
 using LPS.UI.Core.LPSCommandLine.Bindings;
+using LPS.UI.Core.UI.Build.Services;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -42,16 +46,28 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _createCommand.SetHandler((lpaTestPlan) =>
             {
-                _planSetupCommand.Name = lpaTestPlan.Name;
-                _planSetupCommand.NumberOfClients = lpaTestPlan.NumberOfClients;
-                _planSetupCommand.DelayClientCreationUntilIsNeeded = lpaTestPlan.DelayClientCreationUntilIsNeeded;
-                _planSetupCommand.RampUpPeriod = lpaTestPlan.RampUpPeriod;
-                _planSetupCommand.RunInParallel = lpaTestPlan.RunInParallel;
-                string json = new LpsSerializer().Serialize(_planSetupCommand);
-                File.WriteAllText($"{lpaTestPlan.Name}.json", json);
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Your test plan has been created successfully");
-                Console.ResetColor();
+                bool isValidPlan;
+                ValidationResult results;
+                var planValidator = new LPSTestPlanValidator(lpaTestPlan);
+                results = planValidator.Validate();
+                isValidPlan = results.IsValid;
+                if (!isValidPlan)
+                {
+                    results.PrintValidationErrors();
+                }
+                else
+                {
+                    _planSetupCommand.Name = lpaTestPlan.Name;
+                    _planSetupCommand.NumberOfClients = lpaTestPlan.NumberOfClients;
+                    _planSetupCommand.DelayClientCreationUntilIsNeeded = lpaTestPlan.DelayClientCreationUntilIsNeeded;
+                    _planSetupCommand.RampUpPeriod = lpaTestPlan.RampUpPeriod;
+                    _planSetupCommand.RunInParallel = lpaTestPlan.RunInParallel;
+                    string json = LPSSerializationHelper.Serialize(_planSetupCommand);
+                    File.WriteAllText($"{lpaTestPlan.Name}.json", json);
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("Your test plan has been created successfully");
+                    Console.ResetColor();
+                }
             },
             new LPSTestPlanCommandBinder(
                 LPSCommandLineOptions.TestNameOption,
