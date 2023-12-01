@@ -7,39 +7,48 @@ using System.CommandLine;
 using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
+using LPS.UI.Common.Options;
+using LPS.Domain.Common;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
-    public class LPSTestPlanCommandBinder : BinderBase<LPSTestPlan.SetupCommand>
+    public class LPSLoggerBinder : BinderBase<LPSFileLoggerOptions>
     {
-        public static Option<string> _testNameOption;
-        public static Option<int> _numberOfClientsOption;
-        public static Option<int> _rampupPeriodOption;
-        public static Option<bool> _delayClientCreationOption;
-        public static Option<bool> _runInParallerOption;
 
 
-        public LPSTestPlanCommandBinder(Option<string> testNameOption,
-        Option<int> numberOfClientsOption,
-        Option<int> rampupPeriodOption,
-        Option<bool> delayClientCreationOption,
-        Option<bool> runInParallerOption)
+        private Option<string> _logFilePathOption;
+        private Option<bool?> _enableConsoleLoggingOption;
+        private Option<bool?> _disableConsoleErrorLoggingOption;
+        private Option<bool?> _disableFileLoggingOption;
+        private Option<LPSLoggingLevel?> _loggingLevelOption;
+        private Option<LPSLoggingLevel?> _consoleLoggingLevelOption;
+
+
+        public LPSLoggerBinder(
+            Option<string> logFilePathOption = null,
+            Option<bool?> disableFileLoggingOption = null,
+            Option<bool?> enableConsoleLoggingOption = null,
+            Option<bool?> disableConsoleErrorLoggingOption = null,
+            Option<LPSLoggingLevel?> loggingLevelOption = null,
+            Option<LPSLoggingLevel?> consoleLoggingLevelOption = null)
         {
-            _testNameOption = testNameOption;
-            _numberOfClientsOption = numberOfClientsOption;
-            _rampupPeriodOption = rampupPeriodOption;
-            _delayClientCreationOption = delayClientCreationOption;
-            _runInParallerOption = runInParallerOption;
+            _logFilePathOption = logFilePathOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.LogFilePathOption;
+            _enableConsoleLoggingOption = enableConsoleLoggingOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.EnableConsoleLoggingOption;
+            _disableConsoleErrorLoggingOption = disableConsoleErrorLoggingOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.DisableConsoleErrorLoggingOption;
+            _disableFileLoggingOption = disableFileLoggingOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.DisableFileLoggingOption;
+            _loggingLevelOption = loggingLevelOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.LoggingLevelOption;
+            _consoleLoggingLevelOption = consoleLoggingLevelOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.ConsoleLoggingLevelOption;
         }
 
-        protected override LPSTestPlan.SetupCommand GetBoundValue(BindingContext bindingContext) =>
-            new LPSTestPlan.SetupCommand
+        protected override LPSFileLoggerOptions GetBoundValue(BindingContext bindingContext) =>
+            new LPSFileLoggerOptions
             {
-                Name = bindingContext.ParseResult.GetValueForOption(_testNameOption),
-                NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
-                RampUpPeriod = bindingContext.ParseResult.GetValueForOption(_rampupPeriodOption),
-                DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
-                RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
+                LogFilePath = bindingContext.ParseResult.GetValueForOption(_logFilePathOption),
+                EnableConsoleLogging = bindingContext.ParseResult.GetValueForOption(_enableConsoleLoggingOption),
+                DisableConsoleErrorLogging = bindingContext.ParseResult.GetValueForOption(_disableConsoleErrorLoggingOption),
+                DisableFileLogging = bindingContext.ParseResult.GetValueForOption(_disableFileLoggingOption),
+                LoggingLevel = bindingContext.ParseResult.GetValueForOption(_loggingLevelOption),
+                ConsoleLogingLevel = bindingContext.ParseResult.GetValueForOption(_consoleLoggingLevelOption),
             };
     }
 }

@@ -10,6 +10,6 @@ namespace LPS.UI.Common.Options
     {
         public LPSHttpClientOptions LPSHttpClientConfiguration { get; set; }
         public LPSFileLoggerOptions LPSFileLoggerConfiguration { get; set;}
-        public LPSWatchDogOptions LPSWatchdogConfiguration { get; set; }
+        public LPSWatchdogOptions LPSWatchdogConfiguration { get; set; }
     }
 }

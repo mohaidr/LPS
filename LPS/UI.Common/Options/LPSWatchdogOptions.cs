@@ -8,15 +8,15 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Common.Options
 {
-    public class LPSWatchDogOptions
+    public class LPSWatchdogOptions
     {
-        public double MaxMemoryMB { get; set; }
-        public double CoolDownMemoryMB { get; set; }
-        public double MaxCPUPercentage { get; set; }
-        public double CoolDownCPUPercentage { get; set; }
-        public int CoolDownRetryTimeInSeconds { get; set; }
-        public int MaxConnectionsCountPerHostName { get; set; }
-        public int CoolDownConnectionsCountPerHostName { get; set; }
-        public SuspensionMode SuspensionMode { get; set; }
+        public int? MaxMemoryMB { get; set; }
+        public int? CoolDownMemoryMB { get; set; }
+        public int? MaxCPUPercentage { get; set; }
+        public int? CoolDownCPUPercentage { get; set; }
+        public int? CoolDownRetryTimeInSeconds { get; set; }
+        public int? MaxConcurrentConnectionsCountPerHostName { get; set; }
+        public int? CoolDownConcurrentConnectionsCountPerHostName { get; set; }
+        public SuspensionMode? SuspensionMode { get; set; }
     }
 }

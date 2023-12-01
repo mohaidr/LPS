@@ -47,9 +47,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private void Setup()
         {
 
-            _runCommand = new Command("run", "Run existing test") {
-               LPSCommandLineOptions.TestNameOption,
-            };
+            _runCommand = new Command("run", "Run existing test");
+            LPSCommandLineOptions.AddOptionsToCommand(_runCommand, typeof(LPSCommandLineOptions.LPSRunCommandOptions));
             _rootLpsCliCommand.AddCommand(_runCommand);
         }
 
@@ -60,7 +59,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 _planSetupCommand = LPSSerializationHelper.Deserialize<LPSTestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
                 await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider)
                 .Run(_planSetupCommand, cancellationToken);
-            }, LPSCommandLineOptions.TestNameOption);
+            }, LPSCommandLineOptions.LPSRunCommandOptions.TestNameOption);
             _rootLpsCliCommand.Invoke(_args);
         }
     }

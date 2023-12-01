@@ -10,9 +10,9 @@ namespace LPS.UI.Common.Options
 {
     public class LPSHttpClientOptions
     {
-        public int ClientTimeoutInSeconds { get;  set; }
-        public int PooledConnectionLifeTimeInSeconds { get; set; }
-        public int PooledConnectionIdleTimeoutInSeconds { get; set; }
-        public int MaxConnectionsPerServer { get; set; }
+        public int? ClientTimeoutInSeconds { get;  set; }
+        public int? PooledConnectionLifeTimeInSeconds { get; set; }
+        public int? PooledConnectionIdleTimeoutInSeconds { get; set; }
+        public int? MaxConnectionsPerServer { get; set; }
     }
 }

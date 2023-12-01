@@ -10,11 +10,49 @@ using LPS.Infrastructure.Logging;
 using System.Linq;
 using System.Diagnostics;
 using Microsoft.Extensions.Options;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.Logger
 {
-    public class FileLogger : IFileLogger
-    {
+    public class FileLogger : IFileLogger 
+    {   
+        private FileLogger() { 
+            this._logFilePath = "lps-logs.log";
+            this._loggingLevel = LPSLoggingLevel.Verbos;
+            this._consoleLoggingLevel = LPSLoggingLevel.Information;
+            this._disableFileLogging = false;
+            this._enableConsoleLogging = true;
+            this._disableConsoleErrorLogging = false;
+            SetLogFilePath(this._logFilePath);
+            string directory = string.Concat($@"{Path.GetDirectoryName(_logFilePath)}");
+
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            string fileName = Path.GetFileName(_logFilePath);
+            _synchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
+        }
+
+        public FileLogger(string logFilePath, LPSLoggingLevel loggingLevel, LPSLoggingLevel consoleLoggingLevel, bool enableConsoleLogging = true, bool disableConsoleErrorLogging = true, bool disableFileLogging = false)
+        {
+            _loggingLevel = loggingLevel;
+            _consoleLoggingLevel = consoleLoggingLevel;
+            _enableConsoleLogging = enableConsoleLogging;
+            _disableConsoleErrorLogging = disableConsoleErrorLogging;
+            _disableFileLogging = disableFileLogging;
+            SetLogFilePath(logFilePath);
+            string directory = string.Concat($@"{Path.GetDirectoryName(_logFilePath)}");
+
+            if (!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+            string fileName = Path.GetFileName(_logFilePath);
+
+            _synchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
+        }
+
         TextWriter _synchronizedTextWriter;
 
         public string LogFilePath { get { return _logFilePath; } }
@@ -37,24 +75,7 @@ namespace LPS.Infrastructure.Logger
         private LPSLoggingLevel _loggingLevel;
         private int _loggingCancellationCount;
         private string _cancellationErrorMessage;
-        public FileLogger(string logFilePath, LPSLoggingLevel loggingLevel, LPSLoggingLevel consoleLoggingLevel, bool enableConsoleLogging = true, bool disableConsoleErrorLogging = true, bool disableFileLogging = false)
-        {
-            _loggingLevel = loggingLevel;
-            _consoleLoggingLevel = consoleLoggingLevel;
-            _enableConsoleLogging = enableConsoleLogging;
-            _disableConsoleErrorLogging = disableConsoleErrorLogging;
-            _disableFileLogging = disableFileLogging;
-            SetLogFilePath(logFilePath);
-            string directory = string.Concat($@"{Path.GetDirectoryName(_logFilePath)}");
-
-            if (!Directory.Exists(directory))
-            {
-                Directory.CreateDirectory(directory);
-            }
-            string fileName = Path.GetFileName(_logFilePath);
-
-            _synchronizedTextWriter = ObjectFactory.Instance.MakeSynchronizedTextWriter($@"{directory}\\{fileName}");
-        }
+        
 
         private void SetLogFilePath(string logFilePath)
         {
@@ -188,5 +209,9 @@ namespace LPS.Infrastructure.Logger
             await _synchronizedTextWriter.FlushAsync();
         }
 
+        public static FileLogger GetDefaultInstance()
+        { 
+            return new FileLogger();
+        }
     }
 }

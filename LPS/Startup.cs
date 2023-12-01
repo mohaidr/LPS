@@ -16,6 +16,7 @@ using System.Reflection;
 using LPS.UI.Common;
 using LPS.UI.Common.Options;
 using Microsoft.Extensions.Options;
+using Newtonsoft.Json;
 
 namespace LPS
 {
@@ -28,6 +29,11 @@ namespace LPS
                 {
                     configBuilder.AddEnvironmentVariables();
                     string lpsAppSettings = LPSAppConstants.AppSettingsFileLocation;
+                    if (!File.Exists(lpsAppSettings))
+                    {
+                        // If the file doesn't exist, create it with default settings
+                        CreateDefaultAppSettings(lpsAppSettings);
+                    }
                     configBuilder.AddJsonFile(lpsAppSettings, optional: false, reloadOnChange: false);
                 })
                 .ConfigureLPSFileLogger()
@@ -36,7 +42,7 @@ namespace LPS
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.ConfigureWritable<LPSFileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), LPSAppConstants.AppSettingsFileLocation);
-                    services.ConfigureWritable<LPSWatchDogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), LPSAppConstants.AppSettingsFileLocation);
+                    services.ConfigureWritable<LPSWatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<LPSHttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.AddSingleton<LPSAppSettingsWritableOptions>();
                     services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
@@ -56,6 +62,22 @@ namespace LPS
                 .Build();
 
             return host;
+        }
+
+        private static void CreateDefaultAppSettings(string filePath)
+        {
+            // You can customize this method to create the default settings
+            // For example, you can create a basic JSON structure with default values
+            var defaultSettings = new
+            {
+                LPSAppSettings = new LPSAppSettings()
+            };
+
+            // Serialize the default settings object to JSON
+            string jsonContent = JsonConvert.SerializeObject(defaultSettings, Formatting.Indented);
+
+            // Write the JSON content to the specified file path
+            File.WriteAllText(filePath, jsonContent);
         }
     }
 }

@@ -9,7 +9,7 @@ using FluentValidation.Results;
 using LPS.UI.Common;
 using System.Text;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.LPSValidators
 {
     internal class LPSRequestProfileValidator : LPSCommandBaseValidator<LPSHttpRequestProfile.SetupCommand, LPSHttpRequestProfile>
     {

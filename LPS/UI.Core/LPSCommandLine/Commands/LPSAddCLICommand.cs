@@ -5,6 +5,7 @@ using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
 using LPS.UI.Common.Helpers;
 using LPS.UI.Core.LPSCommandLine.Bindings;
+using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.UI.Build.Services;
 using System;
 using System.Collections.Generic;
@@ -33,23 +34,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         private void Setup()
         {
-            _addCommand = new Command("add", "Add an http request")
-            {
-                LPSCommandLineOptions.TestNameOption,
-                LPSCommandLineOptions.CaseNameOption,
-                LPSCommandLineOptions.HttpMethodOption,
-                LPSCommandLineOptions.HttpversionOption,
-                LPSCommandLineOptions.RequestCountOption,
-                LPSCommandLineOptions.IterationModeOption,
-                LPSCommandLineOptions.Duratiion,
-                LPSCommandLineOptions.CoolDownTime,
-                LPSCommandLineOptions.BatchSize,
-                LPSCommandLineOptions.UrlOption,
-                LPSCommandLineOptions.HeaderOption,
-                LPSCommandLineOptions.PayloadOption,
-                LPSCommandLineOptions.DownloadHtmlEmbeddedResources,
-                LPSCommandLineOptions.SaveResponse
-            };
+            _addCommand = new Command("add", "Add an http request");
+
+            LPSCommandLineOptions.AddOptionsToCommand(_addCommand, typeof(LPSCommandLineOptions.LPSAddCommandOptions));
             _rootLpsCliCommand.AddCommand(_addCommand);
         }
 
@@ -93,21 +80,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     Console.ResetColor();
                 }
             },
-            LPSCommandLineOptions.TestNameOption,
-            new LPSTestCaseCommandBinder(
-            LPSCommandLineOptions.CaseNameOption,
-            LPSCommandLineOptions.RequestCountOption,
-            LPSCommandLineOptions.IterationModeOption,
-            LPSCommandLineOptions.Duratiion,
-            LPSCommandLineOptions.CoolDownTime,
-            LPSCommandLineOptions.BatchSize,
-            LPSCommandLineOptions.HttpMethodOption,
-            LPSCommandLineOptions.HttpversionOption,
-            LPSCommandLineOptions.UrlOption,
-            LPSCommandLineOptions.HeaderOption,
-            LPSCommandLineOptions.PayloadOption,
-            LPSCommandLineOptions.DownloadHtmlEmbeddedResources,
-            LPSCommandLineOptions.SaveResponse));
+            LPSCommandLineOptions.LPSAddCommandOptions.TestNameOption,
+            new LPSTestCaseCommandBinder());
             _rootLpsCliCommand.Invoke(_args);
         }
     }

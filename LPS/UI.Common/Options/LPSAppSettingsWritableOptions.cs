@@ -10,10 +10,10 @@ namespace LPS.UI.Common.Options
     {
         IWritableOptions<LPSFileLoggerOptions> _loggerOptions;
         IWritableOptions<LPSHttpClientOptions> _clientOptions;
-        IWritableOptions<LPSWatchDogOptions> _watchDogOptions;
+        IWritableOptions<LPSWatchdogOptions> _watchDogOptions;
         public LPSAppSettingsWritableOptions(IWritableOptions<LPSFileLoggerOptions> loggerOptions,
            IWritableOptions<LPSHttpClientOptions> clientOptions,
-           IWritableOptions<LPSWatchDogOptions> watchDogOptions)
+           IWritableOptions<LPSWatchdogOptions> watchDogOptions)
         { 
             _loggerOptions = loggerOptions;
             _clientOptions = clientOptions;
@@ -22,7 +22,6 @@ namespace LPS.UI.Common.Options
 
         public IWritableOptions<LPSFileLoggerOptions> LPSFileLoggerOptions { get { return _loggerOptions; } }
         public IWritableOptions<LPSHttpClientOptions> LPSHttpClientOptions { get { return _clientOptions; } }
-
-        public IWritableOptions<LPSWatchDogOptions> LPSWatchdogOptions { get { return _watchDogOptions; } }
+        public IWritableOptions<LPSWatchdogOptions> LPSWatchdogOptions { get { return _watchDogOptions; } }
     }
 }

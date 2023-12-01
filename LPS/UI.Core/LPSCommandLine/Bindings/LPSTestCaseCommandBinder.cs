@@ -12,47 +12,47 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
     public class LPSTestCaseCommandBinder : BinderBase<LPSHttpTestCase.SetupCommand>
     {
-        private readonly Option<string> _nameOption;
-        private readonly Option<int?> _requestCountOption;
-        public static Option<int?> _duration;
-        public static Option<int?> _coolDownTime;
-        public static Option<int?> _batchSize;
-        private readonly Option<string> _httpMethodOption;
-        private readonly Option<bool> _downloadHtmlEmbeddedResourcesOption;
-        private readonly Option<bool> _saveResponseOption;
-        private readonly Option<string> _httpversionOption;
-        private readonly Option<string> _urlOption;
-        private readonly Option<IList<string>> _headerOption;
-        private readonly Option<string> _payloadOption;
+        private Option<string> _nameOption;
+        private Option<int?> _requestCountOption;
+        private Option<int?> _duration;
+        private Option<int?> _coolDownTime;
+        private Option<int?> _batchSize;
+        private Option<string> _httpMethodOption;
+        private Option<bool> _downloadHtmlEmbeddedResourcesOption;
+        private Option<bool> _saveResponseOption;
+        private Option<string> _httpversionOption;
+        private Option<string> _urlOption;
+        private Option<IList<string>> _headerOption;
+        private Option<string> _payloadOption;
         Option<LPSHttpTestCase.IterationMode> _iterationModeOption;
 
-        public LPSTestCaseCommandBinder(Option<string> nameOption,
-            Option<int?> requestCountOption,
-            Option<LPSHttpTestCase.IterationMode> iterationModeOption,
-            Option<int?> duratiion,
-            Option<int?> coolDownTime,
-            Option<int?> batchSizem,
-            Option<string> httpMethodOption,
-            Option<string> httpversionOption,
-            Option<string> urlOption,
-            Option<IList<string>> headerOption,
-            Option<string> payloadOption,
-            Option<bool> downloadHtmlEmbeddedResourcesOption,
-            Option<bool> saveResponseOption)
+        public LPSTestCaseCommandBinder(Option<string> nameOption = null,
+            Option<int?> requestCountOption = null,
+            Option<LPSHttpTestCase.IterationMode> iterationModeOption = null,
+            Option<int?> duratiion = null,
+            Option<int?> coolDownTime = null,
+            Option<int?> batchSizeOption = null,
+            Option<string> httpMethodOption = null,
+            Option<string> httpversionOption = null,
+            Option<string> urlOption = null,
+            Option<IList<string>> headerOption = null,
+            Option<string> payloadOption = null,
+            Option<bool> downloadHtmlEmbeddedResourcesOption = null,
+            Option<bool> saveResponseOption = null)
         {
-            _nameOption = nameOption;
-            _iterationModeOption = iterationModeOption;
-            _duration = duratiion;
-            _batchSize = batchSizem;
-            _coolDownTime = coolDownTime;
-            _requestCountOption = requestCountOption;
-            _httpMethodOption = httpMethodOption;
-            _httpversionOption = httpversionOption;
-            _urlOption = urlOption;
-            _headerOption = headerOption;
-            _payloadOption = payloadOption;
-            _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption;
-            _saveResponseOption = saveResponseOption;
+            _nameOption = nameOption ?? LPSCommandLineOptions.LPSAddCommandOptions.CaseNameOption;
+            _iterationModeOption = iterationModeOption ?? LPSCommandLineOptions.LPSAddCommandOptions.IterationModeOption;
+            _duration = duratiion ?? LPSCommandLineOptions.LPSAddCommandOptions.Duratiion;
+            _batchSize = batchSizeOption ?? LPSCommandLineOptions.LPSAddCommandOptions.BatchSize;
+            _coolDownTime = coolDownTime ?? LPSCommandLineOptions.LPSAddCommandOptions.CoolDownTime;
+            _requestCountOption = requestCountOption ?? LPSCommandLineOptions.LPSAddCommandOptions.RequestCountOption;
+            _httpMethodOption = httpMethodOption ?? LPSCommandLineOptions.LPSAddCommandOptions.HttpMethodOption;
+            _httpversionOption = httpversionOption ?? LPSCommandLineOptions.LPSAddCommandOptions.HttpversionOption;
+            _urlOption = urlOption ?? LPSCommandLineOptions.LPSAddCommandOptions.UrlOption;
+            _headerOption = headerOption ?? LPSCommandLineOptions.LPSAddCommandOptions.HeaderOption;
+            _payloadOption = payloadOption ?? LPSCommandLineOptions.LPSAddCommandOptions.PayloadOption;
+            _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? LPSCommandLineOptions.LPSAddCommandOptions.DownloadHtmlEmbeddedResources;
+            _saveResponseOption = saveResponseOption ?? LPSCommandLineOptions.LPSAddCommandOptions.SaveResponse;
         }
 
         protected override LPSHttpTestCase.SetupCommand GetBoundValue(BindingContext bindingContext) =>

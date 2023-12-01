@@ -4,6 +4,7 @@ using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
 using LPS.UI.Common.Helpers;
 using LPS.UI.Core.LPSCommandLine.Bindings;
+using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.UI.Build.Services;
 using System;
 using System.Collections.Generic;
@@ -32,13 +33,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         private void Setup()
         {
-            _createCommand = new Command("create", "Create a new test") {
-                LPSCommandLineOptions.TestNameOption,
-                LPSCommandLineOptions.NumberOfClientsOption,
-                LPSCommandLineOptions.RampupPeriodOption,
-                LPSCommandLineOptions.DelayClientCreation,
-                LPSCommandLineOptions.RunInParaller
-            };
+            _createCommand = new Command("create", "Create a new test");
+            LPSCommandLineOptions.AddOptionsToCommand(_createCommand, typeof(LPSCommandLineOptions.LPSCreateCommandOptions));
             _rootLpsCliCommand.AddCommand(_createCommand);
         }
 
@@ -69,12 +65,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     Console.ResetColor();
                 }
             },
-            new LPSTestPlanCommandBinder(
-                LPSCommandLineOptions.TestNameOption,
-                LPSCommandLineOptions.NumberOfClientsOption,
-                LPSCommandLineOptions.RampupPeriodOption,
-                LPSCommandLineOptions.DelayClientCreation,
-                LPSCommandLineOptions.RunInParaller));
+            new LPSTestPlanCommandBinder());
             _rootLpsCliCommand.Invoke(_args);
         }
     }

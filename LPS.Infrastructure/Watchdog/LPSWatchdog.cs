@@ -29,19 +29,35 @@ namespace LPS.Infrastructure.Watchdog
         private double _coolDownMemoryMB;
         private double _coolDownCPUPercentage;
         private int _coolDownRetryTimeInSeconds;
-        private int _maxConnectionsCountPerHostName;
-        private int _coolDownConnectionsCountPerHostName;
+        private int _maxConcurrentConnectionsCountPerHostName;
+        private int _coolDownConcurrentConnectionsCountPerHostName;
         private ResourceState _resourceState;
         private SuspensionMode _suspensionMode;
 
         private LPSResourceEventListener _lpsResourceListener;
         private LPSConnectionCounterEventListener _lpsConnectionsCountEventListener;
+
+        private LPSWatchdog()
+        {
+            _maxCPUPercentage = 50;
+            _maxMemoryMB = 1000;
+            _coolDownMemoryMB = 500;
+            _coolDownCPUPercentage = 30;
+            _suspensionMode = SuspensionMode.Any;
+            _maxConcurrentConnectionsCountPerHostName = 1000;
+            _coolDownConcurrentConnectionsCountPerHostName = 100;
+            _coolDownRetryTimeInSeconds = 1;
+            _resourceState = ResourceState.Cool;
+            _lpsResourceListener = new LPSResourceEventListener();
+            _lpsConnectionsCountEventListener = new LPSConnectionCounterEventListener();
+        }
+
         public LPSWatchdog(double memoryLimitMB,
             double cpuLimit,
             double coolDownMemoryMB,
             double coolDownCPUPercentage,
-            int maxConnectionsPerHostName,
-            int coolDownConnectionsCountPerHostName,
+            int maxConcurrentConnectionsPerHostName,
+            int coolDownConcurrentConnectionsCountPerHostName,
             int coolDownRetryTimeInSeconds,
             SuspensionMode suspensionMode)
         {
@@ -50,8 +66,8 @@ namespace LPS.Infrastructure.Watchdog
             _coolDownMemoryMB = coolDownMemoryMB;
             _coolDownCPUPercentage = coolDownCPUPercentage;
             _suspensionMode = suspensionMode;
-            _maxConnectionsCountPerHostName = maxConnectionsPerHostName;
-            _coolDownConnectionsCountPerHostName = coolDownConnectionsCountPerHostName;
+            _maxConcurrentConnectionsCountPerHostName = maxConcurrentConnectionsPerHostName;
+            _coolDownConcurrentConnectionsCountPerHostName = coolDownConcurrentConnectionsCountPerHostName;
             _coolDownRetryTimeInSeconds = coolDownRetryTimeInSeconds;
             _resourceState = ResourceState.Cool;
             _lpsResourceListener = new LPSResourceEventListener();
@@ -63,7 +79,7 @@ namespace LPS.Infrastructure.Watchdog
         {
             bool memoryExceededTheLimit = _lpsResourceListener.MemoryUsageMB > _maxMemoryMB;
             bool cpuExceededTheLimit = _lpsResourceListener.CPUPercentage >= _maxCPUPercentage;
-            bool hostActiveConnectionsExceededTheLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _maxConnectionsCountPerHostName;
+            bool hostActiveConnectionsExceededTheLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _maxConcurrentConnectionsCountPerHostName;
             switch (_suspensionMode)
             {
                 case SuspensionMode.All:
@@ -84,7 +100,7 @@ namespace LPS.Infrastructure.Watchdog
         {
             bool memoryExceededTheLimit = _lpsResourceListener.MemoryUsageMB > _coolDownMemoryMB;
             bool cpuExceededTheLimit = _lpsResourceListener.CPUPercentage >= _coolDownCPUPercentage;
-            bool hostActiveConnectionsExceededTheLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _coolDownConnectionsCountPerHostName;
+            bool hostActiveConnectionsExceededTheLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _coolDownConcurrentConnectionsCountPerHostName;
             switch (_suspensionMode)
             {
                 case SuspensionMode.All:
@@ -122,5 +138,12 @@ namespace LPS.Infrastructure.Watchdog
 
             return _resourceState;
         }
+
+
+        public static LPSWatchdog GetDefaultInstance()
+        { 
+            return new  LPSWatchdog();
+        }
+
     }
 }

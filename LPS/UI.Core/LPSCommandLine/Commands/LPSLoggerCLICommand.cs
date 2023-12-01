@@ -4,8 +4,10 @@ using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSCommandLine.Bindings;
+using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.UI.Build.Services;
 using Microsoft.Extensions.Options;
+using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -35,15 +37,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         }
         private void Setup()
         {
-            _loggerCommand = new Command("logger", "Configure the LPS logger")
-            {
-                LPSCommandLineOptions.LogFilePathOption,
-                LPSCommandLineOptions.DisableFileLoggingOption,
-                LPSCommandLineOptions.EnableConsoleLoggingOption,
-                LPSCommandLineOptions.DisableConsoleErrorLoggingOption,
-                LPSCommandLineOptions.LoggingLevelOption,
-                LPSCommandLineOptions.ConsoleLoggingLevelOption,
-            };
+            _loggerCommand = new Command("logger", "Configure the LPS logger");
+            LPSCommandLineOptions.AddOptionsToCommand(_loggerCommand, typeof(LPSCommandLineOptions.LPSLoggerCommandOptions));
             _rootLpsCliCommand.AddCommand(_loggerCommand);
         }
 
@@ -53,31 +48,34 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _loggerCommand.SetHandler((updateLoggerOptions) =>
             {
                 var loggerValidator = new LPSFileLoggerValidator();
-                var validationResults = loggerValidator.Validate(updateLoggerOptions);
+                LPSFileLoggerOptions fileLoggerOptions = new LPSFileLoggerOptions();
+                // Combine the provided logger options by the command and what in the config section to validate the final object
+                fileLoggerOptions.LogFilePath = !string.IsNullOrWhiteSpace(updateLoggerOptions.LogFilePath) ? updateLoggerOptions.LogFilePath: _loggerOptions.Value.LogFilePath;
+                fileLoggerOptions.DisableFileLogging = updateLoggerOptions.DisableFileLogging?? _loggerOptions.Value.DisableFileLogging ;
+                fileLoggerOptions.LoggingLevel = updateLoggerOptions.LoggingLevel?? _loggerOptions.Value.LoggingLevel;
+                fileLoggerOptions.ConsoleLogingLevel = updateLoggerOptions.ConsoleLogingLevel ?? _loggerOptions.Value.ConsoleLogingLevel;
+                fileLoggerOptions.EnableConsoleLogging = updateLoggerOptions.EnableConsoleLogging?? _loggerOptions.Value.EnableConsoleLogging;
+                fileLoggerOptions.DisableConsoleErrorLogging = updateLoggerOptions.DisableConsoleErrorLogging ?? _loggerOptions.Value.DisableConsoleErrorLogging;
+                var validationResults = loggerValidator.Validate(fileLoggerOptions);
+
                 if (!validationResults.IsValid)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Logger options are not valid, the default settings were applies", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "You must update the below properties to have a valid logger configuration. Updating the LPSAppSettings:LPSFileLoggerConfiguration section with the provided arguements will create an invalid logger configuration. You may run 'lps logger -h' to explore the options", LPSLoggingLevel.Warning);
                     validationResults.PrintValidationErrors();
                 }
                 else
                 {
                     _loggerOptions.Update(option =>
                     {
-                        option.LogFilePath = updateLoggerOptions.LogFilePath;
-                        option.DisableFileLogging = updateLoggerOptions.DisableFileLogging;
-                        option.LoggingLevel = updateLoggerOptions.LoggingLevel;
-                        option.ConsoleLogingLevel = updateLoggerOptions.ConsoleLogingLevel;
-                        option.EnableConsoleLogging = updateLoggerOptions.EnableConsoleLogging;
-                        option.DisableConsoleErrorLogging = updateLoggerOptions.DisableConsoleErrorLogging;
+                        option.LogFilePath = fileLoggerOptions.LogFilePath;
+                        option.DisableFileLogging = fileLoggerOptions.DisableFileLogging;
+                        option.LoggingLevel = fileLoggerOptions.LoggingLevel;
+                        option.ConsoleLogingLevel = fileLoggerOptions.ConsoleLogingLevel;
+                        option.EnableConsoleLogging = fileLoggerOptions.EnableConsoleLogging;
+                        option.DisableConsoleErrorLogging = fileLoggerOptions.DisableConsoleErrorLogging;
                     });
                 }
-            }, new LPSLoggerBinder(
-                LPSCommandLineOptions.LogFilePathOption,
-                LPSCommandLineOptions.DisableFileLoggingOption,
-                LPSCommandLineOptions.EnableConsoleLoggingOption,
-                LPSCommandLineOptions.DisableConsoleErrorLoggingOption,
-                LPSCommandLineOptions.LoggingLevelOption,
-                LPSCommandLineOptions.ConsoleLoggingLevelOption));
+            }, new LPSLoggerBinder());
 
             _rootLpsCliCommand.Invoke(_args);
         }

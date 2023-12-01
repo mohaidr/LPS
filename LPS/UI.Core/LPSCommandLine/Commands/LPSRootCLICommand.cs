@@ -28,6 +28,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         LPSAddCLICommand _lpsAddCliCommand;
         LPSRunCLICommand _lpsRunCliCommand;
         LPSLoggerCLICommand _lpsLoggerCliCommand;
+        LPSWatchDogCLICommand _lpsSWatchdogCliCommand;
+        LPSHttpClientCLICommand _lpsSHttpClientCliCommand;
         LPSAppSettingsWritableOptions _appSettings;
         public LPSRootCLICommand(ILPSLogger logger,
             ILPSClientManager<LPSHttpRequestProfile,
@@ -58,6 +60,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _lpsAddCliCommand = new LPSAddCLICommand(_lpsRootCliCommand, _command, _args);
             _lpsRunCliCommand = new LPSRunCLICommand(_lpsRootCliCommand, _command, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog, _args);
             _lpsLoggerCliCommand = new LPSLoggerCLICommand(_lpsRootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions, _args);
+            _lpsSHttpClientCliCommand = new LPSHttpClientCLICommand(_lpsRootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions, _args);
+            _lpsSWatchdogCliCommand = new LPSWatchDogCLICommand(_lpsRootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions, _args);
         }
 
         public void Execute(CancellationToken cancellationToken)
@@ -80,6 +84,16 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
             {
                 _lpsLoggerCliCommand.Execute(cancellationToken);
+            }
+            else if (joinedCommand.StartsWith("httpclient", StringComparison.OrdinalIgnoreCase))
+
+            {
+                _lpsSHttpClientCliCommand.Execute(cancellationToken);
+            }
+            else if (joinedCommand.StartsWith("watchdog", StringComparison.OrdinalIgnoreCase))
+
+            {
+                _lpsSWatchdogCliCommand.Execute(cancellationToken);
             }
         }
     }

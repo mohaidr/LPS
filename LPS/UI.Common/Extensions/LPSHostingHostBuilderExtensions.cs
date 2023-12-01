@@ -4,6 +4,7 @@ using LPS.Infrastructure.Client;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Watchdog;
 using LPS.UI.Common.Options;
+using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.UI.Build.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -30,33 +31,46 @@ namespace LPS.UI.Common.Extensions
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                var loggerValidator = new LPSFileLoggerValidator();
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
-                FileLogger fileLogger;
                 if (lpsFileOptions == null)
                     lpsFileOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration").Get<LPSFileLoggerOptions>();
+                FileLogger fileLogger;
+                bool isDefaultConfigurationsApplied = false;
 
-                var validationResults = loggerValidator.Validate(lpsFileOptions);
-
-                if (!validationResults.IsValid)
+                if (lpsFileOptions == null)
                 {
-                    fileLogger = new FileLogger("lps-logs.log", LPSLoggingLevel.Verbos, LPSLoggingLevel.Information);
-                    fileLogger.Log("0000-0000-0000-0000", "Logger options are not valid, the default settings were applies", LPSLoggingLevel.Warning);
-                    validationResults.PrintValidationErrors();
+                    fileLogger = FileLogger.GetDefaultInstance();
+                    isDefaultConfigurationsApplied = true;
+                    fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSFileLoggerConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
                 }
                 else
                 {
-                    // Create an instance of your custom logger implementation
-                    fileLogger = new FileLogger(lpsFileOptions.LogFilePath, lpsFileOptions.LoggingLevel,
-                        lpsFileOptions.ConsoleLogingLevel, lpsFileOptions.EnableConsoleLogging,
-                        lpsFileOptions.DisableConsoleErrorLogging, lpsFileOptions.DisableFileLogging);
+                    var loggerValidator = new LPSFileLoggerValidator();
+                    var validationResults = loggerValidator.Validate(lpsFileOptions);
+                    if (!validationResults.IsValid)
+                    {
+                        fileLogger = FileLogger.GetDefaultInstance();
+                        isDefaultConfigurationsApplied = true;
+                        fileLogger.Log("0000-0000-0000-0000", "Logger options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
+                        validationResults.PrintValidationErrors();
+                    }
+                    else
+                    {
+                        // Create an instance of your custom logger implementation
+                        fileLogger = new FileLogger(lpsFileOptions.LogFilePath, lpsFileOptions.LoggingLevel.Value,
+                            lpsFileOptions.ConsoleLogingLevel.Value, lpsFileOptions.EnableConsoleLogging.Value,
+                            lpsFileOptions.DisableConsoleErrorLogging.Value, lpsFileOptions.DisableFileLogging.Value);
+                    }
                 }
 
-                // Print Logger Options
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                string jsonString = JsonSerializer.Serialize(fileLogger);
-                Console.WriteLine($"Logger Options: {jsonString}");
-                Console.ResetColor();
+                if (isDefaultConfigurationsApplied)
+                {
+                    // Print Logger Options
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    string jsonString = JsonSerializer.Serialize(fileLogger);
+                    Console.WriteLine($"Applied Logger Options: {jsonString}");
+                    Console.ResetColor();
+                }
 
                 // Register the custom logger instance as a singleton in the DI container
                 services.AddSingleton<ILPSLogger>(fileLogger);
@@ -65,29 +79,57 @@ namespace LPS.UI.Common.Extensions
             return hostBuilder;
         }
 
-        public static IHostBuilder ConfigureLPSWatchdog(this IHostBuilder hostBuilder, LPSWatchDogOptions watchdogOptions = null)
+        public static IHostBuilder ConfigureLPSWatchdog(this IHostBuilder hostBuilder, LPSWatchdogOptions watchdogOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
                 if (watchdogOptions == null)
-                    watchdogOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration").Get<LPSWatchDogOptions>();
+                    watchdogOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration").Get<LPSWatchdogOptions>();
+                LPSWatchdog watchdog;
+                using var serviceProvider = services.BuildServiceProvider();
+                var fileLogger = serviceProvider.GetRequiredService<ILPSLogger>();
+                bool isDefaultConfigurationsApplied = false;
+                if (watchdogOptions == null)
+                {
+                    watchdog = LPSWatchdog.GetDefaultInstance();
+                    isDefaultConfigurationsApplied = true;
+                    fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSWatchdogConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
+                }
+                else
+                {
+                    var lpsWatchdogValidator = new LPSWatchdogValidator();
+                    var validationResults = lpsWatchdogValidator.Validate(watchdogOptions);
+                    if (!validationResults.IsValid)
+                    {
+                        watchdog = LPSWatchdog.GetDefaultInstance();
+                        isDefaultConfigurationsApplied = true;
+                        fileLogger.Log("0000-0000-0000-0000", "Watchdog options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
+                        validationResults.PrintValidationErrors();
+                    }
+                    else
+                    {
+                        // Create an instance of your custom logger implementation
+                        watchdog = new LPSWatchdog(watchdogOptions.MaxMemoryMB.Value,
+                            watchdogOptions.MaxCPUPercentage.Value,
+                            watchdogOptions.CoolDownMemoryMB.Value,
+                            watchdogOptions.CoolDownCPUPercentage.Value,
+                            watchdogOptions.MaxConcurrentConnectionsCountPerHostName.Value,
+                            watchdogOptions.CoolDownConcurrentConnectionsCountPerHostName.Value,
+                            watchdogOptions.CoolDownRetryTimeInSeconds.Value,
+                            watchdogOptions.SuspensionMode.Value);
+                    }
+                }
 
-                // Create an instance of your custom logger implementation
-                var watchdog = new LPSWatchdog(watchdogOptions.MaxMemoryMB,
-                    watchdogOptions.MaxCPUPercentage,
-                    watchdogOptions.CoolDownMemoryMB,
-                    watchdogOptions.CoolDownCPUPercentage,
-                    watchdogOptions.MaxConnectionsCountPerHostName,
-                    watchdogOptions.CoolDownConnectionsCountPerHostName,
-                    watchdogOptions.CoolDownRetryTimeInSeconds,
-                    watchdogOptions.SuspensionMode);
+                if (isDefaultConfigurationsApplied)
+                {
+                    // Print Logger Options
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    string jsonString = JsonSerializer.Serialize(watchdog);
+                    Console.WriteLine($"Applied Watchdog Configuration: {jsonString}");
+                    Console.ResetColor();
+                }
 
-                // Print Logger Options
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                string jsonString = JsonSerializer.Serialize(watchdog);
-                Console.WriteLine($"Watchdog Configuration: {jsonString}");
-                Console.ResetColor();
                 // Register the custom logger instance as a singleton in the DI container
                 services.AddSingleton<ILPSWatchdog>(watchdog);
 
@@ -101,23 +143,49 @@ namespace LPS.UI.Common.Extensions
             {
                 // Read the custom logger configuration from the appsettings.json file or any other configuration source
                 if (lpsHttpClientOptions == null)
+                    lpsHttpClientOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration").Get<LPSHttpClientOptions>();
+
+                LPSHttpClientConfiguration lpsHttpClientConfiguration;
+                using var serviceProvider = services.BuildServiceProvider();
+                var fileLogger = serviceProvider.GetRequiredService<ILPSLogger>();
+                bool isDefaultConfigurationsApplied = false;
+                if (lpsHttpClientOptions == null)
                 {
-                    lpsHttpClientOptions = hostContext.Configuration
-                    .GetSection("LPSAppSettings:LPSHttpClientConfiguration")
-                    .Get<LPSHttpClientOptions>();
+                    lpsHttpClientConfiguration = LPSHttpClientConfiguration.GetDefaultInstance();
+                    isDefaultConfigurationsApplied = true;
+                    fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSHttpClientConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
+                }
+                else
+                {
+                    LPSHttpClientValidator httpClientValidator = new LPSHttpClientValidator();
+                    var validationResults = httpClientValidator.Validate(lpsHttpClientOptions);
+
+                    if (!validationResults.IsValid)
+                    {
+                        lpsHttpClientConfiguration = LPSHttpClientConfiguration.GetDefaultInstance();
+                        isDefaultConfigurationsApplied = true;
+                        fileLogger.Log("0000-0000-0000-0000", "Http Client Options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
+                        validationResults.PrintValidationErrors();
+
+                    }
+                    else
+                    {
+                        // Create an instance of your custom logger implementation
+                        lpsHttpClientConfiguration = new LPSHttpClientConfiguration(TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionLifeTimeInSeconds.Value),
+                           TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionIdleTimeoutInSeconds.Value), lpsHttpClientOptions.MaxConnectionsPerServer.Value,
+                            TimeSpan.FromSeconds(lpsHttpClientOptions.ClientTimeoutInSeconds.Value));
+                    }
                 }
 
-                // Create an instance of your custom logger implementation
-                var lpsHttpClientConfiguration = new LPSHttpClientConfiguration(TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionLifeTimeInSeconds),
-                   TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionIdleTimeoutInSeconds), lpsHttpClientOptions.MaxConnectionsPerServer,
-                    TimeSpan.FromSeconds(lpsHttpClientOptions.ClientTimeoutInSeconds));
 
-                // Print Logger Options
-                Console.ForegroundColor = ConsoleColor.Magenta;
-                string jsonString = JsonSerializer.Serialize(lpsHttpClientConfiguration);
-                Console.WriteLine($"LPS Http Client Configuration: {jsonString}");
-                Console.ResetColor();
-
+                if (isDefaultConfigurationsApplied)
+                {
+                    // Print Logger Options
+                    Console.ForegroundColor = ConsoleColor.Magenta;
+                    string jsonString = JsonSerializer.Serialize(lpsHttpClientConfiguration);
+                    Console.WriteLine($"Applied LPS Http Client Configuration: {jsonString}");
+                    Console.ResetColor();
+                }
 
                 // Register the custom logger instance as a singleton in the DI container
                 services.AddSingleton<ILPSClientConfiguration<LPSHttpRequestProfile>>(lpsHttpClientConfiguration);

@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FluentValidation;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.LPSValidators
 {
     internal class LPSTestPlanValidator : LPSCommandBaseValidator<LPSTestPlan.SetupCommand, LPSTestPlan>
     {

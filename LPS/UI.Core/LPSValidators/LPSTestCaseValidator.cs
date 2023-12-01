@@ -8,7 +8,7 @@ using LPS.UI.Common;
 using System.Threading;
 using Newtonsoft.Json.Linq;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.LPSValidators
 {
     internal class LPSTestCaseValidator : LPSCommandBaseValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
     {
@@ -57,14 +57,14 @@ namespace LPS.UI.Core.UI.Build.Services
             .When(command => command.Mode != LPSHttpTestCase.IterationMode.DCB && command.Mode != LPSHttpTestCase.IterationMode.CRB && command.Mode != LPSHttpTestCase.IterationMode.CB, ApplyConditionTo.CurrentValidator)
             .LessThan(command => command.RequestCount)
             .WithMessage("Batch Size Must Be Less Than The Request Count")
-            .When(command => command.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);           
+            .When(command => command.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);
 
             RuleFor(command => command.CoolDownTime)
             .NotNull()
             .GreaterThan(0)
             .When(command => command.Mode == LPSHttpTestCase.IterationMode.DCB || command.Mode == LPSHttpTestCase.IterationMode.CRB || command.Mode == LPSHttpTestCase.IterationMode.CB)
             .Null()
-            .When(command => command.Mode != LPSHttpTestCase.IterationMode.DCB && command.Mode!= LPSHttpTestCase.IterationMode.CRB && command.Mode != LPSHttpTestCase.IterationMode.CB, ApplyConditionTo.CurrentValidator)
+            .When(command => command.Mode != LPSHttpTestCase.IterationMode.DCB && command.Mode != LPSHttpTestCase.IterationMode.CRB && command.Mode != LPSHttpTestCase.IterationMode.CB, ApplyConditionTo.CurrentValidator)
             .LessThan(command => command.Duration)
             .WithMessage("Cool Down Time Must Be Less Than The Duration")
             .When(command => command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
