@@ -43,7 +43,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 if (!_validator.Validate(nameof(Command.Httpversion)))
                 {
-                    Console.WriteLine("Enter a valid http version, currently we only supports 1.0 and 1.1");
+                    Console.WriteLine("Enter a valid http version, currently we only supports 1.0, 1.1, 1.2 and 2.0");
                     _command.Httpversion = ChallengeService.Challenge("-httpversion");
                     continue;
                 }

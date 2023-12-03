@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -36,6 +37,7 @@ namespace LPS.Infrastructure.Client
                 UseCookies = true,
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 5,
+                EnableMultipleHttp2Connections = true,
             };
             httpClient = new HttpClient(socketsHandler);
             httpClient.Timeout = ((ILPSHttpClientConfiguration<LPSHttpRequestProfile>)config).Timeout;

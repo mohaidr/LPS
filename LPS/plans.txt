@@ -1,13 +1,14 @@
 ======== Urgent List ========
 
-Command to configure file logging options
-Command to configure watchdog
-Command to configure httpclient
+
 Gather the logs of each request and its associated response in one log entry
 Implement a new watchdog option which is responsetime in MS
 correctly calculate the time taken to start and complete a request
 Provide Statistics
 Put all test plans in one folder
+use prompt plus
+http 2 
+use fluent validation for the domain
 
 ======== To Do List ========
 //ToDo: Implement CleanUp Cookies
@@ -64,5 +65,7 @@ Implement RunInParallel
 Handle Response Payload As Bytes and read it as soon as it arrives
 download embedded resources
 Resource Usage Tracker
-
+Command to configure file logging options
+Command to configure watchdog
+Command to configure httpclient
 

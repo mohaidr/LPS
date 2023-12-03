@@ -66,6 +66,15 @@ namespace LPS
 
         private static void CreateDefaultAppSettings(string filePath)
         {
+            // Get the directory path
+            string directoryPath = Path.GetDirectoryName(filePath);
+
+            // Check if the directory exists; if not, create it
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+
             // You can customize this method to create the default settings
             // For example, you can create a basic JSON structure with default values
             var defaultSettings = new

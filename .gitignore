@@ -6,3 +6,7 @@
 netcoreapp3.1
 net6.0
 obj
+/LPS.Domain/bin/Debug/net8.0
+/LPS.Infrastructure/bin/Debug/net8.0
+/LPS.UnitTest/bin/Debug/net8.0
+/LPS/bin/Debug/net8.0

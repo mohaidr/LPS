@@ -44,9 +44,9 @@ namespace LPS.Domain
                     command.IsValid = false;
                 }
 
-                if (command.Httpversion != "1.0" && command.Httpversion != "1.1")
+                if (command.Httpversion != "1.0" && command.Httpversion != "1.1" && command.Httpversion != "1.2" && command.Httpversion != "2.0")
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "invalid http version, 1.0 and 1.1 are supported versions", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "invalid http version, 1.0, 1.1, 1.2 and 2.0 are the supported http versions", LPSLoggingLevel.Warning);
                     command.IsValid = false;
                 }
                 

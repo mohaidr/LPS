@@ -19,7 +19,7 @@ namespace LPS.Domain
         {
             public SetupCommand()
             {
-                Httpversion = "1.1";
+                Httpversion = "2.0";
                 DownloadHtmlEmbeddedResources= false;
                 SaveResponse= false;
                 HttpHeaders = new Dictionary<string, string>();

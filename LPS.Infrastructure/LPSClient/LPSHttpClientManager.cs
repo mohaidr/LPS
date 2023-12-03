@@ -56,7 +56,6 @@ namespace LPS.Infrastructure.Client
 
         public ILPSClientService<LPSHttpRequestProfile> DequeueClient(ILPSClientConfiguration<LPSHttpRequestProfile> config, bool byPassQueueIfEmpty )
         {
-            var stopWatch = new Stopwatch();
             if (_clientsQueue.Count > 0)
             {
                 var client = _clientsQueue.Dequeue();
