@@ -92,7 +92,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time to cooldown during the test") { IsRequired = false, };
             public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", "The number of requests to be sent in a batch") { IsRequired = false, };
             public static Option<string> HttpMethodOption { get; } = new Option<string>("--method", "HTTP method") { IsRequired = true };
-            public static Option<string> HttpversionOption { get; } = new Option<string>("--version", () => "1.1", "HTTP version") { IsRequired = false };
+            public static Option<string> HttpversionOption { get; } = new Option<string>("--version", () => "2.0", "HTTP version") { IsRequired = false };
             public static Option<string> UrlOption { get; } = new Option<string>("--url", "URL") { IsRequired = true };
             public static Option<bool> DownloadHtmlEmbeddedResources { get; } = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true to download the HTML embedded resources or false otherwise") { IsRequired = false };
             public static Option<bool> SaveResponse { get; } = new Option<bool>("--saveResponse", () => false, "Set to true to save the http response or false otherwise") { IsRequired = false };
