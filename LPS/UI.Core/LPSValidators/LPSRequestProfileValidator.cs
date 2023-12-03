@@ -20,8 +20,8 @@ namespace LPS.UI.Core.LPSValidators
         public LPSRequestProfileValidator(LPSHttpRequestProfile.SetupCommand command)
         {
             _command = command;
-            RuleFor(command => command.Httpversion).Must(version => version == "1.0" || version == "1.1" || version== "1.2" || version == "2.0")
-                .WithMessage("invalid http version, 1.0, 1.1, 1.2 and 2.0 are the supported http versions");
+            RuleFor(command => command.Httpversion).Must(version => version == "1.0" || version == "1.1"|| version == "2.0")
+                .WithMessage("invalid http version, 1.0, 1.1 and 2.0 are the supported http versions");
             RuleFor(command => command.HttpMethod).Must(httpMethod => _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
                 .WithMessage("Invalid Http Method");
             RuleFor(command => command.URL).Must(url =>

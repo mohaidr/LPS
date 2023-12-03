@@ -39,7 +39,10 @@ namespace LPS.Infrastructure.Client
                 MaxAutomaticRedirections = 5,
                 EnableMultipleHttp2Connections = true,
             };
-            httpClient = new HttpClient(socketsHandler);
+            httpClient = new HttpClient(socketsHandler)
+            { 
+                DefaultRequestVersion = HttpVersion.Version20
+            };
             httpClient.Timeout = ((ILPSHttpClientConfiguration<LPSHttpRequestProfile>)config).Timeout;
             Id = Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
@@ -55,9 +58,7 @@ namespace LPS.Infrastructure.Client
                 httpRequestMessage.Method = new HttpMethod(lpsHttpRequestProfile.HttpMethod);
 
                 bool supportsContent = (lpsHttpRequestProfile.HttpMethod.ToLower() == "post" || lpsHttpRequestProfile.HttpMethod.ToLower() == "put" || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch");
-                string major = lpsHttpRequestProfile.Httpversion.Split('.')[0];
-                string minor = lpsHttpRequestProfile.Httpversion.Split('.')[1];
-                httpRequestMessage.Version = new Version(int.Parse(major), int.Parse(minor));
+                httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.Httpversion);
                 httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload) : null;
 
 
@@ -101,13 +102,18 @@ namespace LPS.Infrastructure.Client
                 {
                     Directory.CreateDirectory(directoryName);
                 }
-                string fileName = $"{directoryName}/{Id}.{requestNumber}.{lpsHttpRequestProfile.Id}{fileExtension}";
+                string invalidChars = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+
+                // Replace invalid characters in the URL with an underscore
+                string sanitizedUrl = string.Join("-", lpsHttpRequestProfile.URL.Replace("https://", "").Split(invalidChars.ToCharArray()));
+
+                string fileName = $"{directoryName}/{Id}.{requestNumber}.{sanitizedUrl}.{lpsHttpRequestProfile.Id}";
 
                 using (Stream contentStream = await response.Content.ReadAsStreamAsync())
                 {
                     if (lpsHttpRequestProfile.SaveResponse)
                     {
-                        using (FileStream fileStream = File.Create(fileName))
+                        using (FileStream fileStream = File.Create(string.Concat(fileName,"-http", response.Version,fileExtension)))
                         {
 
                             byte[] buffer = new byte[64000]; // Adjust the buffer size as needed
@@ -169,6 +175,20 @@ namespace LPS.Infrastructure.Client
             {
                 LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host);
             }
+        }
+
+        private static Version GetHttpVersion(string version)
+        {
+            if (version == "1.0")
+                return HttpVersion.Version10;
+            else
+                if (version == "1.1")
+                return HttpVersion.Version11;
+            else
+                if (version == "2.0")
+                return HttpVersion.Version20;
+
+            return HttpVersion.Version20;
         }
 
         private void SetContentHeader(HttpRequestMessage message, string name, string value)
