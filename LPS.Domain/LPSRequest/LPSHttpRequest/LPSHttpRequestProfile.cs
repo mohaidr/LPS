@@ -15,11 +15,11 @@ namespace LPS.Domain
     public partial class LPSHttpRequestProfile :LPSRequestProfile, IBusinessEntity, ICloneable
     {
 
-        private ILPSClientService<LPSHttpRequestProfile> _httpClientService;
+        private ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService;
         private LPSHttpRequestProfile()
         {
         }
-
+        ProtectedAccessLPSTestCaseExecuteCommand _protectedCommand;
         private LPSHttpRequestProfile(ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
@@ -28,6 +28,7 @@ namespace LPS.Domain
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
+            _protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
         }
 
         public LPSHttpRequestProfile(LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger,
@@ -38,8 +39,12 @@ namespace LPS.Domain
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
+            _protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
             this.Setup(command);
         }
+
+        public int LastSequenceId { get; set; }
+
         public string HttpMethod { get; private set; }
 
         public string URL { get; private set; }

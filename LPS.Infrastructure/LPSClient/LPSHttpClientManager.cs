@@ -13,19 +13,19 @@ using System.Threading.Tasks;
 namespace LPS.Infrastructure.Client
 {
     //Refactor to queue manager if more queue functionalities are needed
-    public class LPSHttpClientManager : ILPSHttpClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>>
+    public class LPSHttpClientManager : ILPSHttpClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>
     {
         ILPSLogger _logger;
-        Queue<ILPSClientService<LPSHttpRequestProfile>> _clientsQueue;
+        Queue<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _clientsQueue;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         public LPSHttpClientManager(ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _clientsQueue = new Queue<ILPSClientService<LPSHttpRequestProfile>>();
+            _clientsQueue = new Queue<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>();
         }
 
-        public ILPSClientService<LPSHttpRequestProfile> CreateInstance(ILPSClientConfiguration<LPSHttpRequestProfile> config)
+        public ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> CreateInstance(ILPSClientConfiguration<LPSHttpRequestProfile> config)
         {
             var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created", LPSLoggingLevel.Information);
@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.Client
             _logger.Log( _runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Information);
         }
 
-        public ILPSClientService<LPSHttpRequestProfile> DequeueClient()
+        public ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> DequeueClient()
         {
             if (_clientsQueue.Count > 0)
             {
@@ -54,7 +54,7 @@ namespace LPS.Infrastructure.Client
             }
         }
 
-        public ILPSClientService<LPSHttpRequestProfile> DequeueClient(ILPSClientConfiguration<LPSHttpRequestProfile> config, bool byPassQueueIfEmpty )
+        public ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> DequeueClient(ILPSClientConfiguration<LPSHttpRequestProfile> config, bool byPassQueueIfEmpty )
         {
             if (_clientsQueue.Count > 0)
             {

@@ -9,13 +9,13 @@ namespace LPS.UI.Core
     internal class LPSManager
     {
         private ILPSLogger _logger;
-        ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> _httpClientManager;
+        ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequestProfile> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
         internal LPSManager(ILPSLogger logger,
-                ILPSClientManager<LPSHttpRequestProfile,
-                ILPSClientService<LPSHttpRequestProfile>> httpClientManager,
+                ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse,
+                ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
                 ILPSClientConfiguration<LPSHttpRequestProfile> config,
                 ILPSWatchdog wtahcdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider)

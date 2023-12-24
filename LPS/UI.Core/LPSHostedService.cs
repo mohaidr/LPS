@@ -22,14 +22,14 @@ namespace LPS.UI.Core
     {
         ILPSLogger _logger;
         ILPSClientConfiguration<LPSHttpRequestProfile> _config;
-        ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> _httpClientManager;
+        ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _httpClientManager;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
         LPSAppSettingsWritableOptions _appSettings;
         string[] _args;
         public LPSHostedService(ILPSLogger logger,
             ILPSClientConfiguration<LPSHttpRequestProfile> config,
-            ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> httpClientManager,
+            ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider, 
             dynamic cmdArgs, LPSAppSettingsWritableOptions appSettings)

@@ -1,17 +1,16 @@
 ======== Urgent List ========
 
-
-Gather the logs of each request and its associated response in one log entry
-Implement a new watchdog option which is responsetime in MS
 correctly calculate the time taken to start and complete a request
 Provide Statistics
+use fluent validation for the domain
+
+add header validation to http 2 requests and possibly refactor the http client service
 Put all test plans in one folder
 use prompt plus
-http 2 
-use fluent validation for the domain
 
 ======== To Do List ========
 //ToDo: Implement CleanUp Cookies
+Gather the logs of each request and its associated response in one log file // this requires a logger manager to create a logger each time a case is executed
 
 Review the desgin relationships
 support for http2

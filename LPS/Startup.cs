@@ -46,8 +46,8 @@ namespace LPS
                     services.ConfigureWritable<LPSHttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.AddSingleton<LPSAppSettingsWritableOptions>();
                     services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
-                    services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>>, LPSHttpClientManager>();
-                    services.AddSingleton<ILPSClientService<LPSHttpRequestProfile>, LPSHttpClientService>();
+                    services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>, LPSHttpClientManager>();
+                    services.AddSingleton<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>, LPSHttpClientService>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                     if (hostContext.HostingEnvironment.IsProduction())
                     {

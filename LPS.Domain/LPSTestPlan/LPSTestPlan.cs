@@ -14,14 +14,14 @@ namespace LPS.Domain
 
         }
 
-        ILPSClientManager<LPSHttpRequestProfile,
-        ILPSClientService<LPSHttpRequestProfile>> _lpsClientManager;
+        ILPSClientManager<LPSHttpRequestProfile,LPSHttpResponse,
+        ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _lpsClientManager;
         ILPSClientConfiguration<LPSHttpRequestProfile> _lpsClientConfig;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
 
-        public LPSTestPlan(SetupCommand command, ILPSClientManager<LPSHttpRequestProfile,
-            ILPSClientService<LPSHttpRequestProfile>> lpsClientManager,
+        public LPSTestPlan(SetupCommand command, ILPSClientManager<LPSHttpRequestProfile,LPSHttpResponse,
+            ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> lpsClientManager,
             ILPSClientConfiguration<LPSHttpRequestProfile> lpsClientConfig, ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)

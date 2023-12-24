@@ -50,7 +50,7 @@ namespace LPS.Domain
 
                 for (int i = 0; i < this.NumberOfClients && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i++)
                 {
-                    ILPSClientService<LPSHttpRequestProfile> httpClientService = null;
+                    ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService = null;
                     if (!this.DelayClientCreationUntilIsNeeded.Value)
                     {
                         httpClientService = _lpsClientManager.DequeueClient();
@@ -68,7 +68,7 @@ namespace LPS.Domain
                 }
 
                 #region Local method to loop through the plan test cases and execute them async or sequentially 
-                async Task ExecCaseAsync(ILPSClientService<LPSHttpRequestProfile> httpClientService) // a race condition may happen here and causes the wrong httpClient to be captured if the httpClientService state changes before the "await" is called 
+                async Task ExecCaseAsync(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService) // a race condition may happen here and causes the wrong httpClient to be captured if the httpClientService state changes before the "await" is called 
                 {
                     foreach (var testCase in this.LPSTestCases)
                     {

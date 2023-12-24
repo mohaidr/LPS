@@ -19,7 +19,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         LPSTestPlan.SetupCommand _planSetupCommand;
         private string[] _args;
         ILPSLogger _logger;
-        ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> _httpClientManager;
+        ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequestProfile> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
@@ -27,7 +27,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         internal LPSRunCLICommand(Command rootCLICommandLine,
             LPSTestPlan.SetupCommand planSetupCommand,
             ILPSLogger logger,
-            ILPSClientManager<LPSHttpRequestProfile, ILPSClientService<LPSHttpRequestProfile>> httpClientManager,
+            ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
             ILPSClientConfiguration<LPSHttpRequestProfile> config,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILPSWatchdog watchdog,

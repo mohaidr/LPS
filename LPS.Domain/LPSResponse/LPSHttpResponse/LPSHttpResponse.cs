@@ -34,9 +34,10 @@ namespace LPS.Domain
             this.Setup(command);
         }
 
-        public MimeType MIMEType { get; private set; }
+        public MimeType ContentType { get; private set; }
         public string LocationToResponse { get; private set; }
         public HttpStatusCode StatusCode { get; private set; }
+        public string StatusMessage { get; private set; }
         public Dictionary<string, string> ResponseContentHeaders { get; private set; }
         public Dictionary<string, string> ResponseHeaders { get; private set; }
         public bool IsSuccessStatusCode { get; private set; }

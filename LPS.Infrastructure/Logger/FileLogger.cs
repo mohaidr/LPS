@@ -16,7 +16,8 @@ namespace LPS.Infrastructure.Logger
 {
     public class FileLogger : IFileLogger 
     {   
-        private FileLogger() { 
+        private FileLogger() 
+        { 
             this._logFilePath = "lps-logs.log";
             this._loggingLevel = LPSLoggingLevel.Verbos;
             this._consoleLoggingLevel = LPSLoggingLevel.Information;

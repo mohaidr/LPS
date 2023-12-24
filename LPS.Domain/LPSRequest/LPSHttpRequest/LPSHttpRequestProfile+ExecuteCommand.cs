@@ -33,9 +33,9 @@ namespace LPS.Domain
 
         public class ExecuteCommand : IAsyncCommand<LPSHttpRequestProfile> 
         {
-            private ILPSClientService<LPSHttpRequestProfile> _httpClientService { get; set; }
+            private ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService { get; set; }
 
-            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile> httpClientService, LPSHttpTestCase.ExecuteCommand caseExecCommand)
+            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService, LPSHttpTestCase.ExecuteCommand caseExecCommand)
             {
                 _httpClientService = httpClientService;
                 LPSTestCaseExecuteCommand = caseExecCommand;
@@ -50,14 +50,19 @@ namespace LPS.Domain
             }
         }
 
+
         async private Task ExecuteAsync(ExecuteCommand command, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             if (this.IsValid)
             {
                 string hostName = new Uri(this.URL).Host;
                 await _watchdog.Balance(hostName);
-                int requestNumber;
-                ProtectedAccessLPSTestCaseExecuteCommand protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
+                /* 
+                 * Clone the entity so we send a different entity to the http client service.
+                 * To avoid writing to the same instnace concurrently where we update the sequence number which is used by the http client service, so if the sequence number changes while used by the http client service, then a wrong sequence number will be used and may result in exceptions or unexpected behaviors
+                 * This logic may change in the future when we refactor the http client service
+                */
+                var clonedEntity = this.Clone();
                 try
                 {
                     if (this._httpClientService == null)
@@ -65,15 +70,16 @@ namespace LPS.Domain
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
                     
-                    requestNumber = protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
-                    var clientServiceTask = _httpClientService.SendAsync(this, requestNumber.ToString(), cancellationTokenWrapper);
-                    await clientServiceTask;
+                    int sequenceNumber = _protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
+                    ((LPSHttpRequestProfile)clonedEntity).LastSequenceId = sequenceNumber;
+                    this.LastSequenceId = sequenceNumber;
+                    await _httpClientService.SendAsync(((LPSHttpRequestProfile)clonedEntity), cancellationTokenWrapper);
                     this.HasFailed = false;
-                    protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSTestCaseExecuteCommand);
+                    _protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSTestCaseExecuteCommand);
                 }
-                catch (Exception ex)
+                catch
                 {
-                    protectedCommand.SafelyIncrementNumberOfFailedRequests(command.LPSTestCaseExecuteCommand);
+                    _protectedCommand.SafelyIncrementNumberOfFailedRequests(command.LPSTestCaseExecuteCommand);
                     this.HasFailed = true;
                 }
             }

@@ -23,13 +23,13 @@ namespace LPS.Domain
             }
             public LPSTestPlan.ExecuteCommand LPSTestPlanExecuteCommand { get; set; }
            
-            ILPSClientService<LPSHttpRequestProfile> _httpClientService;
+            ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService;
 
             protected ExecuteCommand()
             {
 
             }
-            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile> httpClientService, LPSTestPlan.ExecuteCommand planExecCommand)
+            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService, LPSTestPlan.ExecuteCommand planExecCommand)
             {
                 _httpClientService = httpClientService;
                 LPSTestPlanExecuteCommand = planExecCommand;
@@ -63,7 +63,6 @@ namespace LPS.Domain
                 protectedAccessTestPlanExecuteCommand.SafelyIncrementNumberofSentRequests(execCommand.LPSTestPlanExecuteCommand);
                 return Interlocked.Increment(ref execCommand._numberOfSentRequests);
             }
-
         }
         async private Task ExecuteAsync(ExecuteCommand command, ICancellationTokenWrapper cancellationTokenWrapper)
         {

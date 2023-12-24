@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common
 {
-    public interface ILPSClientService<TRequest> where TRequest : ILPSRequestEntity
+    public interface ILPSClientService<TRequest, TResponse> where TRequest : ILPSRequestEntity where TResponse : ILPSResponseEntity
     {
         public string Id { get; }
         public string GuidId { get; }
 
-        Task SendAsync(TRequest request, string requestId, ICancellationTokenWrapper cancellationTokenWrapper);
+        Task<TResponse> SendAsync(TRequest request, ICancellationTokenWrapper cancellationTokenWrapper);
     }
 }

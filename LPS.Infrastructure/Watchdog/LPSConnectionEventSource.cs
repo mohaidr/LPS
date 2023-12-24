@@ -21,7 +21,7 @@ public class LPSConnectionEventSource : EventSource
         semaphore.Wait();
         try
         {
-            activeConnectionCount = numberOfActiveConnections != -1 ? numberOfActiveConnections : ++activeConnectionCount;
+            activeConnectionCount = numberOfActiveConnections != -1 ? numberOfActiveConnections : Interlocked.Increment(ref activeConnectionCount);
             WriteEvent(1, hostName, activeConnectionCount);
         }
         finally
@@ -36,7 +36,7 @@ public class LPSConnectionEventSource : EventSource
         semaphore.Wait();
         try
         {
-            activeConnectionCount= numberOfActiveConnections != -1? numberOfActiveConnections : --activeConnectionCount;
+            activeConnectionCount= numberOfActiveConnections != -1? numberOfActiveConnections : Interlocked.Decrement(ref activeConnectionCount);
             WriteEvent(2, hostName, activeConnectionCount);
         }
         finally

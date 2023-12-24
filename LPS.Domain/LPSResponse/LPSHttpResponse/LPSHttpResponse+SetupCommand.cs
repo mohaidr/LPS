@@ -23,9 +23,10 @@ namespace LPS.Domain
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
 
-            public MimeType MIMEType { get; set; }
+            public MimeType ContentType { get; set; }
             public string LocationToResponse { get; set; }
             public HttpStatusCode StatusCode { get; set; }
+            public string StatusMessage { get; set; }
             public Dictionary<string, string> ResponseContentHeaders { get; set; }
             public Dictionary<string, string> ResponseHeaders { get; set; }
             public bool IsSuccessStatusCode { get; set; }
@@ -51,7 +52,7 @@ namespace LPS.Domain
             {
                 this.LocationToResponse = command.LocationToResponse;
                 this.StatusCode = command.StatusCode;
-                this.MIMEType= command.MIMEType;
+                this.ContentType= command.ContentType;
                 this.IsSuccessStatusCode= command.IsSuccessStatusCode;
                 this.ResponseHeaders = new Dictionary<string, string>();
                 this.ResponseContentHeaders = new Dictionary<string, string>();
