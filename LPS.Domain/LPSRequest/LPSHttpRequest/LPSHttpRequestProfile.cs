@@ -19,7 +19,7 @@ namespace LPS.Domain
         private LPSHttpRequestProfile()
         {
         }
-        ProtectedAccessLPSTestCaseExecuteCommand _protectedCommand;
+        ProtectedAccessLPSRunExecuteCommand _protectedCommand;
         private LPSHttpRequestProfile(ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
@@ -28,7 +28,7 @@ namespace LPS.Domain
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
-            _protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
+            _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
         }
 
         public LPSHttpRequestProfile(LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger,
@@ -39,7 +39,7 @@ namespace LPS.Domain
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
-            _protectedCommand = new ProtectedAccessLPSTestCaseExecuteCommand();
+            _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
             this.Setup(command);
         }
 

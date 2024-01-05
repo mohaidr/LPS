@@ -67,22 +67,22 @@ namespace LPS.Domain
                     }
                 }
 
-                #region Local method to loop through the plan test cases and execute them async or sequentially 
+                #region Local method to loop through the plan test runs and execute them async or sequentially 
                 async Task ExecCaseAsync(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService) // a race condition may happen here and causes the wrong httpClient to be captured if the httpClientService state changes before the "await" is called 
                 {
-                    foreach (var testCase in this.LPSTestCases)
+                    foreach (var run in this.LPSHttpRuns)
                     {
-                        string hostName = new Uri(testCase.LPSHttpRequestProfile.URL).Host;
+                        string hostName = new Uri(run.LPSHttpRequestProfile.URL).Host;
                         await _watchdog.Balance(hostName);
-                        LPSHttpTestCase.ExecuteCommand testCaseExecutecommand = new LPSHttpTestCase.ExecuteCommand(httpClientService, command);
-                        LPSHttpTestCase cloneToTestCase = (LPSHttpTestCase)testCase.Clone();
+                        LPSHttpRun.ExecuteCommand runExecutecommand = new LPSHttpRun.ExecuteCommand(httpClientService, command);
+                        LPSHttpRun cloneToRun = (LPSHttpRun)run.Clone();
                         if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                         {
-                            awaitableTasks.Add(testCaseExecutecommand.ExecuteAsync(cloneToTestCase, cancellationTokenWrapper));
+                            awaitableTasks.Add(runExecutecommand.ExecuteAsync(cloneToRun, cancellationTokenWrapper));
                         }
                         else
                         {
-                            await testCaseExecutecommand.ExecuteAsync(cloneToTestCase, cancellationTokenWrapper);
+                            await runExecutecommand.ExecuteAsync(cloneToRun, cancellationTokenWrapper);
                         }
                     }
                 }

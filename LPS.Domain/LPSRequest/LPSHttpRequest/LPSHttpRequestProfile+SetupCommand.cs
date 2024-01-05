@@ -20,11 +20,12 @@ namespace LPS.Domain
             public SetupCommand()
             {
                 Httpversion = "2.0";
-                DownloadHtmlEmbeddedResources= false;
-                SaveResponse= false;
+                DownloadHtmlEmbeddedResources = false;
+                SaveResponse = false;
                 HttpHeaders = new Dictionary<string, string>();
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
+            public Guid? Id { get; set; }
 
             public string HttpMethod { get; set; }
             public string URL { get; set; }
@@ -44,17 +45,15 @@ namespace LPS.Domain
                 entity?.Setup(this);
             }
 
-            internal LPSRequestProfile.SetupCommand LPSRequestProfileSetUpCommand;
-
         }
 
         protected void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setup command
-            command.LPSRequestProfileSetUpCommand = new LPSRequestProfile.SetupCommand() {};
-            command.LPSRequestProfileSetUpCommand.Execute(this);
+            var lPSRequestProfileSetUpCommand = new LPSRequestProfile.SetupCommand() { Id = command.Id };
+            base.Setup(lPSRequestProfileSetUpCommand);
             new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && command.LPSRequestProfileSetUpCommand.IsValid)
+            if (command.IsValid && lPSRequestProfileSetUpCommand.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
                 this.Httpversion = command.Httpversion;
@@ -80,7 +79,7 @@ namespace LPS.Domain
             LPSHttpRequestProfile cloneToEntity = new LPSHttpRequestProfile(_logger, _watchdog, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
-                cloneToEntity.Id= this.Id;
+                cloneToEntity.Id = this.Id;
                 cloneToEntity.HttpMethod = this.HttpMethod;
                 cloneToEntity.Httpversion = this.Httpversion;
                 cloneToEntity.URL = this.URL;

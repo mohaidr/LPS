@@ -56,9 +56,15 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _runCommand.SetHandler(async (testName) =>
             {
-                _planSetupCommand = LPSSerializationHelper.Deserialize<LPSTestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
-                await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider)
-                .Run(_planSetupCommand, cancellationToken);
+                try
+                {
+                    _planSetupCommand = LPSSerializationHelper.Deserialize<LPSTestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
+                    await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider)
+                    .Run(_planSetupCommand, cancellationToken);
+                }
+                catch (Exception ex) {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error);
+                }
             }, LPSCommandLineOptions.LPSRunCommandOptions.TestNameOption);
             _rootLpsCliCommand.Invoke(_args);
         }

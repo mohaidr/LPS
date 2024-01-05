@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using static LPS.Domain.LPSHttpTestCase;
+using static LPS.Domain.LPSHttpRun;
 using LPS.Domain.Common;
 
 namespace LPS.Domain

@@ -13,25 +13,31 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpTestCase
+    public partial class LPSHttpRun
     {
 
-        new public class Validator : IDomainValidator<LPSHttpTestCase, LPSHttpTestCase.SetupCommand>
+        new public class Validator : IDomainValidator<LPSHttpRun, LPSHttpRun.SetupCommand>
         {
 
             ILPSLogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            public Validator(LPSHttpTestCase entity, SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public Validator(LPSHttpRun entity, SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 Validate(entity, command);
             }
 
-            public void Validate(LPSHttpTestCase entity, SetupCommand command)
+            public void Validate(LPSHttpRun entity, SetupCommand command)
             {
                 command.IsValid = true;
                 Console.ForegroundColor = ConsoleColor.Yellow;
+
+                if (string.IsNullOrEmpty(command.Name) || !Regex.IsMatch(command.Name, @"^[\w.-]{2,}$"))
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Please Provide a Valid Name, The Name Should At least Be of 2 Charachters And Can Only Contains Letters, Numbers, ., _ and -", LPSLoggingLevel.Warning);
+                    command.IsValid = false;
+                }
 
                 if (command.Mode.HasValue)
                 {

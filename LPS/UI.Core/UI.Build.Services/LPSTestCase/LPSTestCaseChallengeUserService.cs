@@ -7,11 +7,11 @@ using System.Text;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class LPSTestCaseChallengeUserService : IChallengeUserService<LPSHttpTestCase.SetupCommand, LPSHttpTestCase>
+    internal class LPSRunChallengeUserService : IChallengeUserService<LPSHttpRun.SetupCommand, LPSHttpRun>
     {
-        ILPSBaseValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> _validator;
+        ILPSBaseValidator<LPSHttpRun.SetupCommand, LPSHttpRun> _validator;
 
-        public LPSTestCaseChallengeUserService(bool skipOptionalFields, LPSHttpTestCase.SetupCommand command, ILPSBaseValidator<LPSHttpTestCase.SetupCommand, LPSHttpTestCase> validator)
+        public LPSRunChallengeUserService(bool skipOptionalFields, LPSHttpRun.SetupCommand command, ILPSBaseValidator<LPSHttpRun.SetupCommand, LPSHttpRun> validator)
         {
             _skipOptionalFields = skipOptionalFields;
             _command = command;
@@ -20,8 +20,8 @@ namespace LPS.UI.Core.UI.Build.Services
         public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
         private bool _skipOptionalFields;
 
-        LPSHttpTestCase.SetupCommand _command;
-        public LPSHttpTestCase.SetupCommand Command { get { return _command; } set { value = _command; } }
+        LPSHttpRun.SetupCommand _command;
+        public LPSHttpRun.SetupCommand Command { get { return _command; } set { value = _command; } }
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -32,8 +32,8 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
-                    Console.WriteLine("Give your test case a name, it should between 1 and 20 charachters");
-                    _command.Name = ChallengeService.Challenge("-testCaseName");
+                    Console.WriteLine("Name your Run, it should between 1 and 20 charachters");
+                    _command.Name = ChallengeService.Challenge("-requestName");
                     continue;
                 }
 
@@ -47,7 +47,7 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.WriteLine("\t- R - Test will complete when all the requests are completed or you press escape");
                     Console.WriteLine("\t- D - Test will complete once the duration expires or you press escape");
 
-                    if (Enum.TryParse(ChallengeService.Challenge("-iterationMode"), out LPSHttpTestCase.IterationMode mode))
+                    if (Enum.TryParse(ChallengeService.Challenge("-iterationMode"), out LPSHttpRun.IterationMode mode))
                     {
                         _command.Mode = mode;
                     }

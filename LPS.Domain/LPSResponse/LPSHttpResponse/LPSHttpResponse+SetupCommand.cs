@@ -22,6 +22,7 @@ namespace LPS.Domain
             {
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
+            public Guid? Id { get; set; }
 
             public MimeType ContentType { get; set; }
             public string LocationToResponse { get; set; }
@@ -33,22 +34,22 @@ namespace LPS.Domain
             public bool IsValid { get; set; }
             public Guid LPSHttpRequestProfileId { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
+            public TimeSpan ResponseTime { get; set; }
 
             public void Execute(LPSHttpResponse entity)
             {
                 entity?.Setup(this);
             }
-
-            internal LPSResponse.SetupCommand LPSResponseSetUpCommand;
+            public LPSHttpRequestProfile.SetupCommand LPSHttpRequestProfile { get; set; }
         }
 
         protected void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setup command
-            command.LPSResponseSetUpCommand = new LPSResponse.SetupCommand() {};
-            command.LPSResponseSetUpCommand.Execute(this);
+            var lPSResponseSetUpCommand = new LPSResponse.SetupCommand() { Id = command.Id };
+            base.Setup(lPSResponseSetUpCommand);
             new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && command.LPSResponseSetUpCommand.IsValid)
+            if (command.IsValid && lPSResponseSetUpCommand.IsValid)
             {
                 this.LocationToResponse = command.LocationToResponse;
                 this.StatusCode = command.StatusCode;
@@ -56,6 +57,9 @@ namespace LPS.Domain
                 this.IsSuccessStatusCode= command.IsSuccessStatusCode;
                 this.ResponseHeaders = new Dictionary<string, string>();
                 this.ResponseContentHeaders = new Dictionary<string, string>();
+                this.StatusMessage = command.StatusMessage;
+                this.ResponseTime = command.ResponseTime;
+              //  command.LPSHttpRequestProfile.Execute(this.LPSHttpRequestProfile);
                 if (command.ResponseHeaders != null)
                 {
                     foreach (var header in command.ResponseHeaders)
@@ -70,6 +74,10 @@ namespace LPS.Domain
                         this.ResponseContentHeaders.Add(header.Key, header.Value);
                     }
                 }
+               /* if (!command.LPSHttpRequestProfile.Id.HasValue)
+                { 
+                    
+                }*/
                 this.IsValid = true;
             }
         }

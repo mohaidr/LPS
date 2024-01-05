@@ -42,5 +42,6 @@ namespace LPS.Domain
         public Dictionary<string, string> ResponseHeaders { get; private set; }
         public bool IsSuccessStatusCode { get; private set; }
         public LPSHttpRequestProfile LPSHttpRequestProfile { get; private set; }
+        public TimeSpan ResponseTime { get; private set; }
     }
 }

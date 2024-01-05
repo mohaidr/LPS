@@ -29,6 +29,12 @@ namespace LPS.Domain
             public void Validate(LPSResponse entity, SetupCommand command)
             {
                 command.IsValid = true;
+                if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
+                {
+                  //  command.IsValid = false;
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Response: Entity Id Can't be Changed", LPSLoggingLevel.Error);
+                 //   throw new InvalidOperationException("LPS Response: Entity Id Can't be Changed");
+                }
                 //add validation logic if needed
             }
         }

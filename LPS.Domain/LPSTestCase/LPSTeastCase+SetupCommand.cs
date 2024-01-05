@@ -13,31 +13,33 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSTestCase
+    public partial class LPSRun
     {
-        public class SetupCommand : ICommand<LPSTestCase>
+        public class SetupCommand : ICommand<LPSRun>
         {
 
             public SetupCommand()
             {
             }
 
-            public void Execute(LPSTestCase entity)
+            public void Execute(LPSRun entity)
             {
                 entity?.Setup(this);
             }
+            public Guid? Id { get; set; }
 
             public bool IsValid { get; set; }
             public string Name { get; set; }
 
         }
 
-        private void Setup(SetupCommand command)
+        protected void Setup(SetupCommand command)
         {
             new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid)
             {
                 this.Name= command.Name;
+                this.IsValid= true;
             }
         }
     }

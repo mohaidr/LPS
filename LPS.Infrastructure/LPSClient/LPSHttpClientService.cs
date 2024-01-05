@@ -2,6 +2,7 @@
 using LPS.Domain;
 using LPS.Domain.Common;
 using LPS.Infrastructure.Logger;
+using LPS.Infrastructure.Metrics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,6 +26,8 @@ namespace LPS.Infrastructure.Client
         public string Id { get; private set; }
         public string GuidId { get; private set; }
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        LPSDurationMetric durationMetric = new LPSDurationMetric(null); 
+        LPSResponseMetric responseMetric = new LPSResponseMetric(null);
         public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequestProfile> config, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
@@ -92,8 +95,9 @@ namespace LPS.Infrastructure.Client
                         }
                     }
                 }
-                Stopwatch watch = Stopwatch.StartNew();
-                TimeSpan timeToGetFullResponse;
+                Stopwatch stopWatch = Stopwatch.StartNew();
+                TimeSpan responseTime;
+                stopWatch.Restart();
                 var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationTokenWrapper.CancellationToken);
                 string contentType = response?.Content?.Headers?.ContentType?.MediaType;
 
@@ -129,8 +133,8 @@ namespace LPS.Infrastructure.Client
                         }
                     }
                   
-                    timeToGetFullResponse = watch.Elapsed;
-                    watch.Stop();
+                    responseTime = stopWatch.Elapsed;
+                    stopWatch.Stop();
                 }
 
                 //TODO: This is no thing for now, will be used later when implementing DB and for the stats service
@@ -143,10 +147,13 @@ namespace LPS.Infrastructure.Client
                     ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ContentType = mimeType,
-                    LPSHttpRequestProfileId = lpsHttpRequestProfile.Id
+                    LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
+                    ResponseTime = responseTime,
                 };
-
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {timeToGetFullResponse.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {locationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                var responseEntity = new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
+                durationMetric.Update(responseEntity);
+                responseMetric.Update(responseEntity);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {locationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
 
                 if (contentType == "text/html" && response.IsSuccessStatusCode && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
                 {

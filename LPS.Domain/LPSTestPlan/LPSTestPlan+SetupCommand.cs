@@ -1,6 +1,7 @@
 ﻿using LPS.Domain.Common;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace LPS.Domain
@@ -13,7 +14,7 @@ namespace LPS.Domain
 
             public SetupCommand()
             {
-                LPSTestCases = new List<LPSHttpTestCase.SetupCommand>();
+                LPSHttpRuns = new List<LPSHttpRun.SetupCommand>();
                 DelayClientCreationUntilIsNeeded = false;
                 RunInParallel = false;
                 ValidationErrors = new Dictionary<string, List<string>>();
@@ -24,8 +25,9 @@ namespace LPS.Domain
                 entity?.Setup(this);
             }
 
-            public List<LPSHttpTestCase.SetupCommand> LPSTestCases { get; set; }
+            public List<LPSHttpRun.SetupCommand> LPSHttpRuns { get; set; }
 
+            public Guid? Id { get; set; }
             public string Name { get; set; }
             public int NumberOfClients { get; set; }
             public int RampUpPeriod { get; set; }
@@ -38,7 +40,6 @@ namespace LPS.Domain
         private void Setup(SetupCommand command)
         {
             new Validator(this, command, _logger, _runtimeOperationIdProvider);
-
             if (command.IsValid)
             {
                 this.Name = command.Name;
@@ -54,10 +55,19 @@ namespace LPS.Domain
                         _lpsClientManager.CreateAndQueueClient(_lpsClientConfig);
                     }
                 }
-                foreach (var lpsTestCaseCommand in command.LPSTestCases)
+                
+                this.LPSHttpRuns= LPSHttpRuns.Where(run => command.LPSHttpRuns.Select(run=> run.Id).Contains(run.Id)).ToList();
+                foreach (var lpsRunCommand in command.LPSHttpRuns)
                 {
-                    var lpsTestCase = new LPSHttpTestCase(lpsTestCaseCommand, this._logger, _watchdog, _runtimeOperationIdProvider);
-                    LPSTestCases.Add(lpsTestCase);
+                    if (!lpsRunCommand.Id.HasValue)
+                    {
+                        var lpsRun = new LPSHttpRun(lpsRunCommand, this._logger, _watchdog, _runtimeOperationIdProvider);
+                        LPSHttpRuns.Add(lpsRun);
+                    }
+                    else
+                    {
+                        lpsRunCommand.Execute(this.LPSHttpRuns.Single(run => run.Id == lpsRunCommand.Id));
+                    }
                 }
             }
         }  

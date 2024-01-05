@@ -22,6 +22,7 @@ namespace LPS.Domain
                 ValidationErrors = new Dictionary<string, List<string>>();
 
             }
+            public Guid? Id { get; set; }
             public bool IsValid { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
 

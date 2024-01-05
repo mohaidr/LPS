@@ -10,7 +10,7 @@ using System.CommandLine.Parsing;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
-    public class LPSTestCaseCommandBinder : BinderBase<LPSHttpTestCase.SetupCommand>
+    public class LPSRunCommandBinder : BinderBase<LPSHttpRun.SetupCommand>
     {
         private Option<string> _nameOption;
         private Option<int?> _requestCountOption;
@@ -24,11 +24,11 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string> _urlOption;
         private Option<IList<string>> _headerOption;
         private Option<string> _payloadOption;
-        Option<LPSHttpTestCase.IterationMode> _iterationModeOption;
+        Option<LPSHttpRun.IterationMode> _iterationModeOption;
 
-        public LPSTestCaseCommandBinder(Option<string> nameOption = null,
+        public LPSRunCommandBinder(Option<string> nameOption = null,
             Option<int?> requestCountOption = null,
-            Option<LPSHttpTestCase.IterationMode> iterationModeOption = null,
+            Option<LPSHttpRun.IterationMode> iterationModeOption = null,
             Option<int?> duratiion = null,
             Option<int?> coolDownTime = null,
             Option<int?> batchSizeOption = null,
@@ -40,7 +40,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<bool> downloadHtmlEmbeddedResourcesOption = null,
             Option<bool> saveResponseOption = null)
         {
-            _nameOption = nameOption ?? LPSCommandLineOptions.LPSAddCommandOptions.CaseNameOption;
+            _nameOption = nameOption ?? LPSCommandLineOptions.LPSAddCommandOptions.RunNameOption;
             _iterationModeOption = iterationModeOption ?? LPSCommandLineOptions.LPSAddCommandOptions.IterationModeOption;
             _duration = duratiion ?? LPSCommandLineOptions.LPSAddCommandOptions.Duratiion;
             _batchSize = batchSizeOption ?? LPSCommandLineOptions.LPSAddCommandOptions.BatchSize;
@@ -55,8 +55,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _saveResponseOption = saveResponseOption ?? LPSCommandLineOptions.LPSAddCommandOptions.SaveResponse;
         }
 
-        protected override LPSHttpTestCase.SetupCommand GetBoundValue(BindingContext bindingContext) =>
-            new LPSHttpTestCase.SetupCommand
+        protected override LPSHttpRun.SetupCommand GetBoundValue(BindingContext bindingContext) =>
+            new LPSHttpRun.SetupCommand
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
                 Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),

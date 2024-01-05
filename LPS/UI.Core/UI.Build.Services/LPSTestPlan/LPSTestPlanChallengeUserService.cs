@@ -44,7 +44,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 if (!_validator.Validate(nameof(Command.NumberOfClients)))
                 {
-                    Console.WriteLine("The number of clients to run your test cases. " +
+                    Console.WriteLine("The number of clients to execute your runs. " +
                         "The number should be a valid positive number greater than 0");
 
                     int numberOfClients;
@@ -85,7 +85,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 if (!_validator.Validate(nameof(Command.RunInParallel)))
                 {
-                    Console.WriteLine("Would you like to run your test cases in parallel");
+                    Console.WriteLine("Would you like to execute your runs in parallel");
 
                     switch (ChallengeService.Challenge("-runInParallel").ToUpper())
                     {
@@ -99,20 +99,20 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("=================== Add Http Test Case ===================");
+                Console.WriteLine("=================== Add Http Run ===================");
                 Console.ResetColor();
-                var lpsTestCaseCommand = new LPSHttpTestCase.SetupCommand();
-                LPSTestCaseValidator validator = new LPSTestCaseValidator(lpsTestCaseCommand);
-                LPSTestCaseChallengeUserService lpsTestCaseUserService = new LPSTestCaseChallengeUserService(SkipOptionalFields, lpsTestCaseCommand, validator);
-                lpsTestCaseUserService.Challenge();
+                var lpsRunCommand = new LPSHttpRun.SetupCommand();
+                LPSRunValidator validator = new LPSRunValidator(lpsRunCommand);
+                LPSRunChallengeUserService lpsRunUserService = new LPSRunChallengeUserService(SkipOptionalFields, lpsRunCommand, validator);
+                lpsRunUserService.Challenge();
 
-                Command.LPSTestCases.Add(lpsTestCaseCommand);
+                Command.LPSHttpRuns.Add(lpsRunCommand);
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("=================== Http Test Case Has Been Added ===================");
+                Console.WriteLine("=================== Http Run Has Been Added ===================");
                 Console.ResetColor();
 
-                Console.WriteLine("Enter \"add\" to add new test case to your test plan");
+                Console.WriteLine("Enter \"add\" to add a new http run to your test plan");
 
                 string action = Console.ReadLine().Trim().ToLower();
                 if (action == "add")

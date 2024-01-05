@@ -26,7 +26,7 @@ namespace LPS.Domain
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            LPSTestCases = new List<LPSHttpTestCase>();
+            LPSHttpRuns = new List<LPSHttpRun>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;
             _lpsClientManager = lpsClientManager;
@@ -37,7 +37,7 @@ namespace LPS.Domain
         }
 
         public Guid Id { get; protected set; }
-        public IList<LPSHttpTestCase> LPSTestCases { get; private set; }
+        public IList<LPSHttpRun> LPSHttpRuns { get; private set; }
         public string Name { set; private get; }
 
         public bool IsRedo { get; private set; }

@@ -4,10 +4,10 @@ using System.Threading;
 
 [EventSource(Name = "lps.active.connections")]
 public class LPSConnectionEventSource : EventSource
-{
-    private static readonly Lazy<LPSConnectionEventSource> lazyInstance = new Lazy<LPSConnectionEventSource>(() => new LPSConnectionEventSource());
+{    
     private static SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
+    private static readonly Lazy<LPSConnectionEventSource> lazyInstance = new Lazy<LPSConnectionEventSource>(() => new LPSConnectionEventSource());
     public static LPSConnectionEventSource Log => lazyInstance.Value;
 
     private LPSConnectionEventSource() { } // Private constructor to prevent external instantiation

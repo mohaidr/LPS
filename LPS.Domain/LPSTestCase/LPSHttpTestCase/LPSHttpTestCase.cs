@@ -12,7 +12,7 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
 
-    public partial class LPSHttpTestCase : LPSTestCase, IBusinessEntity, ICloneable
+    public partial class LPSHttpRun : LPSRun, IBusinessEntity, ICloneable
     {
 
 
@@ -31,12 +31,12 @@ namespace LPS.Domain
             D = 4
         }
 
-        private LPSHttpTestCase()
+        private LPSHttpRun()
         {
         }
 
         private ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService;
-        private LPSHttpTestCase(
+        private LPSHttpRun(
             ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider) 
@@ -47,7 +47,7 @@ namespace LPS.Domain
         }
 
 
-        public LPSHttpTestCase(SetupCommand command,
+        public LPSHttpRun(SetupCommand command,
             ILPSLogger logger,
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)

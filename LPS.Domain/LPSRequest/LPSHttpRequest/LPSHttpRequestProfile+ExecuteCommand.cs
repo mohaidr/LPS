@@ -15,17 +15,17 @@ namespace LPS.Domain
 
     public partial class LPSHttpRequestProfile
     {
-        private class ProtectedAccessLPSTestCaseExecuteCommand : LPSHttpTestCase.ExecuteCommand
+        private class ProtectedAccessLPSRunExecuteCommand : LPSHttpRun.ExecuteCommand
         {
-            public new int SafelyIncrementNumberofSentRequests(LPSHttpTestCase.ExecuteCommand command)
+            public new int SafelyIncrementNumberofSentRequests(LPSHttpRun.ExecuteCommand command)
             {
                 return base.SafelyIncrementNumberofSentRequests(command);
             }
-            public new int SafelyIncrementNumberOfFailedRequests(LPSHttpTestCase.ExecuteCommand command)
+            public new int SafelyIncrementNumberOfFailedRequests(LPSHttpRun.ExecuteCommand command)
             {
                 return base.SafelyIncrementNumberOfFailedRequests(command);
             }
-            public new int SafelyIncrementNumberOfSuccessfulRequests(LPSHttpTestCase.ExecuteCommand command)
+            public new int SafelyIncrementNumberOfSuccessfulRequests(LPSHttpRun.ExecuteCommand command)
             {
                 return base.SafelyIncrementNumberOfSuccessfulRequests(command);
             }
@@ -35,13 +35,13 @@ namespace LPS.Domain
         {
             private ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService { get; set; }
 
-            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService, LPSHttpTestCase.ExecuteCommand caseExecCommand)
+            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService, LPSHttpRun.ExecuteCommand caseExecCommand)
             {
                 _httpClientService = httpClientService;
-                LPSTestCaseExecuteCommand = caseExecCommand;
+                LPSRunExecuteCommand = caseExecCommand;
             }
 
-            public LPSHttpTestCase.ExecuteCommand LPSTestCaseExecuteCommand { get; set; }
+            public LPSHttpRun.ExecuteCommand LPSRunExecuteCommand { get; set; }
 
             async public Task ExecuteAsync(LPSHttpRequestProfile entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
@@ -70,16 +70,16 @@ namespace LPS.Domain
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
                     
-                    int sequenceNumber = _protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSTestCaseExecuteCommand);
+                    int sequenceNumber = _protectedCommand.SafelyIncrementNumberofSentRequests(command.LPSRunExecuteCommand);
                     ((LPSHttpRequestProfile)clonedEntity).LastSequenceId = sequenceNumber;
                     this.LastSequenceId = sequenceNumber;
                     await _httpClientService.SendAsync(((LPSHttpRequestProfile)clonedEntity), cancellationTokenWrapper);
                     this.HasFailed = false;
-                    _protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSTestCaseExecuteCommand);
+                    _protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.LPSRunExecuteCommand);
                 }
                 catch
                 {
-                    _protectedCommand.SafelyIncrementNumberOfFailedRequests(command.LPSTestCaseExecuteCommand);
+                    _protectedCommand.SafelyIncrementNumberOfFailedRequests(command.LPSRunExecuteCommand);
                     this.HasFailed = true;
                 }
             }

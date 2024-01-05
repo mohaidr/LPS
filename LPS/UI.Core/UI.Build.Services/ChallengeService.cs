@@ -35,8 +35,8 @@ namespace LPS.UI.Core.UI.Build.Services
                     Console.Write("Run In Parallel  (Y/N): ");
                     input = Console.ReadLine().Trim();
                     break;
-                case "-testCaseName":
-                    Console.Write("Test Case Name: ");
+                case "-requestName":
+                    Console.Write("Request Name: ");
                     input = Console.ReadLine().Trim();
                     break;
                 case "-iterationMode":

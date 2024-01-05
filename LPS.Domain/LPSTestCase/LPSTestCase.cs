@@ -12,17 +12,17 @@ using LPS.Domain.Common;
 namespace LPS.Domain
 {
     //This should be a Non-Entity Superclass
-    public partial class LPSTestCase : IValidEntity, IDomainEntity
+    public partial class LPSRun : IValidEntity, IDomainEntity
     {
         protected ILPSLogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected ILPSWatchdog _watchdog;
-        protected LPSTestCase()
+        protected LPSRun()
         {
             Id = Guid.NewGuid();
         }
 
-        public LPSTestCase(SetupCommand command, ILPSLogger logger, 
+        public LPSRun(SetupCommand command, ILPSLogger logger, 
             ILPSWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {

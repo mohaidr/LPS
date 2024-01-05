@@ -8,12 +8,18 @@ add header validation to http 2 requests and possibly refactor the http client s
 Put all test plans in one folder
 use prompt plus
 
+create, update, delete commands
+Json Repository
+move the infra logic to infra logic
+Integrated Metric pipeline
+When creating a repository, create IEntityPolicy so the repository applies then before an entity is saved or updated => for example, immutable field like an Id
+document how to use dot net trace
+
 ======== To Do List ========
 //ToDo: Implement CleanUp Cookies
 Gather the logs of each request and its associated response in one log file // this requires a logger manager to create a logger each time a case is executed
 
 Review the desgin relationships
-support for http2
 Cookie manager to support custom cookies and support enabling disabling cookies per domain. For now cookies are enabled by defaults for all clients and all domains
 redirects - Http Redirections for now is enabled for all domains and all clients
 
@@ -67,4 +73,6 @@ Resource Usage Tracker
 Command to configure file logging options
 Command to configure watchdog
 Command to configure httpclient
+support for http2
+
 

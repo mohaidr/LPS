@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain
 {
-    public partial class LPSHttpTestCase
+    public partial class LPSHttpRun
     {
-        public class ExecuteCommand : IAsyncCommand<LPSHttpTestCase>
+        public class ExecuteCommand : IAsyncCommand<LPSHttpRun>
         {
             private readonly ProtectedAccessTestPlanExecuteCommand protectedAccessTestPlanExecuteCommand = new ProtectedAccessTestPlanExecuteCommand();
             private class ProtectedAccessTestPlanExecuteCommand : LPSTestPlan.ExecuteCommand
@@ -35,7 +35,7 @@ namespace LPS.Domain
                 LPSTestPlanExecuteCommand = planExecCommand;
             }
 
-            async public Task ExecuteAsync(LPSHttpTestCase entity, ICancellationTokenWrapper cancellationTokenWrapper)
+            async public Task ExecuteAsync(LPSHttpRun entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
                 entity._httpClientService = this._httpClientService;
                 await entity.ExecuteAsync(this, cancellationTokenWrapper);
@@ -72,7 +72,7 @@ namespace LPS.Domain
                 #region Logging Request Details
                 string logEntry = string.Empty;
 
-                logEntry += "Test Case Details\n";
+                logEntry += "Run Details\n";
                 logEntry += $"Id: {this.Id}\n";
                 logEntry += $"Iteration Mode: {this.Mode}\n";
                 logEntry += $"Request Count: {this.RequestCount}\n";
@@ -207,7 +207,7 @@ namespace LPS.Domain
             while (!TaskCompletionSource.Task.IsCompleted && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
             {
                 await Task.Delay(10000, cancellationTokenWrapper.CancellationToken);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {_httpClientService.Id} - Case: {name} - Successfully Completed: {execCommand.NumberOfSuccessfullyCompletedRequests} - Failed To Complete: {execCommand.NumberOfFailedToCompleteRequests}", LPSLoggingLevel.Information, cancellationTokenWrapper);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {_httpClientService.Id} - Run: {name} - Successfully Completed: {execCommand.NumberOfSuccessfullyCompletedRequests} - Failed To Complete: {execCommand.NumberOfFailedToCompleteRequests}", LPSLoggingLevel.Information, cancellationTokenWrapper);
             }
         }
     }

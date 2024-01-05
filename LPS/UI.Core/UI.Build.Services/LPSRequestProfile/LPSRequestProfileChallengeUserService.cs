@@ -28,6 +28,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
             while (true)
             {
+
                 if (!_validator.Validate(nameof(Command.HttpMethod)))
                 {
                     Console.WriteLine("Enter a Valid Http Method");

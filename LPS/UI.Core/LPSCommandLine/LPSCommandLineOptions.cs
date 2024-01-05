@@ -14,7 +14,7 @@ using System.Threading;
 using System.Xml.Linq;
 using System.CommandLine.Parsing;
 using System.ComponentModel.DataAnnotations;
-using static LPS.Domain.LPSHttpTestCase;
+using static LPS.Domain.LPSHttpRun;
 using LPS.Domain.Common;
 using System.Reflection;
 using LPS.Infrastructure.Watchdog;
@@ -47,7 +47,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>("--numberOfClients", "Number of clients to execute the plan") { IsRequired = true, };
             public static Option<int> RampupPeriodOption { get; } = new Option<int>("--rampupPeriod", "Time in millisencds to wait before creating starting a new client") { IsRequired = false, };
             public static Option<bool> DelayClientCreation { get; } = new Option<bool>("--delayClientCreation", () => false, "Delay Client Creation Until is Needed") { IsRequired = false };
-            public static Option<bool> RunInParaller { get; } = new Option<bool>("--runInParallel", () => true, "Run Test Cases In Parallel") { IsRequired = false };
+            public static Option<bool> RunInParaller { get; } = new Option<bool>("--runInParallel", () => true, "Execute your runs In Parallel") { IsRequired = false };
         }
 
         public static class LPSAddCommandOptions
@@ -55,7 +55,7 @@ namespace LPS.UI.Core.LPSCommandLine
             static LPSAddCommandOptions()
             {
                 TestNameOption.AddAlias("-tn");
-                CaseNameOption.AddAlias("-cn");
+                RunNameOption.AddAlias("-rn");
                 RequestCountOption.AddAlias("-rc");
                 Duratiion.AddAlias("-d");
                 BatchSize.AddAlias("-bs");
@@ -69,7 +69,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
                 SaveResponse.AddAlias("-sr");
                 TestNameOption.AddAlias("--testname");
-                CaseNameOption.AddAlias("--casename");
+                RunNameOption.AddAlias("--runname");
                 RequestCountOption.AddAlias("--requestcount");
                 Duratiion.AddAlias("--Duration");
                 BatchSize.AddAlias("--batchsize");
@@ -82,14 +82,14 @@ namespace LPS.UI.Core.LPSCommandLine
                 IterationModeOption.AddAlias("--itermationmode");
                 DownloadHtmlEmbeddedResources.AddAlias("--downloadhtmlembeddedresources");
                 SaveResponse.AddAlias("--saveresponse");
-
             }
+
             public static Option<string> TestNameOption { get; } = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
-            public static Option<string> CaseNameOption { get; } = new Option<string>("--caseName", "The name of the test case") { IsRequired = true };
-            public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", "The Test Iteration Mode") { IsRequired = false, };
+            public static Option<string> RunNameOption { get; } = new Option<string>("--runName", "The name of the HTTP Run") { IsRequired = true };
+            public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", "It defines the HTTP Run iteration Mode") { IsRequired = false, };
             public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", "The number of requests") { IsRequired = false, };
-            public static Option<int?> Duratiion { get; } = new Option<int?>("--duration", "Test time in seconds") { IsRequired = false, };
-            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time to cooldown during the test") { IsRequired = false, };
+            public static Option<int?> Duratiion { get; } = new Option<int?>("--duration", "Time to run in seconds") { IsRequired = false, };
+            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time to cooldown during the execution of the HTTP Run") { IsRequired = false, };
             public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", "The number of requests to be sent in a batch") { IsRequired = false, };
             public static Option<string> HttpMethodOption { get; } = new Option<string>("--method", "HTTP method") { IsRequired = true };
             public static Option<string> HttpversionOption { get; } = new Option<string>("--version", () => "2.0", "HTTP version") { IsRequired = false };
