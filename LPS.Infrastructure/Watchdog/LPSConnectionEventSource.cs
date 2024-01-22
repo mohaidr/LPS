@@ -1,28 +1,34 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Threading;
 
 [EventSource(Name = "lps.active.connections")]
-public class LPSConnectionEventSource : EventSource
-{    
+internal class LPSConnectionEventSource : EventSource
+{
     private static SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
     private static readonly Lazy<LPSConnectionEventSource> lazyInstance = new Lazy<LPSConnectionEventSource>(() => new LPSConnectionEventSource());
-    public static LPSConnectionEventSource Log => lazyInstance.Value;
+    internal static LPSConnectionEventSource Log => lazyInstance.Value;
 
-    private LPSConnectionEventSource() { } // Private constructor to prevent external instantiation
+    private LPSConnectionEventSource()
+    {
+    } // Private constructor to prevent external instantiation
 
     // Track the active connection count
-    private static int activeConnectionCount = 0;
+    private static Dictionary<string, int> _activeConnectionsCount = new Dictionary<string, int>();
 
     [Event(1, Message = "Connection established: {0}, Active connection count: {1}")]
-    public void ConnectionEstablished(string hostName, int numberOfActiveConnections = -1)
+    internal void ConnectionEstablished(string hostName, int numberOfActiveConnections = -1)
     {
         semaphore.Wait();
+        if (!_activeConnectionsCount.ContainsKey(hostName))
+            _activeConnectionsCount[hostName] = 0;
         try
         {
-            activeConnectionCount = numberOfActiveConnections != -1 ? numberOfActiveConnections : Interlocked.Increment(ref activeConnectionCount);
-            WriteEvent(1, hostName, activeConnectionCount);
+            int currentCount = _activeConnectionsCount[hostName];
+            _activeConnectionsCount[hostName] = numberOfActiveConnections != -1 ? numberOfActiveConnections : Interlocked.Increment(ref currentCount);
+            WriteEvent(1, hostName, currentCount);
         }
         finally
         {
@@ -31,13 +37,16 @@ public class LPSConnectionEventSource : EventSource
     }
 
     [Event(2, Message = "Connection closed: {0}, Active connection count: {1}")]
-    public void ConnectionClosed(string hostName, int numberOfActiveConnections = -1)
+    internal void ConnectionClosed(string hostName, int numberOfActiveConnections = -1)
     {
         semaphore.Wait();
+        if (!_activeConnectionsCount.ContainsKey(hostName))
+            return;
         try
         {
-            activeConnectionCount= numberOfActiveConnections != -1? numberOfActiveConnections : Interlocked.Decrement(ref activeConnectionCount);
-            WriteEvent(2, hostName, activeConnectionCount);
+            int currentCount = _activeConnectionsCount[hostName];
+            _activeConnectionsCount[hostName] = numberOfActiveConnections != -1 ? numberOfActiveConnections : Interlocked.Decrement(ref currentCount);
+            WriteEvent(2, hostName, currentCount);
         }
         finally
         {

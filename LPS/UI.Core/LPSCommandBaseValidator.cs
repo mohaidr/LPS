@@ -1,14 +1,12 @@
 ﻿using FluentValidation;
 using FluentValidation.Results;
-using LPS.Domain;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
+using LPS.Infrastructure.Common;
 
 namespace LPS.UI.Core
 {
@@ -31,7 +29,7 @@ namespace LPS.UI.Core
         {
             _validationResults = Validate(Command);
             Command.IsValid = _validationResults.IsValid;
-            Command.ValidationErrors = ValidationErrors.DeepClone();
+            Command.ValidationErrors = ValidationErrors.DeepClone(); // DeepClone to prevent any modification on the validation errors one assigned to Command.ValidationErrors
             return !_validationResults.Errors.Any(error => error.PropertyName == property);
         }
 

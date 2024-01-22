@@ -1,8 +1,10 @@
 ﻿using HtmlAgilityPack;
 using LPS.Domain;
 using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
-using LPS.Infrastructure.Metrics;
+using LPS.Infrastructure.Monitoring.Metrics;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -25,11 +27,12 @@ namespace LPS.Infrastructure.Client
         private static int _clientNumber;
         public string Id { get; private set; }
         public string GuidId { get; private set; }
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        LPSDurationMetric durationMetric = new LPSDurationMetric(null); 
-        LPSResponseMetric responseMetric = new LPSResponseMetric(null);
-        public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequestProfile> config, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public ILPSClientConfiguration<LPSHttpRequestProfile> Config { get; }
+
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequestProfile> config, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            Config = config;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
@@ -50,15 +53,18 @@ namespace LPS.Infrastructure.Client
             Id = Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
+        private readonly Dictionary<string, IList<ILPSResponseMetric>> _responseMetricsCache = new Dictionary<string, IList<ILPSResponseMetric>>();
         public async Task<LPSHttpResponse> SendAsync(LPSHttpRequestProfile lpsHttpRequestProfile, ICancellationTokenWrapper cancellationTokenWrapper)
         {
+            if (!_responseMetricsCache.ContainsKey(lpsHttpRequestProfile.Id.ToString()))
+                _responseMetricsCache[lpsHttpRequestProfile.Id.ToString()]= LPSResponseMetricsDataSource.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == lpsHttpRequestProfile.Id);
+            
             int sequenceNumber = lpsHttpRequestProfile.LastSequenceId;
-
             LPSHttpResponse lpsHttpResponse;
             var requestUri = new Uri(lpsHttpRequestProfile.URL);
             try
             {
-                LPSConnectionEventSource.Log.ConnectionEstablished(requestUri.Host);
+                LPSConnectionEventSource.Log.ConnectionEstablished(requestUri.Host); // increase the number of active connections
                 var httpRequestMessage = new HttpRequestMessage();
                 httpRequestMessage.RequestUri = new Uri(lpsHttpRequestProfile.URL);
                 httpRequestMessage.Method = new HttpMethod(lpsHttpRequestProfile.HttpMethod);
@@ -97,8 +103,10 @@ namespace LPS.Infrastructure.Client
                 }
                 Stopwatch stopWatch = Stopwatch.StartNew();
                 TimeSpan responseTime;
+                // restart in case StartNew adds unnecessary milliseconds becuase of JITing. See this https://stackoverflow.com/questions/14019510/calculate-the-execution-time-of-a-method
                 stopWatch.Restart();
                 var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationTokenWrapper.CancellationToken);
+
                 string contentType = response?.Content?.Headers?.ContentType?.MediaType;
 
                 MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
@@ -132,17 +140,17 @@ namespace LPS.Infrastructure.Client
                             }
                         }
                     }
-                  
+
                     responseTime = stopWatch.Elapsed;
                     stopWatch.Stop();
                 }
 
-                //TODO: This is no thing for now, will be used later when implementing DB and for the stats service
+
                 LPSHttpResponse.SetupCommand lpsResponseCommand = new LPSHttpResponse.SetupCommand
                 {
                     StatusCode = response.StatusCode,
                     StatusMessage = response.ReasonPhrase,
-                    LocationToResponse = lpsHttpRequestProfile.SaveResponse ? locationToResponse: string.Empty,
+                    LocationToResponse = lpsHttpRequestProfile.SaveResponse ? locationToResponse : string.Empty,
                     IsSuccessStatusCode = response.IsSuccessStatusCode,
                     ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
@@ -151,8 +159,9 @@ namespace LPS.Infrastructure.Client
                     ResponseTime = responseTime,
                 };
                 var responseEntity = new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
-                durationMetric.Update(responseEntity);
-                responseMetric.Update(responseEntity);
+                responseEntity.LPSHttpRequestProfile = lpsHttpRequestProfile; // this will change when we implement IQueryable Repository where the domain can fetch, validate and update the property. We then pass the profile Id to through the command
+                await Task.WhenAll(_responseMetricsCache[lpsHttpRequestProfile.Id.ToString()].Select(metric => metric.UpdateAsync(responseEntity)));
+
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {locationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
 
                 if (contentType == "text/html" && response.IsSuccessStatusCode && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
@@ -167,6 +176,7 @@ namespace LPS.Infrastructure.Client
             }
             catch (Exception ex)
             {
+                // LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host); // decrease the number of active connections in case of exception
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, cancellationTokenWrapper);
@@ -175,10 +185,11 @@ namespace LPS.Infrastructure.Client
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
                 throw new Exception(ex.Message, ex.InnerException);
             }
-            finally
-            {
-                LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host);
+            finally {
+                LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host); // decrease the number of active connections
+
             }
+
             return lpsHttpResponse;
         }
 

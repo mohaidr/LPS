@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -42,6 +42,10 @@ namespace LPS.Domain
             public bool? SaveResponse { get; set; }
             public void Execute(LPSHttpRequestProfile entity)
             {
+                if (entity == null)
+                {
+                    throw new ArgumentNullException(nameof(entity));
+                }
                 entity?.Setup(this);
             }
 
@@ -76,27 +80,27 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            LPSHttpRequestProfile cloneToEntity = new LPSHttpRequestProfile(_logger, _watchdog, _runtimeOperationIdProvider);
+            LPSHttpRequestProfile clone = new LPSHttpRequestProfile(_logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
-                cloneToEntity.Id = this.Id;
-                cloneToEntity.HttpMethod = this.HttpMethod;
-                cloneToEntity.Httpversion = this.Httpversion;
-                cloneToEntity.URL = this.URL;
-                cloneToEntity.Payload = this.Payload;
-                cloneToEntity.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
-                cloneToEntity.SaveResponse = this.SaveResponse;
-                cloneToEntity.HttpHeaders = new Dictionary<string, string>();
+                clone.Id = this.Id;
+                clone.HttpMethod = this.HttpMethod;
+                clone.Httpversion = this.Httpversion;
+                clone.URL = this.URL;
+                clone.Payload = this.Payload;
+                clone.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
+                clone.SaveResponse = this.SaveResponse;
+                clone.HttpHeaders = new Dictionary<string, string>();
                 if (this.HttpHeaders != null)
                 {
                     foreach (var header in this.HttpHeaders)
                     {
-                        cloneToEntity.HttpHeaders.Add(header.Key, header.Value);
+                        clone.HttpHeaders.Add(header.Key, header.Value);
                     }
                 }
-                cloneToEntity.IsValid = true;
+                clone.IsValid = true;
             }
-            return cloneToEntity;
+            return clone;
         }
     }
 }

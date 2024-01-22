@@ -1,5 +1,5 @@
 ﻿using LPS.Domain;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;

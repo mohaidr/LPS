@@ -6,15 +6,17 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="bin\Debug\net6.0\**" />
+    <EmbeddedResource Remove="bin\Debug\net6.0\**" />
+    <None Remove="bin\Debug\net6.0\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Compile Remove="UIUtilities\HttpConcurrentTestUtility.cs" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="LPS.rar" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="bin\Debug\net6.0\config\lpsSettings.json" />
   </ItemGroup>
 
   <ItemGroup>
@@ -27,6 +29,10 @@
   <ItemGroup>
     <ProjectReference Include="..\LPS.Domain\LPS.Domain.csproj" />
     <ProjectReference Include="..\LPS.Infrastructure\LPS.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="bin\Debug\" />
   </ItemGroup>
 
 </Project>

@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -18,8 +18,8 @@ namespace LPS.Domain
         public new class Validator: IDomainValidator<LPSHttpRequestProfile, LPSHttpRequestProfile.SetupCommand>
         {
             ILPSLogger _logger;
-            IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            public Validator(LPSHttpRequestProfile entity, LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) 
+            ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            public Validator(LPSHttpRequestProfile entity, LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider) 
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -28,6 +28,12 @@ namespace LPS.Domain
 
             public void Validate(LPSHttpRequestProfile entity, SetupCommand command)
             {
+                if (entity == null)
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity", LPSLoggingLevel.Warning);
+                    throw new ArgumentNullException(nameof(entity));
+                }
+
                 if (command == null)
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);

@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.Text;
 using System.Threading;
 using System.Reflection.Emit;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Logging;
 using System.Linq;
 using System.Diagnostics;

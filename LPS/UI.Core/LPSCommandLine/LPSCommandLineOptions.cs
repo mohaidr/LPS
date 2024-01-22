@@ -15,7 +15,7 @@ using System.Xml.Linq;
 using System.CommandLine.Parsing;
 using System.ComponentModel.DataAnnotations;
 using static LPS.Domain.LPSHttpRun;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using System.Reflection;
 using LPS.Infrastructure.Watchdog;
 

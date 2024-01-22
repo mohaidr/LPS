@@ -1,22 +1,17 @@
-﻿using LPS.Domain.Common;
-using Microsoft.Extensions.Configuration;
+﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.IO;
 using LPS.UI.Core;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using LPS.Infrastructure.Logger;
 using LPS.Domain;
 using LPS.Infrastructure.Client;
-using System;
-using System.Threading;
 using LPS.UI.Common.Extensions;
-using System.Reflection;
 using LPS.UI.Common;
 using LPS.UI.Common.Options;
-using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Monitoring;
 
 namespace LPS
 {
@@ -45,10 +40,11 @@ namespace LPS
                     services.ConfigureWritable<LPSWatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<LPSHttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.AddSingleton<LPSAppSettingsWritableOptions>();
-                    services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
                     services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>, LPSHttpClientManager>();
                     services.AddSingleton<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>, LPSHttpClientService>();
-                    services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
+                    services.AddSingleton<ILPSRuntimeOperationIdProvider, LPSRuntimeOperationIdProvider>();
+                    services.AddSingleton<ILPSMonitoringEnroller, LPSMonitoringEnroller>();
+                    services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
                     if (hostContext.HostingEnvironment.IsProduction())
                     {
                         //add production dependencies

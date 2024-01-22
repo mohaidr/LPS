@@ -6,7 +6,7 @@ using System.CommandLine;
 using System.IO;
 using Newtonsoft.Json;
 using System.CommandLine.Binding;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.UI.Common;
 using System.Threading;
 using LPS.UI.Common.Options;
@@ -21,7 +21,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         LPSTestPlan.SetupCommand _command;
         ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _httpClientManager;
         ILPSClientConfiguration<LPSHttpRequestProfile> _config;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
         Command _lpsRootCliCommand;
         LPSCreateCLICommand _lpsCreateCliCommand;
@@ -31,15 +31,17 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         LPSWatchDogCLICommand _lpsSWatchdogCliCommand;
         LPSHttpClientCLICommand _lpsSHttpClientCliCommand;
         LPSAppSettingsWritableOptions _appSettings;
+        ILPSMonitoringEnroller _lpsMonitoringEnroller;
         public LPSRootCLICommand(ILPSLogger logger,
             ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse,
             ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
             ILPSClientConfiguration<LPSHttpRequestProfile> config,
             ILPSWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            string[] args,
+            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
             LPSAppSettingsWritableOptions appSettings,
-            LPSTestPlan.SetupCommand command)
+            LPSTestPlan.SetupCommand command,
+            ILPSMonitoringEnroller lpsMonitoringEnroller,
+            string[] args)
         {
             _logger = logger;
             _command = command;
@@ -49,6 +51,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _watchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _appSettings = appSettings;
+            _lpsMonitoringEnroller = lpsMonitoringEnroller;
             Setup();
         }
         public LPSTestPlan.SetupCommand Command { get { return _command; } }
@@ -58,7 +61,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _lpsRootCliCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
             _lpsCreateCliCommand = new LPSCreateCLICommand(_lpsRootCliCommand, _command, _args);
             _lpsAddCliCommand = new LPSAddCLICommand(_lpsRootCliCommand, _command, _args);
-            _lpsRunCliCommand = new LPSRunCLICommand(_lpsRootCliCommand, _command, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog, _args);
+            _lpsRunCliCommand = new LPSRunCLICommand(_lpsRootCliCommand, _command, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog, _lpsMonitoringEnroller, _args);
             _lpsLoggerCliCommand = new LPSLoggerCLICommand(_lpsRootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions, _args);
             _lpsSHttpClientCliCommand = new LPSHttpClientCLICommand(_lpsRootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions, _args);
             _lpsSWatchdogCliCommand = new LPSWatchDogCLICommand(_lpsRootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions, _args);

@@ -7,7 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -21,24 +21,22 @@ namespace LPS.Domain
         }
         ProtectedAccessLPSRunExecuteCommand _protectedCommand;
         private LPSHttpRequestProfile(ILPSLogger logger,
-            ILPSWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _watchdog = watchdog;
             _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
         }
 
-        public LPSHttpRequestProfile(LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger,
-            ILPSWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public LPSHttpRequestProfile(
+            LPSHttpRequestProfile.SetupCommand command, 
+            ILPSLogger logger,
+            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _watchdog = watchdog;
             _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
             this.Setup(command);
         }

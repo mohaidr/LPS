@@ -10,6 +10,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -38,6 +39,10 @@ namespace LPS.Domain
 
             public void Execute(LPSHttpResponse entity)
             {
+                if (entity == null)
+                {
+                    throw new ArgumentNullException(nameof(entity));
+                }
                 entity?.Setup(this);
             }
             public LPSHttpRequestProfile.SetupCommand LPSHttpRequestProfile { get; set; }
@@ -59,7 +64,6 @@ namespace LPS.Domain
                 this.ResponseContentHeaders = new Dictionary<string, string>();
                 this.StatusMessage = command.StatusMessage;
                 this.ResponseTime = command.ResponseTime;
-              //  command.LPSHttpRequestProfile.Execute(this.LPSHttpRequestProfile);
                 if (command.ResponseHeaders != null)
                 {
                     foreach (var header in command.ResponseHeaders)
@@ -74,10 +78,6 @@ namespace LPS.Domain
                         this.ResponseContentHeaders.Add(header.Key, header.Value);
                     }
                 }
-               /* if (!command.LPSHttpRequestProfile.Id.HasValue)
-                { 
-                    
-                }*/
                 this.IsValid = true;
             }
         }

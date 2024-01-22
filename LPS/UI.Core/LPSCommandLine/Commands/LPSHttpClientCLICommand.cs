@@ -1,4 +1,4 @@
-﻿using LPS.Domain.Common;
+﻿using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
@@ -24,8 +24,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private string[] _args;
         IWritableOptions<LPSHttpClientOptions> _clientOptions;
         ILPSLogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public LPSHttpClientCLICommand(Command rootLpsCliCommand, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<LPSHttpClientOptions> clientOptions, string[] args) 
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public LPSHttpClientCLICommand(Command rootLpsCliCommand, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<LPSHttpClientOptions> clientOptions, string[] args) 
         {
             _rootLpsCliCommand = rootLpsCliCommand;
             _args = args;

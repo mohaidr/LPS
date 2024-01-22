@@ -1,4 +1,4 @@
-﻿using LPS.Domain.Common;
+﻿using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
@@ -25,8 +25,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private string[] _args;
         IWritableOptions<LPSFileLoggerOptions> _loggerOptions;
         ILPSLogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public LPSLoggerCLICommand(Command rootLpsCliCommand, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<LPSFileLoggerOptions> loggerOptions, string[] args) 
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public LPSLoggerCLICommand(Command rootLpsCliCommand, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<LPSFileLoggerOptions> loggerOptions, string[] args) 
         {
             _rootLpsCliCommand = rootLpsCliCommand;
             _args = args;

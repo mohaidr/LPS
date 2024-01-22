@@ -15,7 +15,6 @@ namespace LPS.UI.Core.LPSValidators
     {
 
         LPSHttpRequestProfile.SetupCommand _command;
-        ValidationResult _validationResults;
         private string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
         public LPSRequestProfileValidator(LPSHttpRequestProfile.SetupCommand command)
         {

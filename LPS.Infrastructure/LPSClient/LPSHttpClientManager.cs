@@ -1,5 +1,5 @@
 ﻿using LPS.Domain;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using System;
 using System.Collections;
@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+
 namespace LPS.Infrastructure.Client
 {
     //Refactor to queue manager if more queue functionalities are needed
@@ -17,8 +18,8 @@ namespace LPS.Infrastructure.Client
     {
         ILPSLogger _logger;
         Queue<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _clientsQueue;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public LPSHttpClientManager(ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public LPSHttpClientManager(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;

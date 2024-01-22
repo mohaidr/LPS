@@ -1,10 +1,5 @@
 ﻿using System;
-using LPS.Domain;
-using Microsoft.Extensions.DependencyInjection;
-using LPS.Domain.Common;
 using System.Threading.Tasks;
-using LPS;
-using Microsoft.Extensions.Hosting;
 using System.Threading;
 
 namespace LPS

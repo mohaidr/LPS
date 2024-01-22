@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
 using LPS.UI.Common.Options;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Watchdog;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings

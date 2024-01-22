@@ -1,4 +1,4 @@
-﻿using LPS.Domain.Common;
+﻿using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Watchdog;
 using System;
 using System.Collections.Generic;

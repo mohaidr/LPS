@@ -1,4 +1,4 @@
-﻿using LPS.Domain.Common;
+﻿using LPS.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,7 +11,7 @@ namespace LPS.Domain
     {
         public class SetupCommand: ICommand<LPSTestPlan>, IValidCommand<LPSTestPlan>
         {
-
+            public IList<LPSHttpRun.SetupCommand> LPSHttpRuns { get; set; } // only used to return data
             public SetupCommand()
             {
                 LPSHttpRuns = new List<LPSHttpRun.SetupCommand>();
@@ -22,11 +22,12 @@ namespace LPS.Domain
 
             public void Execute(LPSTestPlan entity)
             {
+                if (entity == null)
+                {
+                    throw new ArgumentNullException(nameof(entity));
+                }
                 entity?.Setup(this);
             }
-
-            public List<LPSHttpRun.SetupCommand> LPSHttpRuns { get; set; }
-
             public Guid? Id { get; set; }
             public string Name { get; set; }
             public int NumberOfClients { get; set; }
@@ -48,27 +49,6 @@ namespace LPS.Domain
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
                 this.RunInParallel = command.RunInParallel;
-                if (!this.DelayClientCreationUntilIsNeeded.Value)
-                {
-                    for (int i = 0; i < this.NumberOfClients; i++)
-                    {
-                        _lpsClientManager.CreateAndQueueClient(_lpsClientConfig);
-                    }
-                }
-                
-                this.LPSHttpRuns= LPSHttpRuns.Where(run => command.LPSHttpRuns.Select(run=> run.Id).Contains(run.Id)).ToList();
-                foreach (var lpsRunCommand in command.LPSHttpRuns)
-                {
-                    if (!lpsRunCommand.Id.HasValue)
-                    {
-                        var lpsRun = new LPSHttpRun(lpsRunCommand, this._logger, _watchdog, _runtimeOperationIdProvider);
-                        LPSHttpRuns.Add(lpsRun);
-                    }
-                    else
-                    {
-                        lpsRunCommand.Execute(this.LPSHttpRuns.Single(run => run.Id == lpsRunCommand.Id));
-                    }
-                }
             }
         }  
     }

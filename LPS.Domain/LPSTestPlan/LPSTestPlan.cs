@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using LPS.Domain.Common;
+using System.Runtime.CompilerServices;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -14,31 +15,28 @@ namespace LPS.Domain
 
         }
 
-        ILPSClientManager<LPSHttpRequestProfile,LPSHttpResponse,
-        ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _lpsClientManager;
+        ILPSClientManager<LPSHttpRequestProfile,LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _lpsClientManager;
         ILPSClientConfiguration<LPSHttpRequestProfile> _lpsClientConfig;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
-
-        public LPSTestPlan(SetupCommand command, ILPSClientManager<LPSHttpRequestProfile,LPSHttpResponse,
-            ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> lpsClientManager,
-            ILPSClientConfiguration<LPSHttpRequestProfile> lpsClientConfig, ILPSLogger logger,
-            ILPSWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        ILPSMonitoringEnroller _lpsMonitoringEnroller;
+        public LPSTestPlan(SetupCommand command, 
+            ILPSLogger logger,
+            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             LPSHttpRuns = new List<LPSHttpRun>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;
-            _lpsClientManager = lpsClientManager;
-            _lpsClientConfig = lpsClientConfig;
-            _watchdog= watchdog;
             Id = Guid.NewGuid();
             this.Setup(command);
         }
 
         public Guid Id { get; protected set; }
-        public IList<LPSHttpRun> LPSHttpRuns { get; private set; }
-        public string Name { set; private get; }
+        //TODO: When implementing repositories and DB think about collections and how they should be treated
+        // Should this be mapped to the DB?
+        // Currently it is open for assignment from out side so the user can easly add too many entities and can add orphan entities
+        public ICollection<LPSHttpRun> LPSHttpRuns { get; set; }
+        public string Name { get; private set; }
 
         public bool IsRedo { get; private set; }
         public bool? DelayClientCreationUntilIsNeeded { get; private set; }

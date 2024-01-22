@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -28,6 +28,10 @@ namespace LPS.Domain
 
             public void Execute(LPSResponse entity)
             {
+                if (entity == null)
+                {
+                    throw new ArgumentNullException(nameof(entity));
+                }
                 entity?.Setup(this);
             }
         }

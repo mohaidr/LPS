@@ -101,7 +101,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 Console.ForegroundColor = ConsoleColor.Cyan;
                 Console.WriteLine("=================== Add Http Run ===================");
                 Console.ResetColor();
-                var lpsRunCommand = new LPSHttpRun.SetupCommand();
+                LPSHttpRun.SetupCommand lpsRunCommand = new LPSHttpRun.SetupCommand();
                 LPSRunValidator validator = new LPSRunValidator(lpsRunCommand);
                 LPSRunChallengeUserService lpsRunUserService = new LPSRunChallengeUserService(SkipOptionalFields, lpsRunCommand, validator);
                 lpsRunUserService.Challenge();

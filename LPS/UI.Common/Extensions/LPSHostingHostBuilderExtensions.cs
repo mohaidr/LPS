@@ -1,5 +1,5 @@
 ﻿using LPS.Domain;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Client;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Watchdog;

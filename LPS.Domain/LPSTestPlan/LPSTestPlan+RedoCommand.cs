@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using static LPS.Domain.LPSHttpRun;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -28,7 +28,7 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 this.IsRedo = true;
-                await this.ExecuteAsync(new ExecuteCommand(), cancellationTokenWrapper);
+                await this.ExecuteAsync(new ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _lpsClientManager, _lpsClientConfig, _lpsMonitoringEnroller), cancellationTokenWrapper);
             }
         }
     }

@@ -7,7 +7,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -15,7 +15,7 @@ namespace LPS.Domain
     public partial class LPSRequestProfile : IValidEntity, ILPSRequestEntity
     {
         protected ILPSLogger _logger;
-        protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        protected ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected ILPSWatchdog _watchdog;
         protected LPSRequestProfile()
         {
@@ -24,7 +24,7 @@ namespace LPS.Domain
 
         public LPSRequestProfile(LPSRequestProfile.SetupCommand command, ILPSLogger logger,
             ILPSWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             Id = Guid.NewGuid();
             _logger = logger;

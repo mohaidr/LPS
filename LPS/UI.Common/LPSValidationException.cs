@@ -17,9 +17,5 @@ namespace LPS.UI.Common
         public LPSValidationException(string message, Exception innerException) : base(message, innerException)
         {
         }
-
-        protected LPSValidationException(SerializationInfo info, StreamingContext context) : base(info, context)
-        {
-        }
     }
 }

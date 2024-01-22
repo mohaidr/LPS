@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Infrastructure.Watchdog
 {
@@ -23,6 +23,9 @@ namespace LPS.Infrastructure.Watchdog
         public double CoolDownCPUPercentage { get { return _coolDownCPUPercentage; } }
         public SuspensionMode SuspensionMode { get { return _suspensionMode; } }
         public int CoolDownRetryTimeInSeconds { get { return _coolDownRetryTimeInSeconds; } }
+        public int MaxConcurrentConnectionsCountPerHostName { get { return _maxConcurrentConnectionsCountPerHostName; } }
+        public int CoolDownConcurrentConnectionsCountPerHostName { get { return _coolDownConcurrentConnectionsCountPerHostName; } }
+
 
         private double _maxMemoryMB;
         private double _maxCPUPercentage;
@@ -82,37 +85,37 @@ namespace LPS.Infrastructure.Watchdog
             bool hostActiveConnectionsExceededTheLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _maxConcurrentConnectionsCountPerHostName;
             switch (_suspensionMode)
             {
+                case SuspensionMode.Any:
+                    _isResourceUsageExceeded = memoryExceededTheLimit
+                        || cpuExceededTheLimit
+                        || hostActiveConnectionsExceededTheLimit;
+                    break;
                 case SuspensionMode.All:
                     _isResourceUsageExceeded = memoryExceededTheLimit
                         && cpuExceededTheLimit
                         && hostActiveConnectionsExceededTheLimit
                         ;
                     break;
-                case SuspensionMode.Any:
-                    _isResourceUsageExceeded = memoryExceededTheLimit
-                        || cpuExceededTheLimit
-                        || hostActiveConnectionsExceededTheLimit;
-                    break;
             }
         }
 
         private void UpdateResourceCoolingFlag(string hostName)
         {
-            bool memoryExceededTheLimit = _lpsResourceListener.MemoryUsageMB > _coolDownMemoryMB;
-            bool cpuExceededTheLimit = _lpsResourceListener.CPUPercentage >= _coolDownCPUPercentage;
-            bool hostActiveConnectionsExceededTheLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _coolDownConcurrentConnectionsCountPerHostName;
+            bool memoryExceedsTheCoolingLimit = _lpsResourceListener.MemoryUsageMB > _coolDownMemoryMB;
+            bool cpuExceedsTheCPULimit = _lpsResourceListener.CPUPercentage >= _coolDownCPUPercentage;
+            bool hostActiveConnectionsExceedsTheConnectionsLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _coolDownConcurrentConnectionsCountPerHostName;
             switch (_suspensionMode)
             {
                 case SuspensionMode.All:
-                    _isResourceCoolingDown = (memoryExceededTheLimit
-                        && cpuExceededTheLimit
-                        && hostActiveConnectionsExceededTheLimit) 
+                    _isResourceCoolingDown = (memoryExceedsTheCoolingLimit
+                        && cpuExceedsTheCPULimit
+                        && hostActiveConnectionsExceedsTheConnectionsLimit)
                         && _resourceState != ResourceState.Cool;
                     break;
                 case SuspensionMode.Any:
-                    _isResourceCoolingDown = (memoryExceededTheLimit
-                        || cpuExceededTheLimit
-                        || hostActiveConnectionsExceededTheLimit) 
+                    _isResourceCoolingDown = (memoryExceedsTheCoolingLimit
+                        || cpuExceedsTheCPULimit
+                        || hostActiveConnectionsExceedsTheConnectionsLimit)
                         && _resourceState != ResourceState.Cool;
                     break;
             }
@@ -125,7 +128,7 @@ namespace LPS.Infrastructure.Watchdog
 
             UpdateResourceUsageFlag(hostName);
             UpdateResourceCoolingFlag(hostName);
-           _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
+            _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
             while (_resourceState != ResourceState.Cool)
             {
                 await Task.Delay(_coolDownRetryTimeInSeconds * 1000);
@@ -141,8 +144,8 @@ namespace LPS.Infrastructure.Watchdog
 
 
         public static LPSWatchdog GetDefaultInstance()
-        { 
-            return new  LPSWatchdog();
+        {
+            return new LPSWatchdog();
         }
 
     }

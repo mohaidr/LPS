@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
@@ -26,8 +26,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private string[] _args;
         IWritableOptions<LPSWatchdogOptions> _watchdogOptions;
         ILPSLogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public LPSWatchDogCLICommand(Command rootLpsCliCommand, ILPSLogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<LPSWatchdogOptions> watchdogOptions, string[] args) 
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public LPSWatchDogCLICommand(Command rootLpsCliCommand, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<LPSWatchdogOptions> watchdogOptions, string[] args) 
         {
             _rootLpsCliCommand = rootLpsCliCommand;
             _args = args;

@@ -10,7 +10,8 @@ use prompt plus
 
 create, update, delete commands
 Json Repository
-move the infra logic to infra logic
+Iqueryable repository to be passed for the domain
+move the infra logic to the infra layer
 Integrated Metric pipeline
 When creating a repository, create IEntityPolicy so the repository applies then before an entity is saved or updated => for example, immutable field like an Id
 document how to use dot net trace

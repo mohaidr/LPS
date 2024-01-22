@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -34,18 +34,37 @@ namespace LPS.Domain
         public class ExecuteCommand : IAsyncCommand<LPSHttpRequestProfile> 
         {
             private ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService { get; set; }
+            ILPSLogger _logger;
+            ILPSWatchdog _watchdog;
+            ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
 
-            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService, LPSHttpRun.ExecuteCommand caseExecCommand)
+            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile,
+                LPSHttpResponse> httpClientService,
+                LPSHttpRun.ExecuteCommand caseExecCommand, 
+                ILPSLogger logger,
+                ILPSWatchdog watchdog,
+                ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _httpClientService = httpClientService;
                 LPSRunExecuteCommand = caseExecCommand;
+                _logger = logger;
+                _watchdog = watchdog;
+                _runtimeOperationIdProvider = runtimeOperationIdProvider;
             }
 
             public LPSHttpRun.ExecuteCommand LPSRunExecuteCommand { get; set; }
 
             async public Task ExecuteAsync(LPSHttpRequestProfile entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
+                if (entity == null)
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPSHttpRequestProfile Entity Must Have a Value", LPSLoggingLevel.Error);
+                    throw new ArgumentNullException(nameof(entity));
+                }
                 entity._httpClientService = this._httpClientService;
+                entity._logger = this._logger;
+                entity._watchdog = this._watchdog;
+                entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
                 await entity.ExecuteAsync(this, cancellationTokenWrapper);
             }
         }

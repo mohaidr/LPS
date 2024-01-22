@@ -1,32 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
 
-public enum MimeType
+namespace LPS.Domain.Common
 {
-    ImageJpeg,
-    ImagePng,
-    ApplicationPdf,
-    TextPlain,
-    ApplicationMsWord,
-    ApplicationVndMsExcel,
-    ApplicationVndOpenXmlFormatsOfficedocumentSpreadsheetmlSheet,
-    ApplicationVndMsPowerpoint,
-    ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation,
-    ApplicationXml,
-    TextXml,
-    TextJavascript,
-    ApplicationJavascript,
-    ApplicationXJavascript,
-    TextCss,
-    TextHtml,
-    ApplicationJson,
-    Unknown, // New enum value for unknown content types
-    // Add more MIME types as needed
-}
 
-public static class MimeTypeExtensions
-{
-    private static readonly Dictionary<MimeType, string> MimeTypeToExtension = new Dictionary<MimeType, string>
+    public enum MimeType
+    {
+        ImageJpeg,
+        ImagePng,
+        ApplicationPdf,
+        TextPlain,
+        ApplicationMsWord,
+        ApplicationVndMsExcel,
+        ApplicationVndOpenXmlFormatsOfficedocumentSpreadsheetmlSheet,
+        ApplicationVndMsPowerpoint,
+        ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation,
+        ApplicationXml,
+        TextXml,
+        TextJavascript,
+        ApplicationJavascript,
+        ApplicationXJavascript,
+        TextCss,
+        TextHtml,
+        ApplicationJson,
+        Unknown, // New enum value for unknown content types
+                 // Add more MIME types as needed
+    }
+
+    public static class MimeTypeExtensions
+    {
+        private static readonly Dictionary<MimeType, string> MimeTypeToExtension = new Dictionary<MimeType, string>
     {
         { MimeType.ImageJpeg, ".jpg" },
         { MimeType.ImagePng, ".png" },
@@ -48,7 +51,7 @@ public static class MimeTypeExtensions
         // Add more mappings as needed
     };
 
-    private static readonly Dictionary<string, MimeType> ContentTypeToMimeType = new Dictionary<string, MimeType>
+        private static readonly Dictionary<string, MimeType> ContentTypeToMimeType = new Dictionary<string, MimeType>
     {
         { "image/jpeg", MimeType.ImageJpeg },
         { "image/png", MimeType.ImagePng },
@@ -70,36 +73,37 @@ public static class MimeTypeExtensions
         // Add more mappings as needed
     };
 
-    public static string ToFileExtension(this MimeType mimeType)
-    {
-        if (MimeTypeToExtension.TryGetValue(mimeType, out string extension))
+        public static string ToFileExtension(this MimeType mimeType)
         {
-            return extension;
-        }
-
-        return ".bin"; // Default extension
-    }
-
-    public static MimeType FromContentType(string contentType)
-    {
-        if (contentType!= null && ContentTypeToMimeType.TryGetValue(contentType, out MimeType mimeType))
-        {
-            return mimeType;
-        }
-
-        return MimeType.Unknown; // Default MIME type representing unknown content types
-    }
-
-    public static string ToContentType(this MimeType mimeType)
-    {
-        foreach (var kvp in ContentTypeToMimeType)
-        {
-            if (kvp.Value == mimeType)
+            if (MimeTypeToExtension.TryGetValue(mimeType, out string extension))
             {
-                return kvp.Key;
+                return extension;
             }
+
+            return ".bin"; // Default extension
         }
 
-        return "application/octet-stream"; // Default content type for unknown MIME types
+        public static MimeType FromContentType(string contentType)
+        {
+            if (contentType != null && ContentTypeToMimeType.TryGetValue(contentType, out MimeType mimeType))
+            {
+                return mimeType;
+            }
+
+            return MimeType.Unknown; // Default MIME type representing unknown content types
+        }
+
+        public static string ToContentType(this MimeType mimeType)
+        {
+            foreach (var kvp in ContentTypeToMimeType)
+            {
+                if (kvp.Value == mimeType)
+                {
+                    return kvp.Key;
+                }
+            }
+
+            return "application/octet-stream"; // Default content type for unknown MIME types
+        }
     }
 }
