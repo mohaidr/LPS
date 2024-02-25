@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -16,16 +17,13 @@ namespace LPS.UI.Core.UI.Build.Services
             switch (challenge)
             {
                 case "-testName":
-                    Console.Write("Teast Name: ");
-                    input = Console.ReadLine().Trim();
+                    input = AnsiConsole.Ask<string>("What's your [green]test name[/]?");
                     break;
                 case "-numberOfClients":
-                    Console.Write("Number Of Clients: ");
-                    input = Console.ReadLine().Trim();
+                    input = AnsiConsole.Ask<string>("The desired [green]number of clients[/]?");
                     break;             
                 case "-rampupPeriod":
-                    Console.Write("Rampup Period (Milliseconds): ");
-                    input = Console.ReadLine().Trim();
+                    input = AnsiConsole.Ask<string>("What's your [green]Rampup Period (Milliseconds)[/]?");;
                     break;              
                 case "-delayClientCreationUntilNeeded":
                     Console.Write("Dleay Client Creation Until Needed (Y/N): ");

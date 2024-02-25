@@ -1,5 +1,6 @@
 ﻿using LPS.Domain;
 using LPS.UI.Common;
+using Spectre.Console;
 using System;
 
 
@@ -31,71 +32,45 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 if (!_validator.Validate(nameof(Command.HttpMethod)))
                 {
-                    Console.WriteLine("Enter a Valid Http Method");
-                    _command.HttpMethod = ChallengeService.Challenge("-httpmethod");
+                    _validator.PrintValidationErrors(nameof(Command.HttpMethod));
+                    _command.HttpMethod = AnsiConsole.Ask<string>("What is your [green]Http request method[/]?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.URL)))
                 {
-                    Console.WriteLine("Enter a valid URL e.g (http(s)://example.com)");
-                    _command.URL = ChallengeService.Challenge("-url");
+                    _validator.PrintValidationErrors(nameof(Command.URL));
+                    _command.URL = AnsiConsole.Ask<string>("What is your [green]Http request URL[/]?");
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.Httpversion)))
                 {
-                    Console.WriteLine("Enter a valid http version, currently we only supports 1.0, 1.1 and 2.0");
-                    _command.Httpversion = ChallengeService.Challenge("-httpversion");
+                    _validator.PrintValidationErrors(nameof(_command.Httpversion));
+                                        _command.Httpversion = AnsiConsole.Ask<string>("Which [green]Http version[/] to use?"); ;
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)))
                 {
-                    Console.WriteLine("If the server returns text/html, would you like to download the html embedded resources");
-                    string input = ChallengeService.Challenge("-downloadHtmlEmbeddedResources");
-                    switch (input.ToLower())
-                    {
-                        case "y":
-                            Command.DownloadHtmlEmbeddedResources = true;
-                            break;
-                        case "n":
-                            Command.DownloadHtmlEmbeddedResources = false;
-                            break;
-                        default:
-                            Command.DownloadHtmlEmbeddedResources = null;
-                            break;
-                    }
+                    _validator.PrintValidationErrors(nameof(Command.DownloadHtmlEmbeddedResources));
+                    Command.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to download the html embedded resources?");
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.SaveResponse)))
                 {
-                    Console.WriteLine("Would you like to save the http responses");
-                    string input = ChallengeService.Challenge("-saveResponse");
-                    switch (input.ToLower())
-                    {
-                        case "y":
-                            Command.SaveResponse = true;
-                            break;
-                        case "n":
-                            Command.SaveResponse = false;
-                            break;
-                        default:
-                            Command.SaveResponse = null;
-                            break;
-                    }
+                    _validator.PrintValidationErrors(nameof(Command.SaveResponse));
+                    Command.SaveResponse = AnsiConsole.Confirm("Would you like to save the http responses?");
                     continue;
                 }
                 break;
             }
 
-
-            Console.WriteLine("Enter the request headers");
-            Console.WriteLine("Type your header in the following format (headerName: headerValue) and click enter. After you finish entering all headers, enter done");
+            AnsiConsole.MarkupLine("Add request headers as [blue](HeaderName: HeaderValue)[/] each on a line. When finished, type C and press enter");
             _command.HttpHeaders = InputHeaderService.Challenge();
 
 
             if (_command.HttpMethod.ToUpper() == "PUT" || _command.HttpMethod.ToUpper() == "POST" || _command.HttpMethod.ToUpper() == "PATCH")
             {
-                Console.WriteLine("Add payload to the request. Enter Path:[Path] to read the payload from a path file, URL:[URL] to read the payload from a URL or just add your payload inline");
+                AnsiConsole.WriteLine("Add payload to your http request.\n - Enter Path:[Path] to read the payload from a path file\n - URL:[URL] to read the payload from a URL \n - Or just add your payload inline");
                 _command.Payload = InputPayloadService.Challenge();
             }
         }

@@ -46,19 +46,20 @@ namespace LPS.Infrastructure.Client
                 EnableMultipleHttp2Connections = true,
             };
             httpClient = new HttpClient(socketsHandler)
-            { 
+            {
                 DefaultRequestVersion = HttpVersion.Version20
             };
             httpClient.Timeout = ((ILPSHttpClientConfiguration<LPSHttpRequestProfile>)config).Timeout;
             Id = Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
+        private static readonly object _lock = new object();
         private readonly Dictionary<string, IList<ILPSResponseMetric>> _responseMetricsCache = new Dictionary<string, IList<ILPSResponseMetric>>();
         public async Task<LPSHttpResponse> SendAsync(LPSHttpRequestProfile lpsHttpRequestProfile, ICancellationTokenWrapper cancellationTokenWrapper)
         {
+
             if (!_responseMetricsCache.ContainsKey(lpsHttpRequestProfile.Id.ToString()))
-                _responseMetricsCache[lpsHttpRequestProfile.Id.ToString()]= LPSResponseMetricsDataSource.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == lpsHttpRequestProfile.Id);
-            
+                _responseMetricsCache[lpsHttpRequestProfile.Id.ToString()] = LPSResponseMetricsDataSource.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == lpsHttpRequestProfile.Id);
             int sequenceNumber = lpsHttpRequestProfile.LastSequenceId;
             LPSHttpResponse lpsHttpResponse;
             var requestUri = new Uri(lpsHttpRequestProfile.URL);
@@ -72,7 +73,6 @@ namespace LPS.Infrastructure.Client
                 bool supportsContent = (lpsHttpRequestProfile.HttpMethod.ToLower() == "post" || lpsHttpRequestProfile.HttpMethod.ToLower() == "put" || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch");
                 httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.Httpversion);
                 httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload) : null;
-
 
                 foreach (var header in lpsHttpRequestProfile.HttpHeaders)
                 {
@@ -158,6 +158,7 @@ namespace LPS.Infrastructure.Client
                     LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
                     ResponseTime = responseTime,
                 };
+
                 var responseEntity = new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
                 responseEntity.LPSHttpRequestProfile = lpsHttpRequestProfile; // this will change when we implement IQueryable Repository where the domain can fetch, validate and update the property. We then pass the profile Id to through the command
                 await Task.WhenAll(_responseMetricsCache[lpsHttpRequestProfile.Id.ToString()].Select(metric => metric.UpdateAsync(responseEntity)));
@@ -185,7 +186,8 @@ namespace LPS.Infrastructure.Client
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
                 throw new Exception(ex.Message, ex.InnerException);
             }
-            finally {
+            finally
+            {
                 LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host); // decrease the number of active connections
 
             }
@@ -519,7 +521,7 @@ namespace LPS.Infrastructure.Client
             }
         }
 
-  
+
     }
 }
 

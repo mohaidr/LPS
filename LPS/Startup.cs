@@ -2,7 +2,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System.IO;
-using LPS.UI.Core;
 using LPS.Infrastructure.Logger;
 using LPS.Domain;
 using LPS.Infrastructure.Client;
@@ -12,6 +11,7 @@ using LPS.UI.Common.Options;
 using Newtonsoft.Json;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Monitoring;
+using LPS.UI.Core.Host;
 
 namespace LPS
 {

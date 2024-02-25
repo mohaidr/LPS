@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Common.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -9,15 +10,19 @@ using System.Threading.Tasks;
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
 
-    internal static class LPSResponseMetricsDataSource
+    public static class LPSResponseMetricsDataSource
     {
         private static List<ILPSResponseMetric> _responseMetric = new List<ILPSResponseMetric>();
+        private static readonly object _lock = new object();
         internal static void Register(LPSHttpRun lpsHttpRun)
         {
-            if (!_responseMetric.Any(metric => metric.LPSHttpRun == lpsHttpRun))
+            lock (_lock)
             {
-                _responseMetric.Add(new LPSResponseBreakDownMetric(lpsHttpRun));
-                _responseMetric.Add(new LPSDurationMetric(lpsHttpRun));
+                if (!_responseMetric.Any(metric => metric.LPSHttpRun.Id == lpsHttpRun.Id))
+                {
+                    _responseMetric.Add(new LPSResponseBreakDownMetric(lpsHttpRun));
+                    _responseMetric.Add(new LPSDurationMetric(lpsHttpRun));
+                }
             }
         }
         public static List<ILPSResponseMetric> Get(Func<ILPSResponseMetric, bool> predicate)

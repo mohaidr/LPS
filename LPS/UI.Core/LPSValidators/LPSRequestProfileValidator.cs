@@ -22,21 +22,22 @@ namespace LPS.UI.Core.LPSValidators
 
 
             RuleFor(command => command.Httpversion).Must(version => version == "1.0" || version == "1.1"|| version == "2.0")
-                .WithMessage("invalid http version, 1.0, 1.1 and 2.0 are the supported http versions");
-            RuleFor(command => command.HttpMethod).Must(httpMethod => _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
-                .WithMessage("Invalid Http Method");
+                .WithMessage("The accepted 'Http Versions' are (\"1.0\", \"1.1\", \"2.0\")");
+            RuleFor(command => command.HttpMethod)
+                .Must(httpMethod => _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
+                .WithMessage("The supported 'Http Methods' are (\"GET\", \"HEAD\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\", \"CONNECT\", \"OPTIONS\", \"TRACE\") ");
             RuleFor(command => command.URL).Must(url =>
             {
                 Uri result;
                 return Uri.TryCreate(url, UriKind.Absolute, out result)
                 && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
-            }).WithMessage("Invalid URL");
+            }).WithMessage("The 'URL' must be a valid URL according to RFC 3986");
             RuleFor(command => command.DownloadHtmlEmbeddedResources)
                 .NotNull()
-                .WithMessage("DownloadHtmlEmbeddedResources property can't be null");
+                .WithMessage("'Download Html Embedded Resources' must be (y) or (n)");
             RuleFor(command => command.SaveResponse)
                 .NotNull()
-                .WithMessage("SaveResponse property can't be null");
+                .WithMessage("'Save Response' must be (y) or (n)");
 
         }
 

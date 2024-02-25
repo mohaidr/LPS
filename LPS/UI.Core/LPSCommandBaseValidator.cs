@@ -7,6 +7,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using LPS.Infrastructure.Common;
+using Spectre.Console;
+using ValidationResult = FluentValidation.Results.ValidationResult;
+using System;
 
 namespace LPS.UI.Core
 {
@@ -47,6 +50,10 @@ namespace LPS.UI.Core
                 }
                 throw new LPSValidationException(errorMessage.ToString());
             }
+        }
+        public void PrintValidationErrors(string property)
+        {           
+            AnsiConsole.MarkupLine(string.Concat("[Orange3]- ", Markup.Escape(string.Join("\n- ", ValidationErrors[property])), "[/]"));
         }
 
         public ValidationResult Validate()

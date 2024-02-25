@@ -17,10 +17,10 @@ namespace LPS.Infrastructure.Monitoring
     public class LPSMonitoringEnroller: ILPSMonitoringEnroller
     {
         public LPSMonitoringEnroller() { }
-
         public void Enroll(LPSHttpRun lpsHttpRun)
         {
-            LPSResponseMetricsDataSource.Register(lpsHttpRun);
+
+                LPSResponseMetricsDataSource.Register(lpsHttpRun);
         }
     }
 

@@ -14,8 +14,6 @@ namespace LPS.Infrastructure.Common.Interfaces
     }
     public interface ILPSResponseMetric : ILPSMetric
     {
-
-
         public ResponseMetricType MetricType { get; }
         public LPSHttpRun LPSHttpRun { get; }
         public ILPSResponseMetric Update(LPSHttpResponse httpResponse);

@@ -3,6 +3,7 @@ using LPS.Domain;
 using System;
 using LPS.Domain.Common.Interfaces;
 using LPS.UI.Core.LPSValidators;
+using Spectre.Console;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
@@ -27,13 +28,7 @@ namespace LPS.UI.Core.UI.Build.Services
         //This must be refactored one domain is refactored
         public LPSTestPlan Build(LPSTestPlan.SetupCommand lpsTestCommand)
         {
-            Console.WriteLine("To skip optional fields enter (Y), otherwise enter (N)");
-            string decision = Console.ReadLine();
-
-            if (!string.IsNullOrEmpty(decision) && decision.Trim().ToLower() == "n")
-                _skipOptionalFields = false;
-            else
-                _skipOptionalFields = true;
+            _skipOptionalFields = AnsiConsole.Confirm("Do you want to skip the optional fields?");
 
             new LPSTestPlanChallengeUserService(_skipOptionalFields, lpsTestCommand, _validator).Challenge();
             var lpsPlan = new LPSTestPlan(lpsTestCommand, _logger, _runtimeOperationIdProvider); // it should validate and throw if the command is not valid

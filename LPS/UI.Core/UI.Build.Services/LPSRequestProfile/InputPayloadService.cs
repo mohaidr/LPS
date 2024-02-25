@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -24,24 +25,8 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Unable To Read Data From The Specified Path");
-                    Console.WriteLine(ex.Message);
-                    Console.ResetColor();
-
-                    Console.WriteLine("Would you like to retry to read the payload? (Y) to retry, (N) to cancel the test, (C) to continue without payload");
-                    string retryDecision = Console.ReadLine();
-
-                    switch (retryDecision.Trim().ToLower())
-                    {
-                        case "y":
-                            break;
-                        case "n":
-                            throw new Exception("Test Cancelled");
-                        case "c":
-                            loop = false;
-                            break;
-                    }
+                    AnsiConsole.MarkupLine($"[red]Unable To Read Data From The Specified Path[/]\n{ex.Message}");
+                    loop = AnsiConsole.Confirm("Would you like to retry to read the payload? (Y) to retry, (N) to continue without payload");
                 }
 
                 break;
@@ -64,24 +49,8 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 catch (Exception ex)
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine("Unable To Read Data From The Specified URL");
-                    Console.WriteLine(ex.Message);
-                    Console.ResetColor();
-
-                    Console.WriteLine("Would you like to retry to read the payload? (Y) to retry, (N) to cancel the test, (C) to continue without payload");
-                    string retryDecision = Console.ReadLine();
-
-                    switch (retryDecision.Trim().ToLower())
-                    {
-                        case "y":
-                            break;
-                        case "n":
-                            throw new Exception("Test Cancelled");
-                        case "c":
-                            loop = false;
-                            break;
-                    }
+                    AnsiConsole.MarkupLine($"[red]Unable To Read Data From The Specified URL[/]\n{ex.Message}");
+                    loop = AnsiConsole.Confirm("Would you like to retry to read the payload? (Y) to retry, (N) to continue without payload");
                 }
 
                 break;
@@ -107,12 +76,8 @@ namespace LPS.UI.Core.UI.Build.Services
 
         public static string Challenge()
         {
-            Console.WriteLine("Where should we read the payload from? URL:[URL] to reald from a web page, Path:[Path] to read from a local file or just provide an inline payload");
-            string input = Console.ReadLine();
-
-            // Parse the input
+            string input = AnsiConsole.Ask<string>("What is your [green]request payload[/]?");  
             return Parse(input);
-
         }
     }
 }

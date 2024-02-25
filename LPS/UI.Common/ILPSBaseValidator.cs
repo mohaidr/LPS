@@ -11,6 +11,7 @@ namespace LPS.UI.Common
         TCommand Command { get;}
         bool Validate (string ptoprtty);
         void ValidateAndThrow(string property);
+        public void PrintValidationErrors(string property);
         Dictionary<string, List<string>> ValidationErrors { get; }
     }
 

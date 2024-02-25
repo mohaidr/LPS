@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using LPS.Domain;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
+using Spectre.Console;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
@@ -30,77 +32,44 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 ResetOptionalFields();
             }
-            Console.ForegroundColor= ConsoleColor.Cyan;
-                Console.WriteLine("=================== Create Your Test Plan ===================");
-            Console.ResetColor();
+            AnsiConsole.MarkupLine("[underline bold blue]Create a Test Plan:[/]");
             while (true)
             {
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
-                    Console.WriteLine("Test name should be between 1 and 20 characters and does not accept special characters");
-                    _command.Name = ChallengeService.Challenge("-testName");
+                    _validator.PrintValidationErrors(nameof(Command.Name));
+                    _command.Name = AnsiConsole.Ask<string>("What's your [green]test name[/]?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.NumberOfClients)))
                 {
-                    Console.WriteLine("The number of clients to execute your runs. " +
-                        "The number should be a valid positive number greater than 0");
-
-                    int numberOfClients;
-                    if (int.TryParse(ChallengeService.Challenge("-numberOfClients"), out numberOfClients))
-                    {
-                        _command.NumberOfClients = numberOfClients;
-                    }
-
+                    _validator.PrintValidationErrors(nameof(Command.NumberOfClients));
+                    _command.NumberOfClients = AnsiConsole.Ask<int>("How many [green]clients[/] should run your test?") ;
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.RampUpPeriod)))
                 {
-                    Console.WriteLine("The time to wait until a new client connects to your site");
-
-                    int rampupPeriod;
-                    if (int.TryParse(ChallengeService.Challenge("-rampupPeriod"), out rampupPeriod))
-                    {
-                        _command.RampUpPeriod = rampupPeriod;
-                    }
-
+                    _validator.PrintValidationErrors(nameof(Command.RampUpPeriod));
+                    _command.RampUpPeriod = AnsiConsole.Ask<int>("What is the [green]Ramp Up Period (Milliseconds)[/] between the clients?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.DelayClientCreationUntilIsNeeded)))
                 {
-                    Console.WriteLine("Delay the client creation until the client is needed");
-
-                    switch (ChallengeService.Challenge("-delayClientCreationUntilNeeded").ToUpper())
-                    {
-                        case "Y":
-                            _command.DelayClientCreationUntilIsNeeded = true; break;
-                        case "N":
-                            _command.DelayClientCreationUntilIsNeeded = false; break;
-                    }
+                    _validator.PrintValidationErrors(nameof(Command.DelayClientCreationUntilIsNeeded));
+                    _command.DelayClientCreationUntilIsNeeded = AnsiConsole.Confirm("Do you want to delay the client creation until is needed?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.RunInParallel)))
                 {
-                    Console.WriteLine("Would you like to execute your runs in parallel");
-
-                    switch (ChallengeService.Challenge("-runInParallel").ToUpper())
-                    {
-                        case "Y":
-                            _command.RunInParallel = true; break;
-                        case "N":
-                            _command.RunInParallel = false; break;
-                    }
-
+                    _validator.PrintValidationErrors(nameof(Command.RunInParallel));
+                    _command.RunInParallel = AnsiConsole.Confirm("Do you want to run all your http runs in parallel?");
                     continue;
                 }
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("=================== Add Http Run ===================");
-                Console.ResetColor();
                 LPSHttpRun.SetupCommand lpsRunCommand = new LPSHttpRun.SetupCommand();
                 LPSRunValidator validator = new LPSRunValidator(lpsRunCommand);
                 LPSRunChallengeUserService lpsRunUserService = new LPSRunChallengeUserService(SkipOptionalFields, lpsRunCommand, validator);
@@ -108,11 +77,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 Command.LPSHttpRuns.Add(lpsRunCommand);
 
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("=================== Http Run Has Been Added ===================");
-                Console.ResetColor();
-
-                Console.WriteLine("Enter \"add\" to add a new http run to your test plan");
+                AnsiConsole.MarkupLine("[bold]Type [blue]add[/] to add a new http run or press [blue]enter[/] [/]");
 
                 string action = Console.ReadLine().Trim().ToLower();
                 if (action == "add")
@@ -122,9 +87,6 @@ namespace LPS.UI.Core.UI.Build.Services
                 break;
             }
 
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("=================== Plan Has Been Created ===================");
-            Console.ResetColor();
             _command.IsValid = true;
         }
 

@@ -2,18 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
 using System.CommandLine;
-using System.CommandLine.Binding;
-using LPS.UI.Core.UI.Build.Services;
-using System.Net.Http;
-using System.Net;
-using System.Reflection.PortableExecutable;
-using System.Threading;
-using System.Xml.Linq;
-using System.CommandLine.Parsing;
-using System.ComponentModel.DataAnnotations;
 using static LPS.Domain.LPSHttpRun;
 using LPS.Domain.Common.Interfaces;
 using System.Reflection;

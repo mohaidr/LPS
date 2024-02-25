@@ -1,6 +1,7 @@
 ﻿using LPS.Domain;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -26,75 +27,54 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 ResetOptionalFields();
             }
+            AnsiConsole.MarkupLine("[underline bold blue]Add HTTP run to your plan:[/]");
             while (true)
             {
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
-                    Console.WriteLine("Name your Run, it should between 1 and 20 charachters");
-                    _command.Name = ChallengeService.Challenge("-httpRunName");
+                    _validator.PrintValidationErrors(nameof(Command.Name));
+
+                    _command.Name = AnsiConsole.Ask<string>("What is the name of your http run?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.Mode)))
                 {
-                    Console.WriteLine("Choose Your Iteration Mode, Accepted Values are (DCB,CRB,CB,R,D)");
-                    Console.WriteLine("\t- D stands for duration. C stands for Cool Down, R stands for Request Count, B stands for Batch Size ");
-                    Console.WriteLine("\t- DCB - Requests will be sent on batches with cooling down between the batches until the duration is elapsed or you press escape");
-                    Console.WriteLine("\t- CRB - Requests will be sent on batches with cooling down between the batches until the number of completed requests matches the request count or you press escape");
-                    Console.WriteLine("\t- CB - Requests will be sent on batches with cooling down between the batches, the test will not stop until you press escape");
-                    Console.WriteLine("\t- R - Test will complete when all the requests are completed or you press escape");
-                    Console.WriteLine("\t- D - Test will complete once the duration expires or you press escape");
 
-                    if (Enum.TryParse(ChallengeService.Challenge("-iterationMode"), out LPSHttpRun.IterationMode mode))
-                    {
-                        _command.Mode = mode;
-                    }
+                    AnsiConsole.MarkupLine("[blue]D[/] stands for duration. [blue]C[/] stands for Cool Down, [blue]R[/] stands for Request Count, [blue]B[/] stands for Batch Size");
+                    _validator.PrintValidationErrors(nameof(Command.Mode));
+                    _command.Mode = AnsiConsole.Ask<LPSHttpRun.IterationMode>("At which mode the http run should be executed?"); ;
                     continue;
                 }
 
 
                 if (!_validator.Validate(nameof(Command.Duration)))
                 {
-                    Console.WriteLine("Enter the duration");
-                    int duration;
-                    if (int.TryParse(ChallengeService.Challenge("-duration"), out duration))
-                    {
-                        _command.Duration = duration;
-                    }
+
+                    _validator.PrintValidationErrors(nameof(Command.Duration));
+                    _command.Duration = AnsiConsole.Ask<int>("What is the duration (in seconds) for which each client can send requests to your endpoint?");
                     continue;
                 }
 
 
                 if (!_validator.Validate(nameof(Command.RequestCount)))
                 {
-                    Console.WriteLine("Enter the number of requests");
-                    int requestCount;
-                    if (int.TryParse(ChallengeService.Challenge("-requestCount"), out requestCount))
-                    {
-                        _command.RequestCount = requestCount;
-                    }
+                    _validator.PrintValidationErrors(nameof(Command.RequestCount));
+                    _command.RequestCount = AnsiConsole.Ask<int>("How many requests the client is supposed to send?");
                     continue;
                 }
 
 
                 if (!_validator.Validate(nameof(Command.BatchSize)))
                 {
-                    Console.WriteLine("Enter the batch size value. Batch size should be less than the request count");
-                    int batchSize;
-                    if (int.TryParse(ChallengeService.Challenge("-batchSize"), out batchSize))
-                    {
-                        _command.BatchSize = batchSize;
-                    }
+                    _validator.PrintValidationErrors(nameof(Command.BatchSize));
+                    _command.BatchSize = AnsiConsole.Ask<int>("How many requests the client has to send in a batch?");
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.CoolDownTime)))
                 {
-                    Console.WriteLine("Enter the cool down time. Cool down time should be less than the duration");
-                    int coolDownTime;
-                    if (int.TryParse(ChallengeService.Challenge("-coolDownTime"), out coolDownTime))
-                    {
-                        _command.CoolDownTime = coolDownTime;
-                    }
+                    _validator.PrintValidationErrors(nameof(Command.CoolDownTime));
+                    _command.CoolDownTime =  AnsiConsole.Ask<int>("For how long the client should pause before running the next batch?");
                     continue;
                 }
 

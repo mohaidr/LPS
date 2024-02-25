@@ -9,7 +9,8 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-
+using LPS.Infrastructure.LPSConsole;
+using Spectre.Console;
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
 
@@ -17,7 +18,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     {
         LPSHttpRun _httpRun;
         LongHistogram _histogram;
-        ConsoleWriter.ConsoleWriter _consoleWriter;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         public LPSHttpRun LPSHttpRun { get { return _httpRun; } }
         internal LPSDurationMetric(LPSHttpRun httpRun)
@@ -25,11 +25,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _httpRun = httpRun;
             _dimensionSet = new LPSDurationMetricDimensionSet();
             _histogram = new LongHistogram(1, 1000000, 3);
-            _consoleWriter = new ConsoleWriter.ConsoleWriter(1, 1);
+            _groupId = Guid.NewGuid();
         }
-
+        Guid _groupId;
         private LPSDurationMetricDimensionSet _dimensionSet { get; set; }
-        public LPSDurationMetricDimensionSet DimensionSet { get { return _dimensionSet; } }
         public ResponseMetricType MetricType => ResponseMetricType.ResponseTime;
 
         public async Task<ILPSResponseMetric> UpdateAsync(LPSHttpResponse response)
@@ -37,16 +36,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync();
             try
             {
-                double averageDenominator = _dimensionSet.AverageResponseTime != 0 ? _dimensionSet.SumResponseTime / _dimensionSet.AverageResponseTime + 1 : 1;
+                double averageDenominator = _dimensionSet.AverageResponseTime != 0 ? (_dimensionSet.SumResponseTime / _dimensionSet.AverageResponseTime) + 1 : 1;
                 _dimensionSet.MaxResponseTime = Math.Max(response.ResponseTime.TotalMilliseconds, _dimensionSet.MaxResponseTime);
-                _dimensionSet.MinResponseTime = Math.Min(response.ResponseTime.TotalMilliseconds, _dimensionSet.MinResponseTime);
+                _dimensionSet.MinResponseTime = _dimensionSet.MinResponseTime == 0 ? response.ResponseTime.TotalMilliseconds: Math.Min(response.ResponseTime.TotalMilliseconds, _dimensionSet.MinResponseTime);
                 _dimensionSet.SumResponseTime = _dimensionSet.SumResponseTime + response.ResponseTime.TotalMilliseconds;
                 _dimensionSet.AverageResponseTime = _dimensionSet.SumResponseTime / averageDenominator;
                 _histogram.RecordValue((long)response.ResponseTime.TotalMilliseconds);
                 _dimensionSet.P10ResponseTime = _histogram.GetValueAtPercentile(10);
                 _dimensionSet.P50ResponseTime = _histogram.GetValueAtPercentile(50);
                 _dimensionSet.P90ResponseTime = _histogram.GetValueAtPercentile(90);
-                _consoleWriter.AddMessage(this.Stringify(), 5, 2, ConsoleColor.Cyan);
+                _dimensionSet.EndPointDetails =  $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
+               // ConsoleMessageWriter.AddUniqueMessage(Markup.Escape(this.Stringify()), 5, _groupId.ToString());
             }
             finally
             {
@@ -64,7 +64,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             try
             {
-                var toSerialize = DimensionSet.CloneObject();
+                var toSerialize = _dimensionSet.CloneObject();
                 toSerialize.SumResponseTime = Math.Round(toSerialize.SumResponseTime, 2);
                 toSerialize.MaxResponseTime = Math.Round(toSerialize.MaxResponseTime, 2);
                 toSerialize.AverageResponseTime = Math.Round(toSerialize.AverageResponseTime, 2);
@@ -72,6 +72,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 toSerialize.P10ResponseTime = Math.Round(toSerialize.P10ResponseTime, 2);
                 toSerialize.P50ResponseTime = Math.Round(toSerialize.P50ResponseTime, 2);
                 toSerialize.P90ResponseTime = Math.Round(toSerialize.P90ResponseTime, 2);
+               
                 return LPSSerializationHelper.Serialize(toSerialize);
             }
             catch (InvalidOperationException ex)
@@ -84,6 +85,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class LPSDurationMetricDimensionSet
     {
+        public string EndPointDetails { get; set; }
         public double SumResponseTime { get; set; }
         public double AverageResponseTime { get; set; }
         public double MinResponseTime { get; set; }

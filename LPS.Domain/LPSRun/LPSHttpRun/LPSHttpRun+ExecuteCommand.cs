@@ -142,7 +142,6 @@ namespace LPS.Domain
 
                 LPSHttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand = new LPSHttpRequestProfile.ExecuteCommand(this._httpClientService, command, _logger, _watchdog, _runtimeOperationIdProvider) ;
                 TaskCompletionSource<bool> taskCompletionSource = new TaskCompletionSource<bool>();
-                _ = ReportAsync(command, this.Name, taskCompletionSource, cancellationTokenWrapper);
                 Stopwatch stopwatch;
                 int numberOfSentRequests = 0;
                 string hostName = new Uri(this.LPSHttpRequestProfile.URL).Host;
@@ -221,17 +220,6 @@ namespace LPS.Domain
 
                 taskCompletionSource.SetResult(true);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has completed all the requests to {this.LPSHttpRequestProfile.URL} with {command.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {command.NumberOfFailedToCompleteRequests} failed to complete requests", LPSLoggingLevel.Information, cancellationTokenWrapper);
-            }
-        }
-
-        //TODO: This logic has to be moved to a seprate reporting service in the infrastructure layer
-        private async Task ReportAsync(ExecuteCommand execCommand, string name, TaskCompletionSource<bool> TaskCompletionSource, ICancellationTokenWrapper cancellationTokenWrapper)
-        {
-          //  await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Start reporting which will run every 10 Seconds", LPSLoggingLevel.Information, cancellationTokenWrapper);
-            while (!TaskCompletionSource.Task.IsCompleted && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
-            {
-                await Task.Delay(10000, cancellationTokenWrapper.CancellationToken);
-             //   await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {_httpClientService.Id} - Run: {name} - Successfully Completed: {execCommand.NumberOfSuccessfullyCompletedRequests} - Failed To Complete: {execCommand.NumberOfFailedToCompleteRequests}", LPSLoggingLevel.Information, cancellationTokenWrapper);
             }
         }
     }

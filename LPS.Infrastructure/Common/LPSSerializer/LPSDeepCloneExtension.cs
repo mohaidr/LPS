@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -38,11 +39,11 @@ namespace LPS.Infrastructure.Common
             {
                 // If it's an IEnumerable, clone each item in the collection
                 Type itemType = obj.GetType().GetGenericArguments().First();
-                var clonedList = (IEnumerable<object>)Activator.CreateInstance(typeof(List<>).MakeGenericType(itemType));
+                var clonedList = (IList)Activator.CreateInstance(typeof(List<>).MakeGenericType(itemType));
 
                 foreach (var item in enumerable)
                 {
-                    clonedList.Append(CloneObject(item));
+                    clonedList.Add(CloneObject(item));
                 }
 
                 return (TValue)clonedList;

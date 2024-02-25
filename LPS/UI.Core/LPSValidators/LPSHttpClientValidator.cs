@@ -17,17 +17,17 @@ namespace LPS.UI.Core.LPSValidators
         public LPSHttpClientValidator()
         {
             RuleFor(httpClient => httpClient.ClientTimeoutInSeconds)
-                .NotNull()
-                .GreaterThan(0);
+                .NotNull().WithMessage("'Client Timeout In Second' must be a non-null value")
+                .GreaterThan(0).WithMessage("'Client Timeout In Second' must be greater than 0");
             RuleFor(httpClient => httpClient.PooledConnectionLifeTimeInSeconds)
-                .NotNull()
-                .GreaterThan(0);
+                .NotNull().WithMessage("'Pooled Connection Life Time In Seconds' must be a non-null value")
+                .GreaterThan(0).WithMessage("'Pooled Connection Life Time In Seconds' must be greater than 0");
             RuleFor(httpClient => httpClient.PooledConnectionIdleTimeoutInSeconds)
-                .NotNull()
-                .GreaterThan(0);
+                .NotNull().WithMessage("'Pooled Connection Idle Timeout In Seconds' must be a non-null value")
+                .GreaterThan(0).WithMessage("'Pooled Connection Idle Timeout In Seconds' must be greater than 0");
             RuleFor(httpClient => httpClient.MaxConnectionsPerServer)
-                .NotNull()
-                .GreaterThan(0);
+                .NotNull().WithMessage("'Max Connections Per Server' a non-null value")
+                .GreaterThan(0).WithMessage("'Max Connections Per Server' must be greater than 0");
         }
     }
 }

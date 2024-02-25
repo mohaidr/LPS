@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Threading;
+using LPS.Infrastructure.ConsoleWriter;
+using Spectre.Console;
 
 namespace LPS
 {
@@ -8,6 +10,8 @@ namespace LPS
     {
         static async Task Main(string[] args)
         {
+            AnsiConsole.Write(new FigletText("LPS").Centered().Color(Color.Green));
+
             CancellationTokenSource cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
             Console.CancelKeyPress += CancelKeyPressHandler;
@@ -15,7 +19,6 @@ namespace LPS
             //DI Services
             var host = Startup.ConfigureServices(args);
             await host.StartAsync(cancellationToken);
-
         }
         static bool _cancelRequested = false;
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)

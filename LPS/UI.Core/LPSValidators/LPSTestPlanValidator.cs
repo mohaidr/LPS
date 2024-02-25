@@ -16,25 +16,27 @@ namespace LPS.UI.Core.LPSValidators
             _command = command;
 
             RuleFor(command => command.Name)
-            .NotNull().NotEmpty()
+            .NotNull().WithMessage("The 'Name' must be a non-null value")
+            .NotEmpty().WithMessage("The 'Name' must not be empty")
             .Matches("^[a-zA-Z0-9 _-]+$")
-            .WithMessage("The plan name does not accept special charachters and should be between 1 and 20 characters")
+            .WithMessage("The 'Name' does not accept special charachters")
             .Length(1, 20)
-            .WithMessage("The plan name should be between 1 and 20 characters");
+            .WithMessage("The 'Name' should be between 1 and 20 characters");
 
             RuleFor(command => command.NumberOfClients)
-            .NotNull()
-            .GreaterThan(0);
+            .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")
+            .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
 
             RuleFor(command => command.RampUpPeriod)
-            .NotNull()
-            .GreaterThan(0);
+            .NotNull().WithMessage("The 'RampUp Period' must be a non-null value")
+            .GreaterThan(0).WithMessage("The 'RampUp Period' must be greater than 0");
+
 
             RuleFor(command => command.DelayClientCreationUntilIsNeeded)
-            .NotNull();
+            .NotNull().WithMessage("'Delay Client Creation Until Is Needed' must be (y) or (n)");
 
             RuleFor(command => command.RunInParallel)
-            .NotNull();
+            .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
         }
 
         public override LPSTestPlan.SetupCommand Command { get { return _command; } }

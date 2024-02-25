@@ -11,6 +11,8 @@ using System.Linq;
 using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.LPSConsole;
+using Spectre.Console;
 
 namespace LPS.Infrastructure.Logger
 {
@@ -87,7 +89,6 @@ namespace LPS.Infrastructure.Logger
 
             // Check if the provided path contains a directory
             string directory = Path.GetDirectoryName(logFilePath);
-
             // If no directory is provided, use a default directory "logs"
             if (string.IsNullOrEmpty(directory))
             {
@@ -121,6 +122,7 @@ namespace LPS.Infrastructure.Logger
 
         public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level, ICancellationTokenWrapper cancellationTokenWrapper = default)
         {
+            diagnosticMessage = Markup.Escape(diagnosticMessage);
             try
             {
                 await semaphoreSlim.WaitAsync();
@@ -129,41 +131,28 @@ namespace LPS.Infrastructure.Logger
                 {
                     if (level == LPSLoggingLevel.Verbos)
                     {
-                        Console.ForegroundColor = ConsoleColor.DarkBlue;
-                        Console.Write(level.ToString() + ": ");
-                        Console.ResetColor();
-                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+
+                        AnsiConsole.MarkupLine($"[blue]{level}:[/] {currentDateTime} {correlationId} {diagnosticMessage}");
+
                     }
                     else
                     if (level == LPSLoggingLevel.Information)
                     {
-                        Console.ForegroundColor = ConsoleColor.Blue;
-                        Console.Write(level.ToString() + ": ");
-                        Console.ResetColor();
-                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                        AnsiConsole.MarkupLine($"[blue]{level}:[/] {currentDateTime} {correlationId} [Cyan]{diagnosticMessage}[/]");
                     }
                     else if (level == LPSLoggingLevel.Warning)
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.Write(level.ToString() + ": ");
-                        Console.ResetColor();
-                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                        AnsiConsole.MarkupLine($"[yellow]{level}:[/] {currentDateTime} {correlationId} {diagnosticMessage}");
+
                     }
                     else if (level == LPSLoggingLevel.Error && !_disableConsoleErrorLogging)
                     {
-                        Console.ForegroundColor = ConsoleColor.Red;
-                        Console.Write(level.ToString() + " ");
-                        Console.ResetColor();
-                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                        AnsiConsole.MarkupLine($"[red]{level}:[/] {currentDateTime} {correlationId} {diagnosticMessage}");
                     }
                     else if (level == LPSLoggingLevel.Critical && !_disableConsoleErrorLogging)
                     {
-                        Console.ForegroundColor = ConsoleColor.DarkRed;
-                        Console.Write(level.ToString() + " ");
-                        Console.ResetColor();
-                        Console.WriteLine($"{currentDateTime} {correlationId} {diagnosticMessage}");
+                        AnsiConsole.MarkupLine($"[red]{level}:[/] {currentDateTime} {correlationId} {diagnosticMessage}");
                     }
-
                 }
                 if (!_disableFileLogging && level >= _loggingLevel)
                 {
@@ -180,7 +169,7 @@ namespace LPS.Infrastructure.Logger
             catch (Exception ex)
             {
 
-                if ( cancellationTokenWrapper.CancellationToken.IsCancellationRequested && ex.Message != null && ex.Message.Equals("A task was canceled.", StringComparison.OrdinalIgnoreCase))
+                if (cancellationTokenWrapper!=default && cancellationTokenWrapper.CancellationToken.IsCancellationRequested && ex.Message != null && ex.Message.Equals("A task was canceled.", StringComparison.OrdinalIgnoreCase))
                 {
                     _loggingCancellationCount++;
                     _cancellationErrorMessage = $"{ex.Message} {ex.InnerException?.Message}";
@@ -189,7 +178,7 @@ namespace LPS.Infrastructure.Logger
                 else
                 {
                    Console.ForegroundColor = ConsoleColor.Yellow;
-                   Console.WriteLine($"Warning: Logging Failed \n {ex.Message} {ex.InnerException?.Message}");
+                   Console.WriteLine($"Warning: Logging Failed  {ex.Message} {ex.InnerException?.Message}");
                    Console.ResetColor();
                 }
             }

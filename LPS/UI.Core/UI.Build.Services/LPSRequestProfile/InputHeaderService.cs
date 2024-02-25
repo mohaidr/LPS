@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using LPS.Infrastructure.Common;
+using Spectre.Console;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
@@ -14,8 +15,8 @@ namespace LPS.UI.Core.UI.Build.Services
             Dictionary<string, string> httpheaders = new Dictionary<string, string>();
             while (true)
             {
-                string input = Console.ReadLine().Trim();
-                if (input == "done")
+                string input = Console.ReadLine();
+                if (input.Equals("C", StringComparison.OrdinalIgnoreCase))
                 {
                     break;
                 }
@@ -31,7 +32,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 catch
                 {
-                    Console.WriteLine("Enter header in a valid format e.g (headerName: headerValue) or enter done to start filling the payload");
+                    AnsiConsole.MarkupLine("[red]Invalid header[/]");
                 }
             }
             return httpheaders.DeepClone();
@@ -54,9 +55,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 }
                 catch
                 {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"Inavlid header: {header}");
-                    Console.ResetColor();
+                    AnsiConsole.MarkupLine($"[red]Invalid header[/] {header}");
                 }
             }
             return httpheaders.DeepClone();
