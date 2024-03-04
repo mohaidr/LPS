@@ -82,6 +82,8 @@ namespace LPS.Domain
         }
 
         LPSHttpRequestProfile _lpsHttpRequestProfile;
+
+        //This should not be allowed to be set explicitly.
         public LPSHttpRequestProfile LPSHttpRequestProfile 
         { 
             get 
@@ -90,7 +92,7 @@ namespace LPS.Domain
             } 
             set 
             { 
-                _lpsHttpRequestProfile = value ?? _lpsHttpRequestProfile;
+                _lpsHttpRequestProfile = value!=null && value.IsValid ? value: _lpsHttpRequestProfile;
             } 
         }
         public int? RequestCount { get; private set; }

@@ -8,49 +8,64 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentValidation;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Validation;
 
 namespace LPS.Domain
 {
 
     public partial class LPSHttpResponse
     {
-        public new class Validator: IDomainValidator<LPSHttpResponse, LPSHttpResponse.SetupCommand>
+        public new class Validator : CommandBaseValidator<LPSHttpResponse, LPSHttpResponse.SetupCommand>
         {
             ILPSLogger _logger;
             ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            public Validator(LPSHttpResponse entity, LPSHttpResponse.SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider) 
+            LPSHttpResponse _entity;
+            LPSHttpResponse.SetupCommand _command;
+            public override SetupCommand Command => _command;
+            public override LPSHttpResponse Entity => _entity;
+            public Validator(LPSHttpResponse entity, LPSHttpResponse.SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
-                Validate(entity, command);
+                _entity = entity;
+                _command = command;
+
+                #region Validation Rules
+                RuleFor(command => command.LocationToResponse)
+                .NotEmpty().WithMessage("'Location To Response' must not be empty.")
+                .Must(BeAValidPath).WithMessage("'Location To Response' Path contains illegal characters or does not exist.");
+                #endregion
+
+                if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Http Response: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
+                }
+
+                _command.IsValid = base.Validate();
             }
 
-            public void Validate(LPSHttpResponse entity, SetupCommand command)
+
+
+            private bool BeAValidPath(string location)
             {
-                if (entity == null)
+                if (string.IsNullOrEmpty(location))
+                    return true; // Empty location is considered valid, you can change this if needed
+
+                // Check for invalid path characters
+                if (location.Any(c => Path.GetInvalidPathChars().Contains(c)))
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(entity));
+                    return false;
                 }
 
-                if (command == null)
+                // Check if the file exists
+                if (!File.Exists(location))
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(command));
+                    return false;
                 }
-                command.IsValid = true;
-                //as of now only checking if a file does exist, the location might be anywhere online so will need to update this logic
-                if (!string.IsNullOrEmpty(command.LocationToResponse) && command.LocationToResponse.ToCharArray().Any(c => Path.GetInvalidPathChars().Contains(c)))
-                {
-                    Console.WriteLine("Path contains illegal charcter");
-                    command.IsValid= false;
-                } 
-                else if(!string.IsNullOrEmpty(command.LocationToResponse) && !File.Exists(command.LocationToResponse))
-                {
-                    Console.WriteLine("File does not exist");
-                    command.IsValid = false;
-                }
+
+                return true;
             }
         }
     }

@@ -67,8 +67,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     foreach (var runCommand in _planSetupCommand.LPSHttpRuns)
                     {
                         var runEntity = new LPSHttpRun(runCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
-                        runEntity.LPSHttpRequestProfile = new LPSHttpRequestProfile(runCommand.LPSRequestProfile, _logger, _runtimeOperationIdProvider);
-                        lpsPlan.LPSHttpRuns.Add(runEntity);
+                        var requestProfile = new LPSHttpRequestProfile(runCommand.LPSRequestProfile, _logger, _runtimeOperationIdProvider);
+                        if (runEntity.IsValid && requestProfile.IsValid)
+                        {
+                            runEntity.LPSHttpRequestProfile = requestProfile;
+                            lpsPlan.LPSHttpRuns.Add(runEntity);
+                        }
+
                     }
                     await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lPSMonitoringEnroller)
                     .Run(lpsPlan, cancellationToken);

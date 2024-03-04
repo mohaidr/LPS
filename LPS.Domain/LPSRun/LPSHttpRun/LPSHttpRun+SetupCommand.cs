@@ -54,7 +54,7 @@ namespace LPS.Domain
             //Set the inherited properties through the parent entity setupcommand
             var lPSRunSetUpCommand = new LPSRun.SetupCommand() { Id = command.Id, Name = command.Name }; // if there are fields has to be set, then pass thm here.
             base.Setup(lPSRunSetUpCommand);
-            new Validator(this, command, _logger, _runtimeOperationIdProvider);
+            var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && lPSRunSetUpCommand.IsValid)
             {
                 this.RequestCount = command.RequestCount;
@@ -63,6 +63,11 @@ namespace LPS.Domain
                 this.CoolDownTime = command.CoolDownTime; ;
                 this.BatchSize = command.BatchSize;
                 this.IsValid = true;
+            }
+            else
+            {
+                this.IsValid = false;
+                validator.PrintValidationErrors();
             }
         }
 

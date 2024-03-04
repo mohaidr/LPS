@@ -11,7 +11,6 @@ using System.Linq;
 using System.Diagnostics;
 using Microsoft.Extensions.Options;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.LPSConsole;
 using Spectre.Console;
 
 namespace LPS.Infrastructure.Logger

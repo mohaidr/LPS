@@ -40,7 +40,7 @@ namespace LPS.Domain
 
         private void Setup(SetupCommand command)
         {
-            new Validator(this, command, _logger, _runtimeOperationIdProvider);
+            var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid)
             {
                 this.Name = command.Name;
@@ -49,6 +49,11 @@ namespace LPS.Domain
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
                 this.RunInParallel = command.RunInParallel;
+            }
+            else
+            {
+                this.IsValid = false;
+                validator.PrintValidationErrors();
             }
         }  
     }

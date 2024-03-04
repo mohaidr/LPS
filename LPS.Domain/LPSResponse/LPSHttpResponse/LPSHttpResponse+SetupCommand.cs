@@ -53,7 +53,7 @@ namespace LPS.Domain
             //Set the inherited properties through the parent entity setup command
             var lPSResponseSetUpCommand = new LPSResponse.SetupCommand() { Id = command.Id };
             base.Setup(lPSResponseSetUpCommand);
-            new Validator(this, command, _logger, _runtimeOperationIdProvider);
+            var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && lPSResponseSetUpCommand.IsValid)
             {
                 this.LocationToResponse = command.LocationToResponse;
@@ -79,6 +79,11 @@ namespace LPS.Domain
                     }
                 }
                 this.IsValid = true;
+            }
+            else
+            {
+                this.IsValid = false;
+                validator.PrintValidationErrors();
             }
         }
     }

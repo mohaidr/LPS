@@ -39,10 +39,17 @@ namespace LPS.Domain
 
         protected virtual void Setup(SetupCommand command)
         {
-            _= new Validator(this, command, _logger, _runtimeOperationIdProvider);
+
+            var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
+
             if (command.IsValid)
             {
                 this.IsValid = true;
+            }
+            else
+            {
+                this.IsValid = false;
+                validator.PrintValidationErrors();
             }
         }
 

@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Validation;
 using System;
 using System.Text.RegularExpressions;
 
@@ -8,36 +9,34 @@ namespace LPS.Domain
     public partial class LPSRun
     {
    
-        public class Validator: IDomainValidator<LPSRun, SetupCommand>
+        public class Validator: CommandBaseValidator<LPSRun, LPSRun.SetupCommand>
         {
             ILPSLogger _logger;
             ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            LPSRun _entity;
+            SetupCommand _command;
             public Validator(LPSRun entity, SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
-                Validate(entity, command);
-            }
+                _entity = entity;
+                _command = command;
 
-            public void Validate(LPSRun entity,SetupCommand command)
-            {
+                #region Validation Rules
+                    // No validation rules so far
+                #endregion
+
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Run: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
-                if (entity == null)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(entity));
-                }
-
-                if (command == null)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(command));
-                }
-                command.IsValid = true;
+                _command.IsValid = true;
             }
+
+            public override SetupCommand Command => _command;
+
+            public override LPSRun Entity => _entity;
+
         }
     }
 }

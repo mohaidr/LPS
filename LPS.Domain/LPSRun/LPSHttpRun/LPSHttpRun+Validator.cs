@@ -8,7 +8,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentValidation;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Validation;
 
 namespace LPS.Domain
 {
@@ -16,135 +18,80 @@ namespace LPS.Domain
     public partial class LPSHttpRun
     {
 
-        new public class Validator : IDomainValidator<LPSHttpRun, LPSHttpRun.SetupCommand>
+        new public class Validator : CommandBaseValidator<LPSHttpRun, LPSHttpRun.SetupCommand>
         {
-
+            public override SetupCommand Command => _command;
+            public override LPSHttpRun Entity => _entity;
             ILPSLogger _logger;
             ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            SetupCommand _command;
+            LPSHttpRun _entity;
             public Validator(LPSHttpRun entity, SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
-                Validate(entity, command);
-            }
+                _command = command;
+                _entity = entity;
 
-            public void Validate(LPSHttpRun entity, SetupCommand command)
-            {
-                if (entity == null)
+                #region Validation Rules
+                RuleFor(command => command.Name)
+               .NotNull().WithMessage("The 'Name' must be a non-null value")
+               .NotEmpty().WithMessage("The 'Name' must not be empty")
+               .Matches("^[a-zA-Z0-9 _-]+$")
+               .WithMessage("The 'Name' does not accept special charachters")
+               .Length(1, 20)
+               .WithMessage("The 'Name' should be between 1 and 20 characters");
+
+                    RuleFor(command => command.Mode)
+                    .NotNull()
+                    .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)");
+
+                    RuleFor(command => command.RequestCount)
+                    .NotNull().WithMessage("The 'Request Count' must be a non-null value and greater than 0")
+                    .GreaterThan(0).WithMessage("The 'Request Count' must be greater than 0")
+                    .When(command => command.Mode == LPSHttpRun.IterationMode.CRB || command.Mode == LPSHttpRun.IterationMode.R)
+                    .Null()
+                    .When(command => command.Mode != LPSHttpRun.IterationMode.CRB && command.Mode != LPSHttpRun.IterationMode.R, ApplyConditionTo.CurrentValidator)
+                    .GreaterThan(command => command.BatchSize)
+                    .WithMessage("The 'Request Count' Must Be Greater Than The BatchSize")
+                    .When(command => command.BatchSize.HasValue, ApplyConditionTo.CurrentValidator);
+
+                    RuleFor(command => command.Duration)
+                    .NotNull().WithMessage("The 'Duration' must be a non-null value and greater than 0")
+                    .GreaterThan(0).WithMessage("The 'Duration' must be greater than 0")
+                    .When(command => command.Mode == LPSHttpRun.IterationMode.D || command.Mode == LPSHttpRun.IterationMode.DCB)
+                    .Null()
+                    .When(command => command.Mode != LPSHttpRun.IterationMode.D && command.Mode != LPSHttpRun.IterationMode.DCB, ApplyConditionTo.CurrentValidator)
+                    .GreaterThan(command => command.CoolDownTime)
+                     .WithMessage("The 'Duration' Must Be Greater Than The Cool Down Time")
+                    .When(command => command.CoolDownTime.HasValue, ApplyConditionTo.CurrentValidator);
+
+                    RuleFor(command => command.BatchSize)
+                    .NotNull().WithMessage("The 'Batch Size' must be a non-null value and greater than 0")
+                    .GreaterThan(0).WithMessage("The 'Batch Size' must be greater than 0")
+                    .When(command => command.Mode == LPSHttpRun.IterationMode.DCB || command.Mode == LPSHttpRun.IterationMode.CRB || command.Mode == LPSHttpRun.IterationMode.CB)
+                    .Null()
+                    .When(command => command.Mode != LPSHttpRun.IterationMode.DCB && command.Mode != LPSHttpRun.IterationMode.CRB && command.Mode != LPSHttpRun.IterationMode.CB, ApplyConditionTo.CurrentValidator)
+                    .LessThan(command => command.RequestCount)
+                    .WithMessage("The 'Batch Size' Must Be Less Than The Request Count")
+                    .When(command => command.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);
+
+                    RuleFor(command => command.CoolDownTime)
+                    .NotNull().WithMessage("The 'Cool Down Time' must be a non-null value and greater than 0")
+                    .GreaterThan(0).WithMessage("The 'Cool Down Time' must be greater than 0")
+                    .When(command => command.Mode == LPSHttpRun.IterationMode.DCB || command.Mode == LPSHttpRun.IterationMode.CRB || command.Mode == LPSHttpRun.IterationMode.CB)
+                    .Null()
+                    .When(command => command.Mode != LPSHttpRun.IterationMode.DCB && command.Mode != LPSHttpRun.IterationMode.CRB && command.Mode != LPSHttpRun.IterationMode.CB, ApplyConditionTo.CurrentValidator)
+                    .LessThan(command => command.Duration)
+                    .WithMessage("The 'Cool Down Time' Must Be Less Than The Duration")
+                    .When(command => command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
+                #endregion
+
+                if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(entity));
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Http Run: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
-
-                if (command == null)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(command));
-                }
-                command.IsValid = true;
-                Console.ForegroundColor = ConsoleColor.Yellow;
-
-                if (string.IsNullOrEmpty(command.Name) || !Regex.IsMatch(command.Name, @"^[\w.-]{2,}$"))
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Please Provide a Valid Name, The Name Should At least Be of 2 Charachters And Can Only Contains Letters, Numbers, ., _ and -", LPSLoggingLevel.Warning);
-                    command.IsValid = false;
-                }
-
-                if (command.Mode.HasValue)
-                {
-                    bool invalidIterationModeCombination = false;
-                    if (command.Mode.Value == IterationMode.DCB)
-                    {
-                        if (!command.Duration.HasValue || command.Duration.Value <= 0
-                            || !command.CoolDownTime.HasValue || command.CoolDownTime.Value <= 0
-                            || !command.BatchSize.HasValue || command.BatchSize.Value <= 0
-                            || command.RequestCount.HasValue)
-                        {
-                            command.IsValid = false;
-                            invalidIterationModeCombination = true;
-                        }
-                    }
-                    else if (command.Mode.Value == IterationMode.CRB)
-                    {
-                        if (!command.CoolDownTime.HasValue || command.CoolDownTime.Value <= 0
-                            || !command.RequestCount.HasValue || command.RequestCount.Value <= 0
-                            || !command.BatchSize.HasValue || command.BatchSize.Value <= 0
-                            || command.Duration.HasValue)
-                        {
-                            command.IsValid = false;
-                            invalidIterationModeCombination = true;
-
-                        }
-                    }
-                    else if (command.Mode.Value == IterationMode.CB)
-                    {
-                        if (!command.CoolDownTime.HasValue || command.CoolDownTime.Value <= 0
-                            || !command.BatchSize.HasValue || command.BatchSize.Value <= 0
-                            || command.Duration.HasValue
-                            || command.RequestCount.HasValue)
-                        {
-                            command.IsValid = false;
-                            invalidIterationModeCombination = true;
-
-                        }
-                    }
-                    else if (command.Mode.Value == IterationMode.R)
-                    {
-                        if (!command.RequestCount.HasValue || command.RequestCount.Value <= 0
-                            || command.Duration.HasValue
-                            || command.BatchSize.HasValue
-                            || command.CoolDownTime.HasValue)
-                        {
-                            command.IsValid = false;
-                            invalidIterationModeCombination = true;
-
-                        }
-
-                    }
-                    else if (command.Mode.Value == IterationMode.D)
-                    {
-                        if (!command.Duration.HasValue || command.Duration.Value <= 0
-                            || command.RequestCount.HasValue
-                            || command.BatchSize.HasValue
-                            || command.CoolDownTime.HasValue)
-                        {
-                            command.IsValid = false;
-                            invalidIterationModeCombination = true;
-
-
-                        }
-                    }
-                    if (invalidIterationModeCombination == true)
-                    {
-
-                        _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid combination, you have to use one of the below combinations" +
-                            "\t- Duration && Cool Down Time && Batch Size" +
-                            "\t- Cool Down Time && Number Of Requests && Batch Size" +
-                            "\t- Cool Down Time && Batch Size. Requests will not stop until you stop it" +
-                            "\t- Number Of Requests. Test will complete when all the requests are completed" +
-                            "\t- Duration. Test will complete once the duration expires", LPSLoggingLevel.Warning);
-                    }
-                }
-                else
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Iteration mode can't be null", LPSLoggingLevel.Warning);
-                }
-
-                if (command.Duration.HasValue && command.CoolDownTime.HasValue && command.CoolDownTime.Value > command.Duration.Value)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Cool Down Time can't be larger than the Duration", LPSLoggingLevel.Warning);
-
-                    command.IsValid = false;
-                }
-
-                if (command.RequestCount.HasValue && command.BatchSize.HasValue && command.BatchSize.Value > command.RequestCount.Value)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Batch Size can't be larger than the request count", LPSLoggingLevel.Warning);
-                    command.IsValid = false;
-                }
-
-                Console.ResetColor();
+                command.IsValid = base.Validate();  
             }
         }
     }

@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common.Interfaces
 {
-    //Only business entities will have matching DB tables
+    //Only business entities will have matching DB entities (tables)
     public interface IBusinessEntity
     {
     }

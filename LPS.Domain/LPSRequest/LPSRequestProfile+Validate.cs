@@ -9,42 +9,45 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Validation;
 
 namespace LPS.Domain
 {
 
     public partial class LPSRequestProfile
     {
-        public class Validator: IDomainValidator<LPSRequestProfile, SetupCommand>
+        public class Validator: CommandBaseValidator<LPSRequestProfile, LPSRequestProfile.SetupCommand>
         {
             ILPSLogger _logger;
             ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            LPSRequestProfile _entity;
+            LPSRequestProfile.SetupCommand _command;
             public Validator(LPSRequestProfile entity, SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
+
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
-                Validate(entity, command);
-            }
-
-            public void Validate(LPSRequestProfile entity, SetupCommand command)
-            {
+                _entity = entity;
+                _command = command;
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Request Profile: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
-                if (entity == null)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(entity));
-                }
 
-                if (command == null)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Entity Command", LPSLoggingLevel.Warning);
-                    throw new ArgumentNullException(nameof(command));
-                }
-                command.IsValid = true;
+                #region Validation Rules
+                    // No validation rules so far
+                #endregion
+
+                _command.IsValid = base.Validate();
+
+
             }
+
+            public override SetupCommand Command => _command;
+
+            public override LPSRequestProfile Entity => _entity;
+
+            
         }
     }
 }

@@ -43,9 +43,9 @@ namespace LPS.Domain
         public Dictionary<string, string> ResponseHeaders { get; private set; }
         public bool IsSuccessStatusCode { get; private set; }
         //TODO:
-        //- The design will be changes when we have a repository and DB and validation will be added to make sure that this value does not change once assigned
+        //- The design will change when we have a repository and DB where validation will be added to make sure that this value does not change once assigned
         //- Assign this through the setupcommand where the command will have the ID so we can fetch the entity from the DB and assign it to prevent creating orphan entities
-        //- Currently it is open for assignment from out side
+        //- Currently it is open for assignment from outside
         public LPSHttpRequestProfile LPSHttpRequestProfile { get; set; }
         public TimeSpan ResponseTime { get; private set; }
     }

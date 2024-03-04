@@ -8,6 +8,9 @@ namespace LPS.Domain.Common.Interfaces
 {
     public interface IDomainValidator<TEntity, TCommand> where TEntity: IDomainEntity where TCommand: ICommand<TEntity>
     {
-       void Validate(TEntity entity, TCommand dto);
+        public TCommand Command { get; }
+        public TEntity Entity { get; }
+
+        bool Validate();
     }
 }

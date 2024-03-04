@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Threading;
-using LPS.Infrastructure.ConsoleWriter;
 using Spectre.Console;
 
 namespace LPS

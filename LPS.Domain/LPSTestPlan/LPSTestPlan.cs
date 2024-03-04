@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using LPS.Domain.Common.Interfaces;
 
@@ -34,8 +35,9 @@ namespace LPS.Domain
         public Guid Id { get; protected set; }
         //TODO: When implementing repositories and DB think about collections and how they should be treated
         // Should this be mapped to the DB?
-        // Currently it is open for assignment from out side so the user can easly add too many entities and can add orphan entities
+        // Currently it is open for assignment from outside so the user may easly add too many entities, nulls or even orphan entities
         public ICollection<LPSHttpRun> LPSHttpRuns { get; set; }
+        public ICollection<LPSHttpRun> _lPSHttpRuns => LPSHttpRuns.Where(run => run != null && run.IsValid).ToList();
         public string Name { get; private set; }
 
         public bool IsRedo { get; private set; }

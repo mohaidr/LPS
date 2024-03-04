@@ -9,8 +9,6 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Infrastructure.ConsoleWriter;
-using LPS.Infrastructure.LPSConsole;
 using System.Globalization;
 using Spectre.Console;
 namespace LPS.Infrastructure.Monitoring.Metrics

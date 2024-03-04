@@ -8,7 +8,9 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using FluentValidation;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Validation;
 
 namespace LPS.Domain
 {
@@ -16,59 +18,56 @@ namespace LPS.Domain
     public partial class LPSTestPlan
     {
    
-        public class Validator: IDomainValidator<LPSTestPlan, LPSTestPlan.SetupCommand>
+        public class Validator: CommandBaseValidator<LPSTestPlan, LPSTestPlan.SetupCommand>
         {
 
             ILPSLogger _logger;
             ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            LPSTestPlan _entity;
+            LPSTestPlan.SetupCommand _command;
+            public override SetupCommand Command => _command;
+            public override LPSTestPlan Entity => _entity;
             public Validator(LPSTestPlan entity, SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
-                Validate(entity, command);
-            }
+                _entity = entity;
+                _command = command;
 
-            public void Validate(LPSTestPlan entity,SetupCommand command)
-            {
+                #region Validation Rules
+                RuleFor(command => command.Name)
+                .NotNull().WithMessage("The 'Name' must be a non-null value")
+                .NotEmpty().WithMessage("The 'Name' must not be empty")
+                .Matches("^[a-zA-Z0-9 _-]+$")
+                .WithMessage("The 'Name' does not accept special charachters")
+                .Length(1, 20)
+                .WithMessage("The 'Name' should be between 1 and 20 characters");
 
-                if (entity == null)
-                {
-                    throw new InvalidOperationException("Invalid Entity State");
-                }
+                RuleFor(command => command.NumberOfClients)
+                .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")
+                .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
+
+                RuleFor(command => command.RampUpPeriod)
+                .NotNull().WithMessage("The 'RampUp Period' must be a non-null value")
+                .GreaterThan(0).WithMessage("The 'RampUp Period' must be greater than 0");
+
+
+                RuleFor(command => command.DelayClientCreationUntilIsNeeded)
+                .NotNull().WithMessage("'Delay Client Creation Until Is Needed' must be (y) or (n)");
+
+                RuleFor(command => command.RunInParallel)
+                .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
+                #endregion
 
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Plan: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
 
-                command.IsValid = true;
+                _command.IsValid = base.Validate();
 
-                if (string.IsNullOrEmpty(command.Name)  || !Regex.IsMatch(command.Name, @"^[\w.-]{2,}$"))
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Invalid Test Name, The name should at least be of 2 charachters and can only contain letters, numbers, ., _ and -", LPSLoggingLevel.Warning);
-                }
-                if (command.NumberOfClients < 1)
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Number of clients can't be less than 1, at least one user has to be created.", LPSLoggingLevel.Warning);
-                }
-
-                if (!command.DelayClientCreationUntilIsNeeded.HasValue) 
-                { 
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Delay client creation until needed must have a value.", LPSLoggingLevel.Warning);
-
-                }
-
-                if (!command.RunInParallel.HasValue)
-                {
-                    command.IsValid = false;
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Run in parallel must have a value.", LPSLoggingLevel.Warning);
-
-                }
-              
             }
+            
         }
     }
 }

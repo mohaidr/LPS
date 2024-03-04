@@ -72,7 +72,7 @@ namespace LPS.Domain
         }
         async private Task ExecuteAsync(ExecuteCommand command, ICancellationTokenWrapper cancellationTokenWrapper)
         {
-            if (this.IsValid)
+            if (this.IsValid && this._lPSHttpRuns.Count>0)
             {
                 List<Task> awaitableTasks = new List<Task>();
 
@@ -112,7 +112,7 @@ namespace LPS.Domain
                 #region Local method to loop through the plan test runs and execute them async or sequentially 
                 async Task ExecCaseAsync(ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClientService) // a race condition may happen here and causes the wrong httpClient to be captured if the httpClientService state changes before the "await" is called 
                 {
-                    foreach (var run in this.LPSHttpRuns)
+                    foreach (var run in this._lPSHttpRuns)
                     {
                         if (run == null || !run.IsValid)
                         {

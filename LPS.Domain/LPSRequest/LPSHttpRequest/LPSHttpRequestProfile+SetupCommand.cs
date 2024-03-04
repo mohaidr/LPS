@@ -53,10 +53,11 @@ namespace LPS.Domain
 
         protected void Setup(SetupCommand command)
         {
+
             //Set the inherited properties through the parent entity setup command
             var lPSRequestProfileSetUpCommand = new LPSRequestProfile.SetupCommand() { Id = command.Id };
             base.Setup(lPSRequestProfileSetUpCommand);
-            new Validator(this, command, _logger, _runtimeOperationIdProvider);
+            var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && lPSRequestProfileSetUpCommand.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
@@ -75,6 +76,11 @@ namespace LPS.Domain
                 }
 
                 this.IsValid = true;
+            }
+            else
+            {
+                this.IsValid = false;
+                validator.PrintValidationErrors();
             }
         }
 
