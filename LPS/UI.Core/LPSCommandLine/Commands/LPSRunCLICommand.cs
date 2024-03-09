@@ -78,7 +78,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lPSMonitoringEnroller)
                     .Run(lpsPlan, cancellationToken);
                 }
-                catch (Exception ex) {
+                catch (Exception ex) 
+                {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error);
                 }
             }, LPSCommandLineOptions.LPSRunCommandOptions.TestNameOption);

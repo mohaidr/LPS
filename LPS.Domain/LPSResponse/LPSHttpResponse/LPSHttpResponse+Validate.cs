@@ -34,7 +34,9 @@ namespace LPS.Domain
 
                 #region Validation Rules
                 RuleFor(command => command.LocationToResponse)
-                .NotEmpty().WithMessage("'Location To Response' must not be empty.")
+                //TODO: This below is commented for now as you need to fetch the LPSHttpRequestProfile from the DB and that is not implemented yet
+                //.NotEmpty().When(command=> _entity.LPSHttpRequestProfile.SaveResponse)
+                // .WithMessage("'Location To Response' must not be empty.")
                 .Must(BeAValidPath).WithMessage("'Location To Response' Path contains illegal characters or does not exist.");
                 #endregion
 

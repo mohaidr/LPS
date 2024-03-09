@@ -17,6 +17,21 @@ namespace LPS.UI.Core.LPSCommandLine
         {
 
         }
+
+        public static class RootCommandLineOptions
+        {
+            static RootCommandLineOptions() 
+            {
+                NumberOfRequests.AddAlias("-n");
+                UrlOption.AddAlias("-u");
+                NumberOfRequests.AddAlias("--numberofrequests");
+                UrlOption.AddAlias("--url");
+            }
+
+            public static Option<int> NumberOfRequests { get; } = new Option<int>("--numberOfRequests", "Number of clients to execute the plan") { IsRequired = true, };
+            public static Option<string> UrlOption { get; } = new Option<string>("--url", "URL") { IsRequired = true };
+        }
+
         public static class LPSCreateCommandOptions
         {
             static LPSCreateCommandOptions()
@@ -100,7 +115,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<string> TestNameOption { get; } = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
         }
 
-
+        
         public static class LPSLoggerCommandOptions
         {
             static LPSLoggerCommandOptions()

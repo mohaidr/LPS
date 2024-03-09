@@ -44,7 +44,7 @@ namespace LPS.Infrastructure.Client
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 5,
                 EnableMultipleHttp2Connections = true,
-            };
+            };  
             httpClient = new HttpClient(socketsHandler)
             {
                 DefaultRequestVersion = HttpVersion.Version20

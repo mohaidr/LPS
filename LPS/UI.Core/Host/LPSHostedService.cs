@@ -1,19 +1,15 @@
 ﻿using LPS.UI.Common;
-using System;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.UI.Core.UI.Build.Services;
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using System.IO;
-using LPS.UI.Core.LPSCommandLine.Commands;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;
 using LPS.Infrastructure.Common;
-using System.Net.Sockets;
-using System.Net;
-using System.Text;
 using Spectre.Console;
+using LPS.UI.Core.LPSCommandLine;
 
 namespace LPS.UI.Core.Host
 {
@@ -26,19 +22,20 @@ namespace LPS.UI.Core.Host
         ILPSWatchdog _watchdog;
         LPSAppSettingsWritableOptions _appSettings;
         ILPSMonitoringEnroller _lPSMonitoringEnroller;
-        string[] _args;
-        public LPSHostedService(ILPSLogger logger,
+        string[] _command_args;
+        public LPSHostedService(
+            dynamic command_args,
+            ILPSLogger logger,
             ILPSClientConfiguration<LPSHttpRequestProfile> config,
             ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
             ILPSWatchdog watchdog,
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILPSMonitoringEnroller lPSMonitoringEnroller,
-            dynamic cmdArgs,
             LPSAppSettingsWritableOptions appSettings)
         {
             _logger = logger;
             _config = config;
-            _args = cmdArgs.args;
+            _command_args = command_args.args;
             _httpClientManager = httpClientManager;
             _watchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -52,10 +49,10 @@ namespace LPS.UI.Core.Host
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
             LPSTestPlan.SetupCommand lpsTestPlanSetupCommand = new LPSTestPlan.SetupCommand();
 
-            if (_args != null && _args.Length > 0)
+            if (_command_args != null && _command_args.Length > 0)
             {
-                var commandLineParser = new LPSRootCLICommand(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand, _lPSMonitoringEnroller, _args);
-                commandLineParser.Execute(cancellationToken);
+                var commandLineManager = new LPSCommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand, _lPSMonitoringEnroller);
+                commandLineManager.Run(cancellationToken);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Information);
             }
             else

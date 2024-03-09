@@ -76,7 +76,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     string json = LPSSerializationHelper.Serialize(_planSetupCommand);
                     File.WriteAllText($"{testName}.json", json);
                     Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Your run has been added successfully");
+                    Console.WriteLine("Your http run has been added successfully");
                     Console.ResetColor();
                 }
             },
