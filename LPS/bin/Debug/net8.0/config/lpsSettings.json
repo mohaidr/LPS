@@ -1,0 +1,28 @@
+{
+  "LPSAppSettings": {
+    "LPSFileLoggerConfiguration": {
+      "LogFilePath": "logs/lpslog.log",
+      "ConsoleLogingLevel": 1,
+      "EnableConsoleLogging": true,
+      "DisableConsoleErrorLogging": true,
+      "DisableFileLogging": false,
+      "LoggingLevel": 0
+    },
+    "LPSWatchdogConfiguration": {
+      "MaxMemoryMB": 7000,
+      "CoolDownMemoryMB": 4000,
+      "MaxCPUPercentage": 70,
+      "CoolDownCPUPercentage": 50,
+      "CoolDownRetryTimeInSeconds": 1,
+      "MaxConcurrentConnectionsCountPerHostName": 1000,
+      "CoolDownConcurrentConnectionsCountPerHostName": 700,
+      "SuspensionMode": 0
+    },
+    "LPSHttpClientConfiguration": {
+      "ClientTimeoutInSeconds": 300,
+      "PooledConnectionLifeTimeInSeconds": 1500,
+      "PooledConnectionIdleTimeoutInSeconds": 350,
+      "MaxConnectionsPerServer": 3000
+    }
+  }
+}
