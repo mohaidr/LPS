@@ -27,14 +27,14 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 ResetOptionalFields();
             }
-            AnsiConsole.MarkupLine("[underline bold blue]Add HTTP run to your plan:[/]");
+            AnsiConsole.MarkupLine("[underline bold blue]Add 'HTTP RUN' to your plan:[/]");
             while (true)
             {
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.Name));
 
-                    _command.Name = AnsiConsole.Ask<string>("What is the name of your http run?");
+                    _command.Name = AnsiConsole.Ask<string>("What is the [green]'Name'[/] of your [green]'HTTP RUN'[/]?");
                     continue;
                 }
 
@@ -43,7 +43,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
                     AnsiConsole.MarkupLine("[blue]D[/] stands for duration. [blue]C[/] stands for Cool Down, [blue]R[/] stands for Request Count, [blue]B[/] stands for Batch Size");
                     _validator.PrintValidationErrors(nameof(Command.Mode));
-                    _command.Mode = AnsiConsole.Ask<LPSHttpRun.IterationMode>("At which mode the http run should be executed?"); ;
+                    _command.Mode = AnsiConsole.Ask<LPSHttpRun.IterationMode>("At which [green]'Mode'[/] the 'HTTP RUN' should be executed?"); ;
                     continue;
                 }
 
@@ -52,7 +52,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 {
 
                     _validator.PrintValidationErrors(nameof(Command.Duration));
-                    _command.Duration = AnsiConsole.Ask<int>("What is the duration (in seconds) for which each client can send requests to your endpoint?");
+                    _command.Duration = AnsiConsole.Ask<int>("What is the [green]'Duration' (in seconds)[/] for which each client can send requests to your endpoint?");
                     continue;
                 }
 
@@ -60,7 +60,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 if (!_validator.Validate(nameof(Command.RequestCount)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.RequestCount));
-                    _command.RequestCount = AnsiConsole.Ask<int>("How many requests the client is supposed to send?");
+                    _command.RequestCount = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client is supposed to send?");
                     continue;
                 }
 
@@ -68,13 +68,13 @@ namespace LPS.UI.Core.UI.Build.Services
                 if (!_validator.Validate(nameof(Command.BatchSize)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.BatchSize));
-                    _command.BatchSize = AnsiConsole.Ask<int>("How many requests the client has to send in a batch?");
+                    _command.BatchSize = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client has to send in a [green]'Batch'[/]?");
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.CoolDownTime)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.CoolDownTime));
-                    _command.CoolDownTime =  AnsiConsole.Ask<int>("For how long the client should pause before running the next batch?");
+                    _command.CoolDownTime = AnsiConsole.Ask<int>("For how [green]'Long' (in seconds)[/] the client should pause before running the next batch?");
                     continue;
                 }
 

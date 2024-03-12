@@ -33,32 +33,32 @@ namespace LPS.UI.Core.UI.Build.Services
                 if (!_validator.Validate(nameof(Command.HttpMethod)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.HttpMethod));
-                    _command.HttpMethod = AnsiConsole.Ask<string>("What is your [green]Http request method[/]?");
+                    _command.HttpMethod = AnsiConsole.Ask<string>("What is the [green]'Http Request Method'[/]?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.URL)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.URL));
-                    _command.URL = AnsiConsole.Ask<string>("What is your [green]Http request URL[/]?");
+                    _command.URL = AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.Httpversion)))
                 {
                     _validator.PrintValidationErrors(nameof(_command.Httpversion));
-                                        _command.Httpversion = AnsiConsole.Ask<string>("Which [green]Http version[/] to use?"); ;
+                    _command.Httpversion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.DownloadHtmlEmbeddedResources));
-                    Command.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to download the html embedded resources?");
+                    Command.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false);
                     continue;
                 }
                 if (!_validator.Validate(nameof(Command.SaveResponse)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.SaveResponse));
-                    Command.SaveResponse = AnsiConsole.Confirm("Would you like to save the http responses?");
+                    Command.SaveResponse = AnsiConsole.Confirm("Would you like to [green]'Save'[/] the http responses?", false);
                     continue;
                 }
                 break;

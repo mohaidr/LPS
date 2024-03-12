@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <title>Load Testing Charts</title>
+    <!-- Include Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        background: #8cb3a5;
+        background: #8cb3a5ad;
+      }
+
+      .chart {
+        width: 100%;
+		display:inline-block;
+		margin-bottom: 50px;
+      }
+
+      canvas {
+		max-width: 50%;
+		float:left;
+		max-height: 300px;
+      }
+	  #chartNote
+	  {
+		max-width:50%;
+		padding:5px;
+	  }
+    </style>
+  </head>
+  <body>
+  <div class="w3-container">
+      <p id="chartNote" class="w3-panel w3-dark-grey w3-border w3-round">Charts will be rendered once the data is available.</p>
+    </div>
+	<!-- Chart containers will be dynamically generated here -->
+    <div id="charts"></div>
+<script >
+
+const colors = ['rgb(0, 110, 110)', 'rgb(150, 160, 160)', 'rgb(60, 130, 130)', 'rgb(120, 150, 150)', 'rgb(90, 140, 140)', 'rgb(30, 120, 120)'];
+
+let chartDataMap = {}; // Object to store chart data and instances
+
+function CreateChartContainer(containerId) {
+    let chartContainer = document.getElementById(containerId);
+    if (!chartContainer) {
+        chartContainer = document.createElement('div');
+        chartContainer.id = containerId;
+        chartContainer.className = 'chart';
+        document.getElementById('charts').appendChild(chartContainer);
+    }
+}
+
+function createChart(containerId, chartData, chartFor, chartType) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const canvas = document.createElement('canvas');
+    container.appendChild(canvas);
+
+    const ctx = canvas.getContext('2d');
+    const chartInstance = new Chart(ctx, {
+        type: chartType,
+        data: chartData,
+        options: {
+            animations: {
+                tension: {
+                    duration: 10000,
+                    easing: 'easeInQuint',
+                    from: 1,
+                    to: 0,
+                }
+            },
+        }
+    });
+
+    // Store the chart instance with its associated containerId
+    chartDataMap[containerId + chartFor] = {
+        chartData: chartData,
+        chartInstance: chartInstance
+    };
+}
+
+function updateChartData(containerId, chartFor, newData) {
+    const chartInstance = chartDataMap[containerId + chartFor].chartInstance;
+    const datasets = newData.datasets;
+
+    // Update each dataset in the chart with the new data
+    datasets.forEach((newDataset, datasetIndex) => {
+        const dataset = chartInstance.data.datasets[datasetIndex];
+        dataset.data = newDataset.data;
+        if (newDataset.label) {
+            dataset.label = newDataset.label;
+        }
+        console.log(dataset)
+    });
+    // Update chart labels if provided
+    if (newData.labels) {
+        chartInstance.data.labels = newData.labels;
+    }
+    // Instead of chartInstance.update(), we will use chartInstance.update({duration: 0})
+    chartInstance.update({
+        duration: 0,
+        lazy: true // Use lazy update to avoid redrawing the entire canvas
+    });
+}
+
+function generateResponseTimeChart(responseTimeData) {
+    responseTimeData.forEach(data => {
+        if (data.endPointDetails == null)
+            return;
+        const responseTimeChartData = {
+            labels: ['Average', 'Min', 'Max', 'P90', 'P50', 'P10'],
+            datasets: [{
+                label: 'Response Time(ms) ' + data.endPointDetails,
+                data: [data.averageResponseTime, data.minResponseTime, data.maxResponseTime, data.p90ResponseTime, data.p50ResponseTime, data.p10ResponseTime],
+                backgroundColor: colors,
+                hoverOffset: 4,
+                borderWidth: 1
+            }]
+        };
+
+        const containerId = 'chart' + data.endPointDetails;
+        const chartFor = "responseTime";
+        if (!chartDataMap[containerId + chartFor]) {
+            // If chart doesn't exist, create it
+            CreateChartContainer(containerId);
+            createChart(containerId, responseTimeChartData, chartFor, 'line');
+        } else { // If chart exists, update its data
+            updateChartData(containerId, chartFor, responseTimeChartData);
+        }
+    });
+}
+
+function generateStatusCodeChart(statusCodesData) { // Initialize an object to hold aggregated data for each endpoint
+    const endpointData = {};
+
+    // Iterate through the statusCodesData to aggregate data
+    statusCodesData.forEach(data => {
+        if (!endpointData[data.endPointDetails]) {
+            // If the endpoint data doesn't exist, initialize it
+            endpointData[data.endPointDetails] = {
+                labels: [],
+                data: [],
+                endpoint: data.endPointDetails
+            };
+        }
+
+        // Push status code label to labels array
+        endpointData[data.endPointDetails].labels.push(data.statusCode + " " + data.statusReason);
+
+        // Push sum of status code to data array
+        endpointData[data.endPointDetails].data.push(data.sum);
+    });
+
+    // Now, iterate through the aggregated endpoint data to create/update charts
+    Object.values(endpointData).forEach(endpoint => {
+        const statusCodesChartData = {
+            labels: endpoint.labels,
+            datasets: [{
+                label: 'Status Codes' + endpoint.endpoint,
+                data: endpoint.data,
+                backgroundColor: colors,
+                hoverOffset: 4,
+                borderWidth: 1
+            }]
+        };
+
+        const containerId = 'chart' + endpoint.endpoint;
+        const chartFor = "responseStatusCode";
+        if (!chartDataMap[containerId + chartFor]) { // If chart doesn't exist, create it
+            CreateChartContainer(containerId);
+            createChart(containerId, statusCodesChartData, chartFor, 'doughnut');
+        } else { // If chart exists, update its data
+            updateChartData(containerId, chartFor, statusCodesChartData);
+        }
+    });
+}
+
+
+
+
+function generateCharts(responseTimeData, statusCodesData) {
+    generateResponseTimeChart(responseTimeData);
+
+    generateStatusCodeChart(statusCodesData);
+}
+
+function fetchDataAndUpdateCharts() {
+    const apiUrl = '/kpis';
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            const responseTimeData = data.responseTimeMetrics;
+            const statusCodesData = data.responseBreakDownMetrics;
+            generateCharts(responseTimeData, statusCodesData);
+        })
+        .catch(error => {
+            console.error('Error fetching data:', error);
+        });
+}
+
+// Call fetchDataAndUpdateCharts every 10 seconds
+setInterval(fetchDataAndUpdateCharts, 5000);
+
+// Call fetchDataAndUpdateCharts when the page loads
+window.onload = fetchDataAndUpdateCharts;
+	
+</script>
+
+  </body>
+</html>

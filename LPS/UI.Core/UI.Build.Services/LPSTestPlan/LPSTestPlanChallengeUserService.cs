@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
@@ -38,35 +39,40 @@ namespace LPS.UI.Core.UI.Build.Services
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.Name));
-                    _command.Name = AnsiConsole.Ask<string>("What's your [green]test name[/]?");
+                    _command.Name = AnsiConsole.Ask<string>("What's your [green]'Test Name'[/]?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.NumberOfClients)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.NumberOfClients));
-                    _command.NumberOfClients = AnsiConsole.Ask<int>("How many [green]clients[/] should run your test?") ;
+                    _command.NumberOfClients = AnsiConsole.Ask<int>("How [green]'Many Clients'[/] should run your test?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.RampUpPeriod)))
                 {
+                    if (Command.NumberOfClients == 1)
+                    {
+                        _command.RampUpPeriod = 1;
+                        continue;
+                    }
                     _validator.PrintValidationErrors(nameof(Command.RampUpPeriod));
-                    _command.RampUpPeriod = AnsiConsole.Ask<int>("What is the [green]Ramp Up Period (Milliseconds)[/] between the clients?");
+                    _command.RampUpPeriod = AnsiConsole.Ask<int>("What is the [green]'Ramp Up Period' (Milliseconds)[/] between the clients?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.DelayClientCreationUntilIsNeeded)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.DelayClientCreationUntilIsNeeded));
-                    _command.DelayClientCreationUntilIsNeeded = AnsiConsole.Confirm("Do you want to delay the client creation until is needed?");
+                    _command.DelayClientCreationUntilIsNeeded = AnsiConsole.Confirm("Do you want to [green]'Delay'[/] the client creation until is needed?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Command.RunInParallel)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.RunInParallel));
-                    _command.RunInParallel = AnsiConsole.Confirm("Do you want to run all your http runs in parallel?");
+                    _command.RunInParallel = AnsiConsole.Confirm("Do you want to run all your http runs in [green]'Parallel'[/]?");
                     continue;
                 }
 
