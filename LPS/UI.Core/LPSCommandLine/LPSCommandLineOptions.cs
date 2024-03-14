@@ -22,14 +22,62 @@ namespace LPS.UI.Core.LPSCommandLine
         {
             static RootCommandLineOptions() 
             {
-                NumberOfRequests.AddAlias("-n");
+                TestNameOption.AddAlias("-tn");
+                DelayClientCreation.AddAlias("-dcc");
+                NumberOfClientsOption.AddAlias("-nc");
+                RampupPeriodOption.AddAlias("-rp");
+                RunInParaller.AddAlias("-rip");
+                TestNameOption.AddAlias("--testname");
+                DelayClientCreation.AddAlias("--delayclientcreation");
+                NumberOfClientsOption.AddAlias("--numberofclients");
+                RampupPeriodOption.AddAlias("--rampupperiod");
+                RunInParaller.AddAlias("--runinparallel");
+                RunNameOption.AddAlias("-rn");
+                RequestCountOption.AddAlias("-rc");
+                Duratiion.AddAlias("-d");
+                BatchSize.AddAlias("-bs");
+                CoolDownTime.AddAlias("-cdt");
+                HttpMethodOption.AddAlias("-hm");
+                HttpversionOption.AddAlias("-hv");
                 UrlOption.AddAlias("-u");
-                NumberOfRequests.AddAlias("--numberofrequests");
+                HeaderOption.AddAlias("-h");
+                PayloadOption.AddAlias("-p");
+                IterationModeOption.AddAlias("-im");
+                DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
+                SaveResponse.AddAlias("-sr");
+                RunNameOption.AddAlias("--runname");
+                RequestCountOption.AddAlias("--requestcount");
+                Duratiion.AddAlias("--Duration");
+                BatchSize.AddAlias("--batchsize");
+                CoolDownTime.AddAlias("--cooldowntime");
+                HttpMethodOption.AddAlias("--httpmethod");
+                HttpversionOption.AddAlias("--httpversion");
                 UrlOption.AddAlias("--url");
+                HeaderOption.AddAlias("--Header");
+                PayloadOption.AddAlias("--Payload");
+                IterationModeOption.AddAlias("--itermationmode");
+                DownloadHtmlEmbeddedResources.AddAlias("--downloadhtmlembeddedresources");
+                SaveResponse.AddAlias("--saveresponse");
             }
-
-            public static Option<int> NumberOfRequests { get; } = new Option<int>("--numberOfRequests", "Number of clients to execute the plan") { IsRequired = true, };
+            public static Option<string> TestNameOption { get; } = new Option<string>("--testname", ()=> "Quick-Test-Plan", "Test name") { IsRequired = false, Arity = ArgumentArity.ExactlyOne };
+            public static Option<int> NumberOfClientsOption { get; } = new Option<int>("--numberOfClients", () => 1, "Number of clients to execute the plan") { IsRequired = false, };
+            public static Option<int> RampupPeriodOption { get; } = new Option<int>("--rampupPeriod", () => 0, "Time in millisencds to wait before creating starting a new client") { IsRequired = false, };
+            public static Option<bool> DelayClientCreation { get; } = new Option<bool>("--delayClientCreation", () => false, "Delay Client Creation Until is Needed") { IsRequired = false };
+            public static Option<bool> RunInParaller { get; } = new Option<bool>("--runInParallel", () => true, "Execute your runs In Parallel") { IsRequired = false };
             public static Option<string> UrlOption { get; } = new Option<string>("--url", "URL") { IsRequired = true };
+            public static Option<string> HttpMethodOption { get; } = new Option<string>("--method", ()=> "GET", "HTTP method") { IsRequired = false };
+            public static Option<IList<string>> HeaderOption { get; } = new Option<IList<string>>("--header", "Header") { IsRequired = false, AllowMultipleArgumentsPerToken = true, };
+            public static Option<string> RunNameOption { get; } = new Option<string>("--runName", ()=> "Quick-Http-Run", "The name of the 'HTTP Run'") { IsRequired = false };
+            public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", ()=> IterationMode.R, "It defines the 'HTTP Run' iteration Mode") { IsRequired = false, };
+            public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", ()=> 1, "The number of requests") { IsRequired = false, };
+            public static Option<int?> Duratiion { get; } = new Option<int?>("--duration", ()=> 0, "Time to run in seconds") { IsRequired = false, };
+            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", ()=> 0, "The time in seconds the client has to cooldown before sending the next batch") { IsRequired = false, };
+            public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", ()=> 0, "The number of requests to be sent in a batch") { IsRequired = false, };
+            public static Option<string> HttpversionOption { get; } = new Option<string>("--httpVersion", () => "2.0", "HTTP version") { IsRequired = false };
+            public static Option<bool> DownloadHtmlEmbeddedResources { get; } = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true to download the HTML embedded resources, otherwise false ") { IsRequired = false };
+            public static Option<bool> SaveResponse { get; } = new Option<bool>("--saveResponse", () => false, "Set to true to save the http response, otherwise false") { IsRequired = false };
+            public static Option<string> PayloadOption { get; } = new Option<string>("--payload", "Request Payload, can be a path to a file or inline text") { IsRequired = false, };
+
         }
 
         public static class LPSCreateCommandOptions
@@ -46,12 +94,14 @@ namespace LPS.UI.Core.LPSCommandLine
                 NumberOfClientsOption.AddAlias("--numberofclients");
                 RampupPeriodOption.AddAlias("--rampupperiod");
                 RunInParaller.AddAlias("--runinparallel");
+
             }
             public static Option<string> TestNameOption { get; } = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>("--numberOfClients", "Number of clients to execute the plan") { IsRequired = true, };
-            public static Option<int> RampupPeriodOption { get; } = new Option<int>("--rampupPeriod", "Time in millisencds to wait before creating starting a new client") { IsRequired = false, };
+            public static Option<int> RampupPeriodOption { get; } = new Option<int>("--rampupPeriod", "Time in millisencds to wait before creating starting a new client") { IsRequired = true, };
             public static Option<bool> DelayClientCreation { get; } = new Option<bool>("--delayClientCreation", () => false, "Delay Client Creation Until is Needed") { IsRequired = false };
             public static Option<bool> RunInParaller { get; } = new Option<bool>("--runInParallel", () => true, "Execute your runs In Parallel") { IsRequired = false };
+        
         }
 
         public static class LPSAddCommandOptions
@@ -89,14 +139,14 @@ namespace LPS.UI.Core.LPSCommandLine
             }
 
             public static Option<string> TestNameOption { get; } = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
-            public static Option<string> RunNameOption { get; } = new Option<string>("--runName", "The name of the HTTP Run") { IsRequired = true };
-            public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", "It defines the HTTP Run iteration Mode") { IsRequired = false, };
+            public static Option<string> RunNameOption { get; } = new Option<string>("--runName", "The name of the 'HTTP Run'") { IsRequired = true };
+            public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", "It defines the 'HTTP Run' iteration Mode") { IsRequired = false, };
             public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", "The number of requests") { IsRequired = false, };
             public static Option<int?> Duratiion { get; } = new Option<int?>("--duration", "Time to run in seconds") { IsRequired = false, };
-            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time to cooldown during the execution of the HTTP Run") { IsRequired = false, };
+            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time in seconds the client has to cooldown before sending the next batch") { IsRequired = false, };
             public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", "The number of requests to be sent in a batch") { IsRequired = false, };
             public static Option<string> HttpMethodOption { get; } = new Option<string>("--method", "HTTP method") { IsRequired = true };
-            public static Option<string> HttpversionOption { get; } = new Option<string>("--version", () => "2.0", "HTTP version") { IsRequired = false };
+            public static Option<string> HttpversionOption { get; } = new Option<string>("--httpVersion", () => "2.0", "HTTP version") { IsRequired = false };
             public static Option<string> UrlOption { get; } = new Option<string>("--url", "URL") { IsRequired = true };
             public static Option<bool> DownloadHtmlEmbeddedResources { get; } = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true to download the HTML embedded resources or false otherwise") { IsRequired = false };
             public static Option<bool> SaveResponse { get; } = new Option<bool>("--saveResponse", () => false, "Set to true to save the http response or false otherwise") { IsRequired = false };
@@ -164,7 +214,8 @@ namespace LPS.UI.Core.LPSCommandLine
 
         public static class LPSWatchdogCommandOptions
         {
-            static LPSWatchdogCommandOptions() {
+            static LPSWatchdogCommandOptions() 
+            {
                 MaxMemoryMB.AddAlias("-mmm");
                 MaxCPUPercentage.AddAlias("-mcp");
                 CoolDownMemoryMB.AddAlias("-cdmm");

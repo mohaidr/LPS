@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using LPS.UI.Core.LPSCommandLine.Bindings;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -50,31 +51,31 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         public void Execute(CancellationToken cancellationToken)
         {
-            _rootCliCommand.SetHandler(async (numberOfRequests, Url) =>
+            _rootCliCommand.SetHandler(async (lpsTestPlan) =>
             {
                 var plan = new LPSTestPlan(new LPSTestPlan.SetupCommand()
                 {
-                    Name = "Quick-Test-Plan",
-                    NumberOfClients = 1,
-                    RunInParallel = true,
-                    RampUpPeriod = 1,
-                    DelayClientCreationUntilIsNeeded = false,
+                    Name = lpsTestPlan.Name,
+                    NumberOfClients = lpsTestPlan.NumberOfClients,
+                    RunInParallel = lpsTestPlan.RunInParallel,
+                    RampUpPeriod = lpsTestPlan.RampUpPeriod,
+                    DelayClientCreationUntilIsNeeded = lpsTestPlan.DelayClientCreationUntilIsNeeded,
                 }, _logger, _runtimeOperationIdProvider);
 
                 var httpRun = new LPSHttpRun(
                          new LPSHttpRun.SetupCommand()
                          {
-                             Mode = LPSHttpRun.IterationMode.R,
-                             RequestCount = numberOfRequests,
-                             Name = "Quick-Test",
+                             Mode = lpsTestPlan.LPSHttpRuns[0].Mode,
+                             RequestCount = lpsTestPlan.LPSHttpRuns[0].RequestCount,
+                             Name = lpsTestPlan.LPSHttpRuns[0].Name,
                          }, _logger, _runtimeOperationIdProvider);
                 var requestProfile = new LPSHttpRequestProfile(
                     new LPSHttpRequestProfile.SetupCommand()
                     {
-                        URL = Url,
-                        HttpMethod = "GET",
-                        DownloadHtmlEmbeddedResources = false,
-                        SaveResponse = false,
+                        URL = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.URL,
+                        HttpMethod = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.HttpMethod,
+                        DownloadHtmlEmbeddedResources = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.DownloadHtmlEmbeddedResources,
+                        SaveResponse = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.SaveResponse,
                     },
                     _logger, _runtimeOperationIdProvider);
                 httpRun.LPSHttpRequestProfile = requestProfile;
@@ -82,8 +83,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lpsMonitoringEnroller);
                 await manager.Run(plan, cancellationToken);
             },
-            LPSCommandLineOptions.RootCommandLineOptions.NumberOfRequests,
-            LPSCommandLineOptions.RootCommandLineOptions.UrlOption);
+            new LPSCommandBinder());
             _rootCliCommand.Invoke(_args);
         }
     }

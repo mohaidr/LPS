@@ -29,7 +29,8 @@ namespace LPS.UI.Core.LPSValidators
 
             RuleFor(command => command.RampUpPeriod)
             .NotNull().WithMessage("The 'RampUp Period' must be a non-null value")
-            .GreaterThan(0).WithMessage("The 'RampUp Period' must be greater than 0");
+            .GreaterThan(0).When(command=> command.NumberOfClients>1)
+            .WithMessage("The 'RampUp Period' must be greater than 0");
 
 
             RuleFor(command => command.DelayClientCreationUntilIsNeeded)
