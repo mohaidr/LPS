@@ -18,14 +18,6 @@ namespace LPS.UI.Common.Extensions
                     group => group.Select(error => error.ErrorMessage).ToList()
                 );
 
-            if (groupedErrors.Count == 0)
-            {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("No validation errors.");
-                Console.ResetColor();
-                return;
-            }
-
             foreach (var kv in groupedErrors)
             {
                 Console.ForegroundColor = ConsoleColor.Red;

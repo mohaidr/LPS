@@ -42,42 +42,32 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         public void Execute(CancellationToken cancellationToken)
         {
-            _addCommand.SetHandler((testName, lpsRun) =>
+            _addCommand.SetHandler((testName, lpsRunSetupCommand) =>
             {
-                bool isValidPlan, isValidRun, isValidRequestProfile;
-                ValidationResult results;
+                ValidationResult planValidationResults, runValidationResulta, requestProfileValidationResults;
                 _planSetupCommand = LPSSerializationHelper.Deserialize<LPSTestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
                 var planValidator = new LPSTestPlanValidator(_planSetupCommand);
-                results = planValidator.Validate();
-                isValidPlan = results.IsValid;
-                if (!isValidPlan)
-                {
-                    results.PrintValidationErrors();
-                }
-                var lpsRunValidator = new LPSRunValidator(lpsRun);
-                results = lpsRunValidator.Validate();
-                isValidRun = results.IsValid;
-                if (!isValidRun)
-                {
-                    results.PrintValidationErrors();
-                }
-                var lpsRequestProfileValidator = new LPSRequestProfileValidator(lpsRun.LPSRequestProfile);
-                results = lpsRequestProfileValidator.Validate();
-                isValidRequestProfile = results.IsValid;
-                if (!isValidRequestProfile)
-                {
-                    results.PrintValidationErrors();
-                }
+                planValidationResults = planValidator.Validate();
+                var lpsRunValidator = new LPSRunValidator(lpsRunSetupCommand);
+                runValidationResulta = lpsRunValidator.Validate();
+                var lpsRequestProfileValidator = new LPSRequestProfileValidator(lpsRunSetupCommand.LPSRequestProfile);
+                requestProfileValidationResults = lpsRequestProfileValidator.Validate();
 
-                if (isValidRun && isValidPlan && isValidRequestProfile)
+                if (planValidationResults.IsValid && runValidationResulta.IsValid && requestProfileValidationResults.IsValid)
                 {
-                    _planSetupCommand.LPSHttpRuns.Add(lpsRun);
+                    _planSetupCommand.LPSHttpRuns.Add(lpsRunSetupCommand);
                     _planSetupCommand.IsValid = true;
                     string json = LPSSerializationHelper.Serialize(_planSetupCommand);
                     File.WriteAllText($"{testName}.json", json);
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine("Your http run has been added successfully");
                     Console.ResetColor();
+                }
+                else
+                {
+                    planValidationResults.PrintValidationErrors();
+                    runValidationResulta.PrintValidationErrors();
+                    requestProfileValidationResults.PrintValidationErrors();
                 }
             },
             LPSCommandLineOptions.LPSAddCommandOptions.TestNameOption,

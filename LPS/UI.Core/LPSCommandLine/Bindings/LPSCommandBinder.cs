@@ -50,29 +50,30 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<bool> downloadHtmlEmbeddedResourcesOption = null,
             Option<bool> saveResponseOption = null)
         {
-            _testPlanNameOption = testPlanNameOption ?? LPSCommandLineOptions.RootCommandLineOptions.TestNameOption;
-            _numberOfClientsOption = numberOfClientsOption ?? LPSCommandLineOptions.RootCommandLineOptions.NumberOfClientsOption;
-            _rampupPeriodOption = rampupPeriodOption ?? LPSCommandLineOptions.RootCommandLineOptions.RampupPeriodOption;
-            _delayClientCreationOption = delayClientCreationOption ?? LPSCommandLineOptions.RootCommandLineOptions.DelayClientCreation;
-            _runInParallerOption = runInParallerOption ?? LPSCommandLineOptions.RootCommandLineOptions.RunInParaller;
-            _httpRunNameOption = httpRunNameOption ?? LPSCommandLineOptions.RootCommandLineOptions.RunNameOption;
-            _iterationModeOption = iterationModeOption ?? LPSCommandLineOptions.RootCommandLineOptions.IterationModeOption;
-            _duration = duratiion ?? LPSCommandLineOptions.RootCommandLineOptions.Duratiion;
-            _batchSize = batchSizeOption ?? LPSCommandLineOptions.RootCommandLineOptions.BatchSize;
-            _coolDownTime = coolDownTime ?? LPSCommandLineOptions.RootCommandLineOptions.CoolDownTime;
-            _requestCountOption = requestCountOption ?? LPSCommandLineOptions.RootCommandLineOptions.RequestCountOption;
-            _httpMethodOption = httpMethodOption ?? LPSCommandLineOptions.RootCommandLineOptions.HttpMethodOption;
-            _httpversionOption = httpversionOption ?? LPSCommandLineOptions.RootCommandLineOptions.HttpversionOption;
-            _urlOption = urlOption ?? LPSCommandLineOptions.RootCommandLineOptions.UrlOption;
-            _headerOption = headerOption ?? LPSCommandLineOptions.RootCommandLineOptions.HeaderOption;
-            _payloadOption = payloadOption ?? LPSCommandLineOptions.RootCommandLineOptions.PayloadOption;
-            _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? LPSCommandLineOptions.RootCommandLineOptions.DownloadHtmlEmbeddedResources;
-            _saveResponseOption = saveResponseOption ?? LPSCommandLineOptions.RootCommandLineOptions.SaveResponse;
+            _testPlanNameOption = testPlanNameOption ?? LPSCommandLineOptions.LPSCommandOptions.TestNameOption;
+            _numberOfClientsOption = numberOfClientsOption ?? LPSCommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
+            _rampupPeriodOption = rampupPeriodOption ?? LPSCommandLineOptions.LPSCommandOptions.RampupPeriodOption;
+            _delayClientCreationOption = delayClientCreationOption ?? LPSCommandLineOptions.LPSCommandOptions.DelayClientCreation;
+            _runInParallerOption = runInParallerOption ?? LPSCommandLineOptions.LPSCommandOptions.RunInParaller;
+            _httpRunNameOption = httpRunNameOption ?? LPSCommandLineOptions.LPSCommandOptions.RunNameOption;
+            _iterationModeOption = iterationModeOption ?? LPSCommandLineOptions.LPSCommandOptions.IterationModeOption;
+            _duration = duratiion ?? LPSCommandLineOptions.LPSCommandOptions.Duration;
+            _batchSize = batchSizeOption ?? LPSCommandLineOptions.LPSCommandOptions.BatchSize;
+            _coolDownTime = coolDownTime ?? LPSCommandLineOptions.LPSCommandOptions.CoolDownTime;
+            _requestCountOption = requestCountOption ?? LPSCommandLineOptions.LPSCommandOptions.RequestCountOption;
+            _httpMethodOption = httpMethodOption ?? LPSCommandLineOptions.LPSCommandOptions.HttpMethodOption;
+            _httpversionOption = httpversionOption ?? LPSCommandLineOptions.LPSCommandOptions.HttpversionOption;
+            _urlOption = urlOption ?? LPSCommandLineOptions.LPSCommandOptions.UrlOption;
+            _headerOption = headerOption ?? LPSCommandLineOptions.LPSCommandOptions.HeaderOption;
+            _payloadOption = payloadOption ?? LPSCommandLineOptions.LPSCommandOptions.PayloadOption;
+            _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? LPSCommandLineOptions.LPSCommandOptions.DownloadHtmlEmbeddedResources;
+            _saveResponseOption = saveResponseOption ?? LPSCommandLineOptions.LPSCommandOptions.SaveResponse;
 
         }
 
-        protected override LPSTestPlan.SetupCommand GetBoundValue(BindingContext bindingContext) =>
-            new LPSTestPlan.SetupCommand
+        protected override LPSTestPlan.SetupCommand GetBoundValue(BindingContext bindingContext)
+        {
+            return new LPSTestPlan.SetupCommand
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_testPlanNameOption),
                 NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
@@ -102,5 +103,6 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                     }
                 }
             };
+        }
     }
 }
