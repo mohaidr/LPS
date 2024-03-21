@@ -72,7 +72,7 @@ namespace LPS.Infrastructure.Client
 
                 bool supportsContent = (lpsHttpRequestProfile.HttpMethod.ToLower() == "post" || lpsHttpRequestProfile.HttpMethod.ToLower() == "put" || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch");
                 httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.Httpversion);
-                httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload) : null;
+                httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload?? string.Empty) : null;
 
                 foreach (var header in lpsHttpRequestProfile.HttpHeaders)
                 {
@@ -177,7 +177,6 @@ namespace LPS.Infrastructure.Client
             }
             catch (Exception ex)
             {
-                // LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host); // decrease the number of active connections in case of exception
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, cancellationTokenWrapper);

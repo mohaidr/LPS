@@ -81,6 +81,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     HttpMethod = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.HttpMethod,
                     DownloadHtmlEmbeddedResources = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.DownloadHtmlEmbeddedResources,
                     SaveResponse = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.SaveResponse,
+                    Payload = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.Payload,
+                    Httpversion = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.Httpversion,
+                    HttpHeaders = lpsTestPlan.LPSHttpRuns[0].LPSRequestProfile.HttpHeaders,
                 };
                 var planValidator = new LPSTestPlanValidator(planSetupCommand);
                 planValidationResults = planValidator.Validate();

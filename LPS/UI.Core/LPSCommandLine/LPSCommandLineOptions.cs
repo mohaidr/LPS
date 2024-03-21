@@ -76,7 +76,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<string> HttpversionOption { get; } = new Option<string>("--httpVersion", () => "2.0", "HTTP version") { IsRequired = false };
             public static Option<bool> DownloadHtmlEmbeddedResources { get; } = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true to download the HTML embedded resources, otherwise false ") { IsRequired = false };
             public static Option<bool> SaveResponse { get; } = new Option<bool>("--saveResponse", () => false, "Set to true to save the http response, otherwise false") { IsRequired = false };
-            public static Option<string> PayloadOption { get; } = new Option<string>("--payload", "Request Payload, can be a path to a file or inline text") { IsRequired = false, };
+            public static Option<string> PayloadOption { get; } = new Option<string>("--payload", ()=> string.Empty, "Request Payload, can be a path to a file or inline text") { IsRequired = false, };
 
         }
 

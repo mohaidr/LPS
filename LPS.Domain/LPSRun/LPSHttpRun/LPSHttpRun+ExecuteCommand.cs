@@ -189,7 +189,7 @@ namespace LPS.Domain
                     case IterationMode.R:
                         for (int i = 0; i < this.RequestCount && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i++)
                         {
-                            _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
+                            await lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                             numberOfSentRequests++;
                             await _watchdog.Balance(hostName);
                         }
@@ -199,7 +199,7 @@ namespace LPS.Domain
                         stopwatch.Start();
                         while (stopwatch.Elapsed.TotalSeconds < this.Duration.Value && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
                         {
-                            _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
+                            await lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                             numberOfSentRequests++;
                             await _watchdog.Balance(hostName);
                         }

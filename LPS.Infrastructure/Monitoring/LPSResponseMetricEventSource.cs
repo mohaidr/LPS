@@ -80,7 +80,7 @@ namespace LPS.Infrastructure.Monitoring
         }
 
         [Event(2, Message = "Response Code Breakdown: {0}")]
-        public void WriteResponseDurationMetrics(string message)
+        public void WriteResponseBreakDownMetrics(string message)
         {
             try
             {

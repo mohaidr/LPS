@@ -35,11 +35,11 @@ namespace LPS.Domain
             public string Httpversion { get; set; }
 
             public Dictionary<string, string> HttpHeaders { get; set; }
+            public bool? DownloadHtmlEmbeddedResources { get; set; }
+            public bool? SaveResponse { get; set; }
 
             public bool IsValid { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
-            public bool? DownloadHtmlEmbeddedResources { get; set; }
-            public bool? SaveResponse { get; set; }
             public void Execute(LPSHttpRequestProfile entity)
             {
                 if (entity == null)

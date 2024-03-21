@@ -45,7 +45,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _dimensionSet.P50ResponseTime = _histogram.GetValueAtPercentile(50);
                 _dimensionSet.P90ResponseTime = _histogram.GetValueAtPercentile(90);
                 _dimensionSet.EndPointDetails =  $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
-               // ConsoleMessageWriter.AddUniqueMessage(Markup.Escape(this.Stringify()), 5, _groupId.ToString());
             }
             finally
             {
@@ -63,16 +62,15 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             try
             {
-                var toSerialize = _dimensionSet.CloneObject();
-                toSerialize.SumResponseTime = Math.Round(toSerialize.SumResponseTime, 2);
-                toSerialize.MaxResponseTime = Math.Round(toSerialize.MaxResponseTime, 2);
-                toSerialize.AverageResponseTime = Math.Round(toSerialize.AverageResponseTime, 2);
-                toSerialize.MinResponseTime = Math.Round(toSerialize.MinResponseTime, 2);
-                toSerialize.P10ResponseTime = Math.Round(toSerialize.P10ResponseTime, 2);
-                toSerialize.P50ResponseTime = Math.Round(toSerialize.P50ResponseTime, 2);
-                toSerialize.P90ResponseTime = Math.Round(toSerialize.P90ResponseTime, 2);
-               
-                return LPSSerializationHelper.Serialize(toSerialize);
+                var dimensionSet = _dimensionSet.CloneObject();
+                dimensionSet.SumResponseTime = Math.Round(dimensionSet.SumResponseTime, 2);
+                dimensionSet.MaxResponseTime = Math.Round(dimensionSet.MaxResponseTime, 2);
+                dimensionSet.AverageResponseTime = Math.Round(dimensionSet.AverageResponseTime, 2);
+                dimensionSet.MinResponseTime = Math.Round(dimensionSet.MinResponseTime, 2);
+                dimensionSet.P10ResponseTime = Math.Round(dimensionSet.P10ResponseTime, 2);
+                dimensionSet.P50ResponseTime = Math.Round(dimensionSet.P50ResponseTime, 2);
+                dimensionSet.P90ResponseTime = Math.Round(dimensionSet.P90ResponseTime, 2);
+                return LPSSerializationHelper.Serialize(dimensionSet);
             }
             catch (InvalidOperationException ex)
             {
