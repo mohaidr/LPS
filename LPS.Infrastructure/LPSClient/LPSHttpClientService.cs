@@ -6,6 +6,7 @@ using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Monitoring.Metrics;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -14,6 +15,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.Mime;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -44,7 +46,7 @@ namespace LPS.Infrastructure.Client
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 5,
                 EnableMultipleHttp2Connections = true,
-            };  
+            };
             httpClient = new HttpClient(socketsHandler)
             {
                 DefaultRequestVersion = HttpVersion.Version20
@@ -54,129 +56,56 @@ namespace LPS.Infrastructure.Client
             GuidId = Guid.NewGuid().ToString();
         }
         private static readonly object _lock = new object();
-        private readonly Dictionary<string, IList<ILPSResponseMetric>> _responseMetricsCache = new Dictionary<string, IList<ILPSResponseMetric>>();
+        private readonly ConcurrentDictionary<string, IList<ILPSMetric>> _metrics = new ConcurrentDictionary<string, IList<ILPSMetric>>();
         public async Task<LPSHttpResponse> SendAsync(LPSHttpRequestProfile lpsHttpRequestProfile, ICancellationTokenWrapper cancellationTokenWrapper)
         {
 
-            if (!_responseMetricsCache.ContainsKey(lpsHttpRequestProfile.Id.ToString()))
-                _responseMetricsCache[lpsHttpRequestProfile.Id.ToString()] = LPSResponseMetricsDataSource.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == lpsHttpRequestProfile.Id);
+            _metrics.TryAdd(lpsHttpRequestProfile.Id.ToString(), LPSMetricsDataSource.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == lpsHttpRequestProfile.Id));
             int sequenceNumber = lpsHttpRequestProfile.LastSequenceId;
             LPSHttpResponse lpsHttpResponse;
             var requestUri = new Uri(lpsHttpRequestProfile.URL);
+            Stopwatch stopWatch = Stopwatch.StartNew();
             try
             {
                 LPSConnectionEventSource.Log.ConnectionEstablished(requestUri.Host); // increase the number of active connections
-                var httpRequestMessage = new HttpRequestMessage();
-                httpRequestMessage.RequestUri = new Uri(lpsHttpRequestProfile.URL);
-                httpRequestMessage.Method = new HttpMethod(lpsHttpRequestProfile.HttpMethod);
 
-                bool supportsContent = (lpsHttpRequestProfile.HttpMethod.ToLower() == "post" || lpsHttpRequestProfile.HttpMethod.ToLower() == "put" || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch");
-                httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.Httpversion);
-                httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload?? string.Empty) : null;
+                var httpRequestMessage = ConstructRequestMessage(lpsHttpRequestProfile);
 
-                foreach (var header in lpsHttpRequestProfile.HttpHeaders)
-                {
-
-                    if (supportsContent)
-                    {
-                        var contentHeaders = httpRequestMessage.Content.Headers;
-
-                        if (contentHeaders.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
-                        {
-                            SetContentHeader(httpRequestMessage, header.Key, header.Value);
-                            continue;
-                        }
-                    }
-
-                    if (!(new StringContent("").Headers.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", ""))))
-                    {
-                        var requestHeader = httpRequestMessage.Headers;
-                        if (requestHeader.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
-                        {
-                            SetRequestHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
-                        }
-                        else
-                        {
-                            SetUserHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
-                        }
-                    }
-                }
-                Stopwatch stopWatch = Stopwatch.StartNew();
-                TimeSpan responseTime;
+                await TryUpdateConnectionsMetrics(lpsHttpRequestProfile, false, cancellationTokenWrapper);
                 // restart in case StartNew adds unnecessary milliseconds becuase of JITing. See this https://stackoverflow.com/questions/14019510/calculate-the-execution-time-of-a-method
                 stopWatch.Restart();
-                var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationTokenWrapper.CancellationToken);
+                var response = await ExecuteHttpRequestAsync(lpsHttpRequestProfile, httpRequestMessage, cancellationTokenWrapper);
+                LPSHttpResponse.SetupCommand responseCommand = await ProcessResponseAsync(response, lpsHttpRequestProfile, sequenceNumber, cancellationTokenWrapper);
+                responseCommand.ResponseTime = stopWatch.Elapsed; // set the response time after the complete payload is read.
+                stopWatch.Stop();
 
-                string contentType = response?.Content?.Headers?.ContentType?.MediaType;
+                lpsHttpResponse = new LPSHttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
+                lpsHttpResponse.LPSHttpRequestProfile = lpsHttpRequestProfile; // this will change when we implement IQueryable Repository where the domain can fetch, validate and update the property. We then pass the profile Id to through the command
 
-                MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
-                string fileExtension = mimeType.ToFileExtension();
-                string invalidChars = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
-                // Replace special characters in the URL with an underscore
-                string sanitizedUrl = string.Join("-", lpsHttpRequestProfile.URL.Replace("https://", "").Split(invalidChars.ToCharArray()));
-                string directoryName = $"{_runtimeOperationIdProvider.OperationId}.{sanitizedUrl}.Resources";
-                string locationToResponse = $"{directoryName}/{Id}.{sequenceNumber}.{lpsHttpRequestProfile.Id}.{sanitizedUrl}.http {response.Version} {fileExtension}";
-                if (!Directory.Exists(directoryName))
-                {
-                    Directory.CreateDirectory(directoryName);
-                }
+                await TryUpdateResponseMetrics(lpsHttpRequestProfile, lpsHttpResponse, cancellationTokenWrapper);
 
-                using (Stream contentStream = await response.Content.ReadAsStreamAsync(cancellationTokenWrapper.CancellationToken))
-                {
-                    byte[] buffer = new byte[64000]; // Adjust the buffer size as needed and modify this logic to have queue of buffers and reuse them
-                    int bytesRead;
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
 
-                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationTokenWrapper.CancellationToken)) > 0)
-                    {
-                        // Process the response as needed
-                        // Example: memoryStream.Write(buffer, 0, bytesRead);
+                await ExtractAndDownloadHtmlResourcesAsync(sequenceNumber, responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient, cancellationTokenWrapper);
 
-                        if (lpsHttpRequestProfile.SaveResponse)
-                        {
-                            // If saving the response to a file is required
-                            using (FileStream fileStream = File.Create(locationToResponse))
-                            {
-                                await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationTokenWrapper.CancellationToken);
-                            }
-                        }
-                    }
-
-                    responseTime = stopWatch.Elapsed;
-                    stopWatch.Stop();
-                }
-
-
-                LPSHttpResponse.SetupCommand lpsResponseCommand = new LPSHttpResponse.SetupCommand
-                {
-                    StatusCode = response.StatusCode,
-                    StatusMessage = response.ReasonPhrase,
-                    LocationToResponse = lpsHttpRequestProfile.SaveResponse ? locationToResponse : string.Empty,
-                    IsSuccessStatusCode = response.IsSuccessStatusCode,
-                    ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
-                    ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
-                    ContentType = mimeType,
-                    LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
-                    ResponseTime = responseTime,
-                };
-
-                var responseEntity = new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
-                responseEntity.LPSHttpRequestProfile = lpsHttpRequestProfile; // this will change when we implement IQueryable Repository where the domain can fetch, validate and update the property. We then pass the profile Id to through the command
-                await Task.WhenAll(_responseMetricsCache[lpsHttpRequestProfile.Id.ToString()].Select(metric => metric.UpdateAsync(responseEntity)));
-
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {locationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
-
-                if (contentType == "text/html" && response.IsSuccessStatusCode && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
-                {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
-                    string htmlContent = await File.ReadAllTextAsync(locationToResponse, Encoding.UTF8);
-                    HtmlDocument doc = new HtmlDocument();
-                    doc.LoadHtml(htmlContent);
-                    await DownloadHtmlEmbeddedResources(doc, lpsHttpRequestProfile.URL, httpClient, cancellationTokenWrapper);
-                }
-                lpsHttpResponse = new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
             }
             catch (Exception ex)
             {
+                LPSHttpResponse.SetupCommand lpsResponseCommand = new LPSHttpResponse.SetupCommand
+                {
+                    StatusCode = 0,
+                    StatusMessage = ex.Message,
+                    LocationToResponse = string.Empty,
+                    IsSuccessStatusCode = false,
+                    LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
+                    ResponseTime = stopWatch.Elapsed,
+                };
+
+                lpsHttpResponse = new LPSHttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
+                lpsHttpResponse.LPSHttpRequestProfile = lpsHttpRequestProfile; // this will change when we implement IQueryable Repository where the domain can fetch, validate and update the property. We then pass the profile Id to through the command
+                await TryUpdateResponseMetrics(lpsHttpRequestProfile, lpsHttpResponse, cancellationTokenWrapper);
+
+
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || (ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer"))))
                 {
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, cancellationTokenWrapper);
@@ -187,11 +116,109 @@ namespace LPS.Infrastructure.Client
             }
             finally
             {
+                await TryUpdateConnectionsMetrics(lpsHttpRequestProfile, true, cancellationTokenWrapper);
                 LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host); // decrease the number of active connections
-
             }
 
             return lpsHttpResponse;
+        }
+
+        private HttpRequestMessage ConstructRequestMessage(LPSHttpRequestProfile lpsHttpRequestProfile)
+        {
+            var httpRequestMessage = new HttpRequestMessage();
+            httpRequestMessage.RequestUri = new Uri(lpsHttpRequestProfile.URL);
+            httpRequestMessage.Method = new HttpMethod(lpsHttpRequestProfile.HttpMethod);
+            bool supportsContent = (lpsHttpRequestProfile.HttpMethod.ToLower() == "post" || lpsHttpRequestProfile.HttpMethod.ToLower() == "put" || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch");
+            httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.Httpversion);
+            httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload ?? string.Empty) : null;
+
+            foreach (var header in lpsHttpRequestProfile.HttpHeaders)
+            {
+
+                if (supportsContent)
+                {
+                    var contentHeaders = httpRequestMessage.Content.Headers;
+
+                    if (contentHeaders.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
+                    {
+                        SetContentHeader(httpRequestMessage, header.Key, header.Value);
+                        continue;
+                    }
+                }
+
+                if (!(new StringContent("").Headers.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", ""))))
+                {
+                    var requestHeader = httpRequestMessage.Headers;
+                    if (requestHeader.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
+                    {
+                        SetRequestHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
+                    }
+                    else
+                    {
+                        SetUserHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
+                    }
+                }
+            }
+
+            return httpRequestMessage;
+        }
+
+        private async Task<HttpResponseMessage> ExecuteHttpRequestAsync(LPSHttpRequestProfile lpsHttpRequestProfile, HttpRequestMessage httpRequestMessage, ICancellationTokenWrapper cancellationTokenWrapper)
+        {
+            var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationTokenWrapper.CancellationToken);
+            return response;
+        }
+
+        private async Task<LPSHttpResponse.SetupCommand> ProcessResponseAsync(HttpResponseMessage response, LPSHttpRequestProfile lpsHttpRequestProfile, int sequenceNumber, ICancellationTokenWrapper cancellationTokenWrapper)
+        {
+            string contentType = response?.Content?.Headers?.ContentType?.MediaType;
+            MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
+            string fileExtension = mimeType.ToFileExtension();
+            string sanitizedUrl = SanitizeUrl(lpsHttpRequestProfile.URL);
+            string directoryName = $"{_runtimeOperationIdProvider.OperationId}.{sanitizedUrl}.Resources";
+            string locationToResponse = $"{directoryName}/{Id}.{sequenceNumber}.{lpsHttpRequestProfile.Id}.{sanitizedUrl}.http {response.Version} {fileExtension}";
+
+            // Ensure the directory exists without an explicit check
+            Directory.CreateDirectory(directoryName);
+
+            using (Stream contentStream = await response.Content.ReadAsStreamAsync(cancellationTokenWrapper.CancellationToken))
+            {
+                byte[] buffer = new byte[64000]; // Adjust the buffer size as needed and modify this logic to have queue of buffers and reuse them
+                int bytesRead;
+
+                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationTokenWrapper.CancellationToken)) > 0)
+                {
+                    // Process the response as needed
+                    // Example: memoryStream.Write(buffer, 0, bytesRead);
+
+                    if (lpsHttpRequestProfile.SaveResponse)
+                    {
+                        // If saving the response to a file is required
+                        using (FileStream fileStream = File.Create(locationToResponse))
+                        {
+                            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationTokenWrapper.CancellationToken);
+                        }
+                    }
+                }
+            }
+
+            return new LPSHttpResponse.SetupCommand
+            {
+                StatusCode = response.StatusCode,
+                StatusMessage = response.ReasonPhrase,
+                LocationToResponse = lpsHttpRequestProfile.SaveResponse ? locationToResponse : string.Empty,
+                IsSuccessStatusCode = response.IsSuccessStatusCode,
+                ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                ContentType = mimeType,
+                LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
+            };
+        }
+
+        private string SanitizeUrl(string url)
+        {
+            string invalidChars = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+            return string.Join("-", url.Replace("https://", "").Split(invalidChars.ToCharArray()));
         }
 
         private static Version GetHttpVersion(string version)
@@ -497,30 +524,87 @@ namespace LPS.Infrastructure.Client
             message.Headers.Add(name, value);
         }
 
-        private async Task DownloadHtmlEmbeddedResources(HtmlDocument doc, string baseUrl, HttpClient client, ICancellationTokenWrapper cancellationTokenWrapper)
+        private async Task ExtractAndDownloadHtmlResourcesAsync(int sequenceNumber, LPSHttpResponse.SetupCommand responseCommand, LPSHttpRequestProfile lpsHttpRequestProfile, string locationToResponse, HttpClient client, ICancellationTokenWrapper cancellationTokenWrapper)
         {
-            // XPath expressions to select different types of resources
-            string[] resourceXPaths = { "//img", "//link[@rel='stylesheet']", "//script" };
-
-            foreach (string resourceXPath in resourceXPaths)
+            try
             {
-                var resourceNodes = doc.DocumentNode.SelectNodes(resourceXPath);
-                if (resourceNodes != null)
+                if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && lpsHttpRequestProfile.Id == responseCommand.LPSHttpRequestProfileId && lpsHttpRequestProfile.SaveResponse && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
                 {
-                    foreach (var resourceNode in resourceNodes)
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                    string htmlContent = await File.ReadAllTextAsync(locationToResponse, Encoding.UTF8);
+                    HtmlDocument doc = new HtmlDocument();
+                    doc.LoadHtml(htmlContent);
+                    string baseUrl = lpsHttpRequestProfile.URL;
+                    // XPath expressions to select different types of resources
+                    string[] resourceXPaths = { "//img", "//link[@rel='stylesheet']", "//script" };
+
+                    foreach (string resourceXPath in resourceXPaths)
                     {
-                        string resourceUrl = resourceNode.GetAttributeValue("src", "");
-                        if (!string.IsNullOrEmpty(resourceUrl) && !resourceUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                        var resourceNodes = doc.DocumentNode.SelectNodes(resourceXPath);
+                        if (resourceNodes != null)
                         {
-                            byte[] resourceData = await client.GetByteArrayAsync(new Uri(new Uri(baseUrl), resourceUrl), cancellationTokenWrapper.CancellationToken);
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloaded: {resourceUrl}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                            foreach (var resourceNode in resourceNodes)
+                            {
+                                string resourceUrl = resourceNode.GetAttributeValue("src", "");
+                                if (!string.IsNullOrEmpty(resourceUrl) && !resourceUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    byte[] resourceData = await client.GetByteArrayAsync(new Uri(new Uri(baseUrl), resourceUrl), cancellationTokenWrapper.CancellationToken);
+                                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloaded: {resourceUrl}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                                }
+                            }
                         }
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Faild to extract and download html resources\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
+            }
         }
 
+        private async Task<bool> TryUpdateConnectionsMetrics(LPSHttpRequestProfile lpsHttpRequestProfile, bool isCompleted, ICancellationTokenWrapper cancellationTokenWrapper)
+        {
+            try
+            {
+                var connectionsMetrics = _metrics[lpsHttpRequestProfile.Id.ToString()].Where(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
+                if (isCompleted)
+                {
+                    foreach (var metric in connectionsMetrics)
+                    {
+                        await ((ILPSConnectionsMetric)metric).DecreseConnectionsCountAsync(cancellationTokenWrapper);
+                    }
+                }
+                else
+                {
+                    foreach (var metric in connectionsMetrics)
+                    {
+                        await ((ILPSConnectionsMetric)metric).IncreaseConnectionsCountAsync(cancellationTokenWrapper);
+                    }
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
+                return false;
+            }
+        }
 
+        private async Task<bool> TryUpdateResponseMetrics(LPSHttpRequestProfile lpsHttpRequestProfile, LPSHttpResponse lpsResponse, ICancellationTokenWrapper cancellationTokenWrapper)
+        {
+            try
+            {
+                var responsMetrics = _metrics[lpsHttpRequestProfile.Id.ToString()].Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
+                await Task.WhenAll(responsMetrics.Select(metric => ((ILPSResponseMetric)metric).UpdateAsync(lpsResponse)));
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
+                return false;
+            }
+
+        }
     }
 }
 

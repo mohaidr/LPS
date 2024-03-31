@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.EventListeners;
 
 namespace LPS.Infrastructure.Watchdog
 {

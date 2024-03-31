@@ -10,41 +10,35 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Spectre.Console;
+using System.Diagnostics.Tracing;
+using LPS.Infrastructure.Monitoring.EventSources;
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
 
     public class LPSDurationMetric : ILPSResponseMetric
     {
+        private LPSDurationMetricDimensionSetProtected _dimensionSet { get; set; }
         LPSHttpRun _httpRun;
         LongHistogram _histogram;
+        LPSResponseMetricEventSource _eventSource;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         public LPSHttpRun LPSHttpRun { get { return _httpRun; } }
         internal LPSDurationMetric(LPSHttpRun httpRun)
         {
             _httpRun = httpRun;
-            _dimensionSet = new LPSDurationMetricDimensionSet();
+            _eventSource = LPSResponseMetricEventSource.GetInstance(_httpRun);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected();
             _histogram = new LongHistogram(1, 1000000, 3);
-            _groupId = Guid.NewGuid();
         }
-        Guid _groupId;
-        private LPSDurationMetricDimensionSet _dimensionSet { get; set; }
-        public ResponseMetricType MetricType => ResponseMetricType.ResponseTime;
+        public LPSMetricType MetricType => LPSMetricType.ResponseTime;
 
         public async Task<ILPSResponseMetric> UpdateAsync(LPSHttpResponse response)
         {
             await _semaphore.WaitAsync();
             try
             {
-                double averageDenominator = _dimensionSet.AverageResponseTime != 0 ? (_dimensionSet.SumResponseTime / _dimensionSet.AverageResponseTime) + 1 : 1;
-                _dimensionSet.MaxResponseTime = Math.Max(response.ResponseTime.TotalMilliseconds, _dimensionSet.MaxResponseTime);
-                _dimensionSet.MinResponseTime = _dimensionSet.MinResponseTime == 0 ? response.ResponseTime.TotalMilliseconds: Math.Min(response.ResponseTime.TotalMilliseconds, _dimensionSet.MinResponseTime);
-                _dimensionSet.SumResponseTime = _dimensionSet.SumResponseTime + response.ResponseTime.TotalMilliseconds;
-                _dimensionSet.AverageResponseTime = _dimensionSet.SumResponseTime / averageDenominator;
-                _histogram.RecordValue((long)response.ResponseTime.TotalMilliseconds);
-                _dimensionSet.P10ResponseTime = _histogram.GetValueAtPercentile(10);
-                _dimensionSet.P50ResponseTime = _histogram.GetValueAtPercentile(50);
-                _dimensionSet.P90ResponseTime = _histogram.GetValueAtPercentile(90);
-                _dimensionSet.EndPointDetails =  $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
+                _dimensionSet.Update(response.ResponseTime.TotalMilliseconds, _httpRun, _histogram);
+                _eventSource.WriteResponseTimeMetrics(response.ResponseTime.TotalMilliseconds);
             }
             finally
             {
@@ -62,34 +56,48 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             try
             {
-                var dimensionSet = _dimensionSet.CloneObject();
-                dimensionSet.SumResponseTime = Math.Round(dimensionSet.SumResponseTime, 2);
-                dimensionSet.MaxResponseTime = Math.Round(dimensionSet.MaxResponseTime, 2);
-                dimensionSet.AverageResponseTime = Math.Round(dimensionSet.AverageResponseTime, 2);
-                dimensionSet.MinResponseTime = Math.Round(dimensionSet.MinResponseTime, 2);
-                dimensionSet.P10ResponseTime = Math.Round(dimensionSet.P10ResponseTime, 2);
-                dimensionSet.P50ResponseTime = Math.Round(dimensionSet.P50ResponseTime, 2);
-                dimensionSet.P90ResponseTime = Math.Round(dimensionSet.P90ResponseTime, 2);
-                return LPSSerializationHelper.Serialize(dimensionSet);
+                return LPSSerializationHelper.Serialize(_dimensionSet);
             }
-            catch (InvalidOperationException ex)
+            catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
                 return string.Empty;
+            }
+        }
+
+        public IDimensionSet GetDimensionSet()
+        {
+            return _dimensionSet;
+        }
+
+        private class LPSDurationMetricDimensionSetProtected : LPSDurationMetricDimensionSet
+        {
+            public void Update(double responseTime, LPSHttpRun httpRun, LongHistogram histogram)
+            {
+                double averageDenominator = AverageResponseTime != 0 ? (SumResponseTime / AverageResponseTime) + 1 : 1;
+                TimeStamp = DateTime.Now;
+                MaxResponseTime = Math.Max(responseTime, MaxResponseTime);
+                MinResponseTime = MinResponseTime == 0 ? responseTime : Math.Min(responseTime, MinResponseTime);
+                SumResponseTime = SumResponseTime + responseTime;
+                AverageResponseTime = SumResponseTime / averageDenominator;
+                histogram.RecordValue((long)responseTime);
+                P10ResponseTime = histogram.GetValueAtPercentile(10);
+                P50ResponseTime = histogram.GetValueAtPercentile(50);
+                P90ResponseTime = histogram.GetValueAtPercentile(90);
+                EndPointDetails = $"{httpRun.Name} - {httpRun.LPSHttpRequestProfile.HttpMethod} {httpRun.LPSHttpRequestProfile.URL} HTTP/{httpRun.LPSHttpRequestProfile.Httpversion}";
             }
         }
     }
 
-    public class LPSDurationMetricDimensionSet
+    public class LPSDurationMetricDimensionSet: IDimensionSet
     {
-        public string EndPointDetails { get; set; }
-        public double SumResponseTime { get; set; }
-        public double AverageResponseTime { get; set; }
-        public double MinResponseTime { get; set; }
-        public double MaxResponseTime { get; set; }
-        public double P90ResponseTime { get; set; }
-        public double P50ResponseTime { get; set; }
-        public double P10ResponseTime { get; set; }
+        public DateTime TimeStamp { get; protected set; }
+        public string EndPointDetails { get; protected set; }
+        public double SumResponseTime { get; protected set; }
+        public double AverageResponseTime { get; protected set; }
+        public double MinResponseTime { get; protected set; }
+        public double MaxResponseTime { get; protected set; }
+        public double P90ResponseTime { get; protected set; }
+        public double P50ResponseTime { get; protected set; }
+        public double P10ResponseTime { get; protected set; }
     }
-
 }

@@ -9,7 +9,6 @@ namespace LPS
     {
         static async Task Main(string[] args)
         {
-            Console.ReadLine();
             AnsiConsole.Write(new FigletText("Load -- Perform {} Stress ^ ").Centered().Color(Color.Green));
 
             CancellationTokenSource cts = new CancellationTokenSource();

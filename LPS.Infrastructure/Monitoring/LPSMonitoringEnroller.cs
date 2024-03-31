@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.Monitoring
         public void Enroll(LPSHttpRun lpsHttpRun)
         {
 
-            LPSResponseMetricsDataSource.Register(lpsHttpRun);
+            LPSMetricsDataSource.Register(lpsHttpRun);
         }
     }
 

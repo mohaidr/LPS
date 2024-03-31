@@ -13,6 +13,7 @@ using System.Linq;
 using LPS.UI.Common;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.UI.Core.Host
 {
@@ -82,13 +83,11 @@ namespace LPS.UI.Core.Host
         {
             try
             {
-                var responseTimeMetrics = string.Join(",", LPSResponseMetricsDataSource.Get(metric => metric.MetricType == Infrastructure.Common.Interfaces.ResponseMetricType.ResponseTime).Select(metric => metric.Stringify()));
+                var responseTimeMetrics = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ResponseTime).Select(metric => (LPSDurationMetricDimensionSet)metric.GetDimensionSet()));
+                var responseBreakDownMetrics = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ResponseCode).Select(metric => (ResponseCodeDimensionSet)metric.GetDimensionSet()));
+                var connectionsMetric = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount).Select(metric => (ConnectionDimensionSet)metric.GetDimensionSet()));
 
-                var responseBreakDownMetrics = LPSSerializationHelper.Serialize(LPSResponseMetricsDataSource
-                    .Get(metric => metric.MetricType == Infrastructure.Common.Interfaces.ResponseMetricType.ResponseBreakDown)
-                    .Select(metric => LPSSerializationHelper.Deserialize<IList<object>>(metric.Stringify()))
-                    .SelectMany(metric => metric));
-                string responseMessage = FormatJson( $"\n{{\"responseBreakDownMetrics\":{responseBreakDownMetrics}, \"responseTimeMetrics\":[\n{responseTimeMetrics}\n]\n}}");
+                string responseMessage = FormatJson( $"\n{{\"responseBreakDownMetrics\":{responseBreakDownMetrics}, \n\"responseTimeMetrics\":\n{responseTimeMetrics},\n\"connectionMetrics\":\n{connectionsMetric}\n}}");
                 string response = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{responseMessage}";
 
                 return response;
@@ -96,7 +95,7 @@ namespace LPS.UI.Core.Host
             catch (Exception ex)
             {
                 // Handle file reading errors
-                return $"HTTP/1.1 500 Internal Server Error\r\n\r\nError reading file: {ex.Message}";
+                return $"HTTP/1.1 500 Internal Server Error\r\n\r\nError reading file: {ex.Message} {ex?.InnerException}";
             }
         }
         private static string FormatJson(string json)
@@ -121,7 +120,7 @@ namespace LPS.UI.Core.Host
                     return;
                 }
 
-                _listener = new TcpListener(IPAddress.Loopback, port);
+                _listener = new TcpListener(IPAddress.Any, port);
                 _listener.Start();
                 _isServerRunning = true;
                 AnsiConsole.MarkupLine($"[CornflowerBlue][bold][italic]Stats Server started and listening on port {port}[/][/][/]");
