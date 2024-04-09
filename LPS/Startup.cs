@@ -31,9 +31,6 @@ namespace LPS
                     }
                     configBuilder.AddJsonFile(lpsAppSettings, optional: false, reloadOnChange: false);
                 })
-                .ConfigureLPSFileLogger()
-                .ConfigureLPSWatchdog()
-                .ConfigureLPSHttpClient()
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.ConfigureWritable<LPSFileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), LPSAppConstants.AppSettingsFileLocation);
@@ -54,6 +51,9 @@ namespace LPS
                         // add development dependencies
                     }
                 })
+                .ConfigureLPSFileLogger()
+                .ConfigureLPSWatchdog()
+                .ConfigureLPSHttpClient()
                 .UseConsoleLifetime(options => options.SuppressStatusMessages = true)
                 .Build();
 

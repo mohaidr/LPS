@@ -75,7 +75,8 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 string hostName = new Uri(this.URL).Host;
-                await _watchdog.Balance(hostName);
+
+                await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                 /* 
                  * Clone the entity so we send a different entity to the http client service.
                  * To avoid writing to the same instnace concurrently where we update the sequence number which is used by the http client service, so if the sequence number changes while used by the http client service, then a wrong sequence number will be used and may result in exceptions or unexpected behaviors

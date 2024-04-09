@@ -12,6 +12,9 @@ using System.Threading.Tasks;
 using Spectre.Console;
 using System.Diagnostics.Tracing;
 using LPS.Infrastructure.Monitoring.EventSources;
+using LPS.Domain.Common.Interfaces;
+using System.Diagnostics;
+using System.Timers;
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
 
@@ -23,12 +26,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         LPSResponseMetricEventSource _eventSource;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         public LPSHttpRun LPSHttpRun { get { return _httpRun; } }
-        internal LPSDurationMetric(LPSHttpRun httpRun)
+        ILPSLogger _logger;
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        internal LPSDurationMetric(LPSHttpRun httpRun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httpRun;
             _eventSource = LPSResponseMetricEventSource.GetInstance(_httpRun);
             _dimensionSet = new LPSDurationMetricDimensionSetProtected();
             _histogram = new LongHistogram(1, 1000000, 3);
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         public LPSMetricType MetricType => LPSMetricType.ResponseTime;
 
@@ -68,6 +75,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             return _dimensionSet;
         }
+        public TDimensionSet GetDimensionSet<TDimensionSet>() where TDimensionSet : IDimensionSet
+        {
+            // Check if _dimensionSet is of the requested type TDimensionSet
+            if (_dimensionSet is TDimensionSet dimensionSet)
+            {
+                return dimensionSet;
+            }
+            else
+            {
+                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSDurationMetric", LPSLoggingLevel.Error);
+                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSDurationMetric");
+            }
+        }
+
+        public void Dispose()
+        {
+        }
+
 
         private class LPSDurationMetricDimensionSetProtected : LPSDurationMetricDimensionSet
         {

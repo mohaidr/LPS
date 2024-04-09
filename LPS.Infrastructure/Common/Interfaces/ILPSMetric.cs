@@ -1,5 +1,6 @@
 ﻿using LPS.Domain;
 using LPS.Infrastructure.Monitoring.Metrics;
+using System;
 
 namespace LPS.Infrastructure.Common.Interfaces
 {
@@ -9,11 +10,12 @@ namespace LPS.Infrastructure.Common.Interfaces
         ResponseCode,
         ConnectionsCount
     }
-    public interface ILPSMetric
+    public interface ILPSMetric: IDisposable
     {
         public LPSHttpRun LPSHttpRun { get; }
         public LPSMetricType MetricType { get; }
         public string Stringify();
         public IDimensionSet GetDimensionSet();
+        TDimensionSet GetDimensionSet<TDimensionSet>() where TDimensionSet : IDimensionSet;
     }
 }

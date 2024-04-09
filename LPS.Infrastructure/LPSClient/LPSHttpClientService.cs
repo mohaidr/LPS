@@ -32,6 +32,8 @@ namespace LPS.Infrastructure.Client
         public ILPSClientConfiguration<LPSHttpRequestProfile> Config { get; }
 
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private static readonly ConcurrentDictionary<string, IList<ILPSMetric>> _metrics = new ConcurrentDictionary<string, IList<ILPSMetric>>();
+
         public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequestProfile> config, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             Config = config;
@@ -55,8 +57,6 @@ namespace LPS.Infrastructure.Client
             Id = Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
-        private static readonly object _lock = new object();
-        private readonly ConcurrentDictionary<string, IList<ILPSMetric>> _metrics = new ConcurrentDictionary<string, IList<ILPSMetric>>();
         public async Task<LPSHttpResponse> SendAsync(LPSHttpRequestProfile lpsHttpRequestProfile, ICancellationTokenWrapper cancellationTokenWrapper)
         {
 
@@ -67,8 +67,6 @@ namespace LPS.Infrastructure.Client
             Stopwatch stopWatch = Stopwatch.StartNew();
             try
             {
-                LPSConnectionEventSource.Log.ConnectionEstablished(requestUri.Host); // increase the number of active connections
-
                 var httpRequestMessage = ConstructRequestMessage(lpsHttpRequestProfile);
 
                 await TryUpdateConnectionsMetrics(lpsHttpRequestProfile, false, cancellationTokenWrapper);
@@ -117,7 +115,6 @@ namespace LPS.Infrastructure.Client
             finally
             {
                 await TryUpdateConnectionsMetrics(lpsHttpRequestProfile, true, cancellationTokenWrapper);
-                LPSConnectionEventSource.Log.ConnectionClosed(requestUri.Host); // decrease the number of active connections
             }
 
             return lpsHttpResponse;

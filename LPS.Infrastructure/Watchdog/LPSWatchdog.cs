@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using HtmlAgilityPack;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Monitoring.EventListeners;
+using LPS.Infrastructure.Monitoring.Metrics;
+using Microsoft.Extensions.Logging;
 
 namespace LPS.Infrastructure.Watchdog
 {
@@ -27,7 +32,6 @@ namespace LPS.Infrastructure.Watchdog
         public int MaxConcurrentConnectionsCountPerHostName { get { return _maxConcurrentConnectionsCountPerHostName; } }
         public int CoolDownConcurrentConnectionsCountPerHostName { get { return _coolDownConcurrentConnectionsCountPerHostName; } }
 
-
         private double _maxMemoryMB;
         private double _maxCPUPercentage;
         private double _coolDownMemoryMB;
@@ -39,9 +43,9 @@ namespace LPS.Infrastructure.Watchdog
         private SuspensionMode _suspensionMode;
 
         private LPSResourceEventListener _lpsResourceListener;
-        private LPSConnectionCounterEventListener _lpsConnectionsCountEventListener;
-
-        private LPSWatchdog()
+        ILPSLogger _logger;
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private LPSWatchdog(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _maxCPUPercentage = 50;
             _maxMemoryMB = 1000;
@@ -53,7 +57,8 @@ namespace LPS.Infrastructure.Watchdog
             _coolDownRetryTimeInSeconds = 1;
             _resourceState = ResourceState.Cool;
             _lpsResourceListener = new LPSResourceEventListener();
-            _lpsConnectionsCountEventListener = new LPSConnectionCounterEventListener();
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
         public LPSWatchdog(double memoryLimitMB,
@@ -63,7 +68,7 @@ namespace LPS.Infrastructure.Watchdog
             int maxConcurrentConnectionsPerHostName,
             int coolDownConcurrentConnectionsCountPerHostName,
             int coolDownRetryTimeInSeconds,
-            SuspensionMode suspensionMode)
+            SuspensionMode suspensionMode, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _maxCPUPercentage = cpuLimit;
             _maxMemoryMB = memoryLimitMB;
@@ -75,15 +80,17 @@ namespace LPS.Infrastructure.Watchdog
             _coolDownRetryTimeInSeconds = coolDownRetryTimeInSeconds;
             _resourceState = ResourceState.Cool;
             _lpsResourceListener = new LPSResourceEventListener();
-            _lpsConnectionsCountEventListener = new LPSConnectionCounterEventListener();
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         bool _isResourceUsageExceeded;
         bool _isResourceCoolingDown;
+
         private void UpdateResourceUsageFlag(string hostName)
         {
             bool memoryExceededTheLimit = _lpsResourceListener.MemoryUsageMB > _maxMemoryMB;
             bool cpuExceededTheLimit = _lpsResourceListener.CPUPercentage >= _maxCPUPercentage;
-            bool hostActiveConnectionsExceededTheLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _maxConcurrentConnectionsCountPerHostName;
+            bool hostActiveConnectionsExceededTheLimit = GetHostActiveConnectionsCount(hostName) > _maxConcurrentConnectionsCountPerHostName;
             switch (_suspensionMode)
             {
                 case SuspensionMode.Any:
@@ -104,7 +111,8 @@ namespace LPS.Infrastructure.Watchdog
         {
             bool memoryExceedsTheCoolingLimit = _lpsResourceListener.MemoryUsageMB > _coolDownMemoryMB;
             bool cpuExceedsTheCPULimit = _lpsResourceListener.CPUPercentage >= _coolDownCPUPercentage;
-            bool hostActiveConnectionsExceedsTheConnectionsLimit = _lpsConnectionsCountEventListener.GetHostActiveConnectionsCount(hostName) > _coolDownConcurrentConnectionsCountPerHostName;
+            bool hostActiveConnectionsExceedsTheConnectionsLimit = GetHostActiveConnectionsCount(hostName) > _coolDownConcurrentConnectionsCountPerHostName;
+
             switch (_suspensionMode)
             {
                 case SuspensionMode.All:
@@ -122,31 +130,50 @@ namespace LPS.Infrastructure.Watchdog
             }
 
         }
-
-        public async Task<ResourceState> Balance(string hostName)
+        
+        public async Task<ResourceState> BalanceAsync(string hostName, ICancellationTokenWrapper cancellationTokenWrapper)
         {
-            await _semaphoreSlim.WaitAsync();
-
-            UpdateResourceUsageFlag(hostName);
-            UpdateResourceCoolingFlag(hostName);
-            _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
-            while (_resourceState != ResourceState.Cool)
+            try
             {
-                await Task.Delay(_coolDownRetryTimeInSeconds * 1000);
                 UpdateResourceUsageFlag(hostName);
                 UpdateResourceCoolingFlag(hostName);
                 _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
+                while (_resourceState != ResourceState.Cool)
+                {
+                    await Task.Delay(_coolDownRetryTimeInSeconds * 1000);
+                    UpdateResourceUsageFlag(hostName);
+                    UpdateResourceCoolingFlag(hostName);
+                    _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
+                }
             }
-
-            _semaphoreSlim.Release();
-
+            catch (Exception ex) 
+            {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Watchdog has failed to balance the resource usage.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
+                _resourceState = ResourceState.Unkown;
+            }
             return _resourceState;
         }
 
-
-        public static LPSWatchdog GetDefaultInstance()
+        private int GetHostActiveConnectionsCount(string hostName)
         {
-            return new LPSWatchdog();
+            try
+            {
+                int hostActiveConnectionsCount = LPSMetricsDataSource
+                    .Get<LPSConnectionsMetricGroup>(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.EndPointDetails!= null && metric.GetDimensionSet<ConnectionDimensionSet>().EndPointDetails.Contains(hostName))
+                    .Select(metric => metric.GetDimensionSet<ConnectionDimensionSet>().ActiveRequestsCount)
+                    .Sum();
+                return hostActiveConnectionsCount;
+            }
+            catch (Exception ex) {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Failed to get the active connections count \n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
+                return -1;
+            }
+         
+        }
+
+        public static LPSWatchdog GetDefaultInstance(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
+        {
+            return new LPSWatchdog(logger, runtimeOperationIdProvider);
         }
 
     }

@@ -176,9 +176,7 @@ namespace LPS.Infrastructure.Logger
                 }
                 else
                 {
-                   Console.ForegroundColor = ConsoleColor.Yellow;
-                   Console.WriteLine($"Warning: Logging Failed  {ex.Message} {ex.InnerException?.Message}");
-                   Console.ResetColor();
+                   AnsiConsole.MarkupLine($"[Yellow]Warning: Logging Failed  {ex.Message} {ex.InnerException?.Message}[/]");
                 }
             }
             finally
@@ -191,9 +189,7 @@ namespace LPS.Infrastructure.Logger
         {
             if (_loggingCancellationCount > 0)
             {
-                Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"The error '{_cancellationErrorMessage}' has been reported {_loggingCancellationCount} times");
-                Console.ResetColor();
+                AnsiConsole.MarkupLine($"[Yellow]The error '{_cancellationErrorMessage}' has been reported {_loggingCancellationCount} times[/]");
             }
             await _synchronizedTextWriter.FlushAsync();
         }

@@ -3,7 +3,9 @@ using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Monitoring.EventSources;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    internal class LPSConnectionsMetricGroup : ILPSConnectionsMetric, IDisposable
+    public class LPSConnectionsMetricGroup : ILPSConnectionsMetric
 
     {
         public LPSMetricType MetricType => LPSMetricType.ConnectionsCount;
@@ -29,14 +31,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         Stopwatch _stopwatch;
         string _endpointDetails;
         Timer _timer;
-
-        public LPSConnectionsMetricGroup(LPSHttpRun httprun)
+        ILPSLogger _logger;
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public LPSConnectionsMetricGroup(LPSHttpRun httprun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httprun;
             _dimensionSet = new ProtectedConnectionDimensionSet();
             _eventSource = LPSRequestEventSource.GetInstance(_httpRun);
             _stopwatch = new Stopwatch();
             _endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
             SchedualMetricsUpdate();
         }
         private void SchedualMetricsUpdate()
@@ -53,9 +58,23 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }, null, 0, sleep);
         }
 
-        IDimensionSet ILPSMetric.GetDimensionSet()
+        public IDimensionSet GetDimensionSet()
         {
             return _dimensionSet;
+        }
+
+        public TDimensionSet GetDimensionSet<TDimensionSet>() where TDimensionSet : IDimensionSet
+        {
+            // Check if _dimensionSet is of the requested type TDimensionSet
+            if (_dimensionSet is TDimensionSet dimensionSet)
+            {
+                return dimensionSet;
+            }
+            else
+            {
+                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricGroup", LPSLoggingLevel.Error);
+                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricGroup");
+            }
         }
 
         public string Stringify()
@@ -115,6 +134,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _stopwatch.Stop();
             _timer.Dispose();
         }
+
+
 
         private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
         {

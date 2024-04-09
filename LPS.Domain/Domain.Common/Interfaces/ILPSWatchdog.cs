@@ -9,10 +9,16 @@ namespace LPS.Domain.Common.Interfaces
     public enum ResourceState { 
         Cool,
         Cooling,
-        Hot
+        Hot,
+        Unkown
     }
     public interface ILPSWatchdog
     {
-        public Task<ResourceState> Balance(string source);
+        /// <summary>
+        /// Block the execution until the resources cool down.
+        /// </summary>
+        /// <param name="hostName">The host name.</param>
+        /// <returns>Returns Cool if the resources cools down successfully and Unkown if exception happens during the cooldown process.</returns>
+        public Task<ResourceState> BalanceAsync(string hostName, ICancellationTokenWrapper cancellationTokenWrapper);
     }
 }

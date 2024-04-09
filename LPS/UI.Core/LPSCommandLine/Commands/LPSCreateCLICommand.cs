@@ -6,6 +6,7 @@ using LPS.UI.Common.Extensions;
 using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.UI.Build.Services;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -14,6 +15,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ValidationResult = FluentValidation.Results.ValidationResult;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -60,9 +62,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     _planSetupCommand.RunInParallel = lpaTestPlan.RunInParallel;
                     string json = LPSSerializationHelper.Serialize(_planSetupCommand);
                     File.WriteAllText($"{lpaTestPlan.Name}.json", json);
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Your test plan has been created successfully");
-                    Console.ResetColor();
+                    AnsiConsole.MarkupLine("[Green]Your test plan has been created successfully[/]");
                 }
             },
             new LPSTestPlanCommandBinder());

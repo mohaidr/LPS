@@ -14,6 +14,9 @@ using Spectre.Console;
 using System.Collections.Concurrent;
 using LPS.Infrastructure.Monitoring.EventSources;
 using System.Collections.ObjectModel;
+using LPS.Domain.Common.Interfaces;
+using System.Diagnostics;
+using System.Timers;
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
 
@@ -23,18 +26,21 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         LPSResponseMetricEventSource _eventSource;
         private static readonly object _lockObject = new object();
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-        Guid _groupId;
         public LPSHttpRun LPSHttpRun { get { return _httpRun; } }
-        internal LPSResponseCodeMetricGroup(LPSHttpRun httpRun)
+        ILPSLogger _logger;
+        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+
+        internal LPSResponseCodeMetricGroup(LPSHttpRun httpRun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
-            _groupId = Guid.NewGuid();
             _httpRun = httpRun;
             _eventSource = LPSResponseMetricEventSource.GetInstance(_httpRun);
-            _dimensionsSet =  new ProtectedResponseCodeDimensionSet();
+            _dimensionSet =  new ProtectedResponseCodeDimensionSet();
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
         public LPSMetricType MetricType => LPSMetricType.ResponseCode;
-        private ProtectedResponseCodeDimensionSet _dimensionsSet { get; set; }
+        private ProtectedResponseCodeDimensionSet _dimensionSet { get; set; }
         public ILPSResponseMetric Update(LPSHttpResponse response)
         {
             return UpdateAsync(response).Result;
@@ -47,12 +53,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 try
                 {
                     string endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
-                    _dimensionsSet.update(response, endpointDetails);
+                    _dimensionSet.update(response, endpointDetails);
                     _eventSource.WriteResponseBreakDownMetrics(response.StatusCode);
                 }
                 finally
                 {
-
                     _semaphore.Release();
                 }
 
@@ -63,7 +68,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             try
             {
-                return LPSSerializationHelper.Serialize(_dimensionsSet);
+                return LPSSerializationHelper.Serialize(_dimensionSet);
 
             }
             catch (Exception ex)
@@ -74,7 +79,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public IDimensionSet GetDimensionSet()
         {
-            return _dimensionsSet;
+            return _dimensionSet;
+        }
+        public TDimensionSet GetDimensionSet<TDimensionSet>() where TDimensionSet : IDimensionSet
+        {
+            // Check if _dimensionSet is of the requested type TDimensionSet
+            if (_dimensionSet is TDimensionSet dimensionSet)
+            {
+                return dimensionSet;
+            }
+            else
+            {
+                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricGroup", LPSLoggingLevel.Error);
+                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricGroup");
+            }
+        }
+
+        public void Dispose()
+        {
         }
 
         private class ProtectedResponseCodeDimensionSet: ResponseCodeDimensionSet

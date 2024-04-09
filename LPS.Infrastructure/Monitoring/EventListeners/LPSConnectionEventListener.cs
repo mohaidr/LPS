@@ -1,7 +1,7 @@
 ﻿using System.Diagnostics.Tracing;
 using System;
+using System.Collections.Concurrent; // Add this for ConcurrentDictionary
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 
 public class LPSConnectionCounterEventListener : EventListener
@@ -23,14 +23,14 @@ public class LPSConnectionCounterEventListener : EventListener
             Console.WriteLine(e.InnerException?.Message);
         }
     }
-    private static Dictionary<string, int> _hostActiveConnectionsCount = new Dictionary<string, int>();
+
+    // Change type to ConcurrentDictionary
+    private static ConcurrentDictionary<string, int> _hostActiveConnectionsCount = new ConcurrentDictionary<string, int>();
+
     public int GetHostActiveConnectionsCount(string hostName)
     {
-        if (_hostActiveConnectionsCount.Keys.Contains(hostName))
-        {
-            return _hostActiveConnectionsCount[hostName];
-        }
-        return 0;
+        // Use GetOrAdd method for thread-safe access
+        return _hostActiveConnectionsCount.GetOrAdd(hostName, 0);
     }
 
     protected override void OnEventWritten(EventWrittenEventArgs eventData)
@@ -39,26 +39,16 @@ public class LPSConnectionCounterEventListener : EventListener
         {
             string hostName = string.Empty;
             int activeConnectionCount = -1;
-            if (eventData.EventId == 1)
+            if (eventData.EventId == 1 || eventData.EventId == 2)
             {
                 hostName = (string)eventData.Payload[0];
                 activeConnectionCount = (int)eventData.Payload[1];
             }
-            else if (eventData.EventId == 2)
-            {
-                hostName = (string)eventData.Payload[0];
-                activeConnectionCount = (int)eventData.Payload[1];
-            }
+
             if (!string.IsNullOrEmpty(hostName) && activeConnectionCount >= 0)
             {
-                if (!_hostActiveConnectionsCount.Keys.Contains(hostName))
-                {
-                    _hostActiveConnectionsCount.Add(hostName, activeConnectionCount);
-                }
-                else
-                {
-                    _hostActiveConnectionsCount[hostName] = activeConnectionCount;
-                }
+                // Use AddOrUpdate method for thread-safe update or add
+                _hostActiveConnectionsCount.AddOrUpdate(hostName, activeConnectionCount, (key, existingVal) => activeConnectionCount);
             }
         }
         catch (Exception e)

@@ -7,6 +7,7 @@ using LPS.UI.Common.Extensions;
 using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.UI.Build.Services;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
@@ -15,6 +16,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using ValidationResult = FluentValidation.Results.ValidationResult;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -59,9 +61,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     _planSetupCommand.IsValid = true;
                     string json = LPSSerializationHelper.Serialize(_planSetupCommand);
                     File.WriteAllText($"{testName}.json", json);
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("Your http run has been added successfully");
-                    Console.ResetColor();
+                    AnsiConsole.MarkupLine("[Green]Your http run has been added successfully[/]");
                 }
                 else
                 {

@@ -17,10 +17,16 @@ namespace LPS.Infrastructure.Monitoring
     public class LPSMonitoringEnroller: ILPSMonitoringEnroller
     {
         public LPSMonitoringEnroller() { }
-        public void Enroll(LPSHttpRun lpsHttpRun)
+        public void Enroll(LPSHttpRun lpsHttpRun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider lpsRuntimeOperationIdProvider = default)
         {
 
-            LPSMetricsDataSource.Register(lpsHttpRun);
+            LPSMetricsDataSource.Register(lpsHttpRun, logger, lpsRuntimeOperationIdProvider);
+        }
+
+        public void Withdraw(LPSHttpRun lpsHttpRun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider lpsRuntimeOperationIdProvider = default)
+        {
+
+            LPSMetricsDataSource.Deregister(lpsHttpRun, logger, lpsRuntimeOperationIdProvider);
         }
     }
 
