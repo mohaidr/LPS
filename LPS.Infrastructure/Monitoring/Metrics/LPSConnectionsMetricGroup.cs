@@ -48,14 +48,19 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             bool isCoolDown = _httpRun.Mode == LPSHttpRun.IterationMode.DCB || _httpRun.Mode == LPSHttpRun.IterationMode.CRB || _httpRun.Mode == LPSHttpRun.IterationMode.CB;
             bool isDurationOrRequest = _httpRun.Mode == LPSHttpRun.IterationMode.D || _httpRun.Mode == LPSHttpRun.IterationMode.R;
-            int sleep = isCoolDown ? _httpRun.CoolDownTime.Value : 1;
+            int cooldownPeriod = isCoolDown ? _httpRun.CoolDownTime.Value : 1;
             _stopwatch.Start();
             _timer = new Timer(_ =>
             {
-                var timeElapsed = Math.Round(_stopwatch.Elapsed.TotalSeconds, 2);
-                var requestsRate = new RequestsRate($"{sleep}s", Math.Round((_completedRequestsCount / timeElapsed) *sleep, 2));
-                _dimensionSet.Update(_activeRequestssCount, _requestsCount, _completedRequestsCount, timeElapsed, requestsRate, _endpointDetails);
-            }, null, 0, sleep);
+                var timeElapsed =_stopwatch.Elapsed.TotalSeconds;
+                var requestsRate = new RequestsRate($"1s", Math.Round((_completedRequestsCount / timeElapsed), 2));
+                var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
+                if (isCoolDown && timeElapsed > cooldownPeriod)
+                {
+                    requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}s", Math.Round((_completedRequestsCount / timeElapsed) * cooldownPeriod, 2));
+                }
+                _dimensionSet.Update(_activeRequestssCount, _requestsCount, _completedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown, _endpointDetails);
+            }, null, 0, cooldownPeriod);
         }
 
         public IDimensionSet GetDimensionSet()
@@ -140,7 +145,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
         {
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int? activeRequestsCount, int? requestsCount = default, double? completedRequestsCount = default, double? timeElapsedInSeconds = default, RequestsRate? requestsRate = default, string endPointDetails = default)
+            public void Update(int? activeRequestsCount, int? requestsCount = default, double? completedRequestsCount = default, double? timeElapsedInSeconds = default, RequestsRate? requestsRate = default, RequestsRate? requestsRatePerCoolDown = default, string endPointDetails = default)
             {
                 TimeStamp = DateTime.Now;
                 this.RequestsCount = requestsCount ?? this.RequestsCount;
@@ -148,6 +153,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 this.CompletedRequestsCount = completedRequestsCount ?? this.CompletedRequestsCount;
                 this.TimeElapsedInSeconds = timeElapsedInSeconds ?? this.TimeElapsedInSeconds;
                 this.RequestsRate = requestsRate ?? this.RequestsRate;
+                this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown ?? this.RequestsRatePerCoolDownPeriod;
                 this.EndPointDetails = endPointDetails == default ? this.EndPointDetails: endPointDetails;
             }
         }
@@ -173,5 +179,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public double CompletedRequestsCount { get; protected set; }
         public double TimeElapsedInSeconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
+        public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
     }
 }
