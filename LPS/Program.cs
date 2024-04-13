@@ -7,49 +7,54 @@ namespace LPS
 {
     class Program
     {
+        private static CancellationTokenSource _cts = new CancellationTokenSource();
+        private static bool _cancelRequested = false;
         static async Task Main(string[] args)
         {
             AnsiConsole.Write(new FigletText("Load -- Perform {} Stress ^ ").Centered().Color(Color.Green));
-
-            CancellationTokenSource cts = new CancellationTokenSource();
-            var cancellationToken = cts.Token;
+            var cancellationToken = _cts.Token;
             Console.CancelKeyPress += CancelKeyPressHandler;
-            _ = WatchForCancellationAsync(cts);
+            _ = WatchForCancellationAsync();
             //DI Services
             var host = Startup.ConfigureServices(args);
             await host.StartAsync(cancellationToken);
         }
-        static bool _cancelRequested = false;
+
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
         {
             if (e.SpecialKey == ConsoleSpecialKey.ControlC || e.SpecialKey == ConsoleSpecialKey.ControlBreak)
             {
-                e.Cancel = true; // Set e.Cancel to true to cancel the default behavior (exit the application).
-
-                // Perform any custom actions you want before the application exits.
-                // For example, you can prompt the user to confirm the exit or save data.
-
-                // In this example, we'll just set a flag to indicate that the cancel was requested.
-                _cancelRequested = true;
+                e.Cancel = true; // Prevent default process termination.
+                AnsiConsole.MarkupLine("[yellow]Graceful shutdown requested (Ctrl+C/Break).[/]");
+                RequestCancellation(); // Cancel the CancellationTokenSource.
             }
         }
-        public static async Task WatchForCancellationAsync(CancellationTokenSource cts)
+
+        private static async Task WatchForCancellationAsync()
         {
             while (!_cancelRequested)
             {
-                if (Console.KeyAvailable)// check for escape
+                if (Console.KeyAvailable) // Check for the Escape key
                 {
-                    ConsoleKeyInfo keyInfo = Console.ReadKey(true);
+                    var keyInfo = Console.ReadKey(true);
                     if (keyInfo.Key == ConsoleKey.Escape)
                     {
-                        cts.Cancel();
-                        _cancelRequested = true;
+                        AnsiConsole.MarkupLine("[yellow]Graceful shutdown requested (Escape).[/]");
+                        RequestCancellation(); // Cancel the CancellationTokenSource.
+                        break; // Exit the loop
                     }
                 }
-                await Task.Delay(1000);
+                await Task.Delay(1000); // Poll every second
             }
+        }
+
+        private static void RequestCancellation()
+        {
             if (!_cancelRequested)
-                cts.Cancel();
+            {
+                _cancelRequested = true;
+                _cts.Cancel();
+            }
         }
     }
 }

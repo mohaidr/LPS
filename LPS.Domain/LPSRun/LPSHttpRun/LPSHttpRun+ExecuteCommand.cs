@@ -215,6 +215,7 @@ namespace LPS.Domain
 
                 //TODO: Change this logic to event driven to avoid unnecessary conext switching every 1 second
                 //Also the approach of knowing if the test has completed by counters may not be the best so look for some other solution
+
                 while (command.NumberOfSuccessfullyCompletedRequests + command.NumberOfFailedToCompleteRequests < numberOfSentRequests)
                 {
                     await Task.Delay(1000);

@@ -137,7 +137,7 @@ namespace LPS.Infrastructure.Logger
                     else
                     if (level == LPSLoggingLevel.Information)
                     {
-                        AnsiConsole.MarkupLine($"[blue]{level}:[/] {currentDateTime} {correlationId} [Cyan]{diagnosticMessage}[/]");
+                        AnsiConsole.MarkupLine($"[blue]{level}:[/] {currentDateTime} {correlationId} {diagnosticMessage}");
                     }
                     else if (level == LPSLoggingLevel.Warning)
                     {
