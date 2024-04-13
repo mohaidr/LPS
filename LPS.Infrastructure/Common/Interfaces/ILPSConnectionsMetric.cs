@@ -10,7 +10,7 @@ namespace LPS.Infrastructure.Common.Interfaces
 {
     public interface ILPSConnectionsMetric : ILPSMetric
     {
-        public Task<bool> IncreaseConnectionsCountAsync(ICancellationTokenWrapper cancellationTokenWrapper);
-        public Task<bool> DecreseConnectionsCountAsync(ICancellationTokenWrapper cancellationTokenWrapper);
+        public bool IncreaseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper);
+        public bool DecreseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper);
     }
 }

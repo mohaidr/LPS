@@ -24,15 +24,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public LPSHttpRun LPSHttpRun => _httpRun;
         int _activeRequestssCount;
         int _requestsCount;
-        double _completedRequestsCount;
+        int _completedRequestsCount;
         ProtectedConnectionDimensionSet _dimensionSet;
         LPSRequestEventSource _eventSource;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         Stopwatch _stopwatch;
         string _endpointDetails;
         Timer _timer;
         ILPSLogger _logger;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private SpinLock _spinLock = new SpinLock();
+
         public LPSConnectionsMetricGroup(LPSHttpRun httprun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httprun;
@@ -52,15 +53,25 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _stopwatch.Start();
             _timer = new Timer(_ =>
             {
-                var timeElapsed =_stopwatch.Elapsed.TotalSeconds;
-                var requestsRate = new RequestsRate($"1s", Math.Round((_completedRequestsCount / timeElapsed), 2));
-                var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
-                if (isCoolDown && timeElapsed > cooldownPeriod)
+                bool lockTaken = false;
+                try
                 {
-                    requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}s", Math.Round((_completedRequestsCount / timeElapsed) * cooldownPeriod, 2));
+
+                    var timeElapsed = _stopwatch.Elapsed.TotalSeconds;
+                    var requestsRate = new RequestsRate($"1s", Math.Round((_completedRequestsCount / timeElapsed), 2));
+                    var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
+                    if (isCoolDown && timeElapsed > cooldownPeriod)
+                    {
+                        requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}s", Math.Round((_completedRequestsCount / timeElapsed) * cooldownPeriod, 2));
+                    }
+                    _spinLock.Enter(ref lockTaken);
+                    _dimensionSet.Update(_activeRequestssCount, _requestsCount, _completedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown, _endpointDetails);
                 }
-                _dimensionSet.Update(_activeRequestssCount, _requestsCount, _completedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown, _endpointDetails);
-            }, null, 0, cooldownPeriod);
+                finally {
+                    if (lockTaken)
+                        _spinLock.Exit();
+                }
+            }, null, 0, 1000);
         }
 
         public IDimensionSet GetDimensionSet()
@@ -93,35 +104,34 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 return string.Empty;
             }
         }
-        public async Task<bool> IncreaseConnectionsCountAsync(ICancellationTokenWrapper cancellationTokenWrapper)
+        public bool IncreaseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper)
         {
+            bool lockTaken = false;
             try
             {
-                await _semaphore.WaitAsync();
-
-                double currentElapsed = _stopwatch.Elapsed.TotalSeconds;
-                ++_activeRequestssCount;
-                ++_requestsCount;
+                _spinLock.Enter(ref lockTaken);
+                _dimensionSet.Update(++_activeRequestssCount,++_requestsCount);
                 _eventSource.AddRequest();
                 return true;
             }
             catch (Exception ex)
-            { 
+            {
                 return false;
             }
             finally
             {
-                _semaphore.Release();
+                if (lockTaken)
+                    _spinLock.Exit();
             }
         }
 
-        public async Task<bool> DecreseConnectionsCountAsync(ICancellationTokenWrapper cancellationTokenWrapper)
+        public bool DecreseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper)
         {
+            bool lockTaken = false;
             try
             {
-                await _semaphore.WaitAsync();
-                ++_completedRequestsCount;
-                --_activeRequestssCount;
+                _spinLock.Enter(ref lockTaken);
+                _dimensionSet.Update(--_activeRequestssCount, _requestsCount, ++_completedRequestsCount);
                 return true;
             }
             catch (Exception ex)
@@ -130,7 +140,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             finally
             {
-                _semaphore.Release();
+                if (lockTaken)
+                    _spinLock.Exit();
             }
         }
 
@@ -144,23 +155,25 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
         {
+            private SpinLock _spinLock = new SpinLock();
+
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int? activeRequestsCount, int? requestsCount = default, double? completedRequestsCount = default, double? timeElapsedInSeconds = default, RequestsRate? requestsRate = default, RequestsRate? requestsRatePerCoolDown = default, string endPointDetails = default)
+            public void Update(int activeRequestsCount = default, int requestsCount = default, int completedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default, string endPointDetails = default)
             {
-                TimeStamp = DateTime.Now;
-                this.RequestsCount = requestsCount ?? this.RequestsCount;
-                this.ActiveRequestsCount = activeRequestsCount ?? this.ActiveRequestsCount;
-                this.CompletedRequestsCount = completedRequestsCount ?? this.CompletedRequestsCount;
-                this.TimeElapsedInSeconds = timeElapsedInSeconds ?? this.TimeElapsedInSeconds;
-                this.RequestsRate = requestsRate ?? this.RequestsRate;
-                this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown ?? this.RequestsRatePerCoolDownPeriod;
-                this.EndPointDetails = endPointDetails == default ? this.EndPointDetails: endPointDetails;
+                    TimeStamp = DateTime.Now;
+                    this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
+                    this.ActiveRequestsCount = activeRequestsCount.Equals(default) ? this.ActiveRequestsCount : activeRequestsCount;
+                    this.CompletedRequestsCount = completedRequestsCount.Equals(default) ? this.CompletedRequestsCount : completedRequestsCount;
+                    this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
+                    this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
+                    this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
+                    this.EndPointDetails = endPointDetails == default ? this.EndPointDetails : endPointDetails;
             }
         }
 
     }
 
-    public struct RequestsRate 
+    public struct RequestsRate
     {
         public RequestsRate(string every, double value)
         {
@@ -168,7 +181,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             Every = every;
         }
         public double Value { get; }
-        public string Every { get;}
+        public string Every { get; }
     }
     public class ConnectionDimensionSet : IDimensionSet
     {
@@ -176,7 +189,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public string EndPointDetails { get; protected set; }
         public int RequestsCount { get; protected set; }
         public int ActiveRequestsCount { get; protected set; }
-        public double CompletedRequestsCount { get; protected set; }
+        public int CompletedRequestsCount { get; protected set; }
         public double TimeElapsedInSeconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }

@@ -568,14 +568,14 @@ namespace LPS.Infrastructure.Client
                 {
                     foreach (var metric in connectionsMetrics)
                     {
-                        await ((ILPSConnectionsMetric)metric).DecreseConnectionsCountAsync(cancellationTokenWrapper);
+                        ((ILPSConnectionsMetric)metric).DecreseConnectionsCount(cancellationTokenWrapper);
                     }
                 }
                 else
                 {
                     foreach (var metric in connectionsMetrics)
                     {
-                        await ((ILPSConnectionsMetric)metric).IncreaseConnectionsCountAsync(cancellationTokenWrapper);
+                        ((ILPSConnectionsMetric)metric).IncreaseConnectionsCount(cancellationTokenWrapper);
                     }
                 }
                 return true;

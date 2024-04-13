@@ -153,11 +153,11 @@ namespace LPS.Domain
                         {
                             for (int b = 0; b < this.BatchSize && stopwatch.Elapsed.TotalSeconds < this.Duration.Value; b++)
                             {
+                                await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                                 _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds , cancellationTokenWrapper.CancellationToken);
-                           await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                         }
                         stopwatch.Stop();
                         break;
@@ -166,11 +166,11 @@ namespace LPS.Domain
                         {
                             for (int b = 0; b < this.BatchSize; b++)
                             {
+                                await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                                 _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, cancellationTokenWrapper.CancellationToken);
-                            await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                         }
                         break;
                     case IterationMode.CB:
@@ -178,19 +178,20 @@ namespace LPS.Domain
                         {
                             for (int b = 0; b < this.BatchSize; b++)
                             {
-                                _=lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
+                                await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
+                                _ =lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, cancellationTokenWrapper.CancellationToken);
-                            await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
+                            
                         }
                         break;
                     case IterationMode.R:
                         for (int i = 0; i < this.RequestCount && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i++)
                         {
+                            await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                             await lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                             numberOfSentRequests++;
-                            await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                         }
                         break;
                     case IterationMode.D:
@@ -198,9 +199,9 @@ namespace LPS.Domain
                         stopwatch.Start();
                         while (stopwatch.Elapsed.TotalSeconds < this.Duration.Value && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
                         {
+                            await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                             await lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                             numberOfSentRequests++;
-                            await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                         }
                         stopwatch.Stop();
                         break;
