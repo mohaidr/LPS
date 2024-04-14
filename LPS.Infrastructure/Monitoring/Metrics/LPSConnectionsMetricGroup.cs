@@ -24,7 +24,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public LPSHttpRun LPSHttpRun => _httpRun;
         int _activeRequestssCount;
         int _requestsCount;
-        int _completedRequestsCount;
+        int _successfulRequestsCount;
+        int _failedRequestsCount;
         ProtectedConnectionDimensionSet _dimensionSet;
         LPSRequestEventSource _eventSource;
         Stopwatch _stopwatch;
@@ -58,16 +59,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 {
 
                     var timeElapsed = _stopwatch.Elapsed.TotalSeconds;
-                    var requestsRate = new RequestsRate($"1s", Math.Round((_completedRequestsCount / timeElapsed), 2));
+                    var requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / timeElapsed), 2));
                     var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
                     if (isCoolDown && timeElapsed > cooldownPeriod)
                     {
-                        requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}s", Math.Round((_completedRequestsCount / timeElapsed) * cooldownPeriod, 2));
+                        requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}s", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
                     }
                     _spinLock.Enter(ref lockTaken);
-                    _dimensionSet.Update(_activeRequestssCount, _requestsCount, _completedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown, _endpointDetails);
+                    _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown, _endpointDetails);
                 }
-                finally {
+                finally
+                {
                     if (lockTaken)
                         _spinLock.Exit();
                 }
@@ -110,7 +112,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             try
             {
                 _spinLock.Enter(ref lockTaken);
-                _dimensionSet.Update(++_activeRequestssCount,++_requestsCount);
+                _dimensionSet.Update(++_activeRequestssCount, ++_requestsCount);
                 _eventSource.AddRequest();
                 return true;
             }
@@ -125,13 +127,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public bool DecreseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper)
+        public bool DecreseConnectionsCount(bool isSuccess, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             bool lockTaken = false;
             try
             {
                 _spinLock.Enter(ref lockTaken);
-                _dimensionSet.Update(--_activeRequestssCount, _requestsCount, ++_completedRequestsCount);
+                if (isSuccess)
+                    _dimensionSet.Update(--_activeRequestssCount, _requestsCount, ++_successfulRequestsCount);
+                else
+                    _dimensionSet.Update(--_activeRequestssCount, _requestsCount, _successfulRequestsCount, ++_failedRequestsCount);
+
                 return true;
             }
             catch (Exception ex)
@@ -158,16 +164,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             private SpinLock _spinLock = new SpinLock();
 
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int activeRequestsCount = default, int requestsCount = default, int completedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default, string endPointDetails = default)
+            public void Update(int activeRequestsCount = default, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default, string endPointDetails = default)
             {
-                    TimeStamp = DateTime.Now;
-                    this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
-                    this.ActiveRequestsCount = activeRequestsCount.Equals(default) ? this.ActiveRequestsCount : activeRequestsCount;
-                    this.CompletedRequestsCount = completedRequestsCount.Equals(default) ? this.CompletedRequestsCount : completedRequestsCount;
-                    this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
-                    this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
-                    this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
-                    this.EndPointDetails = endPointDetails == default ? this.EndPointDetails : endPointDetails;
+                TimeStamp = DateTime.Now;
+                this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
+                this.ActiveRequestsCount = activeRequestsCount.Equals(default) ? this.ActiveRequestsCount : activeRequestsCount;
+                this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;
+                this.FailedRequestsCount = failedRequestsCount.Equals(default) ? this.FailedRequestsCount : failedRequestsCount;
+                this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
+                this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
+                this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
+                this.EndPointDetails = endPointDetails == default ? this.EndPointDetails : endPointDetails;
             }
         }
 
@@ -189,7 +196,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public string EndPointDetails { get; protected set; }
         public int RequestsCount { get; protected set; }
         public int ActiveRequestsCount { get; protected set; }
-        public int CompletedRequestsCount { get; protected set; }
+        public int SuccessfulRequestCount { get; protected set; }
+        public int FailedRequestsCount { get; protected set; }
         public double TimeElapsedInSeconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }

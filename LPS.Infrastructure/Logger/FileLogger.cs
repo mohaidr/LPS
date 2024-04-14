@@ -189,7 +189,7 @@ namespace LPS.Infrastructure.Logger
         {
             if (_loggingCancellationCount > 0)
             {
-                AnsiConsole.MarkupLine($"[Yellow]The error '{_cancellationErrorMessage}' has been reported {_loggingCancellationCount} times[/]");
+                AnsiConsole.MarkupLine($"[Yellow]The error '{_cancellationErrorMessage.Trim()}' has been reported {_loggingCancellationCount} times[/]");
             }
             await _synchronizedTextWriter.FlushAsync();
         }

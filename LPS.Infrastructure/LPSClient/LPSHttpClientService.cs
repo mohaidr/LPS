@@ -69,7 +69,7 @@ namespace LPS.Infrastructure.Client
             {
                 var httpRequestMessage = ConstructRequestMessage(lpsHttpRequestProfile);
 
-                await TryUpdateConnectionsMetrics(lpsHttpRequestProfile, false, cancellationTokenWrapper);
+                await TryIncreaseConnectionsCount(lpsHttpRequestProfile, cancellationTokenWrapper);
                 // restart in case StartNew adds unnecessary milliseconds becuase of JITing. See this https://stackoverflow.com/questions/14019510/calculate-the-execution-time-of-a-method
                 stopWatch.Restart();
                 var response = await ExecuteHttpRequestAsync(lpsHttpRequestProfile, httpRequestMessage, cancellationTokenWrapper);
@@ -82,6 +82,8 @@ namespace LPS.Infrastructure.Client
 
                 await TryUpdateResponseMetrics(lpsHttpRequestProfile, lpsHttpResponse, cancellationTokenWrapper);
 
+                await TryDecreaseConnectionsCount(lpsHttpRequestProfile, response.IsSuccessStatusCode, cancellationTokenWrapper);
+
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
 
                 await ExtractAndDownloadHtmlResourcesAsync(sequenceNumber, responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient, cancellationTokenWrapper);
@@ -89,6 +91,8 @@ namespace LPS.Infrastructure.Client
             }
             catch (Exception ex)
             {
+                await TryDecreaseConnectionsCount(lpsHttpRequestProfile, false, cancellationTokenWrapper);
+
                 LPSHttpResponse.SetupCommand lpsResponseCommand = new LPSHttpResponse.SetupCommand
                 {
                     StatusCode = 0,
@@ -114,7 +118,6 @@ namespace LPS.Infrastructure.Client
             }
             finally
             {
-                await TryUpdateConnectionsMetrics(lpsHttpRequestProfile, true, cancellationTokenWrapper);
             }
 
             return lpsHttpResponse;
@@ -559,32 +562,53 @@ namespace LPS.Infrastructure.Client
             }
         }
 
-        private async Task<bool> TryUpdateConnectionsMetrics(LPSHttpRequestProfile lpsHttpRequestProfile, bool isCompleted, ICancellationTokenWrapper cancellationTokenWrapper)
+      
+
+        private async Task<bool> TryIncreaseConnectionsCount(LPSHttpRequestProfile lpsHttpRequestProfile, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             try
             {
-                var connectionsMetrics = _metrics[lpsHttpRequestProfile.Id.ToString()].Where(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
-                if (isCompleted)
+                var connectionsMetrics = GetConnectionsMetrics(lpsHttpRequestProfile);
+
+                foreach (var metric in connectionsMetrics)
                 {
-                    foreach (var metric in connectionsMetrics)
-                    {
-                        ((ILPSConnectionsMetric)metric).DecreseConnectionsCount(cancellationTokenWrapper);
-                    }
-                }
-                else
-                {
-                    foreach (var metric in connectionsMetrics)
-                    {
-                        ((ILPSConnectionsMetric)metric).IncreaseConnectionsCount(cancellationTokenWrapper);
-                    }
+                    ((ILPSConnectionsMetric)metric).IncreaseConnectionsCount(cancellationTokenWrapper);
                 }
                 return true;
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                                       $"Failed to increase connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
+                                       LPSLoggingLevel.Error, cancellationTokenWrapper);
                 return false;
             }
+        }
+
+        private async Task<bool> TryDecreaseConnectionsCount(LPSHttpRequestProfile lpsHttpRequestProfile, bool isSuccessful, ICancellationTokenWrapper cancellationTokenWrapper)
+        {
+            try
+            {
+                var connectionsMetrics = GetConnectionsMetrics(lpsHttpRequestProfile);
+                foreach (var metric in connectionsMetrics)
+                {
+                    ((ILPSConnectionsMetric)metric).DecreseConnectionsCount(isSuccessful, cancellationTokenWrapper);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                                       $"Failed to decrease connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
+                                       LPSLoggingLevel.Error, cancellationTokenWrapper);
+                return false;
+            }
+        }
+
+        private IEnumerable<ILPSMetric> GetConnectionsMetrics(LPSHttpRequestProfile lpsHttpRequestProfile)
+        {
+            return _metrics[lpsHttpRequestProfile.Id.ToString()]
+                    .Where(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
         }
 
         private async Task<bool> TryUpdateResponseMetrics(LPSHttpRequestProfile lpsHttpRequestProfile, LPSHttpResponse lpsResponse, ICancellationTokenWrapper cancellationTokenWrapper)

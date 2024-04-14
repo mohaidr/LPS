@@ -11,6 +11,6 @@ namespace LPS.Infrastructure.Common.Interfaces
     public interface ILPSConnectionsMetric : ILPSMetric
     {
         public bool IncreaseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper);
-        public bool DecreseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper);
+        public bool DecreseConnectionsCount(bool isSuccess, ICancellationTokenWrapper cancellationTokenWrapper);
     }
 }
