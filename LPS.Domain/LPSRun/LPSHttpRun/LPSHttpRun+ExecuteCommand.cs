@@ -22,7 +22,7 @@ namespace LPS.Domain
                 }
             }
             public LPSTestPlan.ExecuteCommand LPSTestPlanExecuteCommand { get; set; }
-           
+
             ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService;
             ILPSLogger _logger;
             ILPSWatchdog _watchdog;
@@ -33,7 +33,7 @@ namespace LPS.Domain
 
             }
             public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile
-                , LPSHttpResponse> httpClientService, 
+                , LPSHttpResponse> httpClientService,
                 LPSTestPlan.ExecuteCommand planExecCommand,
                 ILPSLogger logger,
                 ILPSWatchdog watchdog,
@@ -73,7 +73,7 @@ namespace LPS.Domain
 
             protected int SafelyIncrementNumberOfSuccessfulRequests(ExecuteCommand execCommand)
             {
-              return Interlocked.Increment(ref execCommand._numberOfSuccessfullyCompletedRequests);
+                return Interlocked.Increment(ref execCommand._numberOfSuccessfullyCompletedRequests);
             }
 
             protected int SafelyIncrementNumberOfFailedRequests(ExecuteCommand execCommand)
@@ -120,7 +120,7 @@ namespace LPS.Domain
                     logEntry += "...Empty Payload...\n";
                 }
 
-                if (this.LPSHttpRequestProfile.HttpHeaders != null && this.LPSHttpRequestProfile.HttpHeaders.Count>0)
+                if (this.LPSHttpRequestProfile.HttpHeaders != null && this.LPSHttpRequestProfile.HttpHeaders.Count > 0)
                 {
                     logEntry += "...Begin Request Headers...\n";
 
@@ -157,17 +157,17 @@ namespace LPS.Domain
                                 _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
-                            await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds , cancellationTokenWrapper.CancellationToken);
+                            await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, cancellationTokenWrapper.CancellationToken);
                         }
                         stopwatch.Stop();
                         break;
                     case IterationMode.CRB:
                         for (int i = 0; i < this.RequestCount.Value && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i += this.BatchSize.Value)
                         {
-                            for (int b = 0; b < this.BatchSize; b++)
+                            for (int b = 0; b < this.BatchSize && numberOfSentRequests < this.RequestCount.Value; b++)
                             {
                                 await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
-                                _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
+                                _= lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, cancellationTokenWrapper.CancellationToken);
@@ -179,7 +179,7 @@ namespace LPS.Domain
                             for (int b = 0; b < this.BatchSize; b++)
                             {
                                 await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
-                                _ =lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
+                                _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile, cancellationTokenWrapper);
                                 numberOfSentRequests++;
                             }
                             await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, cancellationTokenWrapper.CancellationToken);
@@ -208,7 +208,6 @@ namespace LPS.Domain
                     default:
                         throw new ArgumentException("Invalid iteration mode was chosen");
                 }
-
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {numberOfSentRequests} request(s) to {this.LPSHttpRequestProfile.URL}", LPSLoggingLevel.Information, cancellationTokenWrapper);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Information, cancellationTokenWrapper);

@@ -29,14 +29,13 @@ namespace LPS.Infrastructure.Client
         private static int _clientNumber;
         public string Id { get; private set; }
         public string GuidId { get; private set; }
-        public ILPSClientConfiguration<LPSHttpRequestProfile> Config { get; }
+        private ILPSClientConfiguration<LPSHttpRequestProfile> _config;
 
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private static readonly ConcurrentDictionary<string, IList<ILPSMetric>> _metrics = new ConcurrentDictionary<string, IList<ILPSMetric>>();
-
         public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequestProfile> config, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            Config = config;
+            _config = config;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
@@ -183,20 +182,22 @@ namespace LPS.Infrastructure.Client
 
             using (Stream contentStream = await response.Content.ReadAsStreamAsync(cancellationTokenWrapper.CancellationToken))
             {
+                var timeoutCts = new CancellationTokenSource();
+                timeoutCts.CancelAfter(((ILPSHttpClientConfiguration<LPSHttpRequestProfile>)_config).Timeout);
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenWrapper.CancellationToken, timeoutCts.Token);
                 byte[] buffer = new byte[64000]; // Adjust the buffer size as needed and modify this logic to have queue of buffers and reuse them
                 int bytesRead;
 
-                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, cancellationTokenWrapper.CancellationToken)) > 0)
+                while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, linkedCts.Token)) > 0)
                 {
                     // Process the response as needed
                     // Example: memoryStream.Write(buffer, 0, bytesRead);
-
                     if (lpsHttpRequestProfile.SaveResponse)
                     {
                         // If saving the response to a file is required
                         using (FileStream fileStream = File.Create(locationToResponse))
                         {
-                            await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationTokenWrapper.CancellationToken);
+                            await fileStream.WriteAsync(buffer, 0, bytesRead, linkedCts.Token);
                         }
                     }
                 }
