@@ -100,7 +100,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     httpRun.LPSHttpRequestProfile = requestProfile;
                     plan.LPSHttpRuns.Add(httpRun);
                     var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lpsMonitoringEnroller);
-                    await manager.Run(plan, cancellationToken);
+                    await manager.RunAsync(plan, cancellationToken);
                 }
                 else
                 {

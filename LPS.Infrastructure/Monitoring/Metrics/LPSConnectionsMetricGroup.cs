@@ -157,8 +157,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _timer.Dispose();
         }
 
-
-
         private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
         {
             private SpinLock _spinLock = new SpinLock();

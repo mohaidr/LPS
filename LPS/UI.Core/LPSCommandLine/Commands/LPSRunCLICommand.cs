@@ -75,7 +75,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         }
 
                     }
-                    await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lPSMonitoringEnroller).Run(lpsPlan, cancellationToken);
+                    await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lPSMonitoringEnroller).RunAsync(lpsPlan, cancellationToken);
                 }
                 catch (Exception ex) 
                 {

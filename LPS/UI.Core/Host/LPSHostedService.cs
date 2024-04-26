@@ -66,7 +66,7 @@ namespace LPS.UI.Core.Host
                 if (runTest)
                 {
                     var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lPSMonitoringEnroller);
-                    await lpsManager.Run(lpsRun, cancellationToken);
+                    await lpsManager.RunAsync(lpsRun, cancellationToken);
                 }
 
                 AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {lpsTestPlanSetupCommand.Name}[/] to execute the plan[/]");

@@ -14,6 +14,7 @@ using LPS.UI.Common;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using LPS.Infrastructure.Common.Interfaces;
+using System.Threading;
 
 namespace LPS.UI.Core.Host
 {
@@ -26,7 +27,7 @@ namespace LPS.UI.Core.Host
         private static ILPSLogger _logger;
         private static ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private static Dictionary<string, Func<string>> _routeHandlers;
-
+        static CancellationTokenSource _localCancellationTokenSource; //= CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token)
         public static int Port { get; private set; }
 
         public static void Initialize(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
@@ -45,25 +46,27 @@ namespace LPS.UI.Core.Host
             };
         }
 
-        private static string GetDashboardResponse()
+        private static string GetDashboardResponse(string subPath = "")
         {
-            // Assuming the HTML file is located in the same directory as the executable
-            string filePath = Path.Combine(LPSAppConstants.AppExecutableLocation, "dashboard/index.html");
+            if (string.IsNullOrEmpty(subPath))
+            {
+                subPath = "index.html";  // Default file to serve if no subpath is specified
+            }
+
+            // Compute the full path to the file within the dashboard directory
+            string filePath = Path.Combine(LPSAppConstants.AppExecutableLocation, "dashboard", subPath);
 
             if (File.Exists(filePath))
             {
                 try
                 {
-                    // Read the contents of the HTML file
-                    string htmlContent = File.ReadAllText(filePath);
-
-                    // Build the HTTP response
-                    string httpResponse = "HTTP/1.1 200 OK\r\n" +
-                                           "Content-Type: text/html\r\n" +
-                                           $"Content-Length: {htmlContent.Length}\r\n" +
-                                           "\r\n" +
-                                           htmlContent;
-
+                    // Read the contents of the file
+                    string content = File.ReadAllText(filePath);
+                    string httpResponse = $"HTTP/1.1 200 OK\r\n" +
+                                          "Content-Type: text/html\r\n" +
+                                          $"Content-Length: {content.Length}\r\n" +
+                                          "\r\n" +
+                                          content;
                     return httpResponse;
                 }
                 catch (Exception ex)
@@ -79,6 +82,31 @@ namespace LPS.UI.Core.Host
             }
         }
 
+        private static string GetResponseForRequest(string urlPath)
+        {
+            // Check if the URL path starts with /dashboard and extract the subpath
+            if (urlPath.StartsWith("/dashboard"))
+            {
+                // Remove the '/dashboard' part and pass the rest to the GetDashboardResponse
+                string subPath = urlPath.Substring("/dashboard".Length).TrimStart('/');
+                if (string.IsNullOrWhiteSpace(subPath))
+                {
+                    // If there is no subpath, default to serving the index.html file
+                    subPath = "index.html";  // Adjust this line to dynamically select any index.* file if needed
+                }
+                return GetDashboardResponse(subPath);
+            }
+
+            foreach (var routeHandler in _routeHandlers)
+            {
+                if (urlPath.Contains(routeHandler.Key))
+                {
+                    return routeHandler.Value();
+                }
+            }
+
+            return "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nNot Found";
+        }
         private static string GetKPIsResponse()
         {
             try
@@ -87,7 +115,7 @@ namespace LPS.UI.Core.Host
                 var responseBreakDownMetrics = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ResponseCode).Select(metric => (ResponseCodeDimensionSet)metric.GetDimensionSet()));
                 var connectionsMetric = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount).Select(metric => (ConnectionDimensionSet)metric.GetDimensionSet()));
 
-                string responseMessage = FormatJson( $"\n{{\"responseBreakDownMetrics\":{responseBreakDownMetrics}, \n\"responseTimeMetrics\":\n{responseTimeMetrics},\n\"connectionMetrics\":\n{connectionsMetric}\n}}");
+                string responseMessage = FormatJson($"\n{{\"responseBreakDownMetrics\":{responseBreakDownMetrics}, \n\"responseTimeMetrics\":\n{responseTimeMetrics},\n\"connectionMetrics\":\n{connectionsMetric}\n}}");
                 string response = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{responseMessage}";
 
                 return response;
@@ -112,6 +140,8 @@ namespace LPS.UI.Core.Host
         }
         public static async Task StartServerAsync(int port, CancellationTokenWrapper cancellationTokenWrapper)
         {
+            _localCancellationTokenSource = new CancellationTokenSource();
+            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenWrapper.CancellationToken, _localCancellationTokenSource.Token);
             lock (_lockObject)
             {
                 if (_isServerRunning)
@@ -128,10 +158,10 @@ namespace LPS.UI.Core.Host
 
             try
             {
-                while (true && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested)
+                while (!linkedCts.IsCancellationRequested)
                 {
                     TcpClient client = await _listener.AcceptTcpClientAsync();
-                    _ = HandleClientAsync(client, cancellationTokenWrapper);
+                    await HandleClientAsync(client, cancellationTokenWrapper);
                 }
             }
             finally
@@ -160,20 +190,9 @@ namespace LPS.UI.Core.Host
             return null;
         }
 
-        private static string GetResponseForRequest(string urlPath)
-        {
-            foreach (var routeHandler in _routeHandlers)
-            {
-                if (urlPath.Contains(routeHandler.Key))
-                {
-                    return routeHandler.Value();
-                }
-            }
+        
 
-            return "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nNot Found";
-        }
-
-        public static async Task Run(CancellationTokenWrapper cancellationTokenWrapper)
+        public static async Task RunAsync(CancellationTokenWrapper cancellationTokenWrapper)
         {
             if (_logger == null || _runtimeOperationIdProvider == null)
             {
@@ -212,7 +231,11 @@ namespace LPS.UI.Core.Host
 
             client.Close();
         }
-
+        public static async Task ShutdownServerAsync()
+        {
+            _localCancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
+            await Task.Delay(TimeSpan.FromSeconds(6));
+        }
     }
 }
 
