@@ -162,11 +162,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             private SpinLock _spinLock = new SpinLock();
 
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int activeRequestsCount = default, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default, string endPointDetails = default)
+            public void Update(int activeRequestsCount , int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default, string endPointDetails = default)
             {
                 TimeStamp = DateTime.Now;
                 this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
-                this.ActiveRequestsCount = activeRequestsCount.Equals(default) ? this.ActiveRequestsCount : activeRequestsCount;
+                this.ActiveRequestsCount =  activeRequestsCount;
                 this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;
                 this.FailedRequestsCount = failedRequestsCount.Equals(default) ? this.FailedRequestsCount : failedRequestsCount;
                 this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
