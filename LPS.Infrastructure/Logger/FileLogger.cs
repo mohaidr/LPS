@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.Logger
         private FileLogger() 
         { 
             this._logFilePath = "lps-logs.log";
-            this._loggingLevel = LPSLoggingLevel.Verbos;
+            this._loggingLevel = LPSLoggingLevel.Verbose;
             this._consoleLoggingLevel = LPSLoggingLevel.Information;
             this._disableFileLogging = false;
             this._enableConsoleLogging = true;
@@ -115,7 +115,7 @@ namespace LPS.Infrastructure.Logger
             var stopWatch = new Stopwatch();
             stopWatch.Start();
             LogAsync(eventId, diagnosticMessage, level, cancellationTokenWrapper).Wait();
-            _ = LogAsync(eventId, $"Synchronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+            _ = LogAsync(eventId, $"Synchronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
             stopWatch.Stop();
         }
 
@@ -128,7 +128,7 @@ namespace LPS.Infrastructure.Logger
                 string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss.fff +3:00");
                 if (level >= _consoleLoggingLevel && _enableConsoleLogging)
                 {
-                    if (level == LPSLoggingLevel.Verbos)
+                    if (level == LPSLoggingLevel.Verbose)
                     {
 
                         AnsiConsole.MarkupLine($"[blue]{level}:[/] {currentDateTime} {correlationId} {diagnosticMessage}");

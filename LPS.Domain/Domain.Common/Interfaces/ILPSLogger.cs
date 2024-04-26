@@ -10,7 +10,7 @@ namespace LPS.Domain.Common.Interfaces
 
     public enum LPSLoggingLevel
     {
-        Verbos,
+        Verbose,
         Information,
         Warning,
         Error,

@@ -29,7 +29,7 @@ namespace LPS.Infrastructure.Client
         public ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> CreateInstance(ILPSClientConfiguration<LPSHttpRequestProfile> config)
         {
             var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider);
-            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created", LPSLoggingLevel.Information);
+            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
@@ -37,7 +37,7 @@ namespace LPS.Infrastructure.Client
         {
             var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider);
             _clientsQueue.Enqueue(client);
-            _logger.Log( _runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Information);
+            _logger.Log( _runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Verbose);
         }
 
         public ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> DequeueClient()
@@ -45,7 +45,7 @@ namespace LPS.Infrastructure.Client
             if (_clientsQueue.Count > 0)
             {
                 var client = _clientsQueue.Dequeue();
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been dequeued", LPSLoggingLevel.Information);
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been dequeued", LPSLoggingLevel.Verbose);
                 return client;
             }
             else

@@ -83,7 +83,7 @@ namespace LPS.Infrastructure.Client
 
                 await TryDecreaseConnectionsCount(lpsHttpRequestProfile, response.IsSuccessStatusCode, cancellationTokenWrapper);
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
 
                 await ExtractAndDownloadHtmlResourcesAsync(sequenceNumber, responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient, cancellationTokenWrapper);
 
@@ -531,7 +531,7 @@ namespace LPS.Infrastructure.Client
             {
                 if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && lpsHttpRequestProfile.Id == responseCommand.LPSHttpRequestProfileId && lpsHttpRequestProfile.SaveResponse && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
                     string htmlContent = await File.ReadAllTextAsync(locationToResponse, Encoding.UTF8);
                     HtmlDocument doc = new HtmlDocument();
                     doc.LoadHtml(htmlContent);
@@ -550,7 +550,7 @@ namespace LPS.Infrastructure.Client
                                 if (!string.IsNullOrEmpty(resourceUrl) && !resourceUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
                                 {
                                     byte[] resourceData = await client.GetByteArrayAsync(new Uri(new Uri(baseUrl), resourceUrl), cancellationTokenWrapper.CancellationToken);
-                                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloaded: {resourceUrl}", LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloaded: {resourceUrl}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
                                 }
                             }
                         }

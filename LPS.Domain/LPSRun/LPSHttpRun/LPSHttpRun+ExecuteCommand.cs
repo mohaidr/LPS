@@ -136,7 +136,7 @@ namespace LPS.Domain
                     logEntry += "...No Headers Were Provided...\n";
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, logEntry, LPSLoggingLevel.Verbos, cancellationTokenWrapper);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, logEntry, LPSLoggingLevel.Verbose, cancellationTokenWrapper);
                 #endregion
 
                 LPSHttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand = new LPSHttpRequestProfile.ExecuteCommand(this._httpClientService, command, _logger, _watchdog, _runtimeOperationIdProvider) ;
@@ -209,8 +209,8 @@ namespace LPS.Domain
                         throw new ArgumentException("Invalid iteration mode was chosen");
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {numberOfSentRequests} request(s) to {this.LPSHttpRequestProfile.URL}", LPSLoggingLevel.Information, cancellationTokenWrapper);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Information, cancellationTokenWrapper);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {numberOfSentRequests} request(s) to {this.LPSHttpRequestProfile.URL}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
 
                 //TODO: Change this logic to event driven to avoid unnecessary conext switching every 1 second
                 //Also the approach of knowing if the test has completed by counters may not be the best so look for some other solution
@@ -221,7 +221,7 @@ namespace LPS.Domain
                 }
 
                 taskCompletionSource.SetResult(true);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has completed all the requests to {this.LPSHttpRequestProfile.URL} with {command.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {command.NumberOfFailedToCompleteRequests} failed to complete requests", LPSLoggingLevel.Information, cancellationTokenWrapper);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has completed all the requests to {this.LPSHttpRequestProfile.URL} with {command.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {command.NumberOfFailedToCompleteRequests} failed to complete requests", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
             }
         }
     }

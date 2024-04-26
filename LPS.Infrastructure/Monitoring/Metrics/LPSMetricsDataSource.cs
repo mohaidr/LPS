@@ -32,7 +32,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             bool isDurationMetricRegistered = _metrics.TryAdd(durationMetricKey, new LPSDurationMetric(lpsHttpRun, logger, lpsRuntimeOperationIdProvider));
             bool isConnectionsMetricRegistered = _metrics.TryAdd(connectionsMetricKey, new LPSConnectionsMetricGroup(lpsHttpRun, logger, lpsRuntimeOperationIdProvider));
 
-            logger?.Log(lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Host: {new Uri(lpsHttpRun.LPSHttpRequestProfile.URL).Host}, Metric Id: {breakDownMetricKey} Registered: {isBreakDownMetricRegistered}, Metric Id: {durationMetricKey} Registered: {isDurationMetricRegistered}, Metric Id: {connectionsMetricKey} Is Registered: {isConnectionsMetricRegistered}", LPSLoggingLevel.Verbos);
+            logger?.Log(lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Host: {new Uri(lpsHttpRun.LPSHttpRequestProfile.URL).Host}, Metric Id: {breakDownMetricKey} Registered: {isBreakDownMetricRegistered}, Metric Id: {durationMetricKey} Registered: {isDurationMetricRegistered}, Metric Id: {connectionsMetricKey} Is Registered: {isConnectionsMetricRegistered}", LPSLoggingLevel.Verbose);
         }
 
         internal static void Deregister(LPSHttpRun lpsHttpRun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider lpsRuntimeOperationIdProvider = default)
@@ -56,7 +56,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 disposableConnections.Dispose();
             }
-            logger?.Log(lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Host: {new Uri(lpsHttpRun.LPSHttpRequestProfile.URL).Host}, Metric Id: {breakDownMetricKey} Deregistered: {removedBreakDownMetric != null},  Metric Id: {durationMetricKey} Deregistered: {removedDurationMetric != null},  Metric Id: {connectionsMetricKey} Deregistered: {removedConnectionsMetric != null}", LPSLoggingLevel.Verbos);
+            logger?.Log(lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Host: {new Uri(lpsHttpRun.LPSHttpRequestProfile.URL).Host}, Metric Id: {breakDownMetricKey} Deregistered: {removedBreakDownMetric != null},  Metric Id: {durationMetricKey} Deregistered: {removedDurationMetric != null},  Metric Id: {connectionsMetricKey} Deregistered: {removedConnectionsMetric != null}", LPSLoggingLevel.Verbose);
         }
         public static List<ILPSMetric> Get(Func<ILPSMetric, bool> predicate)
         {
