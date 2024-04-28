@@ -55,7 +55,7 @@ Initializes a new test configuration. Essential parameters such as the test's na
 ### Add HTTP Run
 `Command: lps add [options]`
 
-Adds an HTTP run to a predefined test plan. This command configures the specifics of the HTTP requests to be made during the test, including the type of requests, target URLs, and the sequence of these requests. It is crucial for tailoring the test to simulate specific user interactions with the web application.
+Adds an HTTP run to a predefined test plan. This command configures the specifics of the HTTP testing scenario to be made during the test, including the type of requests, target URLs, and the sequence of the testing scenarios. It is crucial for tailoring the test to simulate specific user interactions with the web application.
 
 
     Test Name (-tn, --testname <testname>): Required. Specifies the test to which the HTTP run will be added.
@@ -82,6 +82,38 @@ Executes a prepared test plan according to its specifications. It requires the n
 
     Test Name (-tn, --testname <testname>): Required. Identifies the test to be executed.
     Help (-?, -h): Shows help and options available for the command.
+
+### Example
+    lps create --testname "login-test-plan-01" --numberOfClients 5 --rampupPeriod 1000
+    lps add --testname "login-test-plan-01" --runName "LoginTest" --httpmethod GET --url "https://example.com/login" --iterationMode CRB --requestCount 500 --batchsize 20  --coolDownTime 5
+    lps run --testname "login-test-plan-01"
+
+The Iteration Mode parameter in the LPS tool offers a flexible way to control how HTTP requests are repeated during a test run. Each mode provides a unique method for managing the flow of requests based on different testing needs. Here’s an explanation of each iteration mode and how they enhance the tool's testing capabilities:
+
+The Iteration Mode parameter in the LPS tool offers a flexible way to control how HTTP requests are repeated during a test run. Each mode provides a unique method for managing the flow of requests based on different testing needs. Here’s an explanation of each iteration mode and how they enhance the tool's testing capabilities:
+
+### Iteration Modes:
+#### CB (Cooldown-Batchsize)CB (Cooldown-Batchsize)
+**Description**: In this mode, HTTP requests are issued in batches specified by the --batchsize option. After each batch is sent, the test pauses for a period defined by the --coolDownTime. This mode is useful for testing how well the application handles bursts of traffic followed by periods of inactivity.
+**Use Case:** Ideal for scenarios where you want to simulate users coming in waves, such as during a flash sale or a timed quiz on an educational website.
+#### CRB (Cooldown-Request-Batchsize)CRB (Cooldown-Request-Batchsize)
+**Description**: This mode extends the CB mode by allowing control over the total number of requests (--requestCount) in addition to batch size and cooldown periods. It ensures that the entire test run sends a precise number of requests, distributed across several batches with rest periods in between.
+**Use Case**: Suitable for more detailed stress testing where the total load and its distribution over time are critical, such as testing e-commerce sites on Black Friday sales.
+#### D (Duration)
+**Description**: In the Duration mode, requests are continuously sent for the specified time period (--duration). Similar to the Request Count mode, each request in this mode is issued sequentially; a new request is sent only after the previous one completes. This mode evaluates the endurance of the application by maintaining a consistent load over an extended period.
+**Use Case**: This mode is ideal for scenarios where the performance stability of an application over time is critical. It’s especially relevant for services that expect consistent usage, such as continuous data entry systems or online examination platforms where users might be interacting with the system steadily over lengthy sessions.
+#### DCB (Duration-Cooldown-Batchsize)DCB (Duration-Cooldown-Batchsize)
+**Description**: Combines the elements of duration and CB mode. Requests are sent in batches for the total duration of the test, with cooldown periods between each batch. This hybrid approach provides a comprehensive stress test scenario.
+**Use Case**: Perfect for applications requiring reliability under periodic spikes in user activity, such as online ticketing services during event launches.
+#### R (Request Count)
+**Description**: In the Request Count mode, the tool is set to send a predetermined total number of requests (--requestCount). Each request is sent individually, one after another, with the next request only being dispatched after the previous one has completed. This mode is designed to assess how the application handles a steady stream of incoming requests, one at a time.
+
+**Use Case**: This is particularly useful for testing the application's capacity to process consecutive requests efficiently. It simulates a scenario where users perform actions one after another, such as submitting forms or completing sequential tasks on a workflow application. It's an excellent way to measure how well the server recovers and readies itself for the next request under a controlled load.
+
+### Flexibility and Testing Capabilities:Flexibility and Testing Capabilities:
+The iteration modes provide significant flexibility in how tests are structured, allowing testers to closely mimic a variety of real-world scenarios. By varying the sequence and intensity of load conditions, these modes help identify potential performance bottlenecks and ensure that the application is robust enough to handle different types of user interactions and traffic patterns. This tailored approach is crucial for developing highly reliable and scalable web applications.
+
+# LPS Configuration
     
 ### Configure Logger
 `Command: lps logger [options]`
