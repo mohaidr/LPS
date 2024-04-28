@@ -32,12 +32,13 @@ namespace LPS.UI.Core.LPSValidators
                 return Uri.TryCreate(url, UriKind.Absolute, out result)
                 && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
             }).WithMessage("The 'URL' must be a valid URL according to RFC 3986");
-            RuleFor(command => command.DownloadHtmlEmbeddedResources)
-                .NotNull()
-                .WithMessage("'Download Html Embedded Resources' must be (y) or (n)");
             RuleFor(command => command.SaveResponse)
-                .NotNull()
-                .WithMessage("'Save Response' must be (y) or (n)");
+            .NotNull()
+            .WithMessage("'Save Response' must be (y) or (n)");
+            RuleFor(command => command.DownloadHtmlEmbeddedResources)
+                .NotNull().When(command => command.SaveResponse.HasValue && command.SaveResponse.Value)
+                .WithMessage("'Download Html Embedded Resources' must be (y) or (n)");
+
 
         }
 

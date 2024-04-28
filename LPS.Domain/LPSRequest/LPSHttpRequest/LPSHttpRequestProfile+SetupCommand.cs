@@ -65,7 +65,7 @@ namespace LPS.Domain
                 this.URL = command.URL;
                 this.Payload = command.Payload;
                 this.HttpHeaders = new Dictionary<string, string>();
-                this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.Value;
+                this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.HasValue? command.DownloadHtmlEmbeddedResources.Value: false;
                 this.SaveResponse = command.SaveResponse.Value;
                 if (command.HttpHeaders != null)
                 {

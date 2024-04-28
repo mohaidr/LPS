@@ -49,18 +49,19 @@ namespace LPS.UI.Core.UI.Build.Services
                     _command.Httpversion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)))
-                {
-                    _validator.PrintValidationErrors(nameof(Command.DownloadHtmlEmbeddedResources));
-                    Command.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false);
-                    continue;
-                }
                 if (!_validator.Validate(nameof(Command.SaveResponse)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.SaveResponse));
                     Command.SaveResponse = AnsiConsole.Confirm("Would you like to [green]'Save'[/] the http responses?", false);
                     continue;
                 }
+                if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)) && Command.SaveResponse.Value)
+                {
+                    _validator.PrintValidationErrors(nameof(Command.DownloadHtmlEmbeddedResources));
+                    Command.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false);
+                    continue;
+                }
+
                 break;
             }
 

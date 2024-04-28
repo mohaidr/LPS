@@ -55,7 +55,7 @@ This base command initiates a variety of testing scenarios that can be run immed
     -cdt, --coolDownTime, --cooldowntime <coolDownTime>: Cooldown period in seconds before sending the next batch.
     -bs, --batchsize <batchsize>: Number of requests per batch.
     -hv, --httpVersion, --httpversion <httpVersion>: HTTP version, defaults to 2.0.
-    -dhtmler, --downloadHtmlEmbeddedResources, --downloadhtmlembeddedresources: Option to download HTML embedded resources, defaults to False.
+    -dhtmler, --downloadHtmlEmbeddedResources, --downloadhtmlembeddedresources: Option to download HTML embedded resources, defaults to False. This will only work if the SaveResponse option is set to true. 
     -sr, --saveResponse, --saveresponse: Option to save HTTP responses, defaults to False.
     -p, --payload, --Payload <payload>: Request payload, can be a path to a file or inline text.
 

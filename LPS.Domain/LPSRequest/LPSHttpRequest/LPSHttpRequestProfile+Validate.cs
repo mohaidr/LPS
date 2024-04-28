@@ -17,14 +17,14 @@ namespace LPS.Domain
 
     public partial class LPSHttpRequestProfile
     {
-        public new class Validator: CommandBaseValidator<LPSHttpRequestProfile, LPSHttpRequestProfile.SetupCommand>
+        public new class Validator : CommandBaseValidator<LPSHttpRequestProfile, LPSHttpRequestProfile.SetupCommand>
         {
             ILPSLogger _logger;
             ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
             LPSHttpRequestProfile _entity;
             LPSHttpRequestProfile.SetupCommand _command;
             private string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-            public Validator(LPSHttpRequestProfile entity, LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider) 
+            public Validator(LPSHttpRequestProfile entity, LPSHttpRequestProfile.SetupCommand command, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -43,12 +43,13 @@ namespace LPS.Domain
                     return Uri.TryCreate(url, UriKind.Absolute, out result)
                     && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
                 }).WithMessage("The 'URL' must be a valid URL according to RFC 3986");
-                RuleFor(command => command.DownloadHtmlEmbeddedResources)
-                    .NotNull()
-                    .WithMessage("'Download Html Embedded Resources' must be (y) or (n)");
                 RuleFor(command => command.SaveResponse)
-                    .NotNull()
-                    .WithMessage("'Save Response' must be (y) or (n)");
+                .NotNull()
+                .WithMessage("'Save Response' must be (y) or (n)");
+                RuleFor(command => command.DownloadHtmlEmbeddedResources)
+                    .NotNull().When(command => command.SaveResponse.HasValue && command.SaveResponse.Value)
+                    .WithMessage("'Download Html Embedded Resources' must be (y) or (n)");
+
 
                 //TODO: Validate http headers
 

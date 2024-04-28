@@ -85,6 +85,7 @@ namespace LPS.Infrastructure.Client
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
 
+                //This will only run if save response is set to true
                 await ExtractAndDownloadHtmlResourcesAsync(sequenceNumber, responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient, cancellationTokenWrapper);
 
             }
@@ -530,12 +531,12 @@ namespace LPS.Infrastructure.Client
         {
             try
             {
-                var timeoutCts = new CancellationTokenSource();
-                timeoutCts.CancelAfter(((ILPSHttpClientConfiguration<LPSHttpRequestProfile>)_config).Timeout);
-                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenWrapper.CancellationToken, timeoutCts.Token);
-
                 if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && lpsHttpRequestProfile.Id == responseCommand.LPSHttpRequestProfileId && lpsHttpRequestProfile.SaveResponse && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
                 {
+                    var timeoutCts = new CancellationTokenSource();
+                    timeoutCts.CancelAfter(((ILPSHttpClientConfiguration<LPSHttpRequestProfile>)_config).Timeout);
+                    var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenWrapper.CancellationToken, timeoutCts.Token);
+
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
                     string htmlContent = await File.ReadAllTextAsync(locationToResponse, Encoding.UTF8);
                     HtmlDocument doc = new HtmlDocument();
