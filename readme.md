@@ -55,8 +55,8 @@ This base command initiates a variety of testing scenarios that can be run immed
     -cdt, --coolDownTime, --cooldowntime <coolDownTime>: Cooldown period in seconds before sending the next batch.
     -bs, --batchsize <batchsize>: Number of requests per batch.
     -hv, --httpVersion, --httpversion <httpVersion>: HTTP version, defaults to 2.0.
-    -dhtmler, --downloadHtmlEmbeddedResources, --downloadhtmlembeddedresources: Option to download HTML embedded resources, defaults to False. This will only work if the SaveResponse option is set to true. 
     -sr, --saveResponse, --saveresponse: Option to save HTTP responses, defaults to False.
+	-dhtmler, --downloadHtmlEmbeddedResources, --downloadhtmlembeddedresources: Option to download HTML embedded resources, defaults to False. This will only work if the SaveResponse option is set to true. 
     -p, --payload, --Payload <payload>: Request payload, can be a path to a file or inline text.
 
 
@@ -101,8 +101,8 @@ This command adds an HTTP run to an existing test plan. It configures key aspect
     -hm, --httpmethod <method>: Required. Chooses the HTTP method (e.g., GET, POST).
     -hv, --httpVersion <httpVersion>: Specifies the HTTP protocol version. Default is 2.0.
     -u, --url <url>: Required. The target URL for the HTTP requests.
-    -dhtmler, --downloadHtmlEmbeddedResources: Controls whether to download HTML embedded resources. Default is false.
     -sr, --saveResponse: Decides if the HTTP responses should be saved. Default is false.
+	-dhtmler, --downloadHtmlEmbeddedResources, --downloadhtmlembeddedresources: Option to download HTML embedded resources, defaults to False. This will only work if the SaveResponse option is set to true. 
     -h, --header <header>: Adds custom headers to the HTTP requests.
     -p, --payload <payload>: Provides the data sent with the request, either from a file or as inline text.
 
