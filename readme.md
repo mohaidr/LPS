@@ -1,9 +1,20 @@
 # LPS Command-Line Tool Documentation
 
-## Overview
-The LPS tool is crafted for Load, Performance, and Stress testing of web applications. It equips users to define, manage, and execute various HTTP-based tests to gauge software performance under simulated conditions.
+### Overview
+The LPS tool is designed for Load, Performance, and Stress testing of web applications. It allows users to design, manage, and execute a variety of HTTP-based tests to assess application performance under simulated load conditions.
+
+
+### Example
+`lps --url https://www.example.com -rc 1000`
+
+
+# Commands
 
 `Command: lps [options]`
+
+A comprehensice command used to initiate various testing scenarion on the fly, depending on the options provided.
+
+
 ### Global Options:
     -tn, --testname <testname>: Specifies the test name, defaults to "Quick-Test-Plan".
     -nc, --numberOfClients, --numberofclients <numberOfClients>: Sets the number of clients to execute the plan, defaults to 1.
@@ -24,8 +35,12 @@ The LPS tool is crafted for Load, Performance, and Stress testing of web applica
     -sr, --saveResponse, --saveresponse: Option to save HTTP responses, defaults to False.
     -p, --payload, --Payload <payload>: Request payload, can be a path to a file or inline text.
 
+
   
 `lps [command] [options]`
+
+This command is used to set up a new test plan. You specify the test name, number of clients that will simulate the load, and the ramp-up period among other settings. This is the foundational step where you define the basic parameters of your load test.
+
   
 ### Create Test
 `Command: lps create [options]`
@@ -40,6 +55,9 @@ The LPS tool is crafted for Load, Performance, and Stress testing of web applica
 
 ### Add HTTP Run
 `Command: lps add [options]`
+
+This command adds an HTTP run to an existing test. It involves specifying details like the HTTP method, the target URL, request count, and other HTTP-specific settings. Each HTTP run represents a testing scenario that will be performed during the execution of the plan, simulate real-world usage of the web application.
+
 
     Test Name (-tn, --testname <testname>): Required. Specifies the test to which the HTTP run will be added.
     HTTP Run Name (-rn, --runName <runName>): Required. Names the individual HTTP run.
@@ -59,11 +77,17 @@ The LPS tool is crafted for Load, Performance, and Stress testing of web applica
 ### Run Test  
 `Command: lps run [options]`
 
+This command is used to execute a test plan that has been previously created and configured. It requires the test name as a parameter to identify which test to run. This is the command that actually starts the load, performance, or stress test, generating and sending the traffic as per the defined test plan parameters.
+
+
     Test Name (-tn, --testname <testname>): Required. Identifies the test to be executed.
     Help (-?, -h): Shows help and options available for the command.
     
 ### Configure Logger
 `Command: lps logger [options]`
+
+This command configures logging options for the LPS tool. It allows you to specify where log files should be saved, whether logs should be output to the console, the level of detail in the logs, and other logging preferences. Proper logging is crucial for analyzing the results and behavior of tests.
+
 
     Log File Path (-lfp, --logFilePath <logFilePath>): Specifies the file path for logging output.
     Console Logging (-ecl, --enableConsoleLogging): Enables or disables logging to the console.
@@ -73,6 +97,10 @@ The LPS tool is crafted for Load, Performance, and Stress testing of web applica
     Console Logging Level (-cll, --consoleLoggingLevel <level>): Determines the detail of logs shown on the console.
 
 ### Configure HTTP Client
+
+This command sets parameters for the HTTP client that will be used to send requests. It includes settings such as the maximum number of simultaneous connections per server, how long a connection should stay alive in the pool, and the timeout settings for client requests. These settings help optimize the performance of the HTTP client according to the specific requirements of the test and target environment.
+
+
 `Command: lps httpclient [options]`
 
     Maximum Connections Per Server (-mcps, --maxConnectionsPerServer <maxConnectionsPerServer>): Limits the number of simultaneous connections per server.
@@ -81,6 +109,10 @@ The LPS tool is crafted for Load, Performance, and Stress testing of web applica
     Client Timeout (-cto, --clientTimeout <clientTimeout>): Sets the timeout for HTTP client requests.
 
 ### Configure Watchdog
+
+This command configures the watchdog settings that monitor resource usage (like memory and CPU) of the client machine during a test. It sets thresholds for pausing the test if resource usage becomes too high, which helps prevent the testing process from negatively impacting the system or the network environment. The command also defines the conditions under which the test will resume.
+
+
 `Command: lps watchdog [options]`
 
     Memory Threshold (-mmm, --maxMemoryMB <maxMemoryMB>): Sets a memory usage limit that pauses the test upon being reached.
