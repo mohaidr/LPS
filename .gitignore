@@ -11,3 +11,4 @@ obj
 /LPS.UnitTest/bin/Debug/net8.0
 /LPS/bin/Debug/net8.0
 /LPS/.vs/LPS/v17/.suo
+/LPS/.vs/LPS/v17/*.suo

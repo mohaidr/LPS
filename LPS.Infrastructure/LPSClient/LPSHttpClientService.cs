@@ -170,15 +170,9 @@ namespace LPS.Infrastructure.Client
 
         private async Task<LPSHttpResponse.SetupCommand> ProcessResponseAsync(HttpResponseMessage response, LPSHttpRequestProfile lpsHttpRequestProfile, int sequenceNumber, ICancellationTokenWrapper cancellationTokenWrapper)
         {
+            string locationToResponse = string.Empty;
             string contentType = response?.Content?.Headers?.ContentType?.MediaType;
             MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
-            string fileExtension = mimeType.ToFileExtension();
-            string sanitizedUrl = SanitizeUrl(lpsHttpRequestProfile.URL);
-            string directoryName = $"{_runtimeOperationIdProvider.OperationId}.{sanitizedUrl}.Resources";
-            string locationToResponse = $"{directoryName}/{Id}.{sequenceNumber}.{lpsHttpRequestProfile.Id}.{sanitizedUrl}.http {response.Version} {fileExtension}";
-
-            // Ensure the directory exists without an explicit check
-            Directory.CreateDirectory(directoryName);
 
             using (Stream contentStream = await response.Content.ReadAsStreamAsync(cancellationTokenWrapper.CancellationToken))
             {
@@ -194,6 +188,13 @@ namespace LPS.Infrastructure.Client
                     // Example: memoryStream.Write(buffer, 0, bytesRead);
                     if (lpsHttpRequestProfile.SaveResponse)
                     {
+                        string fileExtension = mimeType.ToFileExtension();
+                        string sanitizedUrl = SanitizeUrl(lpsHttpRequestProfile.URL);
+
+                        string directoryName = $"{_runtimeOperationIdProvider.OperationId}.{sanitizedUrl}.Resources";
+                        // Ensure the directory exists without an explicit check
+                        Directory.CreateDirectory(directoryName);
+                        locationToResponse = $"{directoryName}/{Id}.{sequenceNumber}.{lpsHttpRequestProfile.Id}.{sanitizedUrl}.http {response.Version} {fileExtension}";
                         // If saving the response to a file is required
                         using (FileStream fileStream = File.Create(locationToResponse))
                         {
@@ -207,7 +208,7 @@ namespace LPS.Infrastructure.Client
             {
                 StatusCode = response.StatusCode,
                 StatusMessage = response.ReasonPhrase,
-                LocationToResponse = lpsHttpRequestProfile.SaveResponse ? locationToResponse : string.Empty,
+                LocationToResponse = locationToResponse,
                 IsSuccessStatusCode = response.IsSuccessStatusCode,
                 ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                 ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
@@ -529,6 +530,10 @@ namespace LPS.Infrastructure.Client
         {
             try
             {
+                var timeoutCts = new CancellationTokenSource();
+                timeoutCts.CancelAfter(((ILPSHttpClientConfiguration<LPSHttpRequestProfile>)_config).Timeout);
+                var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenWrapper.CancellationToken, timeoutCts.Token);
+
                 if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && lpsHttpRequestProfile.Id == responseCommand.LPSHttpRequestProfileId && lpsHttpRequestProfile.SaveResponse && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
                 {
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloading Embedded Resources - Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
@@ -549,7 +554,7 @@ namespace LPS.Infrastructure.Client
                                 string resourceUrl = resourceNode.GetAttributeValue("src", "");
                                 if (!string.IsNullOrEmpty(resourceUrl) && !resourceUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
                                 {
-                                    byte[] resourceData = await client.GetByteArrayAsync(new Uri(new Uri(baseUrl), resourceUrl), cancellationTokenWrapper.CancellationToken);
+                                    byte[] resourceData = await client.GetByteArrayAsync(new Uri(new Uri(baseUrl), resourceUrl), linkedCts.Token);
                                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Downloaded: {resourceUrl}", LPSLoggingLevel.Verbose, cancellationTokenWrapper);
                                 }
                             }
