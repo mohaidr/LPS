@@ -39,8 +39,7 @@ A comprehensice command used to initiate various testing scenarion on the fly, d
   
 `lps [command] [options]`
 
-This command is used to set up a new test plan. You specify the test name, number of clients that will simulate the load, and the ramp-up period among other settings. This is the foundational step where you define the basic parameters of your load test.
-
+Initializes a new test configuration. Essential parameters such as the test's name, the number of simulated clients, and the ramp-up period are defined here. This command sets the groundwork for a load test, specifying how the test environment will mimic user traffic.
   
 ### Create Test
 `Command: lps create [options]`
@@ -56,7 +55,7 @@ This command is used to set up a new test plan. You specify the test name, numbe
 ### Add HTTP Run
 `Command: lps add [options]`
 
-This command adds an HTTP run to an existing test. It involves specifying details like the HTTP method, the target URL, request count, and other HTTP-specific settings. Each HTTP run represents a testing scenario that will be performed during the execution of the plan, simulate real-world usage of the web application.
+Adds an HTTP run to a predefined test plan. This command configures the specifics of the HTTP requests to be made during the test, including the type of requests, target URLs, and the sequence of these requests. It is crucial for tailoring the test to simulate specific user interactions with the web application.
 
 
     Test Name (-tn, --testname <testname>): Required. Specifies the test to which the HTTP run will be added.
@@ -77,7 +76,8 @@ This command adds an HTTP run to an existing test. It involves specifying detail
 ### Run Test  
 `Command: lps run [options]`
 
-This command is used to execute a test plan that has been previously created and configured. It requires the test name as a parameter to identify which test to run. This is the command that actually starts the load, performance, or stress test, generating and sending the traffic as per the defined test plan parameters.
+Executes a prepared test plan according to its specifications. It requires the name of the test to identify and launch the appropriate testing procedure. This command triggers the actual load, performance, or stress testing by sending the configured HTTP traffic to the target application.
+
 
 
     Test Name (-tn, --testname <testname>): Required. Identifies the test to be executed.
@@ -86,7 +86,8 @@ This command is used to execute a test plan that has been previously created and
 ### Configure Logger
 `Command: lps logger [options]`
 
-This command configures logging options for the LPS tool. It allows you to specify where log files should be saved, whether logs should be output to the console, the level of detail in the logs, and other logging preferences. Proper logging is crucial for analyzing the results and behavior of tests.
+Sets up logging parameters for the test operations. This command allows customization of log output locations, console logging preferences, and log verbosity. Effective logging is vital for later analysis and troubleshooting of test results.
+
 
 
     Log File Path (-lfp, --logFilePath <logFilePath>): Specifies the file path for logging output.
@@ -98,7 +99,7 @@ This command configures logging options for the LPS tool. It allows you to speci
 
 ### Configure HTTP Client
 
-This command sets parameters for the HTTP client that will be used to send requests. It includes settings such as the maximum number of simultaneous connections per server, how long a connection should stay alive in the pool, and the timeout settings for client requests. These settings help optimize the performance of the HTTP client according to the specific requirements of the test and target environment.
+Configures the HTTP client that will be used for sending requests in a test. Adjustments can be made to connection pooling, client timeout settings, and connection limits per server. These settings optimize the HTTP client's performance to suit the test needs and reduce potential bottlenecks.
 
 
 `Command: lps httpclient [options]`
@@ -110,7 +111,7 @@ This command sets parameters for the HTTP client that will be used to send reque
 
 ### Configure Watchdog
 
-This command configures the watchdog settings that monitor resource usage (like memory and CPU) of the client machine during a test. It sets thresholds for pausing the test if resource usage becomes too high, which helps prevent the testing process from negatively impacting the system or the network environment. The command also defines the conditions under which the test will resume.
+Manages the watchdog mechanism that monitors and controls resource usage during tests. It establishes thresholds for memory and CPU usage that, when exceeded, will pause the test to safeguard the system. It also defines conditions for when a paused test can resume, ensuring that the testing does not overload the system or network.
 
 
 `Command: lps watchdog [options]`
