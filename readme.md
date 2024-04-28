@@ -10,35 +10,23 @@ Iteration Mode is a fundamental feature of the LPS tool that dictates the patter
 
 Here's a clear description of each available mode and what they entail:
 
-#### CB (Cooldown-Batchsize)CB (Cooldown-Batchsize)
-   **Description**: In this mode, HTTP requests are issued in batches specified by the --batchsize option. After each batch is sent, the test pauses for a period defined by the --coolDownTime. This mode is useful for testing how well the application handles bursts of traffic followed by periods of inactivity.
-
-**Use Case:** Ideal for scenarios where you want to simulate users coming in waves, such as during a flash sale or a timed quiz on an educational website.
-
-#### CRB (Cooldown-Request-Batchsize)CRB (Cooldown-Request-Batchsize)
-**Description**: This mode extends the CB mode by allowing control over the total number of requests (--requestCount) in addition to batch size and cooldown periods. It ensures that the entire test run sends a precise number of requests, distributed across several batches with rest periods in between.
-
-**Use Case**: Suitable for more detailed stress testing where the total load and its distribution over time are critical, such as testing e-commerce sites on Black Friday sales.
-
-#### D (Duration)
-**Description**: In the Duration mode, requests are continuously sent for the specified time period (--duration). Similar to the Request Count mode, each request in this mode is issued sequentially; a new request is sent only after the previous one completes. This mode evaluates the endurance of the application by maintaining a consistent load over an extended period.
-
-**Use Case**: This mode is ideal for scenarios where the performance stability of an application over time is critical. It’s especially relevant for services that expect consistent usage, such as continuous data entry systems or online examination platforms where users might be interacting with the system steadily over lengthy sessions.
-
-#### DCB (Duration-Cooldown-Batchsize)DCB (Duration-Cooldown-Batchsize)
-**Description**: Combines the elements of duration and CB mode. Requests are sent in batches for the total duration of the test, with cooldown periods between each batch. This hybrid approach provides a comprehensive stress test scenario.
-
-**Use Case**: Perfect for applications requiring reliability under periodic spikes in user activity, such as online ticketing services during event launches.
-
+#### CB (Cooldown-Batchsize)
+- **Functionality**: Issues HTTP requests in batches, pausing after each batch during the cooldown period. This mode helps assess how the application handles intermittent high traffic.<br/>
+- **Use Case**: Best for simulating user activity in waves, like during promotional events or scheduled exams.
+#### CRB (Cooldown-Request-Batchsize)
+- **Functionality**: Builds on the CB mode by also capping the total number of requests, distributing them in controlled batches with breaks.<br/>
+- **Use Case**: Ideal for precise stress testing during peak traffic times, such as major sales events.
+#### D (Duration)D (Duration)
+- **Functionality**: Sends requests continuously one at a time for a set duration, maintaining a constant load to test application endurance.<br/>
+- **Use Case**: Suitable for evaluating performance stability over long periods, applicable to systems with consistent user engagement.
+#### DCB (Duration-Cooldown-Batchsize)
+- **Functionality**: Merges sustained and batched request sending with breaks, offering a detailed view of how traffic spikes are handled over time.<br/>
+- **Use Case**: Useful for services that need to perform reliably under fluctuating demand, like ticketing portals during launches.
 #### R (Request Count)
-**Description**: In the Request Count mode, the tool is set to send a predetermined total number of requests (--requestCount). Each request is sent individually, one after another, with the next request only being dispatched after the previous one has completed. This mode is designed to assess how the application handles a steady stream of incoming requests, one at a time.
+- **Functionality**: Completes a fixed number of requests sequentially, ensuring the application can handle each request before moving to the next.<br/>
+- **Use Case**: Effective for systems that require orderly processing, such as transactional services where actions must follow a specific sequence.
 
-**Use Case**: This is particularly useful for testing the application's capacity to process consecutive requests efficiently. It simulates a scenario where users perform actions one after another, such as submitting forms or completing sequential tasks on a workflow application. It's an excellent way to measure how well the server recovers and readies itself for the next request under a controlled load.
-
-
-
-### Example
-`lps --url https://www.example.com -rc 1000`
+These modes allow testers to closely replicate various real-world user behaviors and system stresses, aiding in the comprehensive evaluation of web applications under diverse conditions.
 
 
 # Commands
@@ -47,8 +35,11 @@ Here's a clear description of each available mode and what they entail:
 
 This base command initiates a variety of testing scenarios that can be run immediately without the need to save the test configuration. The behavior of the test is determined by the options specified.
 
+### Example
+`lps --url https://www.example.com -rc 1000`
 
-### Options:
+
+#### Options:
     -tn, --testname <testname>: Specifies the test name, defaults to "Quick-Test-Plan".
     -nc, --numberOfClients, --numberofclients <numberOfClients>: Sets the number of clients to execute the plan, defaults to 1.
     -rp, --rampupPeriod, --rampupperiod <rampupPeriod>: Time in milliseconds to wait before a new client starts the test plan, defaults to 0.
@@ -75,12 +66,14 @@ This base command initiates a variety of testing scenarios that can be run immed
 If you prefer to prepare a test in advance and have the flexibility to run it later, you can set up a test plan, incorporate HTTP runs into it, and execute it whenever it's convenient. The plan you create will be saved as a JSON file in the directory from which you execute the command, allowing for easy reuse and modification as needed.
 
   
-### Create Test
-
-Initializes a new test configuration. Essential parameters such as the test's name, the number of simulated clients, and the ramp-up period are defined here. This command sets the groundwork for a load test, specifying how the test environment will mimic user traffic.
-
+### Create Plan:
 
 `lps create [options]`
+
+Initializes a new test plan. Essential parameters such as the test's name, the number of simulated clients, and the ramp-up period are defined here. This command sets the groundwork for a load test, specifying how the test environment will mimic user traffic.
+
+
+#### Options:
 
     -tn, --testname <testname>: Required. Sets the name of the test.
     -nc, --numberOfClients <numberOfClients>: Required. Defines how many clients will run the test simultaneously.
@@ -90,12 +83,13 @@ Initializes a new test configuration. Essential parameters such as the test's na
     Help (-?, -h): Displays help and usage information.
 
 
-
 ### Add HTTP Run
+
 `lps add [options]`
 
-Adds an HTTP run to a predefined test plan. This command configures the specifics of the HTTP testing scenario to be made during the test, including the type of requests, target URLs, and the sequence of the testing scenarios. It is crucial for tailoring the test to simulate specific user interactions with the web application.
+This command adds an HTTP run to an existing test plan. It configures key aspects of the HTTP testing scenario, including iteration mode, target URLs, HTTP method, and other critical elements of the HTTP request. This customization is essential for accurately simulating specific user interactions with the web application.
 
+#### Options:
 
     -tn, --testname <testname>: Required. Specifies the test to which the HTTP run will be added.
     -rn, --runName <runName>: Required. Names the individual HTTP run.
@@ -117,7 +111,7 @@ Adds an HTTP run to a predefined test plan. This command configures the specific
 
 Executes a prepared test plan according to its specifications. It requires the name of the test to identify and launch the appropriate testing procedure. This command triggers the actual load, performance, or stress testing by sending the configured HTTP traffic to the target application.
 
-
+#### Options:
 
     -tn, --testname <testname>: Required. Identifies the test to be executed.
     Help (-?, -h): Shows help and options available for the command.
@@ -136,6 +130,8 @@ Executes a prepared test plan according to its specifications. It requires the n
 
 Sets up logging parameters for the test operations. This command allows customization of log output locations, console logging preferences, and log verbosity. Effective logging is vital for later analysis and troubleshooting of test results.
 
+#### Options:
+
     -lfp, --logFilePath <logFilePath>: Specifies the file path for logging output.
     -ecl, --enableConsoleLogging: Enables or disables logging to the console.
     -dcel, --disableConsoleErrorLogging: Toggles error logging to the console.
@@ -144,11 +140,11 @@ Sets up logging parameters for the test operations. This command allows customiz
     -cll, --consoleLoggingLevel <level>: Determines the detail of logs shown on the console.
 
 ### Configure HTTP Client
+`lps httpclient [options]`
 
 Configures the HTTP client that will be used for sending requests in a test. Adjustments can be made to connection pooling, client timeout settings, and connection limits per server. These settings optimize the HTTP client's performance to suit the test needs and reduce potential bottlenecks.
 
-
-`lps httpclient [options]`
+#### Options:
 
     -mcps, --maxConnectionsPerServer <maxConnectionsPerServer>: Limits the number of simultaneous connections per server.
     -pclt, --poolConnectionLifeTime <poolConnectionLifeTime>: Defines how long a connection remains in the pool.
@@ -156,11 +152,12 @@ Configures the HTTP client that will be used for sending requests in a test. Adj
     -cto, --clientTimeout <clientTimeout>: Sets the timeout for HTTP client requests.
 
 ### Configure Watchdog
+`lps watchdog [options]`
 
 Manages the watchdog mechanism that monitors and controls resource usage during tests. It establishes thresholds for memory and CPU usage that, when exceeded, will pause the test to safeguard the system. It also defines conditions for when a paused test can resume, ensuring that the testing does not overload the system or network.
 
 
-`lps watchdog [options]`
+#### Options:
 
     -mmm, --maxMemoryMB <maxMemoryMB>: Sets a memory usage limit that pauses the test upon being reached.
     -mcp, --maxCPUPercentage <maxCPUPercentage>: Specifies a CPU usage limit to pause the test.
