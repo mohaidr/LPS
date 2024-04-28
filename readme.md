@@ -16,7 +16,7 @@ Here's a clear description of each available mode and what they entail:
 #### CRB (Cooldown-Request-Batchsize)
 - **Functionality**: Builds on the CB mode by also capping the total number of requests, distributing them in controlled batches with breaks.<br/>
 - **Use Case**: Ideal for precise stress testing during peak traffic times, such as major sales events.
-#### D (Duration)D (Duration)
+#### D (Duration)
 - **Functionality**: Sends requests continuously one at a time for a set duration, maintaining a constant load to test application endurance.<br/>
 - **Use Case**: Suitable for evaluating performance stability over long periods, applicable to systems with consistent user engagement.
 #### DCB (Duration-Cooldown-Batchsize)
