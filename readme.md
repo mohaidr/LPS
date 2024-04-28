@@ -36,6 +36,7 @@ A comprehensice command used to initiate various testing scenarion on the fly, d
     -p, --payload, --Payload <payload>: Request payload, can be a path to a file or inline text.
 
 
+### Sub Commands
   
 `lps [command] [options]`
 
