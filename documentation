@@ -1,5 +1,7 @@
-Overview
-The LPS command-line tool is designed for Load, Performance, and Stress testing of web applications. It allows users to define, manage, and execute a variety of HTTP-based tests to evaluate software performance under simulated conditions. This tool supports a range of commands each tailored to specific aspects of testing, from test creation and execution to detailed configurations for HTTP clients and logging systems.
+# LPS Command-Line Tool Documentation
+
+## Overview
+The LPS tool is crafted for Load, Performance, and Stress testing of web applications. It equips users to define, manage, and execute various HTTP-based tests to gauge software performance under simulated conditions.
 
 Command: lps [options]
 Global Options:
