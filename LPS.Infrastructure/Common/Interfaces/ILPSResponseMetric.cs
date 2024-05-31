@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Common.Interfaces
 {
-    public interface ILPSResponseMetric : ILPSMetric
+    public interface ILPSResponseMetric : ILPSMetricMonitor
     {
         public ILPSResponseMetric Update(LPSHttpResponse httpResponse);
         public Task<ILPSResponseMetric> UpdateAsync(LPSHttpResponse httpResponse);

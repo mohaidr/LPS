@@ -17,7 +17,7 @@ namespace LPS.Domain
         protected ILPSLogger _logger;
         protected ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected ILPSWatchdog _watchdog;
-        protected ILPSMonitoringEnroller _lpsMonitoringEnroller;
+        protected ILPSMetricsDataMonitor _lpsMonitoringEnroller;
         protected LPSRun()
         {
             Id = Guid.NewGuid();

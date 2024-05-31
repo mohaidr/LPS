@@ -32,7 +32,7 @@ namespace LPS.Infrastructure.Client
         private ILPSClientConfiguration<LPSHttpRequestProfile> _config;
 
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private static readonly ConcurrentDictionary<string, IList<ILPSMetric>> _metrics = new ConcurrentDictionary<string, IList<ILPSMetric>>();
+        private static readonly ConcurrentDictionary<string, IList<ILPSMetricMonitor>> _metrics = new ConcurrentDictionary<string, IList<ILPSMetricMonitor>>();
         public LPSHttpClientService(ILPSClientConfiguration<LPSHttpRequestProfile> config, ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _config = config;
@@ -59,7 +59,7 @@ namespace LPS.Infrastructure.Client
         public async Task<LPSHttpResponse> SendAsync(LPSHttpRequestProfile lpsHttpRequestProfile, ICancellationTokenWrapper cancellationTokenWrapper)
         {
 
-            _metrics.TryAdd(lpsHttpRequestProfile.Id.ToString(), LPSMetricsDataSource.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == lpsHttpRequestProfile.Id));
+            _metrics.TryAdd(lpsHttpRequestProfile.Id.ToString(), LPSMetricsDataMonitor.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == lpsHttpRequestProfile.Id));
             int sequenceNumber = lpsHttpRequestProfile.LastSequenceId;
             LPSHttpResponse lpsHttpResponse;
             var requestUri = new Uri(lpsHttpRequestProfile.URL);
@@ -579,7 +579,7 @@ namespace LPS.Infrastructure.Client
 
                 foreach (var metric in connectionsMetrics)
                 {
-                    ((ILPSConnectionsMetric)metric).IncreaseConnectionsCount(cancellationTokenWrapper);
+                    ((ILPSConnectionsMetricMonitor)metric).IncreaseConnectionsCount(cancellationTokenWrapper);
                 }
                 return true;
             }
@@ -599,7 +599,7 @@ namespace LPS.Infrastructure.Client
                 var connectionsMetrics = GetConnectionsMetrics(lpsHttpRequestProfile);
                 foreach (var metric in connectionsMetrics)
                 {
-                    ((ILPSConnectionsMetric)metric).DecreseConnectionsCount(isSuccessful, cancellationTokenWrapper);
+                    ((ILPSConnectionsMetricMonitor)metric).DecreseConnectionsCount(isSuccessful, cancellationTokenWrapper);
                 }
                 return true;
             }
@@ -612,7 +612,7 @@ namespace LPS.Infrastructure.Client
             }
         }
 
-        private IEnumerable<ILPSMetric> GetConnectionsMetrics(LPSHttpRequestProfile lpsHttpRequestProfile)
+        private IEnumerable<ILPSMetricMonitor> GetConnectionsMetrics(LPSHttpRequestProfile lpsHttpRequestProfile)
         {
             return _metrics[lpsHttpRequestProfile.Id.ToString()]
                     .Where(metric => metric.MetricType == LPSMetricType.ConnectionsCount);

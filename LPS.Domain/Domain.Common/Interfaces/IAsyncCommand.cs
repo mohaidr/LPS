@@ -7,8 +7,17 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common.Interfaces
 {
-    public interface IAsyncCommand<TEntity> where TEntity: IDomainEntity
+    public enum AsyncCommandStatus
     {
+        NotStarted,
+        Ongoing,
+        Paused,
+        Completed,
+        Failed
+    }
+    public interface IAsyncCommand<TEntity> where TEntity : IDomainEntity
+    {
+        public AsyncCommandStatus Status { get; }
         Task ExecuteAsync(TEntity entity, ICancellationTokenWrapper cancellationTokenWrapper);
     }
 }

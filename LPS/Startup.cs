@@ -12,6 +12,10 @@ using Newtonsoft.Json;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Monitoring;
 using LPS.UI.Core.Host;
+using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Command;
+using System.CommandLine;
+using LPS.Infrastructure.Monitoring.Metrics;
 
 namespace LPS
 {
@@ -37,13 +41,14 @@ namespace LPS
                     services.ConfigureWritable<LPSWatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<LPSHttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.AddSingleton<LPSAppSettingsWritableOptions>();
+                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun>>();
                     services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>, LPSHttpClientManager>();
                     services.AddSingleton<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>, LPSHttpClientService>();
                     services.AddSingleton<ILPSRuntimeOperationIdProvider, LPSRuntimeOperationIdProvider>();
-                    services.AddSingleton<ILPSMonitoringEnroller, LPSMonitoringEnroller>();
+                    services.AddSingleton<ILPSMetricsDataMonitor, LPSMetricsDataMonitor>();
                     services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
                     if (hostContext.HostingEnvironment.IsProduction())
-                    {
+                    {   
                         //add production dependencies
                     }
                     else

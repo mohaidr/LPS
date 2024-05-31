@@ -15,7 +15,10 @@ using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using LPS.Infrastructure.Common.Interfaces;
 using System.Threading;
+using LPS.Domain;
+using LPS.Domain.Domain.Common.Interfaces;
 
+//TODO: This Code Is writting by the help of chatGPT so please consider refactoring for it
 namespace LPS.UI.Core.Host
 {
     //TODO: If the server logic goes bigger, consider moving to a different solution
@@ -27,12 +30,14 @@ namespace LPS.UI.Core.Host
         private static ILPSLogger _logger;
         private static ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private static Dictionary<string, Func<string>> _routeHandlers;
+        private static ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunCommandStatusMonitor;
         static CancellationTokenSource _localCancellationTokenSource; //= CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token)
         public static int Port { get; private set; }
 
-        public static void Initialize(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public static void Initialize(ILPSLogger logger, ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunCommandStatusMonitor, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _logger = logger;
+            _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             InitializeRouteHandlers();
         }
@@ -42,7 +47,7 @@ namespace LPS.UI.Core.Host
             _routeHandlers = new Dictionary<string, Func<string>>
             {
                 { "/dashboard", () => GetDashboardResponse() },
-                { "/kpis", () => GetKPIsResponse() }
+                { "/kpis", () => GetMetrics() }
             };
         }
 
@@ -107,23 +112,111 @@ namespace LPS.UI.Core.Host
 
             return "HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\r\nNot Found";
         }
-        private static string GetKPIsResponse()
+        private class MetricData
+        {
+            public string ExecutionStatus { get; set; }
+            public object ResponseBreakDownMetrics { get; set; }
+            public object ResponseTimeMetrics { get; set; }
+            public object ConnectionMetrics { get; set; }
+        }
+
+        private static string DetermineOverallStatus(List<AsyncCommandStatus> statuses)
+        {
+            if (statuses.All(status => status == AsyncCommandStatus.NotStarted))
+                return "NotStarted";
+            if (statuses.All(status => status == AsyncCommandStatus.Completed))
+                return "Completed";
+            if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Paused) && statuses.Any(status => status == AsyncCommandStatus.Paused))
+                return "Paused";
+            if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Failed) && statuses.Any(status => status == AsyncCommandStatus.Failed))
+                return "Failed";
+            if (statuses.Any(status => status == AsyncCommandStatus.Ongoing))
+                return "Ongoing";
+
+            return "Undefined"; // Default case, should ideally never be reached
+        }
+
+        private static string GetMetrics()
         {
             try
             {
-                var responseTimeMetrics = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ResponseTime).Select(metric => (LPSDurationMetricDimensionSet)metric.GetDimensionSet()));
-                var responseBreakDownMetrics = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ResponseCode).Select(metric => (ResponseCodeDimensionSet)metric.GetDimensionSet()));
-                var connectionsMetric = LPSSerializationHelper.Serialize(LPSMetricsDataSource.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount).Select(metric => (ConnectionDimensionSet)metric.GetDimensionSet()));
+                // Create a dictionary to store endpoint details as keys and their metrics as values
+                var metricsDictionary = new Dictionary<string, MetricData>();
 
-                string responseMessage = FormatJson($"\n{{\"responseBreakDownMetrics\":{responseBreakDownMetrics}, \n\"responseTimeMetrics\":\n{responseTimeMetrics},\n\"connectionMetrics\":\n{connectionsMetric}\n}}");
-                string response = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{responseMessage}";
+                // Define a local function to safely obtain endpoint details from a metric dimension set
+                string GetEndPointDetails(IDimensionSet dimensionSet)
+                {
+                    if (dimensionSet is LPSDurationMetricDimensionSet durationSet)
+                        return durationSet.EndPointDetails;
+                    else if (dimensionSet is ResponseCodeDimensionSet responseSet)
+                        return responseSet.EndPointDetails;
+                    else if (dimensionSet is ConnectionDimensionSet connectionSet)
+                        return connectionSet.EndPointDetails;
 
-                return response;
+                    return null; // or a default string if suitable
+                }
+
+                // Helper action to add metrics to dictionary
+                Action<IEnumerable<dynamic>, string> addToDictionary = (metrics, type) =>
+                {
+                    foreach (var metric in metrics)
+                    {
+                        var endPointDetails = GetEndPointDetails(metric.GetDimensionSet());
+                        if (endPointDetails == null)
+                            continue; // Skip metrics where endpoint details are not applicable or available
+
+                        var statusList = _httpRunCommandStatusMonitor.GetAllStatuses(((ILPSMetricMonitor)metric).LPSHttpRun);
+                        string status = DetermineOverallStatus(statusList);
+
+                        if (!metricsDictionary.ContainsKey(endPointDetails))
+                        {
+                            metricsDictionary[endPointDetails] = new MetricData
+                            {
+                                ExecutionStatus = status
+                            };
+                        }
+                        else if (metricsDictionary[endPointDetails].ExecutionStatus != status)
+                        {
+                            metricsDictionary[endPointDetails].ExecutionStatus = status;
+                        }
+
+
+                        switch (type)
+                        {
+                            case "ResponseTime":
+                                metricsDictionary[endPointDetails].ResponseTimeMetrics = metric.GetDimensionSet();
+                                break;
+                            case "ResponseCode":
+                                metricsDictionary[endPointDetails].ResponseBreakDownMetrics = metric.GetDimensionSet();
+                                break;
+                            case "ConnectionsCount":
+                                metricsDictionary[endPointDetails].ConnectionMetrics = metric.GetDimensionSet();
+                                break;
+                        }
+                    }
+                };
+
+                // Fetch metrics by type
+                var responseTimeMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseTime);
+                var responseBreakDownMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseCode);
+                var connectionsMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
+
+                // Populate the dictionary
+                addToDictionary(responseTimeMetrics, "ResponseTime");
+                addToDictionary(responseBreakDownMetrics, "ResponseCode");
+                addToDictionary(connectionsMetrics, "ConnectionsCount");
+
+                // Serialize the dictionary to JSON
+                string jsonResponse = JsonConvert.SerializeObject(metricsDictionary, Formatting.Indented);
+
+                // Format the HTTP response
+                string httpResponse = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{jsonResponse}";
+                return httpResponse;
             }
             catch (Exception ex)
             {
-                // Handle file reading errors
-                return $"HTTP/1.1 500 Internal Server Error\r\n\r\nError reading file: {ex.Message} {ex?.InnerException}";
+                // Handle errors
+                return $"HTTP/1.1 500 Internal Server Error\r\n\r\nError processing metrics: {ex.Message} {ex?.InnerException}";
             }
         }
         private static string FormatJson(string json)

@@ -18,17 +18,20 @@ namespace LPS.Domain
     {
         public class RedoCommand : IAsyncCommand<LPSTestPlan>
         {
+            private AsyncCommandStatus _executionStatus;
+            public AsyncCommandStatus Status => _executionStatus;
             async public Task ExecuteAsync(LPSTestPlan entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
                 await entity.RedoAsync(this, cancellationTokenWrapper);
             }
         }
+
         async private Task RedoAsync(RedoCommand command, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             if (this.IsValid)
             {
                 this.IsRedo = true;
-                await this.ExecuteAsync(new ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _lpsClientManager, _lpsClientConfig, _lpsMonitoringEnroller), cancellationTokenWrapper);
+                await this.ExecuteAsync(new ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _lpsClientManager, _lpsClientConfig, _httpRunExecutionCommandStatusMonitor, _lpsDataMetricsMonitor), cancellationTokenWrapper);
             }
         }
     }

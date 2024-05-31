@@ -10,6 +10,7 @@ using LPS.UI.Core.LPSValidators;
 using LPS.Infrastructure.Common;
 using Spectre.Console;
 using LPS.UI.Core.LPSCommandLine;
+using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.UI.Core.Host
 {
@@ -21,7 +22,8 @@ namespace LPS.UI.Core.Host
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
         LPSAppSettingsWritableOptions _appSettings;
-        ILPSMonitoringEnroller _lPSMonitoringEnroller;
+        ILPSMetricsDataMonitor _lPSMonitoringEnroller;
+        ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
         string[] _command_args;
         public LPSHostedService(
             dynamic command_args,
@@ -30,7 +32,8 @@ namespace LPS.UI.Core.Host
             ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
             ILPSWatchdog watchdog,
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
-            ILPSMonitoringEnroller lPSMonitoringEnroller,
+            ILPSMetricsDataMonitor lPSMonitoringEnroller,
+            ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
             LPSAppSettingsWritableOptions appSettings)
         {
             _logger = logger;
@@ -41,6 +44,7 @@ namespace LPS.UI.Core.Host
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _appSettings = appSettings;
             _lPSMonitoringEnroller = lPSMonitoringEnroller;
+            _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -51,7 +55,7 @@ namespace LPS.UI.Core.Host
 
             if (_command_args != null && _command_args.Length > 0)
             {
-                var commandLineManager = new LPSCommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand, _lPSMonitoringEnroller);
+                var commandLineManager = new LPSCommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand,_httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller);
                 commandLineManager.Run(cancellationToken);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose);
             }
@@ -65,7 +69,7 @@ namespace LPS.UI.Core.Host
                 bool runTest = AnsiConsole.Confirm("Would you like to run your test now?");
                 if (runTest)
                 {
-                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lPSMonitoringEnroller);
+                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller);
                     await lpsManager.RunAsync(lpsRun, cancellationToken);
                 }
 

@@ -14,6 +14,7 @@ using FluentValidation.Results;
 using LPS.UI.Common.Extensions;
 using LPS.UI.Core.LPSValidators;
 using HtmlAgilityPack;
+using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -26,7 +27,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
         Command _rootCliCommand;
-        ILPSMonitoringEnroller _lpsMonitoringEnroller;
+        ILPSMetricsDataMonitor _lpsMonitoringEnroller;
+        ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
         public LPSCLICommand(
             Command rootCliCommand,
             ILPSLogger logger,
@@ -35,7 +37,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             ILPSClientConfiguration<LPSHttpRequestProfile> config,
             ILPSWatchdog watchdog,
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
-            ILPSMonitoringEnroller lpsMonitoringEnroller,
+            ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
+            ILPSMetricsDataMonitor lpsMonitoringEnroller,
             string[] args)
         {
             _rootCliCommand = rootCliCommand;
@@ -45,6 +48,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _httpClientManager = httpClientManager;
             _watchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
             Setup();
         }
@@ -99,7 +103,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var requestProfile = new LPSHttpRequestProfile(lpsRequestProfileSetupCommand, _logger, _runtimeOperationIdProvider);
                     httpRun.LPSHttpRequestProfile = requestProfile;
                     plan.LPSHttpRuns.Add(httpRun);
-                    var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _lpsMonitoringEnroller);
+                    var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller);
                     await manager.RunAsync(plan, cancellationToken);
                 }
                 else

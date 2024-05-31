@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
@@ -20,7 +21,8 @@ namespace LPS.Domain
         ILPSClientConfiguration<LPSHttpRequestProfile> _lpsClientConfig;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
-        ILPSMonitoringEnroller _lpsMonitoringEnroller;
+        ILPSMetricsDataMonitor _lpsDataMetricsMonitor;
+        ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
         public LPSTestPlan(SetupCommand command, 
             ILPSLogger logger,
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)

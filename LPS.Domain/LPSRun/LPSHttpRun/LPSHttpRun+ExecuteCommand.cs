@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -27,7 +28,9 @@ namespace LPS.Domain
             ILPSLogger _logger;
             ILPSWatchdog _watchdog;
             ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            ILPSMonitoringEnroller _lpsMonitoringEnroller;
+            ILPSMetricsDataMonitor _lpsMonitoringEnroller;
+            ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
+
             protected ExecuteCommand()
             {
 
@@ -38,7 +41,8 @@ namespace LPS.Domain
                 ILPSLogger logger,
                 ILPSWatchdog watchdog,
                 ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
-                ILPSMonitoringEnroller lpsMonitoringEnroller)
+                ILPSMetricsDataMonitor lpsMonitoringEnroller,
+                ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor)
             {
                 _httpClientService = httpClientService;
                 LPSTestPlanExecuteCommand = planExecCommand;
@@ -46,8 +50,8 @@ namespace LPS.Domain
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
+                _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
             }
-            bool _isExecutionCompleted = false;
             async public Task ExecuteAsync(LPSHttpRun entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
                 if (entity == null)
@@ -60,8 +64,19 @@ namespace LPS.Domain
                 entity._watchdog = this._watchdog;
                 entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
                 entity._lpsMonitoringEnroller = this._lpsMonitoringEnroller;
-                await entity.ExecuteAsync(this, cancellationTokenWrapper);
-                _isExecutionCompleted = true;
+                try
+                {
+                    _executionStatus = AsyncCommandStatus.Ongoing;
+                    await entity.ExecuteAsync(this, cancellationTokenWrapper);
+                }
+                catch
+                {
+                    throw;
+                }
+                finally
+                {
+                    _executionStatus = AsyncCommandStatus.Completed;
+                }
             }
 
             private int _numberOfSuccessfullyCompletedRequests;
@@ -70,6 +85,8 @@ namespace LPS.Domain
             public int NumberOfSentRequests { get { return _numberOfSentRequests; } }
             public int NumberOfSuccessfullyCompletedRequests { get { return _numberOfSuccessfullyCompletedRequests; } }
             public int NumberOfFailedToCompleteRequests { get { return _numberOfFailedToCompleteRequests; } }
+            private AsyncCommandStatus _executionStatus;
+            public AsyncCommandStatus Status => _executionStatus;
 
             protected int SafelyIncrementNumberOfSuccessfulRequests(ExecuteCommand execCommand)
             {

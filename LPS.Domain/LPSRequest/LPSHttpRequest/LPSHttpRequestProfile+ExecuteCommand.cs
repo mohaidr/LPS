@@ -51,7 +51,8 @@ namespace LPS.Domain
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
             }
-
+            private AsyncCommandStatus _executionStatus;
+            public AsyncCommandStatus Status => _executionStatus;
             public LPSHttpRun.ExecuteCommand LPSRunExecuteCommand { get; set; }
 
             async public Task ExecuteAsync(LPSHttpRequestProfile entity, ICancellationTokenWrapper cancellationTokenWrapper)
@@ -67,7 +68,7 @@ namespace LPS.Domain
                 entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
                 await entity.ExecuteAsync(this, cancellationTokenWrapper);
             }
-        }
+        }   
 
 
         async private Task ExecuteAsync(ExecuteCommand command, ICancellationTokenWrapper cancellationTokenWrapper)

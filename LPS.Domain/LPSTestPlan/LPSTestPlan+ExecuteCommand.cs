@@ -2,11 +2,14 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Interfaces;
+using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 
 namespace LPS.Domain
@@ -21,7 +24,8 @@ namespace LPS.Domain
             private ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
             private ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _lpsClientManager;
             private ILPSClientConfiguration<LPSHttpRequestProfile> _lpsClientConfig;
-            ILPSMonitoringEnroller _lpsMonitoringEnroller;
+            ILPSMetricsDataMonitor _lpsMonitoringEnroller;
+            ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
             protected ExecuteCommand()
             {
             }
@@ -30,15 +34,19 @@ namespace LPS.Domain
                 ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
                 ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> lpsClientManager,
                 ILPSClientConfiguration<LPSHttpRequestProfile> lpsClientConfig,
-                ILPSMonitoringEnroller lpsMonitoringEnroller)
+                ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
+                ILPSMetricsDataMonitor lpsMonitoringEnroller)
             {
                 _logger = logger;
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsClientManager = lpsClientManager;
                 _lpsClientConfig = lpsClientConfig;
+                _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
             }
+            private AsyncCommandStatus _executionStatus;
+            public AsyncCommandStatus Status => _executionStatus;
             async public Task ExecuteAsync(LPSTestPlan entity, ICancellationTokenWrapper cancellationTokenWrapper)
             {
                 if (entity == null)
@@ -52,7 +60,8 @@ namespace LPS.Domain
                 entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
                 entity._lpsClientConfig = this._lpsClientConfig;
                 entity._lpsClientManager = this._lpsClientManager;
-                entity._lpsMonitoringEnroller = this._lpsMonitoringEnroller;
+                entity._lpsDataMetricsMonitor = this._lpsMonitoringEnroller;
+                entity._httpRunExecutionCommandStatusMonitor = this._httpRunExecutionCommandStatusMonitor;
                 await entity.ExecuteAsync(this, cancellationTokenWrapper);
             }
 
@@ -76,13 +85,13 @@ namespace LPS.Domain
             if (this.IsValid && this._lPSHttpRuns.Count > 0)
             {
                 List<Task> awaitableTasks = new List<Task>();
-                List<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClients = new List<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>();
                 #region Loggin Plan Details
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbose, cancellationTokenWrapper));
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbose, cancellationTokenWrapper));
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbose, cancellationTokenWrapper));
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbose, cancellationTokenWrapper));
                 #endregion
+
 
                 if (!this.DelayClientCreationUntilIsNeeded.Value)
                 {
@@ -93,46 +102,59 @@ namespace LPS.Domain
                 }
                 for (int i = 0; i < this.NumberOfClients && !cancellationTokenWrapper.CancellationToken.IsCancellationRequested; i++)
                 {
+                    ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClient = null;
                     if (!this.DelayClientCreationUntilIsNeeded.Value)
                     {
-                        httpClients.Add(_lpsClientManager.DequeueClient());
+                        httpClient = _lpsClientManager.DequeueClient();
                     }
                     else
                     {
-                        httpClients.Add(_lpsClientManager.CreateInstance(_lpsClientConfig));
+                        httpClient = _lpsClientManager.CreateInstance(_lpsClientConfig);
+                    }
+                    awaitableTasks.Add(LoopRunsAsync(command, httpClient, cancellationTokenWrapper));
+                    if (this.RampUpPeriod > 0)
+                    {
+                        await Task.Delay(this.RampUpPeriod, cancellationTokenWrapper.CancellationToken);
                     }
                 }
-
-                foreach (var run in this.LPSHttpRuns)
-                {
-                    awaitableTasks.Add(ExecHttpRunAsync(run, command, httpClients, cancellationTokenWrapper));
-                }
-
                 await Task.WhenAll(awaitableTasks.ToArray());
             }
         }
 
-        async Task ExecHttpRunAsync(LPSHttpRun httpRun, ExecuteCommand command, List<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClients, ICancellationTokenWrapper cancellationTokenWrapper) // a race condition may happen here and causes the wrong httpClient to be captured if the httpClientService state changes before the "await" is called 
-        {
-            List<Task> localAwaitableTasks = new List<Task>();
 
-           _lpsMonitoringEnroller?.Enroll(httpRun, _logger, _runtimeOperationIdProvider);
-            foreach (var client in httpClients)
+
+        async Task LoopRunsAsync(ExecuteCommand command, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClient, ICancellationTokenWrapper cancellationTokenWrapper)
+        {
+            List<Task> awaitableTasks = new List<Task>();
+            foreach (var httpRun in this.LPSHttpRuns)
             {
+                
+                if (httpRun == null || !httpRun.IsValid)
+                {
+                    continue;
+                }
                 string hostName = new Uri(httpRun.LPSHttpRequestProfile.URL).Host;
                 await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
-
-                LPSHttpRun.ExecuteCommand lpsHttpRunExecutecommand = new LPSHttpRun.ExecuteCommand(client, command, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMonitoringEnroller);
-                LPSHttpRun httpRunClone = (LPSHttpRun)httpRun.Clone();
-                localAwaitableTasks.Add(lpsHttpRunExecutecommand.ExecuteAsync(httpRunClone, cancellationTokenWrapper));
-                if (this.RampUpPeriod > 0)
+                if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {
-                    await Task.Delay(this.RampUpPeriod, cancellationTokenWrapper.CancellationToken);
+                    awaitableTasks.Add(ExecuteRunAsync(httpRun, command, httpClient, cancellationTokenWrapper));
+                }
+                else
+                {
+                    await ExecuteRunAsync(httpRun, command, httpClient, cancellationTokenWrapper);
                 }
             }
-            await Task.WhenAll(localAwaitableTasks.ToArray());
+            await Task.WhenAll(awaitableTasks);
+        }
 
-            _lpsMonitoringEnroller?.Withdraw(httpRun, _logger, _runtimeOperationIdProvider);
+        async Task ExecuteRunAsync(LPSHttpRun httpRun, ExecuteCommand command, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClient, ICancellationTokenWrapper cancellationTokenWrapper)
+        {
+            LPSHttpRun.ExecuteCommand lpsHttpRunExecutecommand = new LPSHttpRun.ExecuteCommand(httpClient, command, _logger, _watchdog, _runtimeOperationIdProvider, _lpsDataMetricsMonitor, _httpRunExecutionCommandStatusMonitor);
+            _httpRunExecutionCommandStatusMonitor.RegisterCommand(lpsHttpRunExecutecommand, httpRun);
+            LPSHttpRun httpRunClone = (LPSHttpRun)httpRun.Clone();
+            _lpsDataMetricsMonitor?.Monitor(httpRun, lpsHttpRunExecutecommand.GetHashCode().ToString());
+            await lpsHttpRunExecutecommand.ExecuteAsync(httpRunClone, cancellationTokenWrapper);
+            _lpsDataMetricsMonitor?.Stop(httpRun, lpsHttpRunExecutecommand.GetHashCode().ToString());
         }
     }
 }

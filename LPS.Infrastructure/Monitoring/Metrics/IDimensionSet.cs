@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
+
     public interface IDimensionSet
     {
     }
