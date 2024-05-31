@@ -59,58 +59,77 @@
             fetch('/kpis') // Replace '/kpis' with your actual API URL
             .then(response => response.json())
             .then(data => {
-                updateCharts(data);
+                const endpoints = Object.keys(data);
+
+                endpoints.forEach((endpoint) => {
+                    const metrics = data[endpoint];
+                    if (!metrics) {
+                        console.error('No metrics available for endpoint:', endpoint);
+                        return;
+                    }
+
+                    const sanitizedEndpoint = endpoint.replace(/[^a-zA-Z0-9]/g, '');
+
+                    const responseTimeMetrics = metrics.ResponseTimeMetrics || {};
+                    const connectionMetrics = metrics.ConnectionMetrics || {};
+                    const responseBreakDownMetrics = metrics.ResponseBreakDownMetrics || {};
+
+                    // Combine RequestsRate and RequestsRatePerCoolDownPeriod in one bar chart
+                    createOrUpdateChart(`${sanitizedEndpoint}-requestsRate`, 'bar', `${endpoint} Requests Rate`, ['Requests Rate (requests/s)', 'Requests Rate per Cool Down Period (20s)'], [
+                        connectionMetrics.RequestsRate?.Value || 0,
+                        connectionMetrics.RequestsRatePerCoolDownPeriod?.Value || 0
+                    ], ['rgba(255, 205, 86, 0.7)', 'rgba(153, 102, 255, 0.7)'], endpoint);
+
+                    createOrUpdateChart(`${sanitizedEndpoint}-responseTime`, 'line', `${endpoint} Response Times (ms)`, ['Min', 'P10', 'P50', 'P90', 'Avg', 'Max'], [
+                        responseTimeMetrics.MinResponseTime || 0,
+                        responseTimeMetrics.P10ResponseTime || 0,
+                        responseTimeMetrics.P50ResponseTime || 0,
+                        responseTimeMetrics.P90ResponseTime || 0,
+                        responseTimeMetrics.AverageResponseTime || 0,
+                        responseTimeMetrics.MaxResponseTime || 0
+                    ], 'rgb(75, 192, 192)', endpoint);
+
+                    createOrUpdateChart(`${sanitizedEndpoint}-statusCode`, 'bar', `${endpoint} Status Codes`, Object.keys(responseBreakDownMetrics.ResponseSummary || {}), Object.values(responseBreakDownMetrics.ResponseSummary || {}), 'rgba(54, 162, 235, 0.5)', endpoint);
+
+                    createOrUpdateChart(`${sanitizedEndpoint}-connectionMetrics`, 'bar', `${endpoint} Connection Metrics`, ['Total Requests', 'Active Requests', 'Successful Requests', 'Failed Requests'], [
+                        connectionMetrics.RequestsCount || 0,
+                        connectionMetrics.ActiveRequestsCount || 0,
+                        connectionMetrics.SuccessfulRequestCount || 0,
+                        connectionMetrics.FailedRequestsCount || 0
+                    ], 'rgba(255, 99, 132, 0.5)', endpoint);
+                });
             })
             .catch(error => console.error('Error fetching data:', error));
         }
 
-        function updateCharts(data) {
-            Object.entries(data).forEach(([endpoint, metrics], index) => {
-                const chartIdBase = `${endpoint.replace(/[^a-zA-Z0-9]/g, '')}-${index}`;
-                createOrUpdateChart(chartIdBase + '-responseTime', 'line', `${endpoint} Response Times (ms)`, ['Min', 'P10', 'P50', 'P90', 'Avg', 'Max'], [
-                    metrics.ResponseTimeMetrics.MinResponseTime,
-                    metrics.ResponseTimeMetrics.P10ResponseTime,
-                    metrics.ResponseTimeMetrics.P50ResponseTime,
-                    metrics.ResponseTimeMetrics.P90ResponseTime,
-                    metrics.ResponseTimeMetrics.AverageResponseTime,
-                    metrics.ResponseTimeMetrics.MaxResponseTime
-                ], 'rgb(75, 192, 192)');
-                createOrUpdateChart(chartIdBase + '-statusCode', 'bar', `${endpoint} Status Codes`, Object.keys(metrics.ResponseBreakDownMetrics.ResponseSummary), Object.values(metrics.ResponseBreakDownMetrics.ResponseSummary), 'rgba(54, 162, 235, 0.5)');
-                createOrUpdateChart(chartIdBase + '-connectionMetrics', 'bar', `${endpoint} Connection Metrics`, ['Total Requests', 'Active Requests', 'Successful Requests', 'Failed Requests'], [
-                    metrics.ConnectionMetrics.RequestsCount,
-                    metrics.ConnectionMetrics.ActiveRequestsCount,
-                    metrics.ConnectionMetrics.SuccessfulRequestCount,
-                    metrics.ConnectionMetrics.FailedRequestsCount
-                ], 'rgba(255, 99, 132, 0.5)');
-            });
-        }
-
-        function createOrUpdateChart(canvasId, type, label, labels, data, borderColor) {
-            if (chartRefs[canvasId]) {
-                const chart = chartRefs[canvasId];
+        function createOrUpdateChart(chartId, type, label, labels, data, backgroundColors, endpoint) {
+            if (!Array.isArray(backgroundColors)) {
+                backgroundColors = [backgroundColors];
+            }
+            const fullChartId = `${endpoint}-${chartId}`;
+            if (chartRefs[fullChartId]) {
+                const chart = chartRefs[fullChartId];
                 chart.data.labels = labels;
-                chart.data.datasets.forEach((dataset) => {
-                    dataset.data = data;
-                });
+                chart.data.datasets[0].data = data;
                 chart.update();
             } else {
                 const ctx = document.createElement('canvas');
+                ctx.id = fullChartId;
                 const div = document.createElement('div');
                 div.className = 'chart-box';
                 div.appendChild(ctx);
                 document.getElementById('chartsContainer').appendChild(div);
 
-                chartRefs[canvasId] = new Chart(ctx, {
+                chartRefs[fullChartId] = new Chart(ctx, {
                     type: type,
                     data: {
                         labels: labels,
                         datasets: [{
                             label: label,
                             data: data,
-                            fill: false,
-                            borderColor: borderColor,
-                            backgroundColor: borderColor,
-                            tension: 0.1
+                            backgroundColor: backgroundColors,
+                            borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
                         }]
                     },
                     options: {
