@@ -24,11 +24,14 @@
             border-radius: 10px;
             padding: 10px;
         }
-        .charts-container {
-            display: none; /* Start hidden to manage via JS */
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
+        .charts-container 
+		{
+			display: flex;
+			flex-wrap: wrap;
+			justify-content: center;
+			align-items: flex-start;  // Ensure alignment doesn't cause issues
+			gap: 20px;
+			width: 100%;  // Explicit full width
         }
         .chart-box {
             width: 45%;
@@ -36,6 +39,11 @@
             background: #222;
             padding: 10px;
             border-radius: 5px;
+			margin: 5px;
+			display: flex;  // Ensure that the flex property does not interfere
+			justify-content: center;
+			align-items: center;
+
         }
         canvas {
             width: 100%;
@@ -166,33 +174,38 @@
                 chart.data.datasets[0].data = data;
                 chart.update();
             } else {
-                const ctx = document.createElement('canvas');
-                ctx.id = fullChartId;
-                const div = document.createElement('div');
-                div.className = 'chart-box';
-                div.appendChild(ctx);
-                container.appendChild(div);
+			
+				const ctx = document.createElement('canvas');
+				ctx.id = fullChartId;
+				ctx.style.width = '100%';  // CSS width
+				ctx.width = container.clientWidth;  // Actual canvas width
+				const div = document.createElement('div');
+				div.className = 'chart-box';
+				div.appendChild(ctx);
+				container.appendChild(div);
 
                 chartRefs[fullChartId] = new Chart(ctx, {
-                    type: type,
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: label,
-                            data: data,
-                            backgroundColor: backgroundColors,
-                            borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
+					type: type,
+					data: {
+						labels: labels,
+						datasets: [{
+							label: label,
+							data: data,
+							backgroundColor: backgroundColors,
+							borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+							borderWidth: 1
+						}]
+					},
+					options: {
+						responsive: true,  // Ensures the chart is responsive
+						maintainAspectRatio: false,  // Allows flexible height
+						scales: {
+							y: {
+								beginAtZero: true
+							}
+						}
+					}
+				});
             }
         }
     </script>
