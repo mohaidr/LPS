@@ -30,7 +30,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         ProtectedConnectionDimensionSet _dimensionSet;
         LPSRequestEventSource _eventSource;
         Stopwatch _stopwatch;
-        string _endpointDetails;
         Timer _timer;
         ILPSLogger _logger;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
@@ -39,10 +38,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public LPSConnectionsMetricMonitor(LPSHttpRun httprun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httprun;
-            _dimensionSet = new ProtectedConnectionDimensionSet();
+            string _endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
+            _dimensionSet = new ProtectedConnectionDimensionSet(_endpointDetails);
             _eventSource = LPSRequestEventSource.GetInstance(_httpRun);
             _stopwatch = new Stopwatch();
-            _endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
@@ -66,7 +65,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                         requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}s", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
                     }
                     _spinLock.Enter(ref lockTaken);
-                    _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown, _endpointDetails);
+                    _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown);
                 }
                 finally
                 {
@@ -90,8 +89,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             else
             {
-                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricGroup", LPSLoggingLevel.Error);
-                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricGroup");
+                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor", LPSLoggingLevel.Error);
+                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor");
             }
         }
 
@@ -173,8 +172,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
         {
+            public ProtectedConnectionDimensionSet(string endPointDetails) {
+                this.EndPointDetails = endPointDetails;
+            }
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int activeRequestsCount , int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default, string endPointDetails = default)
+            public void Update(int activeRequestsCount , int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
             {
                 TimeStamp = DateTime.Now;
                 this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
@@ -184,7 +186,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
                 this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
                 this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
-                this.EndPointDetails = endPointDetails == default ? this.EndPointDetails : endPointDetails;
             }
         }
 

@@ -122,6 +122,8 @@ namespace LPS.UI.Core.Host
 
         private static string DetermineOverallStatus(List<AsyncCommandStatus> statuses)
         {
+            if (statuses.Count == 0)
+                return "NotRunning";
             if (statuses.All(status => status == AsyncCommandStatus.NotStarted))
                 return "NotStarted";
             if (statuses.All(status => status == AsyncCommandStatus.Completed))

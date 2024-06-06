@@ -21,7 +21,7 @@ namespace LPS.Domain
         ILPSClientConfiguration<LPSHttpRequestProfile> _lpsClientConfig;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         ILPSWatchdog _watchdog;
-        ILPSMetricsDataMonitor _lpsDataMetricsMonitor;
+        ILPSMetricsDataMonitor _lpsMetricsDataMonitor;
         ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
         public LPSTestPlan(SetupCommand command, 
             ILPSLogger logger,

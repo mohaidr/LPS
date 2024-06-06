@@ -28,6 +28,31 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _lpsRuntimeOperationIdProvider = lpsRuntimeOperationIdProvider;
         }
 
+        public bool TryRegister(LPSHttpRun lpsHttpRun)
+        {
+            // Check if the key already exists
+            if (_metrics.ContainsKey(lpsHttpRun))
+            {
+                // If it exists, return false indicating the registration did not proceed
+                return false;
+            }
+
+            // Prepare the metrics dictionary for the given LPSHttpRun
+            var metrics = new Dictionary<string, ILPSMetricMonitor>();
+            string breakDownMetricKey = $"{lpsHttpRun.Id}-BreakDown";
+            string durationMetricKey = $"{lpsHttpRun.Id}-Duration";
+            string connectionsMetricKey = $"{lpsHttpRun.Id}-Connections";
+
+            metrics[breakDownMetricKey] = new LPSResponseCodeMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
+            metrics[durationMetricKey] = new LPSDurationMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
+            metrics[connectionsMetricKey] = new LPSConnectionsMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
+
+            // Prepare the tuple to be added
+            var metricsTuple = new Tuple<IList<string>, Dictionary<string, ILPSMetricMonitor>>(new List<string>() { }, metrics);
+            return _metrics.TryAdd(lpsHttpRun, metricsTuple);
+           // Try to add the new entry to the dictionary
+        }
+
         public void Monitor(LPSHttpRun lpsHttpRun, string executionId)
         {
             try

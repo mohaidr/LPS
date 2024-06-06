@@ -24,14 +24,13 @@
             border-radius: 10px;
             padding: 10px;
         }
-        .charts-container 
-		{
-			display: flex;
-			flex-wrap: wrap;
-			justify-content: center;
-			align-items: flex-start;  // Ensure alignment doesn't cause issues
-			gap: 20px;
-			width: 100%;  // Explicit full width
+        .charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            width: 100%;
         }
         .chart-box {
             width: 45%;
@@ -39,11 +38,10 @@
             background: #222;
             padding: 10px;
             border-radius: 5px;
-			margin: 5px;
-			display: flex;  // Ensure that the flex property does not interfere
-			justify-content: center;
-			align-items: center;
-
+            margin: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         canvas {
             width: 100%;
@@ -66,6 +64,10 @@
         .arrow {
             transition: transform 0.3s ease;
         }
+        .status {
+            margin-left: 10px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -74,6 +76,15 @@
 
     <script>
         const chartRefs = {};
+		const statusColors = {
+			'NotRunning': '#808080', // Grey (neutral, not active but normal)
+			'NotStarted': '#FFC107', // Amber (waiting to start, alert but not critical)
+			'Ongoing': '#4CAF50', // Green (active, working as expected)
+			'Paused': '#FF9800', // Orange (temporary stop, needs attention but not an error)
+			'Completed': '#2196F3', // Blue (successfully completed, positive outcome)
+			'Failed': '#F44336' // Red (error or problem, critical attention needed)
+		};
+
 
         document.addEventListener("DOMContentLoaded", function () {
             fetchDataAndRenderCharts();
@@ -92,7 +103,7 @@
                         return;
                     }
 
-                    const endpointContainer = createOrUpdateEndpointContainer(endpoint);
+                    const endpointContainer = createOrUpdateEndpointContainer(endpoint, metrics.ExecutionStatus);
                     const sanitizedEndpoint = endpoint.replace(/[^a-zA-Z0-9]/g, '');
 
                     const responseTimeMetrics = metrics.ResponseTimeMetrics || {};
@@ -126,7 +137,7 @@
             .catch(error => console.error('Error fetching data:', error));
         }
 
-        function createOrUpdateEndpointContainer(endpoint) {
+        function createOrUpdateEndpointContainer(endpoint, status) {
             const containerId = `endpoint-container-${endpoint.replace(/[^a-zA-Z0-9]/g, '')}`;
             let endpointContainer = document.getElementById(containerId);
             if (!endpointContainer) {
@@ -139,29 +150,39 @@
                 header.textContent = `Metrics for ${endpoint}`;
 
                 const arrowSpan = document.createElement('span');
-                arrowSpan.innerHTML = '&#9660;'; // Down arrow indicating it's open
+                arrowSpan.innerHTML = '&#9660;';
                 arrowSpan.className = 'arrow';
-                arrowSpan.style.transform = 'rotate(180deg)'; // Initialize arrow direction for open state
+                arrowSpan.style.transform = 'rotate(180deg)';
 
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'status';
+                statusSpan.textContent = status; // Set initial status
+                statusSpan.style.color = statusColors[status] || '#FFFFFF'; // Default to white if status unknown
+
+                header.appendChild(statusSpan);
                 header.appendChild(arrowSpan);
                 header.onclick = () => toggleCharts(containerId, arrowSpan);
                 endpointContainer.appendChild(header);
 
                 const chartsContainer = document.createElement('div');
                 chartsContainer.className = 'charts-container';
-                chartsContainer.style.display = 'flex'; // Set visible by default
+                chartsContainer.style.display = 'flex';
                 endpointContainer.appendChild(chartsContainer);
+            } else {
+                const statusSpan = endpointContainer.querySelector('.status');
+                statusSpan.textContent = status; // Update status
+                statusSpan.style.color = statusColors[status] || '#FFFFFF'; // Update color based on status
             }
             return endpointContainer.querySelector('.charts-container');
         }
 
-        function toggleCharts(containerId, arrow) {
-            const endpointContainer = document.getElementById(containerId);
-            const chartsContainer = endpointContainer.querySelector('.charts-container');
-            const isVisible = chartsContainer.style.display === 'flex';
-            chartsContainer.style.display = isVisible ? 'none' : 'flex';
-            arrow.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)'; // Toggle arrow direction
-        }
+		function toggleCharts(containerId, arrow) {
+			const endpointContainer = document.getElementById(containerId);
+			const chartsContainer = endpointContainer.querySelector('.charts-container');
+			const isVisible = chartsContainer.style.display === 'flex';
+			chartsContainer.style.display = isVisible ? 'none' : 'flex';
+			arrow.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+		}
 
         function createOrUpdateChart(chartId, type, label, labels, data, backgroundColors, container) {
             if (!Array.isArray(backgroundColors)) {
@@ -174,38 +195,37 @@
                 chart.data.datasets[0].data = data;
                 chart.update();
             } else {
-			
-				const ctx = document.createElement('canvas');
-				ctx.id = fullChartId;
-				ctx.style.width = '100%';  // CSS width
-				ctx.width = container.clientWidth;  // Actual canvas width
-				const div = document.createElement('div');
-				div.className = 'chart-box';
-				div.appendChild(ctx);
-				container.appendChild(div);
+                const ctx = document.createElement('canvas');
+                ctx.id = fullChartId;
+                ctx.style.width = '100%';
+                ctx.width = container.clientWidth;
+                const div = document.createElement('div');
+                div.className = 'chart-box';
+                div.appendChild(ctx);
+                container.appendChild(div);
 
                 chartRefs[fullChartId] = new Chart(ctx, {
-					type: type,
-					data: {
-						labels: labels,
-						datasets: [{
-							label: label,
-							data: data,
-							backgroundColor: backgroundColors,
-							borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
-							borderWidth: 1
-						}]
-					},
-					options: {
-						responsive: true,  // Ensures the chart is responsive
-						maintainAspectRatio: false,  // Allows flexible height
-						scales: {
-							y: {
-								beginAtZero: true
-							}
-						}
-					}
-				});
+                    type: type,
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: label,
+                            data: data,
+                            backgroundColor: backgroundColors,
+                            borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true
+                            }
+                        }
+                    }
+                });
             }
         }
     </script>

@@ -34,7 +34,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpRun = httpRun;
             _eventSource = LPSResponseMetricEventSource.GetInstance(_httpRun);
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected();
+            string endPointDetails = $"{httpRun.Name} - {httpRun.LPSHttpRequestProfile.HttpMethod} {httpRun.LPSHttpRequestProfile.URL} HTTP/{httpRun.LPSHttpRequestProfile.Httpversion}";
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(endPointDetails);
             _histogram = new LongHistogram(1, 1000000, 3);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -46,7 +47,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync();
             try
             {
-                _dimensionSet.Update(response.ResponseTime.TotalMilliseconds, _httpRun, _histogram);
+                _dimensionSet.Update(response.ResponseTime.TotalMilliseconds, _histogram);
                 _eventSource.WriteResponseTimeMetrics(response.ResponseTime.TotalMilliseconds);
             }
             finally
@@ -86,8 +87,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             else
             {
-                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSDurationMetric", LPSLoggingLevel.Error);
-                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSDurationMetric");
+                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSDurationMetricMonitor", LPSLoggingLevel.Error);
+                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSDurationMetricMonitor");
             }
         }
 
@@ -102,7 +103,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class LPSDurationMetricDimensionSetProtected : LPSDurationMetricDimensionSet
         {
-            public void Update(double responseTime, LPSHttpRun httpRun, LongHistogram histogram)
+            public LPSDurationMetricDimensionSetProtected(string endPointDetails) {
+                EndPointDetails = endPointDetails;
+            }
+            public void Update(double responseTime, LongHistogram histogram)
             {
                 double averageDenominator = AverageResponseTime != 0 ? (SumResponseTime / AverageResponseTime) + 1 : 1;
                 TimeStamp = DateTime.Now;
@@ -114,7 +118,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 P10ResponseTime = histogram.GetValueAtPercentile(10);
                 P50ResponseTime = histogram.GetValueAtPercentile(50);
                 P90ResponseTime = histogram.GetValueAtPercentile(90);
-                EndPointDetails = $"{httpRun.Name} - {httpRun.LPSHttpRequestProfile.HttpMethod} {httpRun.LPSHttpRequestProfile.URL} HTTP/{httpRun.LPSHttpRequestProfile.Httpversion}";
             }
         }
     }

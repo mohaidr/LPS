@@ -25,7 +25,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     {
         LPSHttpRun _httpRun;
         LPSResponseMetricEventSource _eventSource;
-        private static readonly object _lockObject = new object();
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         public LPSHttpRun LPSHttpRun { get { return _httpRun; } }
         ILPSLogger _logger;
@@ -35,7 +34,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpRun = httpRun;
             _eventSource = LPSResponseMetricEventSource.GetInstance(_httpRun);
-            _dimensionSet =  new ProtectedResponseCodeDimensionSet();
+            string endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
+            _dimensionSet =  new ProtectedResponseCodeDimensionSet(endpointDetails);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
@@ -53,8 +53,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 try
                 {
-                    string endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
-                    _dimensionSet.update(response, endpointDetails);
+                    _dimensionSet.update(response);
                     _eventSource.WriteResponseBreakDownMetrics(response.StatusCode);
                 }
                 finally
@@ -91,8 +90,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             else
             {
-                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricGroup", LPSLoggingLevel.Error);
-                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricGroup");
+                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricMonitor", LPSLoggingLevel.Error);
+                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricMonitor");
             }
         }
 
@@ -108,12 +107,15 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class ProtectedResponseCodeDimensionSet: ResponseCodeDimensionSet
         {
-            public void update(LPSHttpResponse response, string endpoint) {
+           public ProtectedResponseCodeDimensionSet(string endPointDetails)
+            {
+                EndPointDetails = endPointDetails;
+            }
+            public void update(LPSHttpResponse response) {
                 var key = $"{(int)response.StatusCode} {response.StatusMessage}";
                 TimeStamp = DateTime.UtcNow;
                 ResponseStatusDictionary.AddOrUpdate(key, 1, (k, oldValue) => oldValue + 1);
                 TimeStamp = DateTime.Now;
-                EndPointDetails = endpoint;
             }
         }
     }
