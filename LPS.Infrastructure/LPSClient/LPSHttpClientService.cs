@@ -96,7 +96,7 @@ namespace LPS.Infrastructure.Client
                 LPSHttpResponse.SetupCommand lpsResponseCommand = new LPSHttpResponse.SetupCommand
                 {
                     StatusCode = 0,
-                    StatusMessage = ex.Message,
+                    StatusMessage = ex?.InnerException.Message,
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
                     LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
@@ -114,10 +114,7 @@ namespace LPS.Infrastructure.Client
                 }
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, cancellationTokenWrapper);
-                throw new Exception(ex.Message, ex.InnerException);
-            }
-            finally
-            {
+                throw;
             }
 
             return lpsHttpResponse;

@@ -102,6 +102,7 @@ namespace LPS.Domain
                 {
                     _protectedCommand.SafelyIncrementNumberOfFailedRequests(command.LPSRunExecuteCommand);
                     this.HasFailed = true;
+                    throw;
                 }
             }
         }

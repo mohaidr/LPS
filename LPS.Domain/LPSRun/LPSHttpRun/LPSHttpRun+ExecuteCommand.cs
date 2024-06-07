@@ -35,8 +35,8 @@ namespace LPS.Domain
             {
 
             }
-            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile
-                , LPSHttpResponse> httpClientService,
+            public ExecuteCommand(ILPSClientService<LPSHttpRequestProfile,
+                LPSHttpResponse> httpClientService,
                 LPSTestPlan.ExecuteCommand planExecCommand,
                 ILPSLogger logger,
                 ILPSWatchdog watchdog,
@@ -68,15 +68,13 @@ namespace LPS.Domain
                 {
                     _executionStatus = AsyncCommandStatus.Ongoing;
                     await entity.ExecuteAsync(this, cancellationTokenWrapper);
+                    _executionStatus =  _numberOfFailedToCompleteRequests>0 ? AsyncCommandStatus.Failed : AsyncCommandStatus.Completed;
+
                 }
                 catch
                 {
                     _executionStatus = AsyncCommandStatus.Failed;
                     throw;
-                }
-                finally
-                {
-                    _executionStatus = AsyncCommandStatus.Completed;
                 }
             }
 
