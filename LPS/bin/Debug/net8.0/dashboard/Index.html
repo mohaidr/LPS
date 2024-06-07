@@ -184,50 +184,69 @@
 			arrow.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
 		}
 
-        function createOrUpdateChart(chartId, type, label, labels, data, backgroundColors, container) {
-            if (!Array.isArray(backgroundColors)) {
-                backgroundColors = [backgroundColors];
-            }
-            const fullChartId = `${container.parentNode.id}-${chartId}`;
-            if (chartRefs[fullChartId]) {
-                const chart = chartRefs[fullChartId];
-                chart.data.labels = labels;
-                chart.data.datasets[0].data = data;
-                chart.update();
-            } else {
-                const ctx = document.createElement('canvas');
-                ctx.id = fullChartId;
-                ctx.style.width = '100%';
-                ctx.width = container.clientWidth;
-                const div = document.createElement('div');
-                div.className = 'chart-box';
-                div.appendChild(ctx);
-                container.appendChild(div);
+        function createOrUpdateChart(chartId, type, label, labels, data, backgroundColors, container) 
+		{
+			// Function to truncate label strings
+			function truncateLabel(label, maxLength = 75) {
+				return label.length > maxLength ? `${label.substring(0, maxLength - 3)}...` : label;
+			}
 
-                chartRefs[fullChartId] = new Chart(ctx, {
-                    type: type,
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            label: label,
-                            data: data,
-                            backgroundColor: backgroundColors,
-                            borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
-                            borderWidth: 1
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            y: {
-                                beginAtZero: true
-                            }
-                        }
-                    }
-                });
-            }
-        }
+			if (!Array.isArray(backgroundColors)) {
+				backgroundColors = [backgroundColors];
+			}
+
+			// Truncate each label in the labels array
+			const truncatedLabels = labels.map(label => truncateLabel(label));
+
+			const fullChartId = `${container.parentNode.id}-${chartId}`;
+			if (chartRefs[fullChartId]) {
+				const chart = chartRefs[fullChartId];
+				chart.data.labels = truncatedLabels;
+				chart.data.datasets[0].data = data;
+				chart.update();
+			} else {
+				const ctx = document.createElement('canvas');
+				ctx.id = fullChartId;
+				ctx.style.width = '100%';
+				ctx.width = container.clientWidth;
+				const div = document.createElement('div');
+				div.className = 'chart-box';
+				div.appendChild(ctx);
+				container.appendChild(div);
+
+				chartRefs[fullChartId] = new Chart(ctx, {
+					type: type,
+					data: {
+						labels: truncatedLabels,
+						datasets: [{
+							label: label,
+							data: data,
+							backgroundColor: backgroundColors,
+							borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+							borderWidth: 1
+						}]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							y: {
+								beginAtZero: true
+							}
+						},
+						tooltips: {
+							callbacks: {
+								// Custom tooltip handler to display full labels
+								title: function(tooltipItem, data) {
+									return labels[tooltipItem[0].index];
+								}
+							}
+						}
+					}
+				});
+			}
+		}
+
     </script>
 </body>
 </html>
