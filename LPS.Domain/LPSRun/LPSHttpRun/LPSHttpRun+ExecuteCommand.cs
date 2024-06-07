@@ -71,6 +71,7 @@ namespace LPS.Domain
                 }
                 catch
                 {
+                    _executionStatus = AsyncCommandStatus.Failed;
                     throw;
                 }
                 finally
