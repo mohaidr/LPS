@@ -31,14 +31,17 @@ namespace LPS.UI.Core.Host
         private static ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private static Dictionary<string, Func<string>> _routeHandlers;
         private static ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunCommandStatusMonitor;
-        static CancellationTokenSource _localCancellationTokenSource; //= CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token)
+        static CancellationTokenSource _cts;
+        static CancellationToken _testCancellationToken;
+        public static bool IsRunning { get; private set; }
         public static int Port { get; private set; }
-
-        public static void Initialize(ILPSLogger logger, ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunCommandStatusMonitor, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public static void Initialize(ILPSLogger logger, ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunCommandStatusMonitor, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationToken testCancellationToken)
         {
             _logger = logger;
             _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _testCancellationToken = testCancellationToken;
+            _cts = new CancellationTokenSource();
             InitializeRouteHandlers();
         }
 
@@ -120,24 +123,6 @@ namespace LPS.UI.Core.Host
             public object ConnectionMetrics { get; set; }
         }
 
-        private static string DetermineOverallStatus(List<AsyncCommandStatus> statuses)
-        {
-            if (statuses.Count == 0)
-                return "NotRunning";
-            if (statuses.All(status => status == AsyncCommandStatus.NotStarted))
-                return "NotStarted";
-            if (statuses.All(status => status == AsyncCommandStatus.Completed))
-                return "Completed";
-            if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Paused) && statuses.Any(status => status == AsyncCommandStatus.Paused))
-                return "Paused";
-            if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Failed) && statuses.Any(status => status == AsyncCommandStatus.Failed))
-                return "Failed";
-            if (statuses.Any(status => status == AsyncCommandStatus.Ongoing))
-                return "Ongoing";
-
-            return "Undefined"; // Default case, should ideally never be reached
-        }
-
         private static string GetMetrics()
         {
             try
@@ -169,7 +154,11 @@ namespace LPS.UI.Core.Host
 
                         var statusList = _httpRunCommandStatusMonitor.GetAllStatuses(((ILPSMetricMonitor)metric).LPSHttpRun);
                         string status = DetermineOverallStatus(statusList);
-
+                        bool isCancelled = status != "Completed" && status != "Failed" && _testCancellationToken.IsCancellationRequested;                        
+                        if (isCancelled)
+                        {
+                            status = "Cancelled";
+                        }    
                         if (!metricsDictionary.ContainsKey(endPointDetails))
                         {
                             metricsDictionary[endPointDetails] = new MetricData
@@ -221,6 +210,25 @@ namespace LPS.UI.Core.Host
                 return $"HTTP/1.1 500 Internal Server Error\r\n\r\nError processing metrics: {ex.Message} {ex?.InnerException}";
             }
         }
+
+        private static string DetermineOverallStatus(List<AsyncCommandStatus> statuses)
+        {
+            if (statuses.Count == 0)
+                return "NotRunning";
+            if (statuses.All(status => status == AsyncCommandStatus.NotStarted))
+                return "NotStarted";
+            if (statuses.All(status => status == AsyncCommandStatus.Completed))
+                return "Completed";
+            if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Paused) && statuses.Any(status => status == AsyncCommandStatus.Paused))
+                return "Paused";
+            if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Failed) && statuses.Any(status => status == AsyncCommandStatus.Failed))
+                return "Failed";
+            if (statuses.Any(status => status == AsyncCommandStatus.Ongoing))
+                return "Ongoing";
+
+            return "Undefined"; // Default case, should ideally never be reached
+        }
+
         private static string FormatJson(string json)
         {
             try
@@ -233,10 +241,8 @@ namespace LPS.UI.Core.Host
                 return json;
             }
         }
-        public static async Task StartServerAsync(int port, CancellationTokenWrapper cancellationTokenWrapper)
+        public static async Task StartServerAsync(int port)
         {
-            _localCancellationTokenSource = new CancellationTokenSource();
-            var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationTokenWrapper.CancellationToken, _localCancellationTokenSource.Token);
             lock (_lockObject)
             {
                 if (_isServerRunning)
@@ -253,10 +259,10 @@ namespace LPS.UI.Core.Host
 
             try
             {
-                while (!linkedCts.IsCancellationRequested)
+                while (!_cts.Token.IsCancellationRequested)
                 {
                     TcpClient client = await _listener.AcceptTcpClientAsync();
-                    await HandleClientAsync(client, cancellationTokenWrapper);
+                    await HandleClientAsync(client, _cts.Token);
                 }
             }
             finally
@@ -289,6 +295,7 @@ namespace LPS.UI.Core.Host
 
         public static async Task RunAsync(CancellationTokenWrapper cancellationTokenWrapper)
         {
+            IsRunning = true;
             if (_logger == null || _runtimeOperationIdProvider == null)
             {
                 throw new InvalidOperationException("Server is not properly initialized.");
@@ -296,10 +303,10 @@ namespace LPS.UI.Core.Host
             Random random = new Random();
             int dynamicPortNumber = random.Next(8000, 9001);
             Port = dynamicPortNumber;
-            await StartServerAsync(dynamicPortNumber, cancellationTokenWrapper);
+            await StartServerAsync(dynamicPortNumber);
         }
 
-        private static async Task HandleClientAsync(TcpClient client, CancellationTokenWrapper cancellationTokenWrapper)
+        private static async Task HandleClientAsync(TcpClient client, CancellationToken cancellationToken)
         {
             using (NetworkStream stream = client.GetStream())
             {
@@ -309,7 +316,7 @@ namespace LPS.UI.Core.Host
                 // Read the HTTP request
                 StringBuilder requestBuilder = new StringBuilder();
                 string line;
-                while ((line = await reader.ReadLineAsync(cancellationTokenWrapper.CancellationToken)) != string.Empty)
+                while ((line = await reader.ReadLineAsync(cancellationToken)) != string.Empty)
                 {
                     requestBuilder.AppendLine(line);
                 }
@@ -328,7 +335,8 @@ namespace LPS.UI.Core.Host
         }
         public static async Task ShutdownServerAsync()
         {
-            _localCancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(6));
+            IsRunning = false;
+            _cts.CancelAfter(TimeSpan.FromSeconds(6));
             await Task.Delay(TimeSpan.FromSeconds(6));
         }
     }

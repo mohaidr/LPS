@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using System.Threading;
 using Spectre.Console;
+using LPS.UI.Core.Host;
 
 namespace LPS
 {
@@ -18,6 +19,10 @@ namespace LPS
             //DI Services
             var host = Startup.ConfigureServices(args);
             await host.StartAsync(cancellationToken);
+            if (LPSServer.IsRunning)
+            {
+                await LPSServer.ShutdownServerAsync();
+            }
         }
 
         private static void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
@@ -53,6 +58,7 @@ namespace LPS
             if (!_cancelRequested)
             {
                 _cancelRequested = true;
+                AnsiConsole.MarkupLine("[yellow]Gracefully shutting down the LPS local server[/]");
                 _cts.Cancel();
             }
         }

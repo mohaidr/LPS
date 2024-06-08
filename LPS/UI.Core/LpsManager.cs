@@ -39,14 +39,13 @@ namespace LPS.UI.Core
             if (lpsPlan!=null && lpsPlan.IsValid && lpsPlan.LPSHttpRuns.Count>0)
             {
                
-                LPSServer.Initialize(_logger, _httpRunExecutionCommandStatusMonitor, _runtimeOperationIdProvider);
-                var localServer = LPSServer.RunAsync(cancellationTokenWrapper);
+                LPSServer.Initialize(_logger, _httpRunExecutionCommandStatusMonitor, _runtimeOperationIdProvider, cancellationToken);
+                _ = LPSServer.RunAsync(cancellationTokenWrapper);
                 LPSDashboard.Start();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{lpsPlan.Name}' execution has started", LPSLoggingLevel.Information);
                 await new LPSTestPlan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller)
                     .ExecuteAsync(lpsPlan, cancellationTokenWrapper);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{lpsPlan.Name}' execution has completed", LPSLoggingLevel.Information);
-                await LPSServer.ShutdownServerAsync();
             }
         }
 
