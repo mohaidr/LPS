@@ -27,6 +27,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 {
                     AnsiConsole.MarkupLine($"[red]Unable To Read Data From The Specified Path[/]\n{ex.Message}");
                     loop = AnsiConsole.Confirm("Would you like to retry to read the payload? (Y) to retry, (N) to continue without payload");
+                    continue;
                 }
 
                 break;
@@ -51,6 +52,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 {
                     AnsiConsole.MarkupLine($"[red]Unable To Read Data From The Specified URL[/]\n{ex.Message}");
                     loop = AnsiConsole.Confirm("Would you like to retry to read the payload? (Y) to retry, (N) to continue without payload");
+                    continue;
                 }
 
                 break;

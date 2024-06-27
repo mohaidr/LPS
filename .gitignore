@@ -12,3 +12,7 @@ obj
 /LPS/bin/Debug/net8.0
 /LPS/.vs/LPS/v17/.suo
 /LPS/.vs/LPS/v17/*.suo
+/LPS/.vs/ProjectEvaluation/*.bin
+/LPS/.vs/ProjectEvaluation
+/LPS/.vs/LPS/v17/HierarchyCache.v1.txt
+/LPS/Properties/PublishProfiles

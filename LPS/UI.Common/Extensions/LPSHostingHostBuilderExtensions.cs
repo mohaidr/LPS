@@ -1,7 +1,7 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Client;
 using LPS.Infrastructure.Logger;
+using LPS.Infrastructure.LPSClients;
 using LPS.Infrastructure.Watchdog;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;

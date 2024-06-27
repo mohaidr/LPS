@@ -4,7 +4,6 @@ using Microsoft.Extensions.Hosting;
 using System.IO;
 using LPS.Infrastructure.Logger;
 using LPS.Domain;
-using LPS.Infrastructure.Client;
 using LPS.UI.Common.Extensions;
 using LPS.UI.Common;
 using LPS.UI.Common.Options;
@@ -16,6 +15,7 @@ using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Command;
 using System.CommandLine;
 using LPS.Infrastructure.Monitoring.Metrics;
+using LPS.Infrastructure.LPSClients;
 
 namespace LPS
 {
