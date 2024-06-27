@@ -5,6 +5,14 @@ The LPS tool is designed for Load, Performance, and Stress testing of web applic
 
 The LPS tool is distinctively built around the concept of iteration modes, setting it apart from other testing tools. This design choice emphasizes flexibility and ease of use, allowing users to run diverse testing scenarios by simply specifying a few key parameters. The iteration modes are central to the tool's functionality, offering a robust way to customize how HTTP requests are issued during tests.
 
+### Installation 
+- Download the latest version of the LPS tool from the [versions](https://github.com/mohaidr/lps-tool/tree/main/Version) directory.
+- Save it in your desired directory.
+- Open a terminal as administrator and run the env.ps1 file.
+    - If script execution is restricted, you might need to use the command `Set-ExecutionPolicy RemoteSigned` to enable it.
+    - To restore the original settings, use the command `Set-ExecutionPolicy Restricted`.
+- You can now utilize the lps command from any directory.
+
 ### What is an Iteration Mode?
 Iteration Mode is a fundamental feature of the LPS tool that dictates the pattern and timing of HTTP requests during a test. This mode allows users to precisely model different user interactions and system loads by managing the sequence and behavior of requests. The Iteration Mode specifies how HTTP requests are structured and executed during a test run, allowing you to mimic different user interaction patterns and system loads, it adjusts the sequencing and timing of requests based on predefined behaviors. 
 
@@ -35,9 +43,14 @@ These modes allow testers to closely replicate various real-world user behaviors
 
 This base command initiates a variety of testing scenarios that can be run immediately without the need to save the test configuration. The behavior of the test is determined by the options specified.
 
-### Example
+### Quick Test Examples
 `lps --url https://www.example.com -rc 1000`
 
+`lps --url https://www.example.com -rc 1000 --httpmethod "POST" --payload "Inline Payload"`
+
+`lps --url https://www.example.com -rc 1000 --httpmethod "POST" --payload "Path:C:\Users\User\Desktop\LPS\urnice.json"`
+
+`lps --url https://www.example.com -rc 1000 --httpmethod "POST" --payload "URL:https://www.example.com/payload"`
 
 #### Options:
     -tn, --testname <testname>: Specifies the test name, defaults to "Quick-Test-Plan".
@@ -179,6 +192,12 @@ This help command will provide comprehensive usage information for the LPS tool 
 ## Flexibility and Testing Capabilities:
 The LPS tool through the iteration modes provides significant flexibility in how tests are structured, allowing testers to closely mimic a variety of real-world scenarios. By varying the sequence and intensity of load conditions, these modes help identify potential performance bottlenecks and ensure that the application is robust enough to handle different types of user interactions and traffic patterns. This tailored approach is crucial for developing highly reliable and scalable web applications.
 
+
+## Dashboard
+
+The LPS tool features a dashboard that enables users to effectively monitor and analyze key metrics for their testing endpoints. These metrics include response time, response breakdown, request rate, and connection metrics, offering comprehensive insights for optimal performance monitoring.
+
+![image](https://github.com/mohaidr/lps-tool/assets/5898514/312240c2-ae41-40ab-8bd2-75ef10fca54a)
 
 
 
