@@ -16,6 +16,7 @@ using LPS.Domain.Common.Interfaces;
 using System.Diagnostics;
 using System.Timers;
 using System.Text.Json.Serialization;
+using System.Net;
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
 
@@ -34,8 +35,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpRun = httpRun;
             _eventSource = LPSResponseMetricEventSource.GetInstance(_httpRun);
-            string endPointDetails = $"{httpRun.Name} - {httpRun.LPSHttpRequestProfile.HttpMethod} {httpRun.LPSHttpRequestProfile.URL} HTTP/{httpRun.LPSHttpRequestProfile.Httpversion}";
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(endPointDetails);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(httpRun.Name, httpRun.LPSHttpRequestProfile.HttpMethod, httpRun.LPSHttpRequestProfile.URL, httpRun.LPSHttpRequestProfile.Httpversion);
             _histogram = new LongHistogram(1, 1000000, 3);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -103,8 +103,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class LPSDurationMetricDimensionSetProtected : LPSDurationMetricDimensionSet
         {
-            public LPSDurationMetricDimensionSetProtected(string endPointDetails) {
-                EndPointDetails = endPointDetails;
+            public LPSDurationMetricDimensionSetProtected(string name, string httpMethod, string url, string httpVersion) {
+                RunName = name;
+                HttpMethod = httpMethod;
+                URL = url;
+                HttpVersion = httpVersion;
             }
             public void Update(double responseTime, LongHistogram histogram)
             {
@@ -125,7 +128,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class LPSDurationMetricDimensionSet: IDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
-        public string EndPointDetails { get; protected set; }
+        public string RunName { get; protected set; }
+        public string URL { get; protected set; }
+        public string HttpMethod { get; protected set; }
+        public string HttpVersion { get; protected set; }
         public double SumResponseTime { get; protected set; }
         public double AverageResponseTime { get; protected set; }
         public double MinResponseTime { get; protected set; }

@@ -80,7 +80,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 RampUpPeriod = bindingContext.ParseResult.GetValueForOption(_rampupPeriodOption),
                 DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                 RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
-                LPSHttpRuns = new List<LPSHttpRun.SetupCommand>()
+                LPSRuns = new List<LPSHttpRun.SetupCommand>()
                 {
                     new LPSHttpRun.SetupCommand()
                     {

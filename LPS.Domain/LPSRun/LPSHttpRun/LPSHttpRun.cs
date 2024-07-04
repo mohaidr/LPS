@@ -33,13 +33,15 @@ namespace LPS.Domain
 
         private LPSHttpRun()
         {
+            Type = LPSRunType.HttpRun;
         }
 
         private ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> _httpClientService;
         private LPSHttpRun(
             ILPSLogger logger,
-            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider) 
+            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            Type = LPSRunType.HttpRun;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
@@ -49,6 +51,7 @@ namespace LPS.Domain
             ILPSLogger logger,
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            Type = LPSRunType.HttpRun;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);

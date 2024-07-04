@@ -82,7 +82,7 @@ namespace LPS.Domain
         }
         async private Task ExecuteAsync(ExecuteCommand command, ICancellationTokenWrapper cancellationTokenWrapper)
         {
-            if (this.IsValid && this._lPSHttpRuns.Count > 0)
+            if (this.IsValid && this._lPSRuns.Count > 0)
             {
                 List<Task> awaitableTasks = new List<Task>();
                 #region Loggin Plan Details
@@ -128,31 +128,32 @@ namespace LPS.Domain
 
         private void RegisterHttpRunsForMonitor()
         {
-            foreach (var run in this.LPSHttpRuns)
+            foreach (var run in this.LPSRuns)
             {
-                _lpsMetricsDataMonitor.TryRegister(run);
+                if(run.Type == LPSRunType.HttpRun)
+                _lpsMetricsDataMonitor.TryRegister((LPSHttpRun)run);
             }
         }
 
         async Task LoopRunsAsync(ExecuteCommand command, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> httpClient, ICancellationTokenWrapper cancellationTokenWrapper)
         {
             List<Task> awaitableTasks = new List<Task>();
-            foreach (var httpRun in this.LPSHttpRuns)
+            foreach (var httpRun in this.LPSRuns.Where(run=> run.Type == LPSRunType.HttpRun))
             {
                 
                 if (httpRun == null || !httpRun.IsValid)
                 {
                     continue;
                 }
-                string hostName = new Uri(httpRun.LPSHttpRequestProfile.URL).Host;
+                string hostName = new Uri(((LPSHttpRun)httpRun).LPSHttpRequestProfile.URL).Host;
                 await _watchdog.BalanceAsync(hostName, cancellationTokenWrapper);
                 if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {
-                    awaitableTasks.Add(ExecuteRunAsync(httpRun, command, httpClient, cancellationTokenWrapper));
+                    awaitableTasks.Add(ExecuteRunAsync(((LPSHttpRun)httpRun), command, httpClient, cancellationTokenWrapper));
                 }
                 else
                 {
-                    await ExecuteRunAsync(httpRun, command, httpClient, cancellationTokenWrapper);
+                    await ExecuteRunAsync(((LPSHttpRun)httpRun), command, httpClient, cancellationTokenWrapper);
                 }
             }
             await Task.WhenAll(awaitableTasks);

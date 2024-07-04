@@ -33,11 +33,11 @@ namespace LPS.UI.Core.UI.Build.Services
             new LPSTestPlanChallengeUserService(_skipOptionalFields, lpsTestCommand, _validator).Challenge();
             var lpsPlan = new LPSTestPlan(lpsTestCommand, _logger, _runtimeOperationIdProvider); // it should validate and throw if the command is not valid
 
-            foreach (var runCommand in lpsTestCommand.LPSHttpRuns)
+            foreach (var runCommand in lpsTestCommand.LPSRuns)
             {
                 var runEntity = new LPSHttpRun(runCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
                 runEntity.LPSHttpRequestProfile = new LPSHttpRequestProfile(runCommand.LPSRequestProfile, _logger, _runtimeOperationIdProvider);
-                lpsPlan.LPSHttpRuns.Add(runEntity);
+                lpsPlan.LPSRuns.Add(runEntity);
             }
             
             return lpsPlan;

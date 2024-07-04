@@ -57,7 +57,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
                 if (planValidationResults.IsValid && runValidationResulta.IsValid && requestProfileValidationResults.IsValid)
                 {
-                    _planSetupCommand.LPSHttpRuns.Add(lpsRunSetupCommand);
+                    _planSetupCommand.LPSRuns.Add(lpsRunSetupCommand);
                     _planSetupCommand.IsValid = true;
                     string json = LPSSerializationHelper.Serialize(_planSetupCommand);
                     File.WriteAllText($"{testName}.json", json);

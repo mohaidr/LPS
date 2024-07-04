@@ -68,14 +68,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     _planSetupCommand = LPSSerializationHelper.Deserialize<LPSTestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
                     var lpsPlan = new LPSTestPlan(_planSetupCommand, _logger, _runtimeOperationIdProvider); // it should validate and throw if the command is not valid
-                    foreach (var runCommand in _planSetupCommand.LPSHttpRuns)
+                    foreach (var runCommand in _planSetupCommand.LPSRuns)
                     {
                         var runEntity = new LPSHttpRun(runCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
                         var requestProfile = new LPSHttpRequestProfile(runCommand.LPSRequestProfile, _logger, _runtimeOperationIdProvider);
                         if (runEntity.IsValid && requestProfile.IsValid)
                         {
                             runEntity.LPSHttpRequestProfile = requestProfile;
-                            lpsPlan.LPSHttpRuns.Add(runEntity);
+                            lpsPlan.LPSRuns.Add(runEntity);
                         }
 
                     }

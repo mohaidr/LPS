@@ -17,6 +17,7 @@ using LPS.Infrastructure.Common.Interfaces;
 using System.Threading;
 using LPS.Domain;
 using LPS.Domain.Domain.Common.Interfaces;
+using System.Security.Cryptography;
 
 //TODO: This Code Is writting by the help of chatGPT so please consider refactoring for it
 namespace LPS.UI.Core.Host
@@ -117,34 +118,37 @@ namespace LPS.UI.Core.Host
         }
         private class MetricData
         {
+            public string Endpoint { get; set; }
             public string ExecutionStatus { get; set; }
             public object ResponseBreakDownMetrics { get; set; }
             public object ResponseTimeMetrics { get; set; }
             public object ConnectionMetrics { get; set; }
         }
 
+      
+
         private static string GetMetrics()
         {
             try
             {
-                // Create a dictionary to store endpoint details as keys and their metrics as values
-                var metricsDictionary = new Dictionary<string, MetricData>();
+                // Create a list to store metric data
+                var metricsList = new List<MetricData>();
 
                 // Define a local function to safely obtain endpoint details from a metric dimension set
                 string GetEndPointDetails(IDimensionSet dimensionSet)
                 {
                     if (dimensionSet is LPSDurationMetricDimensionSet durationSet)
-                        return durationSet.EndPointDetails;
+                        return $"{durationSet.RunName} {durationSet.HttpMethod} {durationSet.URL} HTTP/{durationSet.HttpVersion}";
                     else if (dimensionSet is ResponseCodeDimensionSet responseSet)
-                        return responseSet.EndPointDetails;
+                        return $"{responseSet.RunName} {responseSet.HttpMethod} {responseSet.URL} HTTP/{responseSet.HttpVersion}";
                     else if (dimensionSet is ConnectionDimensionSet connectionSet)
-                        return connectionSet.EndPointDetails;
+                        return $"{connectionSet.RunName} {connectionSet.HttpMethod} {connectionSet.URL} HTTP/{connectionSet.HttpVersion}";
 
                     return null; // or a default string if suitable
                 }
 
-                // Helper action to add metrics to dictionary
-                Action<IEnumerable<dynamic>, string> addToDictionary = (metrics, type) =>
+                // Helper action to add metrics to the list
+                Action<IEnumerable<dynamic>, string> addToList = (metrics, type) =>
                 {
                     foreach (var metric in metrics)
                     {
@@ -154,51 +158,54 @@ namespace LPS.UI.Core.Host
 
                         var statusList = _httpRunCommandStatusMonitor.GetAllStatuses(((ILPSMetricMonitor)metric).LPSHttpRun);
                         string status = DetermineOverallStatus(statusList);
-                        bool isCancelled = status != "Completed" && status != "Failed" && _testCancellationToken.IsCancellationRequested;                        
+                        bool isCancelled = status != "Completed" && status != "Failed" && _testCancellationToken.IsCancellationRequested;
                         if (isCancelled)
                         {
                             status = "Cancelled";
-                        }    
-                        if (!metricsDictionary.ContainsKey(endPointDetails))
-                        {
-                            metricsDictionary[endPointDetails] = new MetricData
-                            {
-                                ExecutionStatus = status
-                            };
-                        }
-                        else if (metricsDictionary[endPointDetails].ExecutionStatus != status)
-                        {
-                            metricsDictionary[endPointDetails].ExecutionStatus = status;
                         }
 
+                        var metricData = metricsList.FirstOrDefault(m => m.Endpoint == endPointDetails);
+                        if (metricData == null)
+                        {
+                            metricData = new MetricData
+                            {
+                                ExecutionStatus = status,
+                                Endpoint = endPointDetails
+                            };
+                            metricsList.Add(metricData);
+                        }
+                        else 
+                        if (metricData.ExecutionStatus != status)
+                        {
+                            metricData.ExecutionStatus = status;
+                        }
 
                         switch (type)
                         {
                             case "ResponseTime":
-                                metricsDictionary[endPointDetails].ResponseTimeMetrics = metric.GetDimensionSet();
+                                metricData.ResponseTimeMetrics = metric.GetDimensionSet();
                                 break;
                             case "ResponseCode":
-                                metricsDictionary[endPointDetails].ResponseBreakDownMetrics = metric.GetDimensionSet();
+                                metricData.ResponseBreakDownMetrics = metric.GetDimensionSet();
                                 break;
                             case "ConnectionsCount":
-                                metricsDictionary[endPointDetails].ConnectionMetrics = metric.GetDimensionSet();
+                                metricData.ConnectionMetrics = metric.GetDimensionSet();
                                 break;
                         }
                     }
                 };
-
                 // Fetch metrics by type
                 var responseTimeMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseTime);
                 var responseBreakDownMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseCode);
                 var connectionsMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
 
                 // Populate the dictionary
-                addToDictionary(responseTimeMetrics, "ResponseTime");
-                addToDictionary(responseBreakDownMetrics, "ResponseCode");
-                addToDictionary(connectionsMetrics, "ConnectionsCount");
+                addToList(responseTimeMetrics, "ResponseTime");
+                addToList(responseBreakDownMetrics, "ResponseCode");
+                addToList(connectionsMetrics, "ConnectionsCount");
 
-                // Serialize the dictionary to JSON
-                string jsonResponse = JsonConvert.SerializeObject(metricsDictionary, Formatting.Indented);
+                // Convert metrics list to JSON or any other required format
+                string jsonResponse= JsonConvert.SerializeObject(metricsList, Formatting.Indented);
 
                 // Format the HTTP response
                 string httpResponse = $"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\n\r\n{jsonResponse}";
@@ -206,10 +213,11 @@ namespace LPS.UI.Core.Host
             }
             catch (Exception ex)
             {
-                // Handle errors
-                return $"HTTP/1.1 500 Internal Server Error\r\n\r\nError processing metrics: {ex.Message} {ex?.InnerException}";
+                // Handle exceptions appropriately
+                return $"Error: {ex.Message}";
             }
         }
+
 
         private static string DetermineOverallStatus(List<AsyncCommandStatus> statuses)
         {

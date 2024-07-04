@@ -1,26 +1,17 @@
-﻿using LPS.Domain;
-using LPS.Infrastructure.Common;
+﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Common;
+using LPS.Infrastructure.Monitoring.EventSources;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Globalization;
-using Spectre.Console;
-using System.Collections.Concurrent;
-using LPS.Infrastructure.Monitoring.EventSources;
-using System.Collections.ObjectModel;
-using LPS.Domain.Common.Interfaces;
-using System.Diagnostics;
-using System.Timers;
-using System.Text.Json.Serialization;
+
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-
     public class LPSResponseCodeMetricMonitor : ILPSResponseMetric
     {
         LPSHttpRun _httpRun;
@@ -30,48 +21,46 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         ILPSLogger _logger;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         public bool IsStopped { get; private set; }
+
         internal LPSResponseCodeMetricMonitor(LPSHttpRun httpRun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httpRun;
             _eventSource = LPSResponseMetricEventSource.GetInstance(_httpRun);
-            string endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
-            _dimensionSet =  new ProtectedResponseCodeDimensionSet(endpointDetails);
+            _dimensionSet = new ProtectedResponseCodeDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
         public LPSMetricType MetricType => LPSMetricType.ResponseCode;
         private ProtectedResponseCodeDimensionSet _dimensionSet { get; set; }
+
         public ILPSResponseMetric Update(LPSHttpResponse response)
         {
             return UpdateAsync(response).Result;
         }
+
         public async Task<ILPSResponseMetric> UpdateAsync(LPSHttpResponse response)
         {
-
             await _semaphore.WaitAsync();
+            try
             {
-                try
-                {
-                    _dimensionSet.update(response);
-                    _eventSource.WriteResponseBreakDownMetrics(response.StatusCode);
-                }
-                finally
-                {
-                    _semaphore.Release();
-                }
-
+                _dimensionSet.Update(response);
+                _eventSource.WriteResponseBreakDownMetrics(response.StatusCode);
+            }
+            finally
+            {
+                _semaphore.Release();
             }
             return this;
         }
+
         public string Stringify()
         {
             try
             {
                 return LPSSerializationHelper.Serialize(_dimensionSet);
-
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return string.Empty;
             }
@@ -81,9 +70,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             return _dimensionSet;
         }
+
         public TDimensionSet GetDimensionSet<TDimensionSet>() where TDimensionSet : IDimensionSet
         {
-            // Check if _dimensionSet is of the requested type TDimensionSet
             if (_dimensionSet is TDimensionSet dimensionSet)
             {
                 return dimensionSet;
@@ -105,31 +94,66 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             IsStopped = false;
         }
 
-        private class ProtectedResponseCodeDimensionSet: ResponseCodeDimensionSet
+        private class ProtectedResponseCodeDimensionSet : ResponseCodeDimensionSet
         {
-           public ProtectedResponseCodeDimensionSet(string endPointDetails)
+            public ProtectedResponseCodeDimensionSet(string name, string httpMethod, string url, string httpVersion)
             {
-                EndPointDetails = endPointDetails;
+                RunName = name;
+                HttpMethod = httpMethod;
+                URL = url;
+                HttpVersion = httpVersion;
             }
-            public void update(LPSHttpResponse response) {
-                var key = $"{(int)response.StatusCode} {response.StatusMessage}";
+
+            public void Update(LPSHttpResponse response)
+            {
+                var existingSummary = _responseSummaries.FirstOrDefault(rs => rs.HttpStatusCode == ((int)response.StatusCode).ToString() && rs.HttpStatusReason == response.StatusMessage);
+                if (existingSummary != null)
+                {
+                    existingSummary.Count += 1;
+                }
+                else
+                {
+                    var summary = new ResponseSummary(
+                        ((int)response.StatusCode).ToString(),
+                        response.StatusMessage,
+                        1
+                    );
+                    _responseSummaries.Add(summary);
+                }
+
                 TimeStamp = DateTime.UtcNow;
-                ResponseStatusDictionary.AddOrUpdate(key, 1, (k, oldValue) => oldValue + 1);
-                TimeStamp = DateTime.Now;
             }
         }
     }
+    public class ResponseSummary
+    {
+        public string HttpStatusCode { get; private set; }
+        public string HttpStatusReason { get; private set; }
+        public int Count { get; set; }
 
+        public ResponseSummary(string httpStatusCode, string httpStatusReason, int count)
+        {
+            HttpStatusCode = httpStatusCode;
+            HttpStatusReason = httpStatusReason;
+            Count = count;
+        }
+    }
     public class ResponseCodeDimensionSet : IDimensionSet
     {
+
         public ResponseCodeDimensionSet()
         {
-            ResponseStatusDictionary = new ConcurrentDictionary<string, int>();
+            _responseSummaries = new ConcurrentBag<ResponseSummary>();
         }
-        public DateTime TimeStamp { get; protected set; }
-        public string EndPointDetails { get; protected set; }
-        protected ConcurrentDictionary<string, int> ResponseStatusDictionary {get; set;}
-        public IReadOnlyDictionary<string, int> ResponseSummary => new ReadOnlyDictionary<string, int>(ResponseStatusDictionary);
 
+        public DateTime TimeStamp { get; protected set; }
+        public string RunName { get; protected set; }
+        public string URL { get; protected set; }
+        public string HttpMethod { get; protected set; }
+        public string HttpVersion { get; protected set; }
+
+        protected ConcurrentBag<ResponseSummary> _responseSummaries { get; set; }
+
+        public IList<ResponseSummary> ResponseSummary => _responseSummaries.ToList();
     }
 }

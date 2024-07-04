@@ -36,7 +36,7 @@ namespace LPS.UI.Core
         public async Task RunAsync(LPSTestPlan lpsPlan, CancellationToken cancellationToken)
         {
             CancellationTokenWrapper cancellationTokenWrapper = new CancellationTokenWrapper(cancellationToken);
-            if (lpsPlan!=null && lpsPlan.IsValid && lpsPlan.LPSHttpRuns.Count>0)
+            if (lpsPlan!=null && lpsPlan.IsValid && lpsPlan.LPSRuns.Count>0)
             {
                
                 LPSServer.Initialize(_logger, _httpRunExecutionCommandStatusMonitor, _runtimeOperationIdProvider, cancellationToken);

@@ -114,6 +114,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             try
             {
+
                 // Return all metric monitors matching the predicate
                 return _metrics.Values
                                   .SelectMany(x => x.Item2.Values)

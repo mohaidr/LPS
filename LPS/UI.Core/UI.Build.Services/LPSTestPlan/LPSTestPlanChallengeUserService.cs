@@ -81,7 +81,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 LPSRunChallengeUserService lpsRunUserService = new LPSRunChallengeUserService(SkipOptionalFields, lpsRunCommand, validator);
                 lpsRunUserService.Challenge();
 
-                Command.LPSHttpRuns.Add(lpsRunCommand);
+                Command.LPSRuns.Add(lpsRunCommand);
 
                 AnsiConsole.MarkupLine("[bold]Type [blue]add[/] to add a new http run or press [blue]enter[/] [/]");
 

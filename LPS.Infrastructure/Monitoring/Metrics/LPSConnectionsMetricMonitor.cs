@@ -38,8 +38,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public LPSConnectionsMetricMonitor(LPSHttpRun httprun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httprun;
-            string _endpointDetails = $"{_httpRun.Name} - {_httpRun.LPSHttpRequestProfile.HttpMethod} {_httpRun.LPSHttpRequestProfile.URL} HTTP/{_httpRun.LPSHttpRequestProfile.Httpversion}";
-            _dimensionSet = new ProtectedConnectionDimensionSet(_endpointDetails);
+            _dimensionSet = new ProtectedConnectionDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);
             _eventSource = LPSRequestEventSource.GetInstance(_httpRun);
             _stopwatch = new Stopwatch();
             _logger = logger;
@@ -172,8 +171,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
         {
-            public ProtectedConnectionDimensionSet(string endPointDetails) {
-                this.EndPointDetails = endPointDetails;
+            public ProtectedConnectionDimensionSet(string name, string httpMethod, string url, string httpVersion)
+            {
+                RunName = name;
+                HttpMethod = httpMethod;
+                URL = url;
+                HttpVersion = httpVersion;
             }
             // When calling this method, make sure you take thread safety into considration
             public void Update(int activeRequestsCount , int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
@@ -204,7 +207,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class ConnectionDimensionSet : IDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
-        public string EndPointDetails { get; protected set; }
+        public string RunName { get; protected set; }
+        public string URL { get; protected set; }
+        public string HttpMethod { get; protected set; }
+        public string HttpVersion { get; protected set; }
         public int RequestsCount { get; protected set; }
         public int ActiveRequestsCount { get; protected set; }
         public int SuccessfulRequestCount { get; protected set; }

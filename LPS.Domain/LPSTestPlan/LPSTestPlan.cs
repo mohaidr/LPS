@@ -27,7 +27,7 @@ namespace LPS.Domain
             ILPSLogger logger,
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            LPSHttpRuns = new List<LPSHttpRun>();
+            LPSRuns = new List<LPSRun>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;
             Id = Guid.NewGuid();
@@ -38,8 +38,8 @@ namespace LPS.Domain
         //TODO: When implementing repositories and DB think about collections and how they should be treated
         // Should this be mapped to the DB?
         // Currently it is open for assignment from outside so the user may easly add too many entities, nulls or even orphan entities
-        public ICollection<LPSHttpRun> LPSHttpRuns { get; set; }
-        public ICollection<LPSHttpRun> _lPSHttpRuns => LPSHttpRuns.Where(run => run != null && run.IsValid).ToList();
+        public ICollection<LPSRun> LPSRuns { get; set; }
+        public ICollection<LPSRun> _lPSRuns => LPSRuns.Where(run => run != null && run.IsValid).ToList();
         public string Name { get; private set; }
 
         public bool IsRedo { get; private set; }

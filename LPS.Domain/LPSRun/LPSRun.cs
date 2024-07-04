@@ -11,6 +11,11 @@ using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
+    public enum LPSRunType
+    { 
+        HttpRun,
+        WebSocketRun
+    }
     //This should be a Non-Entity Superclass
     public partial class LPSRun : IValidEntity, IDomainEntity
     {
@@ -35,5 +40,7 @@ namespace LPS.Domain
         public Guid Id { get; protected set; }
         public string Name { get; protected set; }
         public bool IsValid { get; protected set; }
+
+        public LPSRunType Type { get; protected set; }
     }
 }

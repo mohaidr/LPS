@@ -11,10 +11,10 @@ namespace LPS.Domain
     {
         public class SetupCommand: ICommand<LPSTestPlan>, IValidCommand<LPSTestPlan>
         {
-            public IList<LPSHttpRun.SetupCommand> LPSHttpRuns { get; set; } // only used to return data
+            public IList<LPSHttpRun.SetupCommand> LPSRuns { get; set; } // only used to return data
             public SetupCommand()
             {
-                LPSHttpRuns = new List<LPSHttpRun.SetupCommand>();
+                LPSRuns = new List<LPSHttpRun.SetupCommand>();
                 DelayClientCreationUntilIsNeeded = false;
                 RunInParallel = false;
                 ValidationErrors = new Dictionary<string, List<string>>();
