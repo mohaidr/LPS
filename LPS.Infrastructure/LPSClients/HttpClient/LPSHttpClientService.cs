@@ -96,7 +96,7 @@ namespace LPS.Infrastructure.LPSClients
                 LPSHttpResponse.SetupCommand lpsResponseCommand = new LPSHttpResponse.SetupCommand
                 {
                     StatusCode = 0,
-                    StatusMessage = ex?.InnerException.Message,
+                    StatusMessage = ex?.InnerException?.Message,
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
                     LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
