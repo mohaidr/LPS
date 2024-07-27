@@ -27,14 +27,14 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 
 
         public LPSWatchdogBinder(
-            Option<int?> maxMemoryMB = null,
-            Option<int?> maxCPUPercentage = null,
-            Option<int?> coolDownMemoryMB = null,
-            Option<int?> coolDownCPUPercentage = null,
-            Option<int?> maxConcurrentConnectionsCountPerHostName = null,
-            Option<int?> coolDownConcurrentConnectionsCountPerHostName = null,
-            Option<int?> coolDownRetryTimeInSeconds = null,
-            Option<SuspensionMode?> suspensionMode = null)
+            Option<int?>? maxMemoryMB = null,
+            Option<int?>? maxCPUPercentage = null,
+            Option<int?>? coolDownMemoryMB = null,
+            Option<int?>? coolDownCPUPercentage = null,
+            Option<int?>? maxConcurrentConnectionsCountPerHostName = null,
+            Option<int?>? coolDownConcurrentConnectionsCountPerHostName = null,
+            Option<int?>? coolDownRetryTimeInSeconds = null,
+            Option<SuspensionMode?>? suspensionMode = null)
         {
             _maxMemoryMB = maxMemoryMB ?? LPSCommandLineOptions.LPSWatchdogCommandOptions.MaxMemoryMB;
             _maxCPUPercentage = maxCPUPercentage ?? LPSCommandLineOptions.LPSWatchdogCommandOptions.MaxCPUPercentage;

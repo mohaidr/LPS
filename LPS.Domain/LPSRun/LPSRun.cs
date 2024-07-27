@@ -23,6 +23,7 @@ namespace LPS.Domain
         protected ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected ILPSWatchdog _watchdog;
         protected ILPSMetricsDataMonitor _lpsMonitoringEnroller;
+        protected CancellationTokenSource _cts;
         protected LPSRun()
         {
             Id = Guid.NewGuid();

@@ -1,0 +1,257 @@
+﻿@{
+    ViewData["Title"] = "LPS Dashboard";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Metrics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #333;
+            color: #ccc;
+        }
+        .endpoint-container {
+            margin-top: 20px;
+            width: 95%;
+            border: 1px solid #555;
+            border-radius: 10px;
+            padding: 10px;
+        }
+        .charts-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 20px;
+            width: 100%;
+        }
+        .chart-box {
+            width: 45%;
+            min-width: 350px;
+            background: #222;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 5px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        canvas {
+            width: 100%;
+            height: 300px;
+        }
+        h2 {
+            text-align: center;
+            margin: 20px 0;
+            color: #fff;
+        }
+        h3 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+            margin: 20px 0;
+            color: #fff;
+            cursor: pointer;
+        }
+        .arrow {
+            transition: transform 0.3s ease;
+        }
+        .status {
+            margin-left: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h2>API Response Metrics Dashboard</h2>
+    <div id="mainContainer"></div>
+
+    <script>
+        const chartRefs = {};
+		const statusColors = {
+			'NotRunning': '#808080', // Grey (neutral, not active but normal)
+			'NotStarted': '#FFC107', // Amber (waiting to start, alert but not critical)
+			'Ongoing': '#4CAF50', // Green (active, working as expected)
+			'Paused': '#FF9800', // Orange (temporary stop, needs attention but not an error)
+			'Completed': '#2196F3', // Blue (successfully completed, positive outcome)
+			'Failed': '#F44336', // Red (error or problem, critical attention needed)
+			'Cancelled': '#F44336' // Red (error or problem, critical attention needed)
+		};
+
+
+        document.addEventListener("DOMContentLoaded", function () {
+            fetchDataAndRenderCharts();
+            setInterval(fetchDataAndRenderCharts, 5000); // Fetch data every 5 seconds
+        });
+
+        function fetchDataAndRenderCharts() {
+            fetch('/api/metrics') // Replace '/kpis' with your actual API URL
+            .then(response => response.json())
+            .then(data => {
+                const endpoints = Object.keys(data);
+                endpoints.forEach((endpoint) => {
+                    const metrics = data[endpoint];
+                    if (!metrics) {
+                        console.error('No metrics available for endpoint:', endpoint);
+                        return;
+                    }
+
+                    const endpointContainer = createOrUpdateEndpointContainer(endpoint, metrics.executionStatus);
+                    const sanitizedEndpoint = endpoint.replace(/[^a-zA-Z0-9]/g, '');
+
+                    const responseTimeMetrics = metrics.responseTimeMetrics || {};
+                    const connectionMetrics = metrics.connectionMetrics || {};
+                    const responseBreakDownMetrics = metrics.responseBreakDownMetrics || {};
+
+                    createOrUpdateChart(`${sanitizedEndpoint}-requestsRate`, 'bar', `${endpoint} Requests Rate`, ['Requests Rate (requests/s)', 'Requests Rate per Cool Down Period (20s)'], [
+                        connectionMetrics.requestsRate?.Value || 0,
+                        connectionMetrics.requestsRatePerCoolDownPeriod?.Value || 0
+                    ], ['rgba(255, 205, 86, 0.7)', 'rgba(153, 102, 255, 0.7)'], endpointContainer);
+
+                    createOrUpdateChart(`${sanitizedEndpoint}-responseTime`, 'line', `${endpoint} Response Times (ms)`, ['Min', 'P10', 'P50', 'P90', 'Avg', 'Max'], [
+                        responseTimeMetrics.minResponseTime || 0,
+                        responseTimeMetrics.p10ResponseTime || 0,
+                        responseTimeMetrics.p50ResponseTime || 0,
+                        responseTimeMetrics.p90ResponseTime || 0,
+                        responseTimeMetrics.averageResponseTime || 0,
+                        responseTimeMetrics.maxResponseTime || 0
+                    ], 'rgb(75, 192, 192)', endpointContainer);
+
+                    createOrUpdateChart(`${sanitizedEndpoint}-statusCode`, 'bar', `${endpoint} Status Codes`, Object.keys(responseBreakDownMetrics.responseSummary || {}), Object.values(responseBreakDownMetrics.responseSummary || {}), 'rgba(54, 162, 235, 0.5)', endpointContainer);
+
+                    createOrUpdateChart(`${sanitizedEndpoint}-connectionMetrics`, 'bar', `${endpoint} Connection Metrics`, ['Total Requests', 'Active Requests', 'Successful Requests', 'Failed Requests'], [
+                        connectionMetrics.requestsCount || 0,
+                        connectionMetrics.activeRequestsCount || 0,
+                        connectionMetrics.successfulRequestCount || 0,
+                        connectionMetrics.failedRequestsCount || 0
+                    ], 'rgba(255, 99, 132, 0.5)', endpointContainer);
+                });
+            })
+            .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function createOrUpdateEndpointContainer(endpoint, status) {
+            const containerId = `endpoint-container-${endpoint.replace(/[^a-zA-Z0-9]/g, '')}`;
+            let endpointContainer = document.getElementById(containerId);
+            if (!endpointContainer) {
+                endpointContainer = document.createElement('div');
+                endpointContainer.id = containerId;
+                endpointContainer.className = 'endpoint-container';
+                document.getElementById('mainContainer').appendChild(endpointContainer);
+
+                const header = document.createElement('h3');
+                header.textContent = `Metrics for ${endpoint}`;
+
+                const arrowSpan = document.createElement('span');
+                arrowSpan.innerHTML = '&#9660;';
+                arrowSpan.className = 'arrow';
+                arrowSpan.style.transform = 'rotate(180deg)';
+
+                const statusSpan = document.createElement('span');
+                statusSpan.className = 'status';
+                statusSpan.textContent = status; // Set initial status
+                statusSpan.style.color = statusColors[status] || '#FFFFFF'; // Default to white if status unknown
+
+                header.appendChild(statusSpan);
+                header.appendChild(arrowSpan);
+                header.onclick = () => toggleCharts(containerId, arrowSpan);
+                endpointContainer.appendChild(header);
+
+                const chartsContainer = document.createElement('div');
+                chartsContainer.className = 'charts-container';
+                chartsContainer.style.display = 'flex';
+                endpointContainer.appendChild(chartsContainer);
+            } else {
+                const statusSpan = endpointContainer.querySelector('.status');
+                statusSpan.textContent = status; // Update status
+                statusSpan.style.color = statusColors[status] || '#FFFFFF'; // Update color based on status
+            }
+            return endpointContainer.querySelector('.charts-container');
+        }
+
+		function toggleCharts(containerId, arrow) {
+			const endpointContainer = document.getElementById(containerId);
+			const chartsContainer = endpointContainer.querySelector('.charts-container');
+			const isVisible = chartsContainer.style.display === 'flex';
+			chartsContainer.style.display = isVisible ? 'none' : 'flex';
+			arrow.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+		}
+
+        function createOrUpdateChart(chartId, type, label, labels, data, backgroundColors, container) 
+		{
+			// Function to truncate label strings
+			function truncateLabel(label, maxLength = 75) {
+				return label.length > maxLength ? `${label.substring(0, maxLength - 3)}...` : label;
+			}
+
+			if (!Array.isArray(backgroundColors)) {
+				backgroundColors = [backgroundColors];
+			}
+
+			// Truncate each label in the labels array
+			const truncatedLabels = labels.map(label => truncateLabel(label));
+
+			const fullChartId = `${container.parentNode.id}-${chartId}`;
+			if (chartRefs[fullChartId]) {
+				const chart = chartRefs[fullChartId];
+				chart.data.labels = truncatedLabels;
+				chart.data.datasets[0].data = data;
+				chart.update();
+			} else {
+				const ctx = document.createElement('canvas');
+				ctx.id = fullChartId;
+				ctx.style.width = '100%';
+				ctx.width = container.clientWidth;
+				const div = document.createElement('div');
+				div.className = 'chart-box';
+				div.appendChild(ctx);
+				container.appendChild(div);
+
+				chartRefs[fullChartId] = new Chart(ctx, {
+					type: type,
+					data: {
+						labels: truncatedLabels,
+						datasets: [{
+							label: label,
+							data: data,
+							backgroundColor: backgroundColors,
+							borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+							borderWidth: 1
+						}]
+					},
+					options: {
+						responsive: true,
+						maintainAspectRatio: false,
+						scales: {
+							y: {
+								beginAtZero: true
+							}
+						},
+						tooltips: {
+							callbacks: {
+								// Custom tooltip handler to display full labels
+								title: function(tooltipItem, data) {
+									return labels[tooltipItem[0].index];
+								}
+							}
+						}
+					}
+				});
+			}
+		}
+
+    </script>
+</body>
+</html>

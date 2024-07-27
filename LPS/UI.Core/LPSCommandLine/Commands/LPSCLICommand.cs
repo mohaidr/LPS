@@ -29,6 +29,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         Command _rootCliCommand;
         ILPSMetricsDataMonitor _lpsMonitoringEnroller;
         ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
+       CancellationTokenSource _cts;
         public LPSCLICommand(
             Command rootCliCommand,
             ILPSLogger logger,
@@ -39,6 +40,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
             ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
             ILPSMetricsDataMonitor lpsMonitoringEnroller,
+            CancellationTokenSource cts,
             string[] args)
         {
             _rootCliCommand = rootCliCommand;
@@ -50,6 +52,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
+            _cts = cts;
             Setup();
         }
         private void Setup()
@@ -103,8 +106,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var requestProfile = new LPSHttpRequestProfile(lpsRequestProfileSetupCommand, _logger, _runtimeOperationIdProvider);
                     httpRun.LPSHttpRequestProfile = requestProfile;
                     plan.LPSRuns.Add(httpRun);
-                    var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller);
-                    await manager.RunAsync(plan, cancellationToken);
+                    var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts);
+                    await manager.RunAsync(plan);
                 }
                 else
                 {

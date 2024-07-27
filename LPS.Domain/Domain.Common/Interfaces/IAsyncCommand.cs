@@ -18,6 +18,6 @@ namespace LPS.Domain.Common.Interfaces
     public interface IAsyncCommand<TEntity> where TEntity : IDomainEntity
     {
         public AsyncCommandStatus Status { get; }
-        Task ExecuteAsync(TEntity entity, ICancellationTokenWrapper cancellationTokenWrapper);
+        Task ExecuteAsync(TEntity entity);
     }
 }

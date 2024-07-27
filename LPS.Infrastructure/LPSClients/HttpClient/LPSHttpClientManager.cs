@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 
@@ -19,23 +20,25 @@ namespace LPS.Infrastructure.LPSClients
         ILPSLogger _logger;
         Queue<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _clientsQueue;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public LPSHttpClientManager(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
+        CancellationTokenSource _cts;
+        public LPSHttpClientManager(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _clientsQueue = new Queue<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>();
+            _cts = cts;
         }
 
         public ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse> CreateInstance(ILPSClientConfiguration<LPSHttpRequestProfile> config)
         {
-            var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider);
+            var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider, _cts);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
         public void CreateAndQueueClient(ILPSClientConfiguration<LPSHttpRequestProfile> config)
         {
-            var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider);
+            var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider, _cts);
             _clientsQueue.Enqueue(client);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Verbose);
         }
@@ -67,7 +70,7 @@ namespace LPS.Infrastructure.LPSClients
             {
                 if (byPassQueueIfEmpty)
                 {
-                    var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider);
+                    var client = new LPSHttpClientService(config, _logger, _runtimeOperationIdProvider, _cts);
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.Id} was created", LPSLoggingLevel.Information);
                     return client;
                 }

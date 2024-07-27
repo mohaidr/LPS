@@ -25,12 +25,12 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 
 
         public LPSLoggerBinder(
-            Option<string> logFilePathOption = null,
-            Option<bool?> disableFileLoggingOption = null,
-            Option<bool?> enableConsoleLoggingOption = null,
-            Option<bool?> disableConsoleErrorLoggingOption = null,
-            Option<LPSLoggingLevel?> loggingLevelOption = null,
-            Option<LPSLoggingLevel?> consoleLoggingLevelOption = null)
+            Option<string>? logFilePathOption = null,
+            Option<bool?>? disableFileLoggingOption = null,
+            Option<bool?>? enableConsoleLoggingOption = null,
+            Option<bool?>? disableConsoleErrorLoggingOption = null,
+            Option<LPSLoggingLevel?>? loggingLevelOption = null,
+            Option<LPSLoggingLevel?>? consoleLoggingLevelOption = null)
         {
             _logFilePathOption = logFilePathOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.LogFilePathOption;
             _enableConsoleLoggingOption = enableConsoleLoggingOption ?? LPSCommandLineOptions.LPSLoggerCommandOptions.EnableConsoleLoggingOption;

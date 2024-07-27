@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
@@ -18,14 +19,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     {
         private static ILPSLogger _logger;
         private static ILPSRuntimeOperationIdProvider _lpsRuntimeOperationIdProvider;
+        CancellationTokenSource _cts;
 
         // ConcurrentDictionary to manage both metrics and execution lists with multiple monitors per LPSHttpRun
         private static ConcurrentDictionary<LPSHttpRun, Tuple<IList<string>, Dictionary<string, ILPSMetricMonitor>>> _metrics = new ConcurrentDictionary<LPSHttpRun, Tuple<IList<string>, Dictionary<string, ILPSMetricMonitor>>>();
 
-        public LPSMetricsDataMonitor(ILPSLogger logger, ILPSRuntimeOperationIdProvider lpsRuntimeOperationIdProvider)
+        public LPSMetricsDataMonitor(ILPSLogger logger, ILPSRuntimeOperationIdProvider lpsRuntimeOperationIdProvider, CancellationTokenSource cts)
         {
             _logger = logger;
             _lpsRuntimeOperationIdProvider = lpsRuntimeOperationIdProvider;
+            _cts = cts;
         }
 
         public bool TryRegister(LPSHttpRun lpsHttpRun)
@@ -45,7 +48,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             metrics[breakDownMetricKey] = new LPSResponseCodeMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
             metrics[durationMetricKey] = new LPSDurationMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
-            metrics[connectionsMetricKey] = new LPSConnectionsMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
+            metrics[connectionsMetricKey] = new LPSConnectionsMetricMonitor(lpsHttpRun, _cts, _logger, _lpsRuntimeOperationIdProvider);
 
             // Prepare the tuple to be added
             var metricsTuple = new Tuple<IList<string>, Dictionary<string, ILPSMetricMonitor>>(new List<string>() { }, metrics);
@@ -67,7 +70,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
                     metrics[breakDownMetricKey] = new LPSResponseCodeMetricMonitor(run, _logger, _lpsRuntimeOperationIdProvider);
                     metrics[durationMetricKey] = new LPSDurationMetricMonitor(run, _logger, _lpsRuntimeOperationIdProvider);
-                    metrics[connectionsMetricKey] = new LPSConnectionsMetricMonitor(run, _logger, _lpsRuntimeOperationIdProvider);
+                    metrics[connectionsMetricKey] = new LPSConnectionsMetricMonitor(run, _cts, _logger, _lpsRuntimeOperationIdProvider);
 
                     return new Tuple<IList<string>, Dictionary<string, ILPSMetricMonitor>>(new List<string>(), metrics);
                 });

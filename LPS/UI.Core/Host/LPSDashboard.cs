@@ -13,7 +13,7 @@ namespace LPS.UI.Core.Host
     {
         public static void Start()
         {
-            OpenBrowser($"http://127.0.0.1:{LPSServer.Port}/dashboard");
+           OpenBrowser($"http://127.0.0.1:8000");
         }
 
         private static void OpenBrowser(string url)

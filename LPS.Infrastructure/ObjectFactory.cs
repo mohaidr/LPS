@@ -38,6 +38,11 @@ namespace LPS.Infrastructure.Logging
                         }
                         else
                         {
+                            if (!File.Exists(path))
+                            { 
+                                File.Create(path).Close();
+                            }
+
                             StreamWriter streamWriter = new StreamWriter(path, true, Encoding.Default, 65536);
                             textWriters.Add(path, streamWriter);
                             return TextWriter.Synchronized(streamWriter);

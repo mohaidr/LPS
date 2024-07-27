@@ -31,24 +31,24 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<bool> _delayClientCreationOption;
         private Option<bool> _runInParallerOption;
 
-        public LPSCommandBinder(Option<string> testPlanNameOption = null,
-            Option<int> numberOfClientsOption = null,
-            Option<int> rampupPeriodOption = null,
-            Option<bool> delayClientCreationOption = null,
-            Option<bool> runInParallerOption = null,
-            Option<string> httpRunNameOption = null,
-            Option<int?> requestCountOption = null,
-            Option<LPSHttpRun.IterationMode> iterationModeOption = null,
-            Option<int?> duratiion = null,
-            Option<int?> coolDownTime = null,
-            Option<int?> batchSizeOption = null,
-            Option<string> httpMethodOption = null,
-            Option<string> httpversionOption = null,
-            Option<string> urlOption = null,
-            Option<IList<string>> headerOption = null,
-            Option<string> payloadOption = null,
-            Option<bool> downloadHtmlEmbeddedResourcesOption = null,
-            Option<bool> saveResponseOption = null)
+        public LPSCommandBinder(Option<string>? testPlanNameOption = null,
+            Option<int>? numberOfClientsOption = null,
+            Option<int>? rampupPeriodOption = null,
+            Option<bool>? delayClientCreationOption = null,
+            Option<bool>? runInParallerOption = null,
+            Option<string>? httpRunNameOption = null,
+            Option<int?>? requestCountOption = null,
+            Option<LPSHttpRun.IterationMode>? iterationModeOption = null,
+            Option<int?>? duratiion = null,
+            Option<int?>? coolDownTime = null,
+            Option<int?>? batchSizeOption = null,
+            Option<string>? httpMethodOption = null,
+            Option<string>? httpversionOption = null,
+            Option<string>? urlOption = null,
+            Option<IList<string>>? headerOption = null,
+            Option<string>? payloadOption = null,
+            Option<bool>? downloadHtmlEmbeddedResourcesOption = null,
+            Option<bool>? saveResponseOption = null)
         {
             _testPlanNameOption = testPlanNameOption ?? LPSCommandLineOptions.LPSCommandOptions.TestNameOption;
             _numberOfClientsOption = numberOfClientsOption ?? LPSCommandLineOptions.LPSCommandOptions.NumberOfClientsOption;

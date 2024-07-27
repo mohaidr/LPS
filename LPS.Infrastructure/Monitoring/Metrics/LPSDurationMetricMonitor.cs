@@ -112,7 +112,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             public void Update(double responseTime, LongHistogram histogram)
             {
                 double averageDenominator = AverageResponseTime != 0 ? (SumResponseTime / AverageResponseTime) + 1 : 1;
-                TimeStamp = DateTime.Now;
+                TimeStamp = DateTime.UtcNow;
                 MaxResponseTime = Math.Max(responseTime, MaxResponseTime);
                 MinResponseTime = MinResponseTime == 0 ? responseTime : Math.Min(responseTime, MinResponseTime);
                 SumResponseTime = SumResponseTime + responseTime;

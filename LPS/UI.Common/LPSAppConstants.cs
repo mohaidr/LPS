@@ -10,8 +10,10 @@ namespace LPS.UI.Common
 {
     internal class LPSAppConstants
     {
+        #pragma warning disable CS8601 // Possible null reference assignment.
         public static readonly string AppExecutableLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+        #pragma warning restore CS8601 // Possible null reference assignment.
         public static readonly string AppSettingsFileName = "lpsSettings.json";
-        public static readonly string AppSettingsFileLocation = Path.Combine(LPSAppConstants.AppExecutableLocation, "config", LPSAppConstants.AppSettingsFileName);
+        public static readonly string AppSettingsFileLocation = Path.Combine(AppExecutableLocation, "config", LPSAppConstants.AppSettingsFileName);
     }
 }

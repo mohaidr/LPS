@@ -93,7 +93,7 @@
         });
 
         function fetchDataAndRenderCharts() {
-            fetch('/kpis') // Replace '/kpis' with your actual API URL
+            fetch('/api/metrics') // Replace '/kpis' with your actual API URL
             .then(response => response.json())
             .then(data => {
                 const endpoints = Object.keys(data);
@@ -104,34 +104,34 @@
                         return;
                     }
 
-                    const endpointContainer = createOrUpdateEndpointContainer(endpoint, metrics.ExecutionStatus);
+                    const endpointContainer = createOrUpdateEndpointContainer(endpoint, metrics.executionStatus);
                     const sanitizedEndpoint = endpoint.replace(/[^a-zA-Z0-9]/g, '');
 
-                    const responseTimeMetrics = metrics.ResponseTimeMetrics || {};
-                    const connectionMetrics = metrics.ConnectionMetrics || {};
-                    const responseBreakDownMetrics = metrics.ResponseBreakDownMetrics || {};
+                    const responseTimeMetrics = metrics.responseTimeMetrics || {};
+                    const connectionMetrics = metrics.connectionMetrics || {};
+                    const responseBreakDownMetrics = metrics.responseBreakDownMetrics || {};
 
                     createOrUpdateChart(`${sanitizedEndpoint}-requestsRate`, 'bar', `${endpoint} Requests Rate`, ['Requests Rate (requests/s)', 'Requests Rate per Cool Down Period (20s)'], [
-                        connectionMetrics.RequestsRate?.Value || 0,
-                        connectionMetrics.RequestsRatePerCoolDownPeriod?.Value || 0
+                        connectionMetrics.requestsRate?.Value || 0,
+                        connectionMetrics.requestsRatePerCoolDownPeriod?.Value || 0
                     ], ['rgba(255, 205, 86, 0.7)', 'rgba(153, 102, 255, 0.7)'], endpointContainer);
 
                     createOrUpdateChart(`${sanitizedEndpoint}-responseTime`, 'line', `${endpoint} Response Times (ms)`, ['Min', 'P10', 'P50', 'P90', 'Avg', 'Max'], [
-                        responseTimeMetrics.MinResponseTime || 0,
-                        responseTimeMetrics.P10ResponseTime || 0,
-                        responseTimeMetrics.P50ResponseTime || 0,
-                        responseTimeMetrics.P90ResponseTime || 0,
-                        responseTimeMetrics.AverageResponseTime || 0,
-                        responseTimeMetrics.MaxResponseTime || 0
+                        responseTimeMetrics.minResponseTime || 0,
+                        responseTimeMetrics.p10ResponseTime || 0,
+                        responseTimeMetrics.p50ResponseTime || 0,
+                        responseTimeMetrics.p90ResponseTime || 0,
+                        responseTimeMetrics.averageResponseTime || 0,
+                        responseTimeMetrics.maxResponseTime || 0
                     ], 'rgb(75, 192, 192)', endpointContainer);
 
-                    createOrUpdateChart(`${sanitizedEndpoint}-statusCode`, 'bar', `${endpoint} Status Codes`, Object.keys(responseBreakDownMetrics.ResponseSummary || {}), Object.values(responseBreakDownMetrics.ResponseSummary || {}), 'rgba(54, 162, 235, 0.5)', endpointContainer);
+                    createOrUpdateChart(`${sanitizedEndpoint}-statusCode`, 'bar', `${endpoint} Status Codes`, Object.keys(responseBreakDownMetrics.responseSummary || {}), Object.values(responseBreakDownMetrics.responseSummary || {}), 'rgba(54, 162, 235, 0.5)', endpointContainer);
 
                     createOrUpdateChart(`${sanitizedEndpoint}-connectionMetrics`, 'bar', `${endpoint} Connection Metrics`, ['Total Requests', 'Active Requests', 'Successful Requests', 'Failed Requests'], [
-                        connectionMetrics.RequestsCount || 0,
-                        connectionMetrics.ActiveRequestsCount || 0,
-                        connectionMetrics.SuccessfulRequestCount || 0,
-                        connectionMetrics.FailedRequestsCount || 0
+                        connectionMetrics.requestsCount || 0,
+                        connectionMetrics.activeRequestsCount || 0,
+                        connectionMetrics.successfulRequestCount || 0,
+                        connectionMetrics.failedRequestsCount || 0
                     ], 'rgba(255, 99, 132, 0.5)', endpointContainer);
                 });
             })

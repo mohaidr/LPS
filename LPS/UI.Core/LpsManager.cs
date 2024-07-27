@@ -17,13 +17,15 @@ namespace LPS.UI.Core
         ILPSWatchdog _watchdog;
         ILPSMetricsDataMonitor _lpsMonitoringEnroller;
         ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
+        CancellationTokenSource _cts;
         internal LPSManager(ILPSLogger logger,
                 ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse,ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
                 ILPSClientConfiguration<LPSHttpRequestProfile> config,
                 ILPSWatchdog wtahcdog,
                 ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
                 ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
-                ILPSMetricsDataMonitor lpsMonitoringEnroller)
+                ILPSMetricsDataMonitor lpsMonitoringEnroller, 
+                CancellationTokenSource cts)
         {
             _logger = logger;
             _httpClientManager = httpClientManager;
@@ -32,19 +34,17 @@ namespace LPS.UI.Core
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
+            _cts = cts;
         }
-        public async Task RunAsync(LPSTestPlan lpsPlan, CancellationToken cancellationToken)
+        public async Task RunAsync(LPSTestPlan lpsPlan)
         {
-            CancellationTokenWrapper cancellationTokenWrapper = new CancellationTokenWrapper(cancellationToken);
             if (lpsPlan!=null && lpsPlan.IsValid && lpsPlan.LPSRuns.Count>0)
             {
                
-                LPSServer.Initialize(_logger, _httpRunExecutionCommandStatusMonitor, _runtimeOperationIdProvider, cancellationToken);
-                _ = LPSServer.RunAsync(cancellationTokenWrapper);
                 LPSDashboard.Start();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{lpsPlan.Name}' execution has started", LPSLoggingLevel.Information);
-                await new LPSTestPlan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller)
-                    .ExecuteAsync(lpsPlan, cancellationTokenWrapper);
+                await new LPSTestPlan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
+                    .ExecuteAsync(lpsPlan);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{lpsPlan.Name}' execution has completed", LPSLoggingLevel.Information);
             }
         }

@@ -17,6 +17,7 @@ namespace LPS.Domain
         protected ILPSLogger _logger;
         protected ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected ILPSWatchdog _watchdog;
+        protected CancellationTokenSource _cts;
         protected LPSRequestProfile()
         {
             Id = Guid.NewGuid();

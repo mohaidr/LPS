@@ -28,6 +28,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         Command _runCommand;
         ILPSMetricsDataMonitor _lPSMonitoringEnroller;
         ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
+        CancellationTokenSource _cts;
         internal LPSRunCLICommand(Command rootCLICommandLine,
             LPSTestPlan.SetupCommand planSetupCommand,
             ILPSLogger logger,
@@ -37,6 +38,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             ILPSWatchdog watchdog,
             ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
             ILPSMetricsDataMonitor lPSMonitoringEnroller,
+            CancellationTokenSource cts,
             string[] args)
         {
             _rootLpsCliCommand = rootCLICommandLine;
@@ -49,6 +51,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _watchdog = watchdog;
             _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
             _lPSMonitoringEnroller = lPSMonitoringEnroller;
+            _cts = cts;
             Setup();
         }
 
@@ -79,7 +82,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         }
 
                     }
-                    await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider,_httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller).RunAsync(lpsPlan, cancellationToken);
+                    await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider,_httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller, _cts).RunAsync(lpsPlan);
                 }
                 catch (Exception ex) 
                 {

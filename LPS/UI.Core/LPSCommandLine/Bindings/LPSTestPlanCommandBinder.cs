@@ -19,11 +19,11 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<bool> _runInParallerOption;
 
         public LPSTestPlanCommandBinder(
-            Option<string> testNameOption = null,
-            Option<int> numberOfClientsOption = null,
-            Option<int> rampupPeriodOption = null,
-            Option<bool> delayClientCreationOption = null,
-            Option<bool> runInParallerOption = null)
+            Option<string>? testNameOption = null,
+            Option<int>? numberOfClientsOption = null,
+            Option<int>? rampupPeriodOption = null,
+            Option<bool>? delayClientCreationOption = null,
+            Option<bool>? runInParallerOption = null)
         {
             _testNameOption = testNameOption ?? LPSCommandLineOptions.LPSCreateCommandOptions.TestNameOption;
             _numberOfClientsOption = numberOfClientsOption ?? LPSCommandLineOptions.LPSCreateCommandOptions.NumberOfClientsOption;

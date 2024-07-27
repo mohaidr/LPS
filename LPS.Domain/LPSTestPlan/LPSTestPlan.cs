@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
 
@@ -23,6 +24,7 @@ namespace LPS.Domain
         ILPSWatchdog _watchdog;
         ILPSMetricsDataMonitor _lpsMetricsDataMonitor;
         ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
+        CancellationTokenSource _cts;
         public LPSTestPlan(SetupCommand command, 
             ILPSLogger logger,
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)

@@ -35,6 +35,7 @@ namespace LPS.UI.Core.LPSCommandLine
         LPSHttpClientCLICommand _lpsSHttpClientCliCommand;
         LPSAppSettingsWritableOptions _appSettings;
         ILPSMetricsDataMonitor _lpsMonitoringEnroller;
+        CancellationTokenSource _cts;
         ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
         public LPSCommandLineManager(
             string[] command_args,
@@ -47,7 +48,8 @@ namespace LPS.UI.Core.LPSCommandLine
             LPSAppSettingsWritableOptions appSettings,
             LPSTestPlan.SetupCommand command,
             ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
-            ILPSMetricsDataMonitor lpsMonitoringEnroller)
+            ILPSMetricsDataMonitor lpsMonitoringEnroller,
+            CancellationTokenSource cts)
         {
             _logger = logger;
             _command = command;
@@ -59,6 +61,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _appSettings = appSettings;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
             _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+            _cts = cts;
             Configure();
         }
         public LPSTestPlan.SetupCommand Command { get { return _command; } }
@@ -66,10 +69,10 @@ namespace LPS.UI.Core.LPSCommandLine
         private void Configure()
         {
             _rootCliCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
-            _lpsCliCommand = new LPSCLICommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _command_args);
+            _lpsCliCommand = new LPSCLICommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts, _command_args);
             _lpsCreateCliCommand = new LPSCreateCLICommand(_rootCliCommand, _command, _command_args);
             _lpsAddCliCommand = new LPSAddCLICommand(_rootCliCommand, _command, _command_args);
-            _lpsRunCliCommand = new LPSRunCLICommand(_rootCliCommand, _command, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog,_httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _command_args);
+            _lpsRunCliCommand = new LPSRunCLICommand(_rootCliCommand, _command, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog,_httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts, _command_args);
             _lpsLoggerCliCommand = new LPSLoggerCLICommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions, _command_args);
             _lpsSHttpClientCliCommand = new LPSHttpClientCLICommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions, _command_args);
             _lpsSWatchdogCliCommand = new LPSWatchDogCLICommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions, _command_args);

@@ -28,7 +28,7 @@ namespace LPS.UI.Common.Extensions
     public static class LPSHostingHostBuilderExtensions
     {
 
-        public static IHostBuilder ConfigureLPSFileLogger(this IHostBuilder hostBuilder, LPSFileLoggerOptions lpsFileOptions = null)
+        public static IHostBuilder ConfigureLPSFileLogger(this IHostBuilder hostBuilder, LPSFileLoggerOptions? lpsFileOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
@@ -78,7 +78,7 @@ namespace LPS.UI.Common.Extensions
             return hostBuilder;
         }
 
-        public static IHostBuilder ConfigureLPSWatchdog(this IHostBuilder hostBuilder, LPSWatchdogOptions watchdogOptions = null)
+        public static IHostBuilder ConfigureLPSWatchdog(this IHostBuilder hostBuilder, LPSWatchdogOptions? watchdogOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
@@ -90,7 +90,7 @@ namespace LPS.UI.Common.Extensions
                 bool isDefaultConfigurationsApplied = false;
                 if (watchdogOptions == null)
                 {
-                    watchdog = LPSWatchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILPSLogger>(), serviceProvider.GetRequiredService<ILPSRuntimeOperationIdProvider>());
+                    watchdog = LPSWatchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILPSLogger>(), serviceProvider.GetRequiredService<ILPSRuntimeOperationIdProvider>(), serviceProvider.GetRequiredService<CancellationTokenSource>());
                     isDefaultConfigurationsApplied = true;
                     fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSWatchdogConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
                 }
@@ -100,7 +100,7 @@ namespace LPS.UI.Common.Extensions
                     var validationResults = lpsWatchdogValidator.Validate(watchdogOptions);
                     if (!validationResults.IsValid)
                     {
-                        watchdog = LPSWatchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILPSLogger>(), serviceProvider.GetRequiredService<ILPSRuntimeOperationIdProvider>());
+                        watchdog = LPSWatchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILPSLogger>(), serviceProvider.GetRequiredService<ILPSRuntimeOperationIdProvider>(), serviceProvider.GetRequiredService<CancellationTokenSource>());
                         isDefaultConfigurationsApplied = true;
                         fileLogger.Log("0000-0000-0000-0000", "Watchdog options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
                         validationResults.PrintValidationErrors();
@@ -132,7 +132,7 @@ namespace LPS.UI.Common.Extensions
             return hostBuilder;
         }
 
-        public static IHostBuilder ConfigureLPSHttpClient(this IHostBuilder hostBuilder, LPSHttpClientOptions lpsHttpClientOptions = null)
+        public static IHostBuilder ConfigureLPSHttpClient(this IHostBuilder hostBuilder, LPSHttpClientOptions? lpsHttpClientOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {

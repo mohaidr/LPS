@@ -26,19 +26,19 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string> _payloadOption;
         Option<LPSHttpRun.IterationMode> _iterationModeOption;
 
-        public LPSRunCommandBinder(Option<string> nameOption = null,
-            Option<int?> requestCountOption = null,
-            Option<LPSHttpRun.IterationMode> iterationModeOption = null,
-            Option<int?> duratiion = null,
-            Option<int?> coolDownTime = null,
-            Option<int?> batchSizeOption = null,
-            Option<string> httpMethodOption = null,
-            Option<string> httpversionOption = null,
-            Option<string> urlOption = null,
-            Option<IList<string>> headerOption = null,
-            Option<string> payloadOption = null,
-            Option<bool> downloadHtmlEmbeddedResourcesOption = null,
-            Option<bool> saveResponseOption = null)
+        public LPSRunCommandBinder(Option<string>? nameOption = null,
+            Option<int?>? requestCountOption = null,
+            Option<LPSHttpRun.IterationMode>? iterationModeOption = null,
+            Option<int?>? duratiion = null,
+            Option<int?>? coolDownTime = null,
+            Option<int?>? batchSizeOption = null,
+            Option<string>? httpMethodOption = null,
+            Option<string>? httpversionOption = null,
+            Option<string>? urlOption = null,
+            Option<IList<string>>? headerOption = null,
+            Option<string>? payloadOption = null,
+            Option<bool>? downloadHtmlEmbeddedResourcesOption = null,
+            Option<bool>? saveResponseOption = null)
         {
             _nameOption = nameOption ?? LPSCommandLineOptions.LPSAddCommandOptions.RunNameOption;
             _iterationModeOption = iterationModeOption ?? LPSCommandLineOptions.LPSAddCommandOptions.IterationModeOption;

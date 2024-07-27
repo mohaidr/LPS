@@ -25,6 +25,8 @@ namespace LPS.UI.Core.Host
         ILPSMetricsDataMonitor _lPSMonitoringEnroller;
         ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
         string[] _command_args;
+        CancellationTokenSource _cts;
+        static bool _cancelRequested;
         public LPSHostedService(
             dynamic command_args,
             ILPSLogger logger,
@@ -34,7 +36,7 @@ namespace LPS.UI.Core.Host
             ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILPSMetricsDataMonitor lPSMonitoringEnroller,
             ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
-            LPSAppSettingsWritableOptions appSettings)
+            LPSAppSettingsWritableOptions appSettings, CancellationTokenSource cts)
         {
             _logger = logger;
             _config = config;
@@ -45,18 +47,24 @@ namespace LPS.UI.Core.Host
             _appSettings = appSettings;
             _lPSMonitoringEnroller = lPSMonitoringEnroller;
             _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+            _cts = cts;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
+
+            Console.CancelKeyPress += CancelKeyPressHandler;
+            _ = WatchForCancellationAsync();
+
+
             LPSTestPlan.SetupCommand lpsTestPlanSetupCommand = new LPSTestPlan.SetupCommand();
 
             if (_command_args != null && _command_args.Length > 0)
             {
-                var commandLineManager = new LPSCommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand,_httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller);
-                commandLineManager.Run(cancellationToken);
+                var commandLineManager = new LPSCommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand, _httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller, _cts);
+                commandLineManager.Run(_cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose);
             }
             else
@@ -69,8 +77,8 @@ namespace LPS.UI.Core.Host
                 bool runTest = AnsiConsole.Confirm("Would you like to run your test now?");
                 if (runTest)
                 {
-                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller);
-                    await lpsManager.RunAsync(lpsRun, cancellationToken);
+                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller, _cts);
+                    await lpsManager.RunAsync(lpsRun);
                 }
 
                 AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {lpsTestPlanSetupCommand.Name}[/] to execute the plan[/]");
@@ -81,8 +89,51 @@ namespace LPS.UI.Core.Host
         }
         public async Task StopAsync(CancellationToken cancellationToken)
         {
+
+            #pragma warning disable CS8602 // Dereference of a possibly null reference.
+            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "App Stopping in 5 Seconds", LPSLoggingLevel.Information);
+            await Task.Delay(6000);
             await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose);
             await _logger?.Flush();
         }
+
+        private void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
+        {
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC || e.SpecialKey == ConsoleSpecialKey.ControlBreak)
+            {
+                e.Cancel = true; // Prevent default process termination.
+                AnsiConsole.MarkupLine("[yellow]Graceful shutdown requested (Ctrl+C/Break).[/]");
+                RequestCancellation(); // Cancel the CancellationTokenSource.
+            }
+        }
+
+        private async Task WatchForCancellationAsync()
+        {
+            while (!_cancelRequested)
+            {
+                if (Console.KeyAvailable) // Check for the Escape key
+                {
+                    var keyInfo = Console.ReadKey(true);
+                    if (keyInfo.Key == ConsoleKey.Escape)
+                    {
+                        AnsiConsole.MarkupLine("[yellow]Graceful shutdown requested (Escape).[/]");
+                        RequestCancellation(); // Cancel the CancellationTokenSource.
+                        break; // Exit the loop
+                    }
+                }
+                await Task.Delay(1000); // Poll every second
+            }
+        }
+
+        private void RequestCancellation()
+        {
+            if (!_cancelRequested)
+            {
+                _cancelRequested = true;
+                AnsiConsole.MarkupLine("[yellow]Gracefully shutting down the LPS local server[/]");
+                _cts.Cancel();
+            }
+        }
+
     }
 }

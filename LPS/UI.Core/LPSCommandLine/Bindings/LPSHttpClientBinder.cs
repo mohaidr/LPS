@@ -15,18 +15,18 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
     public class LPSHttpClientBinder : BinderBase<LPSHttpClientOptions>
     {
-        private static Option<int?> _maxConnectionsPerServerption;
-        private static Option<int?> _poolConnectionLifeTimeOption;
-        private static Option<int?> _poolConnectionIdelTimeoutOption;
-        private static Option<int?> _clientTimeoutOption;
+        private static Option<int?>? _maxConnectionsPerServerption;
+        private static Option<int?>? _poolConnectionLifeTimeOption;
+        private static Option<int?>? _poolConnectionIdelTimeoutOption;
+        private static Option<int?>? _clientTimeoutOption;
 
 
 
 
-        public LPSHttpClientBinder(Option<int?> maxConnectionsPerServerption= null,
-         Option<int?> poolConnectionLifeTimeOption = null,
-         Option<int?> poolConnectionIdelTimeoutOption = null,
-         Option<int?> clientTimeoutOption = null)
+        public LPSHttpClientBinder(Option<int?>? maxConnectionsPerServerption= null,
+         Option<int?>? poolConnectionLifeTimeOption = null,
+         Option<int?>? poolConnectionIdelTimeoutOption = null,
+         Option<int?>? clientTimeoutOption = null)
         {
             _maxConnectionsPerServerption = maxConnectionsPerServerption ?? LPSCommandLineOptions.LPSHttpClientCommandOptions.MaxConnectionsPerServerption;
             _poolConnectionLifeTimeOption = poolConnectionLifeTimeOption ?? LPSCommandLineOptions.LPSHttpClientCommandOptions.PoolConnectionLifeTimeOption;

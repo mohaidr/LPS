@@ -45,7 +45,8 @@ namespace LPS.Infrastructure.Watchdog
         private LPSResourceEventListener _lpsResourceListener;
         ILPSLogger _logger;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private LPSWatchdog(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
+        CancellationTokenSource _cts;
+        private LPSWatchdog(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
         {
             _maxCPUPercentage = 50;
             _maxMemoryMB = 1000;
@@ -59,6 +60,7 @@ namespace LPS.Infrastructure.Watchdog
             _lpsResourceListener = new LPSResourceEventListener();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _cts = cts;
         }
 
         public LPSWatchdog(double memoryLimitMB,
@@ -131,7 +133,7 @@ namespace LPS.Infrastructure.Watchdog
 
         }
         
-        public async Task<ResourceState> BalanceAsync(string hostName, ICancellationTokenWrapper cancellationTokenWrapper)
+        public async Task<ResourceState> BalanceAsync(string hostName)
         {
             try
             {
@@ -171,9 +173,9 @@ namespace LPS.Infrastructure.Watchdog
          
         }
 
-        public static LPSWatchdog GetDefaultInstance(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public static LPSWatchdog GetDefaultInstance(ILPSLogger logger, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
         {
-            return new LPSWatchdog(logger, runtimeOperationIdProvider);
+            return new LPSWatchdog(logger, runtimeOperationIdProvider, cts);
         }
 
     }

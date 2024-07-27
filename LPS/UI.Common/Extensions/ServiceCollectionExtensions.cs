@@ -18,7 +18,7 @@ namespace LPS.UI.Common.Extensions
             string appSettingsFileLocation) where T : class, new()
         {
             services.Configure<T>(section);
-            services.AddTransient<IWritableOptions<T>>(provider =>
+            _ = services.AddTransient<IWritableOptions<T>>(provider =>
             {
                 var configuration = (IConfigurationRoot)provider.GetService<IConfiguration>();
                 var environment = provider.GetService<IHostEnvironment>();

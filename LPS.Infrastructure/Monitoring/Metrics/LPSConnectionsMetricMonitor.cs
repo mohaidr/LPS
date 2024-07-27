@@ -33,9 +33,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         Timer _timer;
         ILPSLogger _logger;
         ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        CancellationTokenSource _cts;
         private SpinLock _spinLock = new SpinLock();
         public bool IsStopped { get; private set; }
-        public LPSConnectionsMetricMonitor(LPSHttpRun httprun, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
+        public LPSConnectionsMetricMonitor(LPSHttpRun httprun, CancellationTokenSource cts, ILPSLogger logger = default, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httprun;
             _dimensionSet = new ProtectedConnectionDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);
@@ -43,6 +44,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _stopwatch = new Stopwatch();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _cts = cts;
         }
         private void SchedualMetricsUpdate()
         {
@@ -104,7 +106,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 return string.Empty;
             }
         }
-        public bool IncreaseConnectionsCount(ICancellationTokenWrapper cancellationTokenWrapper)
+        public bool IncreaseConnectionsCount()
         {
             bool lockTaken = false;
             try
@@ -125,7 +127,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public bool DecreseConnectionsCount(bool isSuccess, ICancellationTokenWrapper cancellationTokenWrapper)
+        public bool DecreseConnectionsCount(bool isSuccess)
         {
             bool lockTaken = false;
             try
@@ -181,7 +183,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             // When calling this method, make sure you take thread safety into considration
             public void Update(int activeRequestsCount , int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
             {
-                TimeStamp = DateTime.Now;
+                TimeStamp = DateTime.UtcNow;
                 this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
                 this.ActiveRequestsCount =  activeRequestsCount;
                 this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;

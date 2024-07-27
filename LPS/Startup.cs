@@ -16,6 +16,11 @@ using LPS.Infrastructure.Monitoring.Command;
 using System.CommandLine;
 using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.LPSClients;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using LPS.UI.Core;
+
 
 namespace LPS
 {
@@ -24,6 +29,18 @@ namespace LPS
         public static IHost ConfigureServices(string[] args)
         {
             var host = Host.CreateDefaultBuilder()
+                .ConfigureWebHostDefaults(webBuilder =>
+                {
+                    webBuilder.UseStartup<LPS.Dashboard.Startup>();
+                    webBuilder.ConfigureKestrel(serverOptions =>
+                    {
+                        serverOptions.ListenAnyIP(8000);
+                    });
+
+                    // Capture startup URL
+                    webBuilder.UseUrls($"http://localhost:{8000}");
+
+                })
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
                     configBuilder.AddEnvironmentVariables();
@@ -41,6 +58,7 @@ namespace LPS
                     services.ConfigureWritable<LPSWatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<LPSHttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), LPSAppConstants.AppSettingsFileLocation);
                     services.AddSingleton<LPSAppSettingsWritableOptions>();
+                    services.AddSingleton<CancellationTokenSource>();
                     services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun>>();
                     services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>, LPSHttpClientManager>();
                     services.AddSingleton<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>, LPSHttpClientService>();
@@ -48,7 +66,7 @@ namespace LPS
                     services.AddSingleton<ILPSMetricsDataMonitor, LPSMetricsDataMonitor>();
                     services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
                     if (hostContext.HostingEnvironment.IsProduction())
-                    {   
+                    {
                         //add production dependencies
                     }
                     else
@@ -60,7 +78,7 @@ namespace LPS
                 .ConfigureLPSWatchdog()
                 .ConfigureLPSHttpClient()
                 .UseConsoleLifetime(options => options.SuppressStatusMessages = true)
-                .Build();
+               .Build();
 
             return host;
         }
