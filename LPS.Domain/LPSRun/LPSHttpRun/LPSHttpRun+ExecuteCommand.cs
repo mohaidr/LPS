@@ -71,7 +71,7 @@ namespace LPS.Domain
                 {
                     _executionStatus = AsyncCommandStatus.Ongoing;
                     await entity.ExecuteAsync(this);
-                    _executionStatus =  _numberOfFailedToCompleteRequests>0 ? AsyncCommandStatus.Failed : AsyncCommandStatus.Completed;
+                    _executionStatus =  _numberOfFailedToCompleteRequests>0 ? AsyncCommandStatus.Failed : _cts.Token.IsCancellationRequested ? AsyncCommandStatus.Cancelled : AsyncCommandStatus.Completed;
 
                 }
                 catch

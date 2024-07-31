@@ -105,7 +105,9 @@ namespace LPS.Domain
                 {
                     _protectedCommand.SafelyIncrementNumberOfFailedRequests(command.LPSRunExecuteCommand);
                     this.HasFailed = true;
-                     throw;
+                    //TODO: We removed the "throw" line as it is cuasing the whole test to ext
+                    //We need to think about not exiting the whole test when an exception occures here
+                    //OR Give option for the client to cancel the http run when the customer starts noticing failures 
                 }
             }
         }

@@ -68,11 +68,7 @@ namespace LPS.Controllers
 
                     var statusList = _httpRunCommandStatusMonitor.GetAllStatuses(((ILPSMetricMonitor)metric).LPSHttpRun);
                     string status = DetermineOverallStatus(statusList);
-                    bool isCancelled = status != "Completed" && status != "Failed" && _testCancellationToken.IsCancellationRequested;
-                    if (isCancelled)
-                    {
-                        status = "Cancelled";
-                    }
+
 
                     var metricData = metricsList.FirstOrDefault(m => m.Endpoint == endPointDetails);
                     if (metricData == null)
@@ -129,9 +125,10 @@ namespace LPS.Controllers
                 return "Paused";
             if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Failed) && statuses.Any(status => status == AsyncCommandStatus.Failed))
                 return "Failed";
+            if (statuses.All(status => status == AsyncCommandStatus.Completed || status == AsyncCommandStatus.Cancelled) && statuses.Any(status => status == AsyncCommandStatus.Cancelled))
+                return "Cancelled";
             if (statuses.Any(status => status == AsyncCommandStatus.Ongoing))
                 return "Ongoing";
-
             return "Undefined"; // Default case, should ideally never be reached
         }
     }

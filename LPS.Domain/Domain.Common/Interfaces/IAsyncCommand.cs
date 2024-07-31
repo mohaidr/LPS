@@ -12,6 +12,7 @@ namespace LPS.Domain.Common.Interfaces
         NotStarted,
         Ongoing,
         Paused,
+        Cancelled,
         Completed,
         Failed
     }
