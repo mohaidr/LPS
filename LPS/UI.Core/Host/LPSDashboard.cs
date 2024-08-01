@@ -1,4 +1,5 @@
-﻿using LPS.UI.Common;
+﻿using Dashboard.Common;
+using LPS.UI.Common;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +14,7 @@ namespace LPS.UI.Core.Host
     {
         public static void Start()
         {
-           OpenBrowser($"http://127.0.0.1:8000");
+           OpenBrowser($"http://127.0.0.1:{GlobalSettings.Port}");
         }
 
         private static void OpenBrowser(string url)

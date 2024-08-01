@@ -20,6 +20,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using LPS.UI.Core;
+using Dashboard.Common;
 
 
 namespace LPS
@@ -34,11 +35,11 @@ namespace LPS
                     webBuilder.UseStartup<LPS.Dashboard.Startup>();
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
-                        serverOptions.ListenAnyIP(8000);
+                        serverOptions.ListenAnyIP(GlobalSettings.Port);
                     });
 
                     // Capture startup URL
-                    webBuilder.UseUrls($"http://localhost:{8000}");
+                    webBuilder.UseUrls($"http://localhost:{GlobalSettings.Port}");
 
                 })
                 .ConfigureAppConfiguration((configBuilder) =>
