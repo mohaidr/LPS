@@ -32,16 +32,14 @@ namespace LPS
             var host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder.UseStartup<LPS.Dashboard.Startup>();
+                    webBuilder
+                    .UseSetting("http_port", GlobalSettings.Port.ToString())
+                    .UseStartup<LPS.Dashboard.Startup>();
                     webBuilder.UseStaticWebAssets();
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
                         serverOptions.ListenAnyIP(GlobalSettings.Port);
                     });
-
-                    // Capture startup URL
-                    webBuilder.UseUrls($"http://localhost:{GlobalSettings.Port}");
-
                 })
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
