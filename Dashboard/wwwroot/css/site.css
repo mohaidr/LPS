@@ -5,11 +5,11 @@ body.dark-mode {
 
 .dark-mode .card {
     background-color: #1e1e1e;
-    color: #000000;
+    color: #ffffff;
 }
 
 .dark-mode .btn-link {
-    color: #000000;
+    color: #ffffff;
 }
 
 .container {
@@ -63,7 +63,7 @@ body.dark-mode {
 
 .card-header {
     background-color: #ededed;
-    color: white;
+    color: black;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -84,4 +84,38 @@ body.dark-mode {
 
 .collapsible-icon {
     font-size: 1.2em;
+    cursor: pointer;
 }
+
+.toggle-text {
+    margin-left: 10px;
+}
+
+.custom-switch {
+    margin-bottom: 10px;
+}
+
+    .custom-switch .custom-control-label::before {
+        left: -2.25rem;
+        width: 2.25rem;
+        height: 1.25rem;
+        pointer-events: all;
+        border-radius: 1.25rem;
+    }
+
+    .custom-switch .custom-control-label::after {
+        left: -2.125rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 1rem;
+        background-color: black;
+        transition: left 0.15s ease-in-out;
+    }
+
+    .custom-switch .custom-control-input:checked ~ .custom-control-label::after {
+        left: -2rem;
+    }
+
+    .custom-switch .custom-control-input:checked ~ .custom-control-label::before {
+        background-color: #007bff;
+    }

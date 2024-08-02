@@ -1,5 +1,8 @@
 ﻿<div class="container" id="dashboard-container">
-    <button class="btn btn-primary toggle-button" onclick="toggleDarkMode()">Toggle Dark Mode</button>
+    <div class="custom-control custom-switch">
+        <input type="checkbox" class="custom-control-input" id="darkModeSwitch" onclick="toggleDarkMode()">
+        <label class="custom-control-label" for="darkModeSwitch"><span class="toggle-text">Toggle Dark Mode</span></label>
+    </div>
     <div id="dashboard">
         <!-- Dashboard content will be generated here -->
     </div>

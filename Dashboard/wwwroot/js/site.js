@@ -1,154 +1,181 @@
-﻿
-const endpointToCharts = {};
+﻿const endpointToCharts = {};
 let darkMode = false;
 
 async function fetchMetrics() {
-    const response = await fetch('/api/metrics');
-    const metricsData = await response.json();
-    updateDashboard(metricsData);
+    try {
+        const response = await fetch('/api/metrics');
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const metricsData = await response.json();
+        updateDashboard(metricsData);
+    } catch (error) {
+        console.error('Fetch metrics failed:', error);
+    }
 }
 
 function updateDashboard(metricsData) {
     const dashboard = document.getElementById('dashboard');
     const previousState = {};
 
-    // Save the collapsed state
     document.querySelectorAll('.collapse').forEach(element => {
         previousState[element.id] = element.classList.contains('show');
     });
 
-    metricsData.sort((a, b) => (a.executionStatus === 'Ongoing' ? -1 : 1));
-    dashboard.innerHTML = ''; // Clear existing content
+    const statusOrder = {
+        'Ongoing': 1,
+        'NotStarted': 2,
+        'NotRunning': 2,
+        'Paused': 3,
+        'Cancelled': 4,
+        'Failed': 5,
+        'Completed': 6
+    };
+
+    metricsData.sort((a, b) => statusOrder[a.executionStatus] - statusOrder[b.executionStatus]);
 
     metricsData.forEach((metric, index) => {
         const endpointKey = metric.endpoint.replace(/\W/g, '_');
         const containerId = `container-${endpointKey}`;
+        const contentId = `${containerId}-content`;
         const responseTimeChartId = `responseTimeChart-${endpointKey}`;
         const connectionChartId = `connectionChart-${endpointKey}`;
         const requestsRateChartId = `requestsRateChart-${endpointKey}`;
         const responseSummaryChartId = `responseSummaryChart-${endpointKey}`;
 
-        const container = document.createElement('div');
-        container.className = 'collapse-container';
-        container.innerHTML = `
-                    <div class="card">
-                        <div class="card-header collapsible" id="heading-${index}">
-                            <h5 class="mb-0">
-                                <button class="btn btn-link" onclick="toggleCollapse('${containerId}')">
-                                    ${metric.endpoint}
-                                </button>
-                            </h5>
-                        </div>
-                        <div id="${containerId}" class="collapse ${previousState[containerId] ? 'show' : ''}" aria-labelledby="heading-${index}" data-parent="#dashboard">
-                            <div class="card-body">
-                                <p class="status" id="status-${endpointKey}">Status: ${metric.executionStatus}</p>
-                                <div class="row">
-                                    <div class="col-md-6 chart-container">
-                                        <canvas id="${responseTimeChartId}"></canvas>
-                                    </div>
-                                    <div class="col-md-6 chart-container">
-                                        <canvas id="${connectionChartId}"></canvas>
-                                    </div>
+        let container = document.getElementById(containerId);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = containerId;
+            container.className = 'collapse-container';
+            container.innerHTML = `
+                <div class="card">
+                    <div class="card-header collapsible" id="heading-${index}">
+                        <h5 class="mb-0">
+                            ${metric.endpoint}
+                            <span class="status status-${metric.executionStatus}" id="status-${endpointKey}">Status: ${metric.executionStatus}</span>
+                        </h5>
+                        <span class="collapsible-icon" id="icon-${contentId}" onclick="toggleCollapse('${contentId}')">
+                            <i class="bi bi-plus-lg"></i>
+                        </span>
+                    </div>
+                    <div id="${contentId}" class="collapse ${previousState[contentId] ? 'show' : ''}" aria-labelledby="heading-${index}" data-parent="#dashboard">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6 chart-container">
+                                    <canvas id="${responseTimeChartId}"></canvas>
                                 </div>
-                                <div class="row">
-                                    <div class="col-md-6 chart-container">
-                                        <canvas id="${requestsRateChartId}"></canvas>
-                                    </div>
-                                    <div class="col-md-6 chart-container">
-                                        <canvas id="${responseSummaryChartId}"></canvas>
-                                    </div>
+                                <div class="col-md-6 chart-container">
+                                    <canvas id="${connectionChartId}"></canvas>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6 chart-container">
+                                    <canvas id="${requestsRateChartId}"></canvas>
+                                </div>
+                                <div class="col-md-6 chart-container">
+                                    <canvas id="${responseSummaryChartId}"></canvas>
                                 </div>
                             </div>
                         </div>
                     </div>
-                `;
-        dashboard.appendChild(container);
+                </div>
+            `;
+            dashboard.appendChild(container);
 
-        endpointToCharts[responseTimeChartId] = new Chart(document.getElementById(responseTimeChartId).getContext('2d'), {
-            type: 'line',
-            data: {
-                labels: formatLabelsForChart(metric.responseTimeMetrics),
-                datasets: [{
-                    label: 'Response Time Metrics',
-                    data: formatDataForChart(metric.responseTimeMetrics),
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+            endpointToCharts[responseTimeChartId] = new Chart(document.getElementById(responseTimeChartId).getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: formatLabelsForChart(metric.responseTimeMetrics),
+                    datasets: [{
+                        label: 'Response Time Metrics',
+                        data: formatDataForChart(metric.responseTimeMetrics),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        endpointToCharts[connectionChartId] = new Chart(document.getElementById(connectionChartId).getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: formatLabelsForChart(metric.connectionMetrics, 'count'),
-                datasets: [{
-                    label: 'Connection Metrics',
-                    data: formatDataForChart(metric.connectionMetrics, 'count'),
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+            endpointToCharts[connectionChartId] = new Chart(document.getElementById(connectionChartId).getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: formatLabelsForChart(metric.connectionMetrics, 'count'),
+                    datasets: [{
+                        label: 'Connection Metrics',
+                        data: formatDataForChart(metric.connectionMetrics, 'count'),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        endpointToCharts[requestsRateChartId] = new Chart(document.getElementById(requestsRateChartId).getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: formatLabelsForChart(metric.connectionMetrics, 'rate'),
-                datasets: [{
-                    label: 'Requests Rate',
-                    data: formatDataForChart(metric.connectionMetrics, 'rate'),
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+            endpointToCharts[requestsRateChartId] = new Chart(document.getElementById(requestsRateChartId).getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: formatLabelsForChart(metric.connectionMetrics, 'rate'),
+                    datasets: [{
+                        label: 'Requests Rate',
+                        data: formatDataForChart(metric.connectionMetrics, 'rate'),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
 
-        endpointToCharts[responseSummaryChartId] = new Chart(document.getElementById(responseSummaryChartId).getContext('2d'), {
-            type: 'bar',
-            data: {
-                labels: formatLabelsForChart(metric.responseBreakDownMetrics.responseSummary, 'summary'),
-                datasets: [{
-                    label: 'Response Summary',
-                    data: formatDataForChart(metric.responseBreakDownMetrics.responseSummary, 'summary'),
-                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                    borderColor: 'rgba(75, 192, 192, 1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+            endpointToCharts[responseSummaryChartId] = new Chart(document.getElementById(responseSummaryChartId).getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: formatLabelsForChart(metric.responseBreakDownMetrics.responseSummary, 'summary'),
+                    datasets: [{
+                        label: 'Response Summary',
+                        data: formatDataForChart(metric.responseBreakDownMetrics.responseSummary, 'summary'),
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
                     }
                 }
-            }
-        });
+            });
+        } else {
+            updateChartData(endpointToCharts[responseTimeChartId], metric.responseTimeMetrics);
+            updateChartData(endpointToCharts[connectionChartId], metric.connectionMetrics, 'count');
+            updateChartData(endpointToCharts[requestsRateChartId], metric.connectionMetrics, 'rate');
+            updateChartData(endpointToCharts[responseSummaryChartId], metric.responseBreakDownMetrics.responseSummary, 'summary');
+            updateStatus(metric, endpointKey);
 
-        updateStatus(metric, endpointKey);
+            dashboard.removeChild(container);
+            dashboard.appendChild(container);
+        }
     });
 }
 
@@ -182,16 +209,23 @@ function formatDataForChart(data, dataType) {
 
 function toggleCollapse(containerId) {
     const container = document.getElementById(containerId);
+    const icon = document.getElementById(`icon-${containerId}`).querySelector('i');
+
     if (container.classList.contains('show')) {
         container.classList.remove('show');
+        icon.classList.remove('bi-dash-lg');
+        icon.classList.add('bi-plus-lg');
     } else {
         container.classList.add('show');
+        icon.classList.remove('bi-plus-lg');
+        icon.classList.add('bi-dash-lg');
     }
 }
 
 function toggleDarkMode() {
     darkMode = !darkMode;
     document.body.classList.toggle('dark-mode', darkMode);
+    document.getElementById('darkModeSwitch').checked = darkMode;
 }
 
 function updateStatus(metric, endpointKey) {
@@ -200,6 +234,5 @@ function updateStatus(metric, endpointKey) {
     statusElement.className = `status status-${metric.executionStatus}`;
 }
 
-// Initial fetch and set interval for periodic updates
 fetchMetrics();
 setInterval(fetchMetrics, 5000);
