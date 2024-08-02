@@ -24,7 +24,6 @@ namespace LPS.Dashboard
             }
 
             app.UseStaticFiles();
-            app.UseHttpsRedirection();
 
             app.UseRouting();
 
