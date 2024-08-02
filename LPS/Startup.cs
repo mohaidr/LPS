@@ -33,6 +33,7 @@ namespace LPS
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<LPS.Dashboard.Startup>();
+                    webBuilder.UseStaticWebAssets();
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
                         serverOptions.ListenAnyIP(GlobalSettings.Port);

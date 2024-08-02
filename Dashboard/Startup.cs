@@ -23,8 +23,8 @@ namespace LPS.Dashboard
                 app.UseHsts();
             }
 
-            app.UseHttpsRedirection();
             app.UseStaticFiles();
+            app.UseHttpsRedirection();
 
             app.UseRouting();
 
