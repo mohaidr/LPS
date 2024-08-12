@@ -9,7 +9,8 @@ namespace LPS.Controllers
 {
     public class HomeController : Controller
     {
-        public IActionResult Index()
+        [Route("{*path}")]
+        public IActionResult Index(string path)
         {
             return View(); // This will render the 'Index.cshtml' view
         }
