@@ -17,12 +17,12 @@ namespace LPS.Controllers
     {
         private static bool _isServerRunning = false;
         private static readonly object _lockObject = new object();
-        private static ILPSLogger _logger;
-        private static ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private static ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunCommandStatusMonitor;
+        private static Domain.Common.Interfaces.ILogger _logger;
+        private static IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private static ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunCommandStatusMonitor;
         static CancellationToken _testCancellationToken;
 
-        public MetricsController(ILPSLogger logger, ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunCommandStatusMonitor, ILPSRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
+        public MetricsController(Domain.Common.Interfaces.ILogger logger, ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunCommandStatusMonitor, IRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
         {
             _logger = logger;
             _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
@@ -66,7 +66,7 @@ namespace LPS.Controllers
                     if (endPointDetails == null)
                         continue; // Skip metrics where endpoint details are not applicable or available
 
-                    var statusList = _httpRunCommandStatusMonitor.GetAllStatuses(((ILPSMetricMonitor)metric).LPSHttpRun);
+                    var statusList = _httpRunCommandStatusMonitor.GetAllStatuses(((IMetricMonitor)metric).LPSHttpRun);
                     string status = DetermineOverallStatus(statusList);
 
 
@@ -101,9 +101,9 @@ namespace LPS.Controllers
                 }
             };
             // Fetch metrics by type
-            var responseTimeMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseTime);
-            var responseBreakDownMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseCode);
-            var connectionsMetrics = LPSMetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
+            var responseTimeMetrics = MetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseTime);
+            var responseBreakDownMetrics = MetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseCode);
+            var connectionsMetrics = MetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
 
             // Populate the dictionary
             addToList(responseTimeMetrics, "ResponseTime");

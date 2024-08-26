@@ -1,0 +1,59 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using LPS.Domain.Common.Interfaces;
+
+namespace LPS.Domain
+{
+
+    public partial class HttpRequestProfile :RequestProfile, IBusinessEntity, ICloneable
+    {
+
+        private IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
+        private HttpRequestProfile()
+        {
+        }
+        ProtectedAccessLPSRunExecuteCommand _protectedCommand;
+        private HttpRequestProfile(ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        {
+            HttpHeaders = new Dictionary<string, string>();
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
+        }
+
+        public HttpRequestProfile(
+            HttpRequestProfile.SetupCommand command, 
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        {
+            HttpHeaders = new Dictionary<string, string>();
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
+            this.Setup(command);
+        }
+
+        public int LastSequenceId { get; protected set; }
+
+        public string HttpMethod { get; protected set; }
+
+        public string URL { get; protected set; }
+
+        public string Payload { get; protected set; }
+
+        public string Httpversion { get; protected set; }
+
+        public Dictionary<string, string> HttpHeaders { get; protected set; }
+
+        public bool DownloadHtmlEmbeddedResources { get; protected set; }
+        public bool SaveResponse { get; protected set; }
+    }
+}

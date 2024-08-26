@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace LPS.Domain.Common.Interfaces
 {
 
-    public interface IFileLogger : ILPSLogger
+    public interface IFileLogger : ILogger
     {
     }
 }

@@ -13,7 +13,7 @@ namespace LPS.Infrastructure.Monitoring.Command
     public class HttpRunCommandStatusMonitor<TCommand, TEntity> : 
         ICommandStatusMonitor<TCommand, TEntity>
         where TCommand : IAsyncCommand<TEntity>
-        where TEntity : LPSHttpRun
+        where TEntity : HttpRun
     {
         private readonly ConcurrentDictionary<TEntity, ConcurrentBag<TCommand>> _commandRegistry = new ConcurrentDictionary<TEntity, ConcurrentBag<TCommand>>();
 

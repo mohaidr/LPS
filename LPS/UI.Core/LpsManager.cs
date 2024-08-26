@@ -10,21 +10,21 @@ namespace LPS.UI.Core
 {
     internal class LPSManager
     {
-        private ILPSLogger _logger;
-        ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> _httpClientManager;
-        ILPSClientConfiguration<LPSHttpRequestProfile> _config;
-        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        ILPSWatchdog _watchdog;
-        ILPSMetricsDataMonitor _lpsMonitoringEnroller;
-        ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> _httpRunExecutionCommandStatusMonitor;
+        private ILogger _logger;
+        IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
+        IClientConfiguration<HttpRequestProfile> _config;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        IWatchdog _watchdog;
+        IMetricsDataMonitor _lpsMonitoringEnroller;
+        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
         CancellationTokenSource _cts;
-        internal LPSManager(ILPSLogger logger,
-                ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse,ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>> httpClientManager,
-                ILPSClientConfiguration<LPSHttpRequestProfile> config,
-                ILPSWatchdog wtahcdog,
-                ILPSRuntimeOperationIdProvider runtimeOperationIdProvider,
-                ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun> httpRunExecutionCommandStatusMonitor,
-                ILPSMetricsDataMonitor lpsMonitoringEnroller, 
+        internal LPSManager(ILogger logger,
+                IClientManager<HttpRequestProfile, HttpResponse,IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
+                IClientConfiguration<HttpRequestProfile> config,
+                IWatchdog wtahcdog,
+                IRuntimeOperationIdProvider runtimeOperationIdProvider,
+                ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunExecutionCommandStatusMonitor,
+                IMetricsDataMonitor lpsMonitoringEnroller, 
                 CancellationTokenSource cts)
         {
             _logger = logger;
@@ -36,14 +36,14 @@ namespace LPS.UI.Core
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
             _cts = cts;
         }
-        public async Task RunAsync(LPSTestPlan lpsPlan)
+        public async Task RunAsync(TestPlan lpsPlan)
         {
             if (lpsPlan!=null && lpsPlan.IsValid && lpsPlan.LPSRuns.Count>0)
             {
-               
-                LPSDashboard.Start();
+
+                Host.Dashboard.Start();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{lpsPlan.Name}' execution has started", LPSLoggingLevel.Information);
-                await new LPSTestPlan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
+                await new TestPlan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
                     .ExecuteAsync(lpsPlan);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{lpsPlan.Name}' execution has completed", LPSLoggingLevel.Information);
             }

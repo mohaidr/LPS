@@ -7,16 +7,16 @@ using Spectre.Console;
 
 namespace LPS.UI.Core.UI.Build.Services
 {
-    internal class ManualBuild : IBuilderService<LPSTestPlan.SetupCommand, LPSTestPlan>
+    internal class ManualBuild : IBuilderService<TestPlan.SetupCommand, TestPlan>
     {
-        ILPSBaseValidator<LPSTestPlan.SetupCommand, LPSTestPlan> _validator;
-        ILPSLogger _logger;
-        ILPSRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        IBaseValidator<TestPlan.SetupCommand, TestPlan> _validator;
+        ILogger _logger;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         public ManualBuild(
-            ILPSBaseValidator<LPSTestPlan.SetupCommand, 
-            LPSTestPlan> validator,
-            ILPSLogger logger,
-            ILPSRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IBaseValidator<TestPlan.SetupCommand, 
+            TestPlan> validator,
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _validator= validator;
             _logger= logger;
@@ -26,17 +26,17 @@ namespace LPS.UI.Core.UI.Build.Services
         static bool _skipOptionalFields = true;
         
         //This must be refactored one domain is refactored
-        public LPSTestPlan Build(LPSTestPlan.SetupCommand lpsTestCommand)
+        public TestPlan Build(TestPlan.SetupCommand lpsTestCommand)
         {
             _skipOptionalFields = AnsiConsole.Confirm("Do you want to skip the optional fields?");
 
-            new LPSTestPlanChallengeUserService(_skipOptionalFields, lpsTestCommand, _validator).Challenge();
-            var lpsPlan = new LPSTestPlan(lpsTestCommand, _logger, _runtimeOperationIdProvider); // it should validate and throw if the command is not valid
+            new TestPlanChallengeUserService(_skipOptionalFields, lpsTestCommand, _validator).Challenge();
+            var lpsPlan = new TestPlan(lpsTestCommand, _logger, _runtimeOperationIdProvider); // it should validate and throw if the command is not valid
 
             foreach (var runCommand in lpsTestCommand.LPSRuns)
             {
-                var runEntity = new LPSHttpRun(runCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
-                runEntity.LPSHttpRequestProfile = new LPSHttpRequestProfile(runCommand.LPSRequestProfile, _logger, _runtimeOperationIdProvider);
+                var runEntity = new HttpRun(runCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
+                runEntity.SetHttpRequestProfile(new HttpRequestProfile(runCommand.LPSRequestProfile, _logger, _runtimeOperationIdProvider));
                 lpsPlan.LPSRuns.Add(runEntity);
             }
             

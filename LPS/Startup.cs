@@ -44,7 +44,7 @@ namespace LPS
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
                     configBuilder.AddEnvironmentVariables();
-                    string lpsAppSettings = LPSAppConstants.AppSettingsFileLocation;
+                    string lpsAppSettings = AppConstants.AppSettingsFileLocation;
                     if (!File.Exists(lpsAppSettings))
                     {
                         // If the file doesn't exist, create it with default settings
@@ -54,17 +54,17 @@ namespace LPS
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.ConfigureWritable<LPSFileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), LPSAppConstants.AppSettingsFileLocation);
-                    services.ConfigureWritable<LPSWatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), LPSAppConstants.AppSettingsFileLocation);
-                    services.ConfigureWritable<LPSHttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), LPSAppConstants.AppSettingsFileLocation);
-                    services.AddSingleton<LPSAppSettingsWritableOptions>();
+                    services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), AppConstants.AppSettingsFileLocation);
+                    services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), AppConstants.AppSettingsFileLocation);
+                    services.ConfigureWritable<HttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), AppConstants.AppSettingsFileLocation);
+                    services.AddSingleton<AppSettingsWritableOptions>();
                     services.AddSingleton<CancellationTokenSource>();
-                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<LPSHttpRun>, LPSHttpRun>>();
-                    services.AddSingleton<ILPSClientManager<LPSHttpRequestProfile, LPSHttpResponse, ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>>, LPSHttpClientManager>();
-                    services.AddSingleton<ILPSClientService<LPSHttpRequestProfile, LPSHttpResponse>, LPSHttpClientService>();
-                    services.AddSingleton<ILPSRuntimeOperationIdProvider, LPSRuntimeOperationIdProvider>();
-                    services.AddSingleton<ILPSMetricsDataMonitor, LPSMetricsDataMonitor>();
-                    services.AddHostedService(p => p.ResolveWith<LPSHostedService>(new { args }));
+                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>>();
+                    services.AddSingleton<IClientManager<HttpRequestProfile, Domain.HttpResponse, IClientService<HttpRequestProfile, Domain.HttpResponse>>, HttpClientManager>();
+                    services.AddSingleton<IClientService<HttpRequestProfile, Domain.HttpResponse>, HttpClientService>();
+                    services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
+                    services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
+                    services.AddHostedService(p => p.ResolveWith<HostedService>(new { args }));
                     if (hostContext.HostingEnvironment.IsProduction())
                     {
                         //add production dependencies
@@ -98,7 +98,7 @@ namespace LPS
             // For example, you can create a basic JSON structure with default values
             var defaultSettings = new
             {
-                LPSAppSettings = new LPSAppSettings()
+                LPSAppSettings = new AppSettings()
             };
 
             // Serialize the default settings object to JSON
