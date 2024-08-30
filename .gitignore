@@ -17,3 +17,7 @@ obj
 /LPS/.vs/LPS/v17/HierarchyCache.v1.txt
 /LPS/Properties/PublishProfiles
 /LPS/*.user
+*.pdb
+*.dll
+/Dashboard/bin/Debug/net8.0/*.dll
+*.exe
