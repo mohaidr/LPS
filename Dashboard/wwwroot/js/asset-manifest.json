@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/static/css/main.3b4b745f.css",
+    "main.js": "/static/js/main.762dc148.js",
+    "static/media/nucleo-icons.eot": "/static/media/nucleo-icons.bd42d77b9672555647d1.eot",
+    "static/media/nucleo-icons.ttf": "/static/media/nucleo-icons.4466aeec3386b965a232.ttf",
+    "static/media/nucleo-icons.woff": "/static/media/nucleo-icons.8e954b749f951b654fc6.woff",
+    "static/media/nucleo-icons.woff2": "/static/media/nucleo-icons.ec16bc4cc4526801004d.woff2",
+    "index.html": "/index.html"
+  },
+  "entrypoints": [
+    "static/css/main.3b4b745f.css",
+    "static/js/main.762dc148.js"
+  ]
+}
