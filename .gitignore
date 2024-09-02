@@ -17,3 +17,14 @@ obj
 /LPS/.vs/LPS/v17/HierarchyCache.v1.txt
 /LPS/Properties/PublishProfiles
 /LPS/*.user
+*.pdb
+*.dll
+/Dashboard/bin/Debug/net8.0/*.dll
+*.exe
+wwwroot
+net8.0
+/LPS/bin/Debug/net8.0.zip
+*.user
+/LPS/LPS - Backup.csproj
+/LPS.Infrastructure/Common/Interfaces/ILPSConnectionsMetricMonitor.cs
+/LPS.Infrastructure/Common/Interfaces/ILPSMetricMonitor.cs
