@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using LPS.UI.Core;
 using Dashboard.Common;
+using System.Reflection;
 
 
 namespace LPS
@@ -32,10 +33,21 @@ namespace LPS
             var host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder
-                    .UseSetting("http_port", GlobalSettings.Port.ToString())
-                    .UseStartup<LPS.Dashboard.Startup>();
+                    // Set the content root to the directory containing the executable
+                    var contentRoot = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+                    webBuilder.UseContentRoot(contentRoot);
+
+                    // Set the web root to the wwwroot folder within the content root
+                    var webRoot = Path.Combine(contentRoot, "wwwroot");
+                    webBuilder.UseWebRoot(webRoot);
+
+                    webBuilder.UseSetting("http_port", GlobalSettings.Port.ToString())
+                              .UseStartup<LPS.Dashboard.Startup>();
+
+                    // Ensure static web assets are used correctly
                     webBuilder.UseStaticWebAssets();
+
+                    // Configure Kestrel to listen on the specified port
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
                         serverOptions.ListenAnyIP(GlobalSettings.Port);
