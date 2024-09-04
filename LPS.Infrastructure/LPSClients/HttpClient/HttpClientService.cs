@@ -75,6 +75,8 @@ namespace LPS.Infrastructure.LPSClients
                 stopWatch.Restart();
                 var response = await ExecuteHttpRequestAsync(lpsHttpRequestProfile, httpRequestMessage);
                 HttpResponse.SetupCommand responseCommand = await ProcessResponseAsync(response, lpsHttpRequestProfile, sequenceNumber);
+                //This will only run if save response is set to true
+                await ExtractAndDownloadHtmlResourcesAsync(sequenceNumber, responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient);
                 responseCommand.ResponseTime = stopWatch.Elapsed; // set the response time after the complete payload is read.
                 stopWatch.Stop();
 
@@ -86,9 +88,6 @@ namespace LPS.Infrastructure.LPSClients
                 await TryDecreaseConnectionsCount(lpsHttpRequestProfile, response.IsSuccessStatusCode);
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbose, _cts);
-
-                //This will only run if save response is set to true
-                await ExtractAndDownloadHtmlResourcesAsync(sequenceNumber, responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient);
 
             }
             catch (Exception ex)
