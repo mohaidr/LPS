@@ -42,10 +42,10 @@
     <Content Update="wwwroot\js\asset-manifest.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\js\main.f3bd8193.js">
+    <Content Update="wwwroot\js\main.b7292c4d.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\js\main.f3bd8193.js.LICENSE.txt">
+    <Content Update="wwwroot\js\main.b7292c4d.js.LICENSE.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
     <Content Update="wwwroot\js\manifest.json">
