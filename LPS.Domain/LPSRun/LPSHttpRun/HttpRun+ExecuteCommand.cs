@@ -176,7 +176,7 @@ namespace LPS.Domain
                                 _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
                                 numberOfSentRequests++;
                             }
-                            await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, _cts.Token);
+                            await Task.Delay(this.CoolDownTime.Value, _cts.Token);
                         }
                         stopwatch.Stop();
                         break;
@@ -189,7 +189,7 @@ namespace LPS.Domain
                                 _= lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
                                 numberOfSentRequests++;
                             }
-                            await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, _cts.Token);
+                            await Task.Delay(this.CoolDownTime.Value, _cts.Token);
                         }
                         break;
                     case IterationMode.CB:
@@ -201,7 +201,7 @@ namespace LPS.Domain
                                 _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
                                 numberOfSentRequests++;
                             }
-                            await Task.Delay((int)TimeSpan.FromSeconds(this.CoolDownTime.Value).TotalMilliseconds, _cts.Token);
+                            await Task.Delay(this.CoolDownTime.Value, _cts.Token);
                             
                         }
                         break;

@@ -51,9 +51,6 @@
     <Content Update="wwwroot\js\manifest.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <Content Update="wwwroot\js\site.js">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Update="wwwroot\lib\bootstrap\dist\css\bootstrap-grid.css">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>

@@ -57,12 +57,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 try
                 {
 
-                    var timeElapsed = _stopwatch.Elapsed.TotalSeconds;
-                    var requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / timeElapsed), 2));
+                    var timeElapsed = _stopwatch.Elapsed.TotalMilliseconds;
+                    var requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / (timeElapsed/1000)), 2));
                     var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
                     if (isCoolDown && timeElapsed > cooldownPeriod)
                     {
-                        requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}s", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
+                        requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
                     }
                     _spinLock.Enter(ref lockTaken);
                     _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown);

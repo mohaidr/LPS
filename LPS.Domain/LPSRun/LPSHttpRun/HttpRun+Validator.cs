@@ -63,8 +63,8 @@ namespace LPS.Domain
                 .When(command => command.Mode == HttpRun.IterationMode.D || command.Mode == HttpRun.IterationMode.DCB)
                 .Null()
                 .When(command => command.Mode != HttpRun.IterationMode.D && command.Mode != HttpRun.IterationMode.DCB, ApplyConditionTo.CurrentValidator)
-                .GreaterThan(command => command.CoolDownTime)
-                    .WithMessage("The 'Duration' Must Be Greater Than The Cool Down Time")
+                .GreaterThan(command => command.CoolDownTime/1000)
+                    .WithMessage("The 'Duration*1000' Must Be Greater Than The Cool Down Time")
                 .When(command => command.Mode == HttpRun.IterationMode.DCB && command.CoolDownTime.HasValue, ApplyConditionTo.CurrentValidator);
 
                 RuleFor(command => command.BatchSize)
@@ -83,8 +83,8 @@ namespace LPS.Domain
                 .When(command => command.Mode == HttpRun.IterationMode.DCB || command.Mode == HttpRun.IterationMode.CRB || command.Mode == HttpRun.IterationMode.CB)
                 .Null()
                 .When(command => command.Mode != HttpRun.IterationMode.DCB && command.Mode != HttpRun.IterationMode.CRB && command.Mode != HttpRun.IterationMode.CB, ApplyConditionTo.CurrentValidator)
-                .LessThan(command => command.Duration)
-                .WithMessage("The 'Cool Down Time' Must Be Less Than The Duration")
+                .LessThan(command => command.Duration*1000)
+                .WithMessage("The 'CoolDownTime/1000' Must Be Less Than The Duration")
                 .When(command => command.Mode == HttpRun.IterationMode.DCB && command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
                 #endregion
 

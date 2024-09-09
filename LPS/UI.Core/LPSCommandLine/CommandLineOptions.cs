@@ -71,7 +71,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", ()=> IterationMode.R, "It defines the 'HTTP Run' iteration Mode") { IsRequired = false, };
             public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", ()=> null, "The number of requests") { IsRequired = false, };
             public static Option<int?> Duration { get; } = new Option<int?>("--duration", ()=> null, "Time to run in seconds") { IsRequired = false, };
-            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", ()=> null, "The time in seconds the client has to cooldown before sending the next batch") { IsRequired = false, };
+            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", ()=> null, "The time in milliseconds the client has to cooldown before sending the next batch") { IsRequired = false, };
             public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", ()=> null, "The number of requests to be sent in a batch") { IsRequired = false, };
             public static Option<string> HttpversionOption { get; } = new Option<string>("--httpVersion", () => "2.0", "HTTP version") { IsRequired = false };
             public static Option<bool> DownloadHtmlEmbeddedResources { get; } = new Option<bool>("--downloadHtmlEmbeddedResources", () => false, "Set to true to download the HTML embedded resources, otherwise false ") { IsRequired = false };
@@ -143,7 +143,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", "It defines the 'HTTP Run' iteration Mode") { IsRequired = false, };
             public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", "The number of requests") { IsRequired = false, };
             public static Option<int?> Duratiion { get; } = new Option<int?>("--duration", "Time to run in seconds") { IsRequired = false, };
-            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time in seconds the client has to cooldown before sending the next batch") { IsRequired = false, };
+            public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time in milliseconds the client has to cooldown before sending the next batch") { IsRequired = false, };
             public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", "The number of requests to be sent in a batch") { IsRequired = false, };
             public static Option<string> HttpMethodOption { get; } = new Option<string>("--method", "HTTP method") { IsRequired = true };
             public static Option<string> HttpversionOption { get; } = new Option<string>("--httpVersion", () => "2.0", "HTTP version") { IsRequired = false };
