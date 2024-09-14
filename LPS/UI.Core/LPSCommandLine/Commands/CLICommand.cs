@@ -77,6 +77,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     Mode = lpsTestPlan.LPSRuns[0].Mode,
                     RequestCount = lpsTestPlan.LPSRuns[0].RequestCount,
+                    MaximizeThroughput = lpsTestPlan.LPSRuns[0].MaximizeThroughput,
                     BatchSize = lpsTestPlan.LPSRuns[0].BatchSize,
                     Duration = lpsTestPlan.LPSRuns[0].Duration,
                     CoolDownTime = lpsTestPlan.LPSRuns[0].CoolDownTime,

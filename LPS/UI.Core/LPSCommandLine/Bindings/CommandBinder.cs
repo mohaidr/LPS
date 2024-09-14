@@ -14,6 +14,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
     {
         private Option<string> _httpRunNameOption;
         private Option<int?> _requestCountOption;
+        private Option<bool> _maximizeThroughputOption;
         private Option<int?> _duration;
         private Option<int?> _coolDownTime;
         private Option<int?> _batchSize;
@@ -41,6 +42,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<HttpRun.IterationMode>? iterationModeOption = null,
             Option<int?>? duratiion = null,
             Option<int?>? coolDownTime = null,
+            Option<bool>? maximizeThroughput = null,
             Option<int?>? batchSizeOption = null,
             Option<string>? httpMethodOption = null,
             Option<string>? httpversionOption = null,
@@ -61,6 +63,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _batchSize = batchSizeOption ?? CommandLineOptions.LPSCommandOptions.BatchSize;
             _coolDownTime = coolDownTime ?? CommandLineOptions.LPSCommandOptions.CoolDownTime;
             _requestCountOption = requestCountOption ?? CommandLineOptions.LPSCommandOptions.RequestCountOption;
+            _maximizeThroughputOption = maximizeThroughput ?? CommandLineOptions.LPSCommandOptions.MaximizeThroughputOption;
             _httpMethodOption = httpMethodOption ?? CommandLineOptions.LPSCommandOptions.HttpMethodOption;
             _httpversionOption = httpversionOption ?? CommandLineOptions.LPSCommandOptions.HttpversionOption;
             _urlOption = urlOption ?? CommandLineOptions.LPSCommandOptions.UrlOption;
@@ -87,6 +90,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                         Name = bindingContext.ParseResult.GetValueForOption(_httpRunNameOption),
                         Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),
                         RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
+                        MaximizeThroughput = bindingContext.ParseResult.GetValueForOption(_maximizeThroughputOption),
                         Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                         CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                         BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),

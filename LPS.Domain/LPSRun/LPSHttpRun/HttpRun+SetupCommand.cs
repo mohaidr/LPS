@@ -20,6 +20,7 @@ namespace LPS.Domain
 
             public SetupCommand()
             {
+                MaximizeThroughput = false;
                 LPSRequestProfile = new HttpRequestProfile.SetupCommand();
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
@@ -37,7 +38,7 @@ namespace LPS.Domain
             public Guid? Id { get; set; }
 
             public int? RequestCount { get; set; }
-
+            public bool? MaximizeThroughput { get; set; }
             public int? Duration { get; set; }
 
             public int? BatchSize { get; set; }
@@ -58,6 +59,7 @@ namespace LPS.Domain
             if (command.IsValid && lPSRunSetUpCommand.IsValid)
             {
                 this.RequestCount = command.RequestCount;
+                this.MaximizeThroughput = command.MaximizeThroughput.Value;
                 this.Mode = command.Mode;
                 this.Duration = command.Duration;
                 this.CoolDownTime = command.CoolDownTime; ;
@@ -84,6 +86,7 @@ namespace LPS.Domain
                 clone.Duration = this.Duration;
                 clone.CoolDownTime = this.CoolDownTime; ;
                 clone.BatchSize = this.BatchSize;
+                clone.MaximizeThroughput = this.MaximizeThroughput;
                 clone.IsValid = true;
             }
             return clone;

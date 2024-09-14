@@ -161,7 +161,7 @@ namespace LPS.Infrastructure.Watchdog
             try
             {
                 int hostActiveConnectionsCount = MetricsDataMonitor
-                    .Get<ConnectionsMetricMonitor>(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.URL!= null && metric.GetDimensionSet<ConnectionDimensionSet>().URL.Contains(hostName))
+                    .Get<ThroughputMetricMonitor>(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.URL!= null && metric.GetDimensionSet<ConnectionDimensionSet>().URL.Contains(hostName))
                     .Select(metric => metric.GetDimensionSet<ConnectionDimensionSet>().ActiveRequestsCount)
                     .Sum();
                 return hostActiveConnectionsCount;

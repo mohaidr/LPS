@@ -14,6 +14,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
     {
         private Option<string> _nameOption;
         private Option<int?> _requestCountOption;
+        private Option<bool> _maximizeThroughputOption;
         private Option<int?> _duration;
         private Option<int?> _coolDownTime;
         private Option<int?> _batchSize;
@@ -29,6 +30,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         public RunCommandBinder(Option<string>? nameOption = null,
             Option<int?>? requestCountOption = null,
             Option<HttpRun.IterationMode>? iterationModeOption = null,
+            Option<bool>? maximizeThroughput = null,
             Option<int?>? duratiion = null,
             Option<int?>? coolDownTime = null,
             Option<int?>? batchSizeOption = null,
@@ -41,6 +43,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<bool>? saveResponseOption = null)
         {
             _nameOption = nameOption ?? CommandLineOptions.LPSAddCommandOptions.RunNameOption;
+            _maximizeThroughputOption = maximizeThroughput ?? CommandLineOptions.LPSAddCommandOptions.MaximizeThroughputOption;
             _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSAddCommandOptions.IterationModeOption;
             _duration = duratiion ?? CommandLineOptions.LPSAddCommandOptions.Duratiion;
             _batchSize = batchSizeOption ?? CommandLineOptions.LPSAddCommandOptions.BatchSize;
@@ -60,6 +63,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
                 Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),
+                MaximizeThroughput = bindingContext.ParseResult.GetValueForOption(_maximizeThroughputOption),
                 RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                 CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),

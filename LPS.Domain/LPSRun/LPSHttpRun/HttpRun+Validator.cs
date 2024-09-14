@@ -46,6 +46,10 @@ namespace LPS.Domain
                 .NotNull()
                 .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)");
 
+                RuleFor(command => command.MaximizeThroughput)
+               .NotNull()
+               .WithMessage("The 'MaximizeThroughput' property must be a non-null value");
+
                 RuleFor(command => command.RequestCount)
                 .NotNull()
                 .WithMessage("The 'Request Count' must be a non-null value and greater than 0")

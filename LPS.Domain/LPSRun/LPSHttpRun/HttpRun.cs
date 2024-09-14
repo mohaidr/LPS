@@ -107,5 +107,6 @@ namespace LPS.Domain
         public int? CoolDownTime { get; private set; }
 
         public IterationMode? Mode { get; private set; }
+        public bool MaximizeThroughput { get; private set; }
     }
 }

@@ -17,7 +17,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class ConnectionsMetricMonitor : IConnectionsMetricMonitor
+    public class ThroughputMetricMonitor : IThroughputMetricMonitor
     {
         public LPSMetricType MetricType => LPSMetricType.ConnectionsCount;
         HttpRun _httpRun;
@@ -35,7 +35,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         CancellationTokenSource _cts;
         private SpinLock _spinLock = new SpinLock();
         public bool IsStopped { get; private set; }
-        public ConnectionsMetricMonitor(HttpRun httprun, CancellationTokenSource cts, Domain.Common.Interfaces.ILogger logger = default, IRuntimeOperationIdProvider runtimeOperationIdProvider = default)
+        public ThroughputMetricMonitor(HttpRun httprun, CancellationTokenSource cts, Domain.Common.Interfaces.ILogger logger = default, IRuntimeOperationIdProvider runtimeOperationIdProvider = default)
         {
             _httpRun = httprun;
             _dimensionSet = new ProtectedConnectionDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);

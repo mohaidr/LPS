@@ -577,7 +577,7 @@ namespace LPS.Infrastructure.LPSClients
 
                 foreach (var metric in connectionsMetrics)
                 {
-                    ((IConnectionsMetricMonitor)metric).IncreaseConnectionsCount();
+                    ((IThroughputMetricMonitor)metric).IncreaseConnectionsCount();
                 }
                 return true;
             }
@@ -597,7 +597,7 @@ namespace LPS.Infrastructure.LPSClients
                 var connectionsMetrics = GetConnectionsMetrics(lpsHttpRequestProfile);
                 foreach (var metric in connectionsMetrics)
                 {
-                    ((IConnectionsMetricMonitor)metric).DecreseConnectionsCount(isSuccessful);
+                    ((IThroughputMetricMonitor)metric).DecreseConnectionsCount(isSuccessful);
                 }
                 return true;
             }

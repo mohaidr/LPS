@@ -48,7 +48,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             metrics[breakDownMetricKey] = new ResponseCodeMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
             metrics[durationMetricKey] = new DurationMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
-            metrics[connectionsMetricKey] = new ConnectionsMetricMonitor(lpsHttpRun, _cts, _logger, _lpsRuntimeOperationIdProvider);
+            metrics[connectionsMetricKey] = new ThroughputMetricMonitor(lpsHttpRun, _cts, _logger, _lpsRuntimeOperationIdProvider);
 
             // Prepare the tuple to be added
             var metricsTuple = new Tuple<IList<string>, Dictionary<string, IMetricMonitor>>(new List<string>() { }, metrics);
@@ -70,7 +70,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
                     metrics[breakDownMetricKey] = new ResponseCodeMetricMonitor(run, _logger, _lpsRuntimeOperationIdProvider);
                     metrics[durationMetricKey] = new DurationMetricMonitor(run, _logger, _lpsRuntimeOperationIdProvider);
-                    metrics[connectionsMetricKey] = new ConnectionsMetricMonitor(run, _cts, _logger, _lpsRuntimeOperationIdProvider);
+                    metrics[connectionsMetricKey] = new ThroughputMetricMonitor(run, _cts, _logger, _lpsRuntimeOperationIdProvider);
 
                     return new Tuple<IList<string>, Dictionary<string, IMetricMonitor>>(new List<string>(), metrics);
                 });

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Common.Interfaces
 {
-    public interface IConnectionsMetricMonitor : IMetricMonitor
+    public interface IThroughputMetricMonitor : IMetricMonitor
     {
         public bool IncreaseConnectionsCount();
         public bool DecreseConnectionsCount(bool isSuccess);

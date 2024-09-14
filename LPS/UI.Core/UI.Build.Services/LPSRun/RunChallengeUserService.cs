@@ -60,7 +60,6 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-
                 if (!_validator.Validate(nameof(Command.BatchSize)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.BatchSize));
@@ -70,7 +69,14 @@ namespace LPS.UI.Core.UI.Build.Services
                 if (!_validator.Validate(nameof(Command.CoolDownTime)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.CoolDownTime));
-                    _command.CoolDownTime = AnsiConsole.Ask<int>("For how [green]'Long' (in seconds)[/] the client should pause before running the next batch?");
+                    _command.CoolDownTime = AnsiConsole.Ask<int>("For how [green]'Long' (in Milliseconds)[/] the client should pause before running the next batch?");
+                    continue;
+                }
+
+                if (!_validator.Validate(nameof(Command.MaximizeThroughput)))
+                {
+                    _validator.PrintValidationErrors(nameof(Command.MaximizeThroughput));
+                    _command.MaximizeThroughput = AnsiConsole.Confirm("Do you want to maximize the [green]throughput[/]? Maximizing the throughput will result in [yellow]higher CPU and Memory usage[/]!", false);
                     continue;
                 }
 
@@ -85,7 +91,7 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                //reset optional fields if there is any
+                _command.MaximizeThroughput = null;
             }
         }
     }

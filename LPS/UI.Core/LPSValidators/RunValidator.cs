@@ -30,7 +30,11 @@ namespace LPS.UI.Core.LPSValidators
 
             RuleFor(command => command.Mode)
             .NotNull()
-            .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)");
+            .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)"); 
+
+            RuleFor(command => command.MaximizeThroughput)
+            .NotNull()
+            .WithMessage("The 'MaximizeThroughput' property must be a non-null value");
 
             RuleFor(command => command.RequestCount)
             .NotNull().WithMessage("The 'Request Count' must be a non-null value and greater than 0")

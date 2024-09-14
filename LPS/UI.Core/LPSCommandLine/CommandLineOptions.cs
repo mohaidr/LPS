@@ -43,6 +43,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 HeaderOption.AddAlias("-h");
                 PayloadOption.AddAlias("-p");
                 IterationModeOption.AddAlias("-im");
+                MaximizeThroughputOption.AddAlias("-mt");
                 DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
                 SaveResponse.AddAlias("-sr");
                 RunNameOption.AddAlias("--runname");
@@ -56,6 +57,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 HeaderOption.AddAlias("--Header");
                 PayloadOption.AddAlias("--Payload");
                 IterationModeOption.AddAlias("--itermationmode");
+                MaximizeThroughputOption.AddAlias("--maximizethroughput");
                 DownloadHtmlEmbeddedResources.AddAlias("--downloadhtmlembeddedresources");
                 SaveResponse.AddAlias("--saveresponse");
             }
@@ -69,7 +71,8 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<IList<string>> HeaderOption { get; } = new Option<IList<string>>("--header", "Header") { IsRequired = false, AllowMultipleArgumentsPerToken = true, };
             public static Option<string> RunNameOption { get; } = new Option<string>("--runName", ()=> "Quick-Http-Run", "The name of the 'HTTP Run'") { IsRequired = false };
             public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", ()=> IterationMode.R, "It defines the 'HTTP Run' iteration Mode") { IsRequired = false, };
-            public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", ()=> null, "The number of requests") { IsRequired = false, };
+            public static Option<bool> MaximizeThroughputOption { get; } = new Option<bool>("--maximizeThroughput", () => false, "Maximizing test throughput. Maximizing the throughput will result in higher CPU and Memory usage") { IsRequired = false, };
+            public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", () => null, "The number of requests") { IsRequired = false, };
             public static Option<int?> Duration { get; } = new Option<int?>("--duration", ()=> null, "Time to run in seconds") { IsRequired = false, };
             public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", ()=> null, "The time in milliseconds the client has to cooldown before sending the next batch") { IsRequired = false, };
             public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", ()=> null, "The number of requests to be sent in a batch") { IsRequired = false, };
@@ -120,6 +123,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 HeaderOption.AddAlias("-h");
                 PayloadOption.AddAlias("-p");
                 IterationModeOption.AddAlias("-im");
+                MaximizeThroughputOption.AddAlias("-mt");
                 DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
                 SaveResponse.AddAlias("-sr");
                 TestNameOption.AddAlias("--testname");
@@ -134,14 +138,16 @@ namespace LPS.UI.Core.LPSCommandLine
                 HeaderOption.AddAlias("--Header");
                 PayloadOption.AddAlias("--Payload");
                 IterationModeOption.AddAlias("--itermationmode");
+                MaximizeThroughputOption.AddAlias("--maximizethroughput");
                 DownloadHtmlEmbeddedResources.AddAlias("--downloadhtmlembeddedresources");
                 SaveResponse.AddAlias("--saveresponse");
             }
 
-            public static Option<string> TestNameOption { get; } = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
+            public static Option<string> TestNameOption { get; } = new Option<string>("--testName", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
             public static Option<string> RunNameOption { get; } = new Option<string>("--runName", "The name of the 'HTTP Run'") { IsRequired = true };
             public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>("--iterationMode", "It defines the 'HTTP Run' iteration Mode") { IsRequired = false, };
             public static Option<int?> RequestCountOption { get; } = new Option<int?>("--requestCount", "The number of requests") { IsRequired = false, };
+            public static Option<bool> MaximizeThroughputOption { get; } = new Option<bool>("--maximizeThroughput", () => false, "Maximizing test throughput. Maximizing the throughput will result in higher CPU and Memory usage") { IsRequired = false, };
             public static Option<int?> Duratiion { get; } = new Option<int?>("--duration", "Time to run in seconds") { IsRequired = false, };
             public static Option<int?> CoolDownTime { get; } = new Option<int?>("--coolDownTime", "The time in milliseconds the client has to cooldown before sending the next batch") { IsRequired = false, };
             public static Option<int?> BatchSize { get; } = new Option<int?>("--batchsize", "The number of requests to be sent in a batch") { IsRequired = false, };
