@@ -1,5 +1,6 @@
 ﻿using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Domain.LPSRun.IterationMode;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -177,27 +178,74 @@ namespace LPS.Domain
 
             var lpsRequestProfileExecCommand = new HttpRequestProfile.ExecuteCommand(_httpClientService, command, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
             var taskCompletionSource = new TaskCompletionSource<bool>();
-            var hostName = new Uri(this.LPSHttpRequestProfile.URL).Host;
+            IIterationModeService iterationModeService = null;
+
+            // Create a batch processor if needed
+            IBatchProcessor<HttpRequestProfile.ExecuteCommand, HttpRequestProfile> batchProcessor = null;
 
             switch (this.Mode)
             {
                 case IterationMode.DCB:
-                    await ExecuteDCBModeAsync(lpsRequestProfileExecCommand, hostName);
+                    batchProcessor = new BatchProcessor(LPSHttpRequestProfile, _watchdog);
+                    iterationModeService = new DCBMode.Builder()
+                        .SetCommand(lpsRequestProfileExecCommand)
+                        .SetDuration(this.Duration.Value)
+                        .SetCoolDownTime(this.CoolDownTime.Value)
+                        .SetBatchSize(this.BatchSize.Value)
+                        .SetMaximizeThroughput(this.MaximizeThroughput)
+                        .SetBatchProcessor(batchProcessor)
+                        .Build();
                     break;
+
                 case IterationMode.CRB:
-                    await ExecuteCRBModeAsync(lpsRequestProfileExecCommand, hostName);
+                    batchProcessor = new BatchProcessor(LPSHttpRequestProfile, _watchdog);
+                    iterationModeService = new CRBMode.Builder()
+                        .SetCommand(lpsRequestProfileExecCommand)
+                        .SetRequestCount(this.RequestCount.Value)
+                        .SetCoolDownTime(this.CoolDownTime.Value)
+                        .SetBatchSize(this.BatchSize.Value)
+                        .SetMaximizeThroughput(this.MaximizeThroughput)
+                        .SetBatchProcessor(batchProcessor)
+                        .Build();
                     break;
+
                 case IterationMode.CB:
-                    await ExecuteCBModeAsync(lpsRequestProfileExecCommand, hostName);
+                    batchProcessor = new BatchProcessor(LPSHttpRequestProfile, _watchdog);
+                    iterationModeService = new CBMode.Builder()
+                        .SetCommand(lpsRequestProfileExecCommand)
+                        .SetCoolDownTime(this.CoolDownTime.Value)
+                        .SetBatchSize(this.BatchSize.Value)
+                        .SetMaximizeThroughput(this.MaximizeThroughput)
+                        .SetBatchProcessor(batchProcessor)
+                        .Build();
                     break;
+
                 case IterationMode.R:
-                    await ExecuteRModeAsync(lpsRequestProfileExecCommand, hostName);
+                    iterationModeService = new RMode.Builder()
+                        .SetCommand(lpsRequestProfileExecCommand)
+                        .SetRequestCount(this.RequestCount.Value)
+                        .SetWatchdog(_watchdog)
+                        .SetRequestProfile(LPSHttpRequestProfile)
+                        .Build();
                     break;
+
                 case IterationMode.D:
-                    await ExecuteDModeAsync(lpsRequestProfileExecCommand, hostName);
+                    iterationModeService = new DMode.Builder()
+                        .SetCommand(lpsRequestProfileExecCommand)
+                        .SetDuration(this.Duration.Value)
+                        .SetWatchdog(_watchdog)
+                        .SetRequestProfile(LPSHttpRequestProfile)
+                        .Build();
                     break;
+
                 default:
                     throw new ArgumentException("Invalid iteration mode was chosen");
+            }
+
+            // Execute the iteration mode service
+            if (iterationModeService != null)
+            {
+                _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
             }
 
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {_numberOfSentRequests} request(s) to {this.LPSHttpRequestProfile.URL}", LPSLoggingLevel.Verbose, _cts);
@@ -210,150 +258,6 @@ namespace LPS.Domain
 
             taskCompletionSource.SetResult(true);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has completed all the requests to {this.LPSHttpRequestProfile.URL} with {command.NumberOfSuccessfullyCompletedRequests} successfully completed requests and {command.NumberOfFailedToCompleteRequests} failed to complete requests", LPSLoggingLevel.Verbose, _cts);
-        }
-
-        private async Task ExecuteDCBModeAsync(HttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand, string hostName)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            var coolDownWatch = Stopwatch.StartNew();
-
-            while (stopwatch.Elapsed.TotalSeconds < this.Duration.Value && !_cts.Token.IsCancellationRequested)
-            {
-                if (MaximizeThroughput)
-                {
-                    bool newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= CoolDownTime;
-                    if (newBatch)
-                    {
-                        coolDownWatch.Restart();
-                        await Task.Yield();
-                        for (int b = 0; b < this.BatchSize && stopwatch.Elapsed.TotalSeconds < this.Duration.Value; b++)
-                        {
-                            await _watchdog.BalanceAsync(hostName);
-                            _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                            _numberOfSentRequests++;
-                        }
-                    }
-                }
-                else
-                {
-                    coolDownWatch.Restart();
-                    for (int b = 0; b < this.BatchSize && stopwatch.Elapsed.TotalSeconds < this.Duration.Value; b++)
-                    {
-                        await _watchdog.BalanceAsync(hostName);
-                        _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                        _numberOfSentRequests++;
-                    }
-                    await Task.Delay((int)Math.Max(CoolDownTime.Value, CoolDownTime.Value - coolDownWatch.Elapsed.TotalMilliseconds));
-                }
-            }
-
-            coolDownWatch.Stop();
-            stopwatch.Stop();
-        }
-
-        private async Task ExecuteCRBModeAsync(HttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand, string hostName)
-        {
-            var coolDownWatch = Stopwatch.StartNew();
-
-            while (_numberOfSentRequests < this.RequestCount.Value && !_cts.Token.IsCancellationRequested)
-            {
-                if (MaximizeThroughput)
-                {
-                    bool newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= CoolDownTime;
-                    if (newBatch)
-                    {
-                        coolDownWatch.Restart();
-                        await Task.Yield();
-                        for (int b = 0; b < this.BatchSize && _numberOfSentRequests < this.RequestCount.Value; b++)
-                        {
-                            await _watchdog.BalanceAsync(hostName);
-                            _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                            _numberOfSentRequests++;
-                        }
-                    }
-                }
-                else
-                {
-                    coolDownWatch.Restart();
-                    for (int b = 0; b < this.BatchSize && _numberOfSentRequests < this.RequestCount.Value; b++)
-                    {
-                        await _watchdog.BalanceAsync(hostName);
-                        _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                        _numberOfSentRequests++;
-                    }
-                    await Task.Delay((int)Math.Max(CoolDownTime.Value, CoolDownTime.Value - coolDownWatch.Elapsed.TotalMilliseconds));
-                }
-            }
-
-            coolDownWatch.Stop();
-        }
-
-        private async Task ExecuteCBModeAsync(HttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand, string hostName)
-        {
-            var coolDownWatch = Stopwatch.StartNew();
-
-            while (!_cts.Token.IsCancellationRequested)
-            {
-                if (MaximizeThroughput)
-                {
-                    bool newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= CoolDownTime;
-                    if (newBatch)
-                    {
-                        coolDownWatch.Restart();
-                        await Task.Yield();
-                        for (int b = 0; b < this.BatchSize; b++)
-                        {
-                            await _watchdog.BalanceAsync(hostName);
-                            _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                            _numberOfSentRequests++;
-                        }
-                    }
-                }
-                else
-                {
-                    coolDownWatch.Restart();
-                    for (int b = 0; b < this.BatchSize; b++)
-                    {
-                        await _watchdog.BalanceAsync(hostName);
-                        _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                        _numberOfSentRequests++;
-                    }
-                    await Task.Delay((int)Math.Max(CoolDownTime.Value, CoolDownTime.Value - coolDownWatch.Elapsed.TotalMilliseconds));
-                }
-            }
-
-            coolDownWatch.Stop();
-        }
-
-        private async Task ExecuteRModeAsync(HttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand, string hostName)
-        {
-            for (int i = 0; i < this.RequestCount && !_cts.Token.IsCancellationRequested; i++)
-            {
-                await _watchdog.BalanceAsync(hostName);
-                await lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                _numberOfSentRequests++;
-            }
-        }
-
-        private async Task ExecuteDModeAsync(HttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand, string hostName)
-        {
-            var stopwatch = Stopwatch.StartNew();
-            while (stopwatch.Elapsed.TotalSeconds < this.Duration.Value && !_cts.Token.IsCancellationRequested)
-            {
-                await _watchdog.BalanceAsync(hostName);
-                await lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                _numberOfSentRequests++;
-            }
-            stopwatch.Stop();
-        }
-        private async Task SendBatchAsync(HttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand, string hostName, int batchSize, Func<bool> batchCondition)
-        {
-            for (int b = 0; b < batchSize && batchCondition(); b++)
-            {
-                await _watchdog.BalanceAsync(hostName);
-                _ = lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
-                _numberOfSentRequests++;
-            }
         }
     }
 }

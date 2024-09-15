@@ -4,9 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPS.Domain.Common.Interfaces
+namespace LPS.Domain.Domain.Common.Interfaces
 {
-    public interface IDomainEntity
+    internal interface IBuilder<T> where T : class
     {
+        T Build();
     }
 }

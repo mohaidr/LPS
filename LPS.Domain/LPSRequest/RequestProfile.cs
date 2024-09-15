@@ -12,7 +12,7 @@ using LPS.Domain.Common.Interfaces;
 namespace LPS.Domain
 {
     //This should be a Non-Entity Superclass
-    public partial class RequestProfile : IValidEntity, IRequestEntity
+    public partial class RequestProfile : IDomainEntity, IValidEntity, IRequestEntity
     {
         protected ILogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
