@@ -31,14 +31,14 @@ namespace LPS.Infrastructure.LPSClients
 
         public IClientService<HttpRequestProfile, HttpResponse> CreateInstance(IClientConfiguration<HttpRequestProfile> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _cts);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
         public void CreateAndQueueClient(IClientConfiguration<HttpRequestProfile> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _cts);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider);
             _clientsQueue.Enqueue(client);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Verbose);
         }
@@ -70,7 +70,7 @@ namespace LPS.Infrastructure.LPSClients
             {
                 if (byPassQueueIfEmpty)
                 {
-                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _cts);
+                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider);
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.Id} was created", LPSLoggingLevel.Information);
                     return client;
                 }

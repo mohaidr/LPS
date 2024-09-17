@@ -18,8 +18,8 @@ namespace LPS.Domain.Common.Interfaces
     }
     public interface ILogger
     {
-        void Log(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, CancellationTokenSource cts = default);
-        Task LogAsync(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, CancellationTokenSource cts = default);
+        void Log(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, CancellationToken token = default);
+        Task LogAsync(string EventId, string DiagnosticMessage, LPSLoggingLevel Level, CancellationToken token = default);
         public Task Flush();
     }
 }

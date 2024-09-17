@@ -1,5 +1,6 @@
 ﻿using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -45,8 +46,12 @@ namespace LPS.Domain
         //TODO:
         //- The design will change when we have a repository and DB where validation will be added to make sure that this value does not change once assigned
         //- Assign this through the setupcommand where the command will have the ID so we can fetch the entity from the DB and assign it to prevent creating orphan entities
-        //- Currently it is open for assignment from outside
-        public HttpRequestProfile LPSHttpRequestProfile { get; set; }
+        public HttpRequestProfile LPSHttpRequestProfile { get; private set; }
+
+        public void SetHttpRequestProfile(HttpRequestProfile lPSHttpRequestProfile)
+        {
+            LPSHttpRequestProfile = lPSHttpRequestProfile != null && lPSHttpRequestProfile.IsValid ? lPSHttpRequestProfile : throw new InvalidLPSEntityException($"The referenced LPS Entity of type {typeof(HttpRequestProfile)} is either null or invalid.");
+        }
         public TimeSpan ResponseTime { get; private set; }
     }
 }

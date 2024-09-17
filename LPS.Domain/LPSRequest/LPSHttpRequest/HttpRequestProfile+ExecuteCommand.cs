@@ -97,7 +97,7 @@ namespace LPS.Domain
                     int sequenceNumber = _protectedCommand.SafelyIncrementNumberofSentRequests(command.RunExecuteCommand);
                     ((HttpRequestProfile)clonedEntity).LastSequenceId = sequenceNumber;
                     this.LastSequenceId = sequenceNumber;
-                    await _httpClientService.SendAsync(((HttpRequestProfile)clonedEntity));
+                    await _httpClientService.SendAsync(((HttpRequestProfile)clonedEntity), _cts.Token);
                     this.HasFailed = false;
                     _protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.RunExecuteCommand);
                 }

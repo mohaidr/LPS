@@ -110,16 +110,16 @@ namespace LPS.Infrastructure.Logger
 
         private static SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationTokenSource cts = default)
+        public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default)
         {
             var stopWatch = new Stopwatch();
             stopWatch.Start();
-            LogAsync(eventId, diagnosticMessage, level, cts).Wait();
-            _ = LogAsync(eventId, $"Synchronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbose, cts);
+            LogAsync(eventId, diagnosticMessage, level, token).Wait();
+            _ = LogAsync(eventId, $"Synchronous logging time was {stopWatch.Elapsed}", LPSLoggingLevel.Verbose, token);
             stopWatch.Stop();
         }
 
-        public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level, CancellationTokenSource cts = default)
+        public async Task LogAsync(string correlationId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default)
         {
             diagnosticMessage = Markup.Escape(diagnosticMessage);
             try
@@ -157,8 +157,8 @@ namespace LPS.Infrastructure.Logger
                 {
                     StringBuilder stringBuilder = new StringBuilder();
                     stringBuilder.Append($"{currentDateTime} {level} {correlationId} {diagnosticMessage}");
-                    if (cts != default)
-                        await _synchronizedTextWriter.WriteLineAsync(stringBuilder, cts.Token);
+                    if (token != default)
+                        await _synchronizedTextWriter.WriteLineAsync(stringBuilder, token);
                     else
                         await _synchronizedTextWriter.WriteLineAsync(stringBuilder);
 
@@ -168,7 +168,7 @@ namespace LPS.Infrastructure.Logger
             catch (Exception ex)
             {
 
-                if (cts!=default && cts.Token.IsCancellationRequested && ex.Message != null && ex.Message.Equals("A task was canceled.", StringComparison.OrdinalIgnoreCase))
+                if (token!=default && token.IsCancellationRequested && ex.Message != null && ex.Message.Equals("A task was canceled.", StringComparison.OrdinalIgnoreCase))
                 {
                     _loggingCancellationCount++;
                     _cancellationErrorMessage = $"{ex.Message} {ex.InnerException?.Message}";
