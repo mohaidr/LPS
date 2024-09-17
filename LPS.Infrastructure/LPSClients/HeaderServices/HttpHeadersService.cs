@@ -41,7 +41,6 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                 }
             }
         }
-
         private void SetContentHeader(HttpRequestMessage message, string name, string value)
         {
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))

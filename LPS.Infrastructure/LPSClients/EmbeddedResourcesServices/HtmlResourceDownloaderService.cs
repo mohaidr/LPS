@@ -4,12 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPS.Infrastructure.LPSClients.LPSClient.EmbeddedResourcesServices
+namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
 {
     using HtmlAgilityPack;
     using LPS.Domain.Common.Interfaces;
     using LPS.Infrastructure.Logger;
-    using LPS.Infrastructure.LPSClients.EmbeddedResources;
     using LPS.Infrastructure.LPSClients.URLServices;
     using LPS.Infrastructure.Monitoring.Metrics;
     using System;

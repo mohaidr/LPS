@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LPS.Infrastructure.LPSClients.EmbeddedResources
+namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
 {
     public interface IHtmlResourceDownloaderService
     {
