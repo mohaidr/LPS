@@ -72,7 +72,6 @@ namespace LPS.Infrastructure.LPSClients
             {
                 var httpRequestMessage = _messageService.Build(lpsHttpRequestProfile);
                 await _metricsService.TryIncreaseConnectionsCount(lpsHttpRequestProfile, token);
-                // restart in case StartNew adds unnecessary milliseconds becuase of JITing. See this https://stackoverflow.com/questions/14019510/calculate-the-execution-time-of-a-method
                 stopWatch.Start();
                 var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token);
                 stopWatch.Stop();

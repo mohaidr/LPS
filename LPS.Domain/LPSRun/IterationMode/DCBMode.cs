@@ -1,6 +1,8 @@
 ﻿using LPS.Domain.Domain.Common.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -19,36 +21,45 @@ namespace LPS.Domain.LPSRun.IterationMode
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
-            int numberOfSentRequests = 0;
+            List<Task<int>> awaitableTasks = [];
+
             var stopwatch = Stopwatch.StartNew();
             var coolDownWatch = Stopwatch.StartNew();
 
-            Func<bool> continueCondition = () => stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested;
+            bool continueCondition() => stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested;
             Func<bool> batchCondition = continueCondition;
-
+            bool newBatch = true;
             while (continueCondition())
             {
                 if (_maximizeThroughput)
                 {
-                    bool newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                     if (newBatch)
                     {
                         coolDownWatch.Restart();
                         await Task.Yield();
-                        numberOfSentRequests+= await _batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition);
+                        awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition));
                     }
+                    newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                 }
                 else
                 {
                     coolDownWatch.Restart();
-                    numberOfSentRequests += await _batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition);
+                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition));
                     await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
                 }
             }
 
             coolDownWatch.Stop();
             stopwatch.Stop();
-            return numberOfSentRequests;
+            try
+            {
+                var results = await Task.WhenAll(awaitableTasks);
+                return results.Sum();
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
         }
 
         public class Builder : IBuilder<DCBMode>

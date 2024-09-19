@@ -3,7 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Tracing;
-using System.Threading;
 
 namespace LPS.Infrastructure.Monitoring.EventListeners
 {
@@ -16,30 +15,28 @@ namespace LPS.Infrastructure.Monitoring.EventListeners
         {
         }
 
-        public double MemoryUsageMB { get { return _memoryUsageMB; } }
-        public double CPUPercentage { get { return _cpuTime; } }
+        public double MemoryUsageMB => _memoryUsageMB;
+        public double CPUPercentage => _cpuTime;
+
         protected override void OnEventSourceCreated(EventSource source)
         {
-            if (!source.Name.Equals("System.Runtime"))
+            if (source.Name.Equals("System.Runtime"))
             {
-                return;
+                EnableEvents(source, EventLevel.Verbose, EventKeywords.All, new Dictionary<string, string>()
+                {
+                    ["EventCounterIntervalSec"] = "1"
+                });
             }
-
-            EnableEvents(source, EventLevel.Verbose, EventKeywords.All, new Dictionary<string, string>() { ["EventCounterIntervalSec"] = "1" });
         }
+
         protected override void OnEventWritten(EventWrittenEventArgs eventData)
         {
-            if (eventData.Payload == null)
+            if (eventData.Payload == null || !eventData.EventName.Equals("EventCounters"))
             {
                 return;
             }
 
-            if (!eventData.EventName.Equals("EventCounters"))
-            {
-                return;
-            }
-
-            for (int i = 0; i < eventData.Payload.Count; ++i)
+            for (int i = 0; i < eventData.Payload.Count; i++)
             {
                 if (eventData.Payload[i] is IDictionary<string, object> eventPayload)
                 {
@@ -47,7 +44,9 @@ namespace LPS.Infrastructure.Monitoring.EventListeners
                     switch (counterName)
                     {
                         case "working-set":
-                            double.TryParse(counterValue, out _memoryUsageMB);
+                            // Get private memory size (which includes virtual memory as well)
+                            _memoryUsageMB = GetPrivateMemoryUsageMB();
+                            Console.WriteLine(_memoryUsageMB);
                             break;
                         case "cpu-usage":
                             double.TryParse(counterValue, out _cpuTime);
@@ -58,21 +57,33 @@ namespace LPS.Infrastructure.Monitoring.EventListeners
         }
 
         private static (string counterName, string counterValue) GetRelevantMetric(
-        IDictionary<string, object> eventPayload)
+            IDictionary<string, object> eventPayload)
         {
-            var counterName = "";
-            var counterValue = "";
+            var counterName = string.Empty;
+            var counterValue = string.Empty;
 
             if (eventPayload.TryGetValue("Name", out object displayValue))
             {
                 counterName = displayValue.ToString();
             }
+
             if (eventPayload.TryGetValue("Mean", out object value) ||
                 eventPayload.TryGetValue("Increment", out value))
             {
                 counterValue = value.ToString();
             }
+
             return (counterName, counterValue);
+        }
+
+        // New method to get the private memory usage in MB from the process
+        private double GetPrivateMemoryUsageMB()
+        {
+            using (var process = Process.GetCurrentProcess())
+            {
+                // PrivateMemorySize64 gives the total private memory size in bytes
+                return process.PrivateMemorySize64 / (1024.0 * 1024.0); // Convert to MB
+            }
         }
     }
 }

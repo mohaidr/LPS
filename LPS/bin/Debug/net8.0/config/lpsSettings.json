@@ -9,13 +9,13 @@
       "LoggingLevel": 0
     },
     "LPSWatchdogConfiguration": {
-      "MaxMemoryMB": 7000,
-      "CoolDownMemoryMB": 4000,
+      "MaxMemoryMB": 200,
+      "CoolDownMemoryMB": 150,
       "MaxCPUPercentage": 70,
       "CoolDownCPUPercentage": 50,
       "CoolDownRetryTimeInSeconds": 1,
-      "MaxConcurrentConnectionsCountPerHostName": 1000,
-      "CoolDownConcurrentConnectionsCountPerHostName": 700,
+      "MaxConcurrentConnectionsCountPerHostName": 7000,
+      "CoolDownConcurrentConnectionsCountPerHostName": 2500,
       "SuspensionMode": 0
     },
     "LPSHttpClientConfiguration": {

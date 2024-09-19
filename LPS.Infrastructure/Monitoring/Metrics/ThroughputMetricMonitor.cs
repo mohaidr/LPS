@@ -6,6 +6,7 @@ using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Monitoring.EventSources;
 using Microsoft.Extensions.Logging;
+using Spectre.Console.Rendering;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -28,43 +29,43 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         int _failedRequestsCount;
         ProtectedConnectionDimensionSet _dimensionSet;
         RequestEventSource _eventSource;
-        Stopwatch _stopwatch;
+        Stopwatch _throughputWatch;
         Timer _timer;
         Domain.Common.Interfaces.ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         CancellationTokenSource _cts;
         private SpinLock _spinLock = new SpinLock();
         public bool IsStopped { get; private set; }
-        public ThroughputMetricMonitor(HttpRun httprun, CancellationTokenSource cts, Domain.Common.Interfaces.ILogger logger = default, IRuntimeOperationIdProvider runtimeOperationIdProvider = default)
+        public bool IsTestStarted { get; private set; }
+        public ThroughputMetricMonitor(HttpRun httprun, CancellationTokenSource cts, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _httpRun = httprun;
             _dimensionSet = new ProtectedConnectionDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);
             _eventSource = RequestEventSource.GetInstance(_httpRun);
-            _stopwatch = new Stopwatch();
+            _throughputWatch = new Stopwatch();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _cts = cts;
         }
-        private void SchedualMetricsUpdate()
+
+        private void UpdateMetrics()
         {
+            bool lockTaken = false;
             bool isCoolDown = _httpRun.Mode == HttpRun.IterationMode.DCB || _httpRun.Mode == HttpRun.IterationMode.CRB || _httpRun.Mode == HttpRun.IterationMode.CB;
-            bool isDurationOrRequest = _httpRun.Mode == HttpRun.IterationMode.D || _httpRun.Mode == HttpRun.IterationMode.R;
             int cooldownPeriod = isCoolDown ? _httpRun.CoolDownTime.Value : 1;
-            _stopwatch.Start();
-            _timer = new Timer(_ =>
+
+            if (IsTestStarted)
             {
-                bool lockTaken = false;
                 try
                 {
-
-                    var timeElapsed = _stopwatch.Elapsed.TotalMilliseconds;
-                    var requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / (timeElapsed/1000)), 2));
+                    _spinLock.Enter(ref lockTaken);
+                    var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
+                    var requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / (timeElapsed / 1000)), 2));
                     var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
                     if (isCoolDown && timeElapsed > cooldownPeriod)
                     {
                         requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
                     }
-                    _spinLock.Enter(ref lockTaken);
                     _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown);
                 }
                 finally
@@ -72,7 +73,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     if (lockTaken)
                         _spinLock.Exit();
                 }
+            }
+        }
+        private void SchedualMetricsUpdate()
+        {
+            _timer = new Timer(_ =>
+            {
+                if (IsTestStarted && !IsStopped)
+                {
+                    try
+                    {
+                        UpdateMetrics();
+                    }
+                    finally
+                    {
+                    }
+                }
             }, null, 0, 1000);
+
         }
 
         public IDimensionSet GetDimensionSet()
@@ -113,6 +131,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _spinLock.Enter(ref lockTaken);
                 _dimensionSet.Update(++_activeRequestssCount, ++_requestsCount);
                 _eventSource.AddRequest();
+                IsTestStarted = true;
                 return true;
             }
             catch (Exception ex)
@@ -123,6 +142,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 if (lockTaken)
                     _spinLock.Exit();
+                UpdateMetrics();
             }
         }
 
@@ -147,31 +167,34 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 if (lockTaken)
                     _spinLock.Exit();
+                UpdateMetrics();
             }
         }
 
         public void Start()
         {
+            _throughputWatch.Start();
             IsStopped = false;
+            _dimensionSet.StopUpdate = false;
             SchedualMetricsUpdate();
         }
 
         public void Stop()
         {
+            IsStopped = true;
+            IsTestStarted = false;
+            _dimensionSet.StopUpdate = true;
             try
             {
-                _stopwatch.Stop();
+                _throughputWatch.Stop();
                 _timer.Dispose();
             }
-            finally
-            {
-                IsStopped = true;
-            }
-
+            finally { }
         }
 
         private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
         {
+            public bool StopUpdate { get; set; }
             public ProtectedConnectionDimensionSet(string name, string httpMethod, string url, string httpVersion)
             {
                 RunName = name;
@@ -180,30 +203,52 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 HttpVersion = httpVersion;
             }
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int activeRequestsCount , int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
+            public void Update(int activeRequestsCount, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
             {
-                TimeStamp = DateTime.UtcNow;
-                this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
-                this.ActiveRequestsCount =  activeRequestsCount;
-                this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;
-                this.FailedRequestsCount = failedRequestsCount.Equals(default) ? this.FailedRequestsCount : failedRequestsCount;
-                this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
-                this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
-                this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
+                if (!StopUpdate)
+                {
+                    TimeStamp = DateTime.UtcNow;
+                    this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
+                    this.ActiveRequestsCount = activeRequestsCount;
+                    this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;
+                    this.FailedRequestsCount = failedRequestsCount.Equals(default) ? this.FailedRequestsCount : failedRequestsCount;
+                    this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
+                    this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
+                    this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
+                }
             }
         }
 
     }
 
-    public struct RequestsRate
+    public readonly struct RequestsRate(string every, double value) : IEquatable<RequestsRate> 
     {
-        public RequestsRate(string every, double value)
+        public double Value { get; } = value;
+        public string Every { get; } = every;
+        public bool Equals(RequestsRate other)
         {
-            Value = value;
-            Every = every;
+            return Value.Equals(other.Value) && string.Equals(Every, other.Every, StringComparison.Ordinal);
         }
-        public double Value { get; }
-        public string Every { get; }
+        public override bool Equals(object obj)
+        {
+            return obj is RequestsRate other && Equals(other);
+        }
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Value, Every);
+        }
+        public static bool operator ==(RequestsRate left, RequestsRate right)
+        {
+            return left.Equals(right);
+        }
+        public static bool operator !=(RequestsRate left, RequestsRate right)
+        {
+            return !(left == right);
+        }
+        public override string ToString()
+        {
+            return $"RequestsRate: Every = {Every}, Value = {Value}";
+        }
     }
     public class ConnectionDimensionSet : IDimensionSet
     {
