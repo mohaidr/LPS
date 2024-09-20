@@ -46,7 +46,6 @@ namespace LPS.Infrastructure.Monitoring.EventListeners
                         case "working-set":
                             // Get private memory size (which includes virtual memory as well)
                             _memoryUsageMB = GetPrivateMemoryUsageMB();
-                            Console.WriteLine(_memoryUsageMB);
                             break;
                         case "cpu-usage":
                             double.TryParse(counterValue, out _cpuTime);

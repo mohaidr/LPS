@@ -15,6 +15,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Infrastructure.LPSClients.MetricsServices;
 using LPS.Infrastructure.LPSClients.MessageServices;
+using System.Buffers;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -33,7 +34,7 @@ namespace LPS.Infrastructure.LPSClients
         IMessageService _messageService;
         public HttpClientService(IClientConfiguration<HttpRequestProfile> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMessageService messageService= null,
+            IMessageService messageService = null,
             IHttpHeadersService headersService = null,
             IMetricsService metricsService = null)
         {
@@ -61,7 +62,7 @@ namespace LPS.Infrastructure.LPSClients
             Id = Interlocked.Increment(ref _clientNumber).ToString();
             GuidId = Guid.NewGuid().ToString();
         }
-        public async Task<HttpResponse> SendAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token = default)
+        public async Task<HttpResponse> SendAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token)
         {
 
             _metricsService.AddMetrics(lpsHttpRequestProfile.Id);
@@ -78,9 +79,10 @@ namespace LPS.Infrastructure.LPSClients
                 var results = (await ProcessResponseAsync(response, lpsHttpRequestProfile, sequenceNumber, token));
                 HttpResponse.SetupCommand responseCommand = results.command;
                 //This will only run if save response is set to true
-                await TryDownloadHtmlResourcesAsync(responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient);
-                responseCommand.ResponseTime = stopWatch.Elapsed+ results.streamTime; // set the response time after the complete payload is read.
+                stopWatch.Start();
+                await TryDownloadHtmlResourcesAsync(responseCommand, lpsHttpRequestProfile, responseCommand.LocationToResponse, httpClient, token);
                 stopWatch.Stop();
+                responseCommand.ResponseTime = stopWatch.Elapsed + results.streamTime; // set the response time after the complete payload is read.
 
                 lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
                 lpsHttpResponse.SetHttpRequestProfile(lpsHttpRequestProfile);
@@ -123,46 +125,84 @@ namespace LPS.Infrastructure.LPSClients
             return lpsHttpResponse;
         }
 
-        private async Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(HttpResponseMessage response, HttpRequestProfile lpsHttpRequestProfile, int sequenceNumber, CancellationToken token)
+        private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
+        private async Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
+            HttpResponseMessage response,
+            HttpRequestProfile lpsHttpRequestProfile,
+            int sequenceNumber,
+            CancellationToken token)
         {
+            Stopwatch streamStopwatch = Stopwatch.StartNew();
+            string locationToResponse = string.Empty;
+            string contentType = response?.Content?.Headers?.ContentType?.MediaType;
+            MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
+
             try
             {
-                Stopwatch streamStopwatch = Stopwatch.StartNew();
-                string locationToResponse = string.Empty;
-                string contentType = response?.Content?.Headers?.ContentType?.MediaType;
-                MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
-
-                using (Stream contentStream = await response.Content.ReadAsStreamAsync(token))
+                // Ensure response.Content is not null
+                if (response.Content == null)
                 {
-                    var timeoutCts = new CancellationTokenSource();
-                    timeoutCts.CancelAfter(((ILPSHttpClientConfiguration<HttpRequestProfile>)_config).Timeout);
-                    var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token);
-                    byte[] buffer = new byte[64000]; // Adjust the buffer size as needed and modify this logic to have queue of buffers and reuse them
-                    int bytesRead;
-                    FileStream fileStream = null;
-                    if (lpsHttpRequestProfile.SaveResponse)
-                    {
-                        string fileExtension = mimeType.ToFileExtension();
-                        string sanitizedUrl = new UrlSanitizationService().Sanitize(lpsHttpRequestProfile.URL);
-                        string directoryName = $"{_runtimeOperationIdProvider.OperationId}.{sanitizedUrl}.Resources";
-
-                        Directory.CreateDirectory(directoryName);
-                        locationToResponse = $"{directoryName}/{Id}.{sequenceNumber}.{lpsHttpRequestProfile.Id}.{sanitizedUrl}.http {response.Version} {fileExtension}";
-
-                        fileStream = File.Create(locationToResponse);
-                    }
-                    streamStopwatch.Start();
-                    while ((bytesRead = await contentStream.ReadAsync(buffer, 0, buffer.Length, linkedCts.Token)) > 0)
-                    {
-                        streamStopwatch.Stop();
-                        await (fileStream?.WriteAsync(buffer, 0, bytesRead, linkedCts.Token) ?? Task.CompletedTask);
-                        streamStopwatch.Start();
-                    }
-                    streamStopwatch.Stop();
-                    await (fileStream?.FlushAsync(linkedCts.Token) ?? Task.CompletedTask);
-
+                    throw new InvalidOperationException("Response content is null.");
                 }
-                return ( new HttpResponse.SetupCommand
+
+                using Stream contentStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                using var timeoutCts = new CancellationTokenSource();
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token);
+                {
+                    timeoutCts.CancelAfter(((ILPSHttpClientConfiguration<HttpRequestProfile>)_config).Timeout);
+                    byte[] buffer = _bufferPool.Rent(64000);
+                    try
+                    {
+                        // Determine the target stream based on whether to save the response
+                        Stream targetStream = Stream.Null; // Default to discarding data
+
+                        if (lpsHttpRequestProfile.SaveResponse)
+                        {
+                            // Build the file path for saving the response
+                            string fileExtension = mimeType.ToFileExtension();
+                            string sanitizedUrl = new UrlSanitizationService().Sanitize(lpsHttpRequestProfile.URL);
+                            string directoryName = $"{_runtimeOperationIdProvider.OperationId}.{sanitizedUrl}.Resources";
+
+                            Directory.CreateDirectory(directoryName);
+                            locationToResponse = $"{directoryName}/{Id}.{sequenceNumber}.{lpsHttpRequestProfile.Id}.{sanitizedUrl}.http {response.Version} {fileExtension}";
+
+                            // Initialize FileStream if SaveResponse is true
+                            targetStream = new FileStream(
+                                locationToResponse,
+                                FileMode.Create,
+                                FileAccess.Write,
+                                FileShare.None,
+                                bufferSize: 4096,
+                                useAsync: true);
+                        }
+
+                        await using (targetStream.ConfigureAwait(false))
+                        {
+                            int bytesRead;
+                            streamStopwatch.Start();
+
+                            while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), linkedCts.Token).ConfigureAwait(false)) > 0)
+                            {
+                                streamStopwatch.Stop();
+                                // Save the response to the target stream (e.g., file). If stream is set to Stream.Null, the below line will be discarded
+                                await targetStream.WriteAsync(buffer.AsMemory(0, bytesRead), linkedCts.Token).ConfigureAwait(false);
+                                streamStopwatch.Start();
+                            }
+
+                            streamStopwatch.Stop();
+
+                            await targetStream.FlushAsync(linkedCts.Token).ConfigureAwait(false);
+                        }
+
+                    }
+
+                    finally
+                    {
+                        _bufferPool.Return(buffer);
+                    }
+                }
+
+                return (new HttpResponse.SetupCommand
                 {
                     StatusCode = response.StatusCode,
                     StatusMessage = response.ReasonPhrase,
@@ -181,15 +221,15 @@ namespace LPS.Infrastructure.LPSClients
         }
 
 
-        private async Task<bool> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpRequestProfile lpsHttpRequestProfile, string htmlFilePath, HttpClient client)
+        private async Task<bool> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpRequestProfile lpsHttpRequestProfile, string htmlFilePath, HttpClient client, CancellationToken token = default)
         {
             if (!lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
-            { 
+            {
                 return false;
             }
             if (!lpsHttpRequestProfile.SaveResponse)
             {
-                _=_logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Save Response must be set to true to download the embedded html resources", LPSLoggingLevel.Warning);
+                _ = _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Save Response must be set to true to download the embedded html resources", LPSLoggingLevel.Warning, token);
                 return false;
             }
             try
@@ -197,14 +237,14 @@ namespace LPS.Infrastructure.LPSClients
                 if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && lpsHttpRequestProfile.Id == responseCommand.LPSHttpRequestProfileId)
                 {
                     var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, new UrlSanitizationService(), client);
-                    await htmlResourceDownloader.DownloadResourcesAsync(lpsHttpRequestProfile.URL, htmlFilePath, CancellationToken.None);
+                    await htmlResourceDownloader.DownloadResourcesAsync(lpsHttpRequestProfile.URL, htmlFilePath, token);
                 }
                 return true;
             }
             catch (Exception ex)
             {
 
-                _ = _logger.LogAsync(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error);
+                _ = _logger.LogAsync(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error, token);
                 return false;
             }
         }

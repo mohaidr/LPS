@@ -9,8 +9,8 @@
       "LoggingLevel": 0
     },
     "LPSWatchdogConfiguration": {
-      "MaxMemoryMB": 200,
-      "CoolDownMemoryMB": 150,
+      "MaxMemoryMB": 1000,
+      "CoolDownMemoryMB": 800,
       "MaxCPUPercentage": 70,
       "CoolDownCPUPercentage": 50,
       "CoolDownRetryTimeInSeconds": 1,

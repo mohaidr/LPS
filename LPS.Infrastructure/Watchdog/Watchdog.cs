@@ -137,11 +137,17 @@ namespace LPS.Infrastructure.Watchdog
         {
             try
             {
+                bool isGCExecuted = false;
                 UpdateResourceUsageFlag(hostName);
                 UpdateResourceCoolingFlag(hostName);
                 _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
                 while (_resourceState != ResourceState.Cool)
                 {
+                    if (!isGCExecuted)
+                    {
+                        GC.Collect();
+                        isGCExecuted = true;
+                    }
                     await Task.Delay(_coolDownRetryTimeInSeconds * 1000);
                     UpdateResourceUsageFlag(hostName);
                     UpdateResourceCoolingFlag(hostName);

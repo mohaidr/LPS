@@ -44,7 +44,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
         {
             try
             {
-                _logger.Log(_operationIdProvider.OperationId, $"Starting resource download for {htmlFilePath}", LPSLoggingLevel.Verbose, cancellationToken);
+               await _logger.LogAsync(_operationIdProvider.OperationId, $"Starting resource download for {htmlFilePath}", LPSLoggingLevel.Verbose, cancellationToken);
 
                 // Read the HTML content from the saved file
                 string htmlContent = await File.ReadAllTextAsync(htmlFilePath, cancellationToken);
@@ -80,7 +80,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                     .Distinct()
                     .ToList();
 
-                _logger.Log(_operationIdProvider.OperationId, $"Found {resourceUrls.Count} resources to download.", LPSLoggingLevel.Verbose, cancellationToken);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Found {resourceUrls.Count} resources to download.", LPSLoggingLevel.Verbose, cancellationToken);
 
                 // Directory to save downloaded resources
                 string baseDirectory = Path.GetDirectoryName(htmlFilePath);
@@ -107,22 +107,22 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                         // Save to file
                         await File.WriteAllBytesAsync(filePath, resourceData, cancellationToken);
 
-                        _logger.Log(_operationIdProvider.OperationId, $"Downloaded resource: {resourceUri}", LPSLoggingLevel.Verbose, cancellationToken);
+                        await _logger.LogAsync(_operationIdProvider.OperationId, $"Downloaded resource: {resourceUri}", LPSLoggingLevel.Verbose, cancellationToken);
 
                         // Optionally, update metrics
                     }
                     catch (Exception ex)
                     {
-                        _logger.Log(_operationIdProvider.OperationId, $"Failed to download resource {resourceUrl}: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
+                       await _logger.LogAsync(_operationIdProvider.OperationId, $"Failed to download resource {resourceUrl}: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
                         // Continue with other resources
                     }
                 }
 
-                _logger.Log(_operationIdProvider.OperationId, $"Completed resource download for {htmlFilePath}", LPSLoggingLevel.Verbose, cancellationToken);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Completed resource download for {htmlFilePath}", LPSLoggingLevel.Verbose, cancellationToken);
             }
             catch (Exception ex)
             {
-                _logger.Log(_operationIdProvider.OperationId, $"Error in DownloadResourcesAsync: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Error in DownloadResourcesAsync: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
                 // Depending on requirements, decide whether to rethrow or handle the exception
                 throw;
             }
