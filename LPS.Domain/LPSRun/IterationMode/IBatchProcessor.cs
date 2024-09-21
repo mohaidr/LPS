@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSRun.IterationMode
@@ -35,7 +36,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         /// A <see cref="Task{Int32}"/> representing the asynchronous operation.
         /// The result contains the number of requests sent in the batch.
         /// </returns>
-        public Task<int> SendBatchAsync(TExucuteCommand command, int batchSize, Func<bool> batchCondition);
+        public Task<int> SendBatchAsync(TExucuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token);
 
     }
 }

@@ -35,14 +35,14 @@ namespace LPS.Domain.LPSRun.IterationMode
                     {
                         coolDownWatch.Restart();
                         await Task.Yield();
-                        awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition));
+                        awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
                     }
                     newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                 }
                 else
                 {
                     coolDownWatch.Restart();
-                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition));
+                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
                     await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
                 }
             }

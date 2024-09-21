@@ -27,7 +27,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             var stopwatch = Stopwatch.StartNew();
             while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested)
             {
-                await _watchdog.BalanceAsync(_hostName);
+                await _watchdog.BalanceAsync(_hostName, cancellationToken);
                 await _command.ExecuteAsync(_requestProfile);
                 numberOfSentRequests++;
             }

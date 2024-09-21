@@ -70,7 +70,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     Name = lpsTestPlan.Name,
                     NumberOfClients = lpsTestPlan.NumberOfClients,
                     RunInParallel = lpsTestPlan.RunInParallel,
-                    RampUpPeriod = lpsTestPlan.RampUpPeriod,
+                    ArrivalDelay = lpsTestPlan.ArrivalDelay,
                     DelayClientCreationUntilIsNeeded = lpsTestPlan.DelayClientCreationUntilIsNeeded,
                 };
                 var httpRunSetupCommand = new HttpRun.SetupCommand()

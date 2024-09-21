@@ -25,12 +25,12 @@ namespace LPS.UI.Core.LPSCommandLine
                 TestNameOption.AddAlias("-tn");
                 DelayClientCreation.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
-                RampupPeriodOption.AddAlias("-rp");
+                ArrivalDelayOption.AddAlias("-ad");
                 RunInParaller.AddAlias("-rip");
                 TestNameOption.AddAlias("--testname");
                 DelayClientCreation.AddAlias("--delayclientcreation");
                 NumberOfClientsOption.AddAlias("--numberofclients");
-                RampupPeriodOption.AddAlias("--rampupperiod");
+                ArrivalDelayOption.AddAlias("--arrivaldelay");
                 RunInParaller.AddAlias("--runinparallel");
                 RunNameOption.AddAlias("-rn");
                 RequestCountOption.AddAlias("-rc");
@@ -63,7 +63,7 @@ namespace LPS.UI.Core.LPSCommandLine
             }
             public static Option<string> TestNameOption { get; } = new Option<string>("--testname", ()=> "Quick-Test-Plan", "Test name") { IsRequired = false, Arity = ArgumentArity.ExactlyOne };
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>("--numberOfClients", () => 1, "Number of clients to execute the plan") { IsRequired = false, };
-            public static Option<int> RampupPeriodOption { get; } = new Option<int>("--rampupPeriod", () => 0, "Time in millisencds to wait before a new client run the test plan") { IsRequired = false, };
+            public static Option<int> ArrivalDelayOption { get; } = new Option<int>("--arrivalDelay", () => 0, "Time in millisencds to wait before a new client arrives") { IsRequired = false, };
             public static Option<bool> DelayClientCreation { get; } = new Option<bool>("--delayClientCreation", () => false, "Delay Client Creation Until is Needed") { IsRequired = false };
             public static Option<bool> RunInParaller { get; } = new Option<bool>("--runInParallel", () => true, "Execute your runs In Parallel") { IsRequired = false };
             public static Option<string> UrlOption { get; } = new Option<string>("--url", "URL") { IsRequired = true };
@@ -90,18 +90,18 @@ namespace LPS.UI.Core.LPSCommandLine
                 TestNameOption.AddAlias("-tn");
                 DelayClientCreation.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
-                RampupPeriodOption.AddAlias("-rp");
+                ArrivalDelayOption.AddAlias("-ad");
                 RunInParaller.AddAlias("-rip");
                 TestNameOption.AddAlias("--testname");
                 DelayClientCreation.AddAlias("--delayclientcreation");
                 NumberOfClientsOption.AddAlias("--numberofclients");
-                RampupPeriodOption.AddAlias("--rampupperiod");
+                ArrivalDelayOption.AddAlias("--arrivaldelay");
                 RunInParaller.AddAlias("--runinparallel");
 
             }
             public static Option<string> TestNameOption { get; } = new Option<string>("--testname", "Test name") { IsRequired = true, Arity = ArgumentArity.ExactlyOne };
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>("--numberOfClients", "Number of clients to execute the plan") { IsRequired = true, };
-            public static Option<int> RampupPeriodOption { get; } = new Option<int>("--rampupPeriod", "Time in millisencds to wait before creating starting a new client") { IsRequired = true, };
+            public static Option<int> ArrivalDelayOption { get; } = new Option<int>("--arrivalDelay", "Time in millisencds to wait before a new client arrives") { IsRequired = true, };
             public static Option<bool> DelayClientCreation { get; } = new Option<bool>("--delayClientCreation", () => false, "Delay Client Creation Until is Needed") { IsRequired = false };
             public static Option<bool> RunInParaller { get; } = new Option<bool>("--runInParallel", () => true, "Execute your runs In Parallel") { IsRequired = false };
         
@@ -227,6 +227,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 CoolDownMemoryMB.AddAlias("-cdmm");
                 MaxConcurrentConnectionsCountPerHostName.AddAlias("-mcccphn");
                 CoolDownConcurrentConnectionsCountPerHostName.AddAlias("-cdcccphn");
+                MaxCoolingPeriod.AddAlias("-mcp");
+                ResumeCoolingAfter.AddAlias("-rca");
                 CoolDownRetryTimeInSeconds.AddAlias("-cdrtis");
                 SuspensionMode.AddAlias("-sm");
                 MaxMemoryMB.AddAlias("--maxmemorymb");
@@ -235,6 +237,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 MaxConcurrentConnectionsCountPerHostName.AddAlias("--cooldowncpupercentage");
                 CoolDownConcurrentConnectionsCountPerHostName.AddAlias("--cooldownconcurrentconnectionscountperhostname");
                 CoolDownRetryTimeInSeconds.AddAlias("--cooldownretrytimeinseconds");
+                MaxCoolingPeriod.AddAlias("-maxcoolingperiod");
+                ResumeCoolingAfter.AddAlias("-resumecoolingafter");
                 SuspensionMode.AddAlias("--suspensionmode");
             }
 
@@ -245,6 +249,8 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<int?> MaxConcurrentConnectionsCountPerHostName { get; } = new Option<int?>("--maxConcurrentConnectionsCountPerHostName", "Set max concurrent connections threshold to puase the test when the value reached") { IsRequired = false, };
             public static Option<int?> CoolDownConcurrentConnectionsCountPerHostName { get; } = new Option<int?>("--coolDownConcurrentConnectionsCountPerHostName", "Set max concurrent connections cooldown to resume the test when the value reached") { IsRequired = false, };
             public static Option<int?> CoolDownRetryTimeInSeconds { get; } = new Option<int?>("--coolDownRetryTimeInSeconds", "The interval at which the system examines the cooldown value to decide whether to release or persist in pausing the test.") { IsRequired = false, };
+            public static Option<int?> MaxCoolingPeriod { get; } = new Option<int?>("--maxCoolingPeriod", "The maximum duration in seconds for the cooling process before the watchdog pause it.") { IsRequired = false, };
+            public static Option<int?> ResumeCoolingAfter { get; } = new Option<int?>("--resumeCoolingAfter", "The time in seconds to resume cooling after it has been paused.") { IsRequired = false, };
             public static Option<SuspensionMode?> SuspensionMode { get; } = new Option<SuspensionMode?>("--suspensionMode", @"determines the suspension approach. ""All"" entails pausing the test when all parameters surpass their thresholds, while ""Any"" involves pausing the test if any parameter exceeds its specified threshold.") { IsRequired = false, };
 
         }

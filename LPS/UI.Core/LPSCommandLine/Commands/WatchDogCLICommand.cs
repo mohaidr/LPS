@@ -59,6 +59,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 watchdoOptions.CoolDownConcurrentConnectionsCountPerHostName = updatedWatchdogOptions.CoolDownConcurrentConnectionsCountPerHostName ?? _watchdogOptions.Value.CoolDownConcurrentConnectionsCountPerHostName;
                 watchdoOptions.CoolDownRetryTimeInSeconds = updatedWatchdogOptions.CoolDownRetryTimeInSeconds ?? _watchdogOptions.Value.CoolDownRetryTimeInSeconds;
                 watchdoOptions.SuspensionMode = updatedWatchdogOptions.SuspensionMode ?? _watchdogOptions.Value.SuspensionMode;
+                watchdoOptions.MaxCoolingPeriod = updatedWatchdogOptions.MaxCoolingPeriod ?? _watchdogOptions.Value.MaxCoolingPeriod;
+                watchdoOptions.ResumeCoolingAfter = updatedWatchdogOptions.ResumeCoolingAfter ?? _watchdogOptions.Value.ResumeCoolingAfter;
 
                 var validationResults = watchdogValidator.Validate(watchdoOptions);
                 if (!validationResults.IsValid)
@@ -79,6 +81,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         option.CoolDownConcurrentConnectionsCountPerHostName = watchdoOptions.CoolDownConcurrentConnectionsCountPerHostName;
                         option.CoolDownRetryTimeInSeconds = watchdoOptions.CoolDownRetryTimeInSeconds;
                         option.SuspensionMode = watchdoOptions.SuspensionMode;
+                        option.MaxCoolingPeriod = watchdoOptions.MaxCoolingPeriod;
+                        option.ResumeCoolingAfter = watchdoOptions.ResumeCoolingAfter;
                     });
                 }
             }, new WatchDogBinder());

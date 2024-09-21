@@ -50,15 +50,15 @@ namespace LPS.UI.Core.UI.Build.Services
                     continue;
                 }
 
-                if (!_validator.Validate(nameof(Command.RampUpPeriod)))
+                if (!_validator.Validate(nameof(Command.ArrivalDelay)))
                 {
                     if (Command.NumberOfClients == 1)
                     {
-                        _command.RampUpPeriod = 1;
+                        _command.ArrivalDelay = 1;
                         continue;
                     }
-                    _validator.PrintValidationErrors(nameof(Command.RampUpPeriod));
-                    _command.RampUpPeriod = AnsiConsole.Ask<int>("What is the [green]'Ramp Up Period' (Milliseconds)[/] between the clients?");
+                    _validator.PrintValidationErrors(nameof(Command.ArrivalDelay));
+                    _command.ArrivalDelay = AnsiConsole.Ask<int>("What is the [green]'Client Arrival Interval'[/] in milliseconds (i.e., the delay between each client's arrival)?");
                     continue;
                 }
 

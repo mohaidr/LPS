@@ -22,6 +22,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<int?> _maxConcurrentConnectionsCountPerHostName;
         private Option<int?> _coolDownConcurrentConnectionsCountPerHostName;
         private Option<int?> _coolDownRetryTimeInSeconds;
+        private Option<int?> _maxCoolingPeriod;
+        private Option<int?> _resumeCoolingAfter;
         private Option<SuspensionMode?> _suspensionMode;
 
 
@@ -34,6 +36,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<int?>? maxConcurrentConnectionsCountPerHostName = null,
             Option<int?>? coolDownConcurrentConnectionsCountPerHostName = null,
             Option<int?>? coolDownRetryTimeInSeconds = null,
+            Option<int?>? maxCoolingPeriod = null,
+            Option<int?>? resumeCoolingAfter = null,
             Option<SuspensionMode?>? suspensionMode = null)
         {
             _maxMemoryMB = maxMemoryMB ?? CommandLineOptions.LPSWatchdogCommandOptions.MaxMemoryMB;
@@ -43,6 +47,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _maxConcurrentConnectionsCountPerHostName = maxConcurrentConnectionsCountPerHostName ?? CommandLineOptions.LPSWatchdogCommandOptions.MaxConcurrentConnectionsCountPerHostName;
             _coolDownConcurrentConnectionsCountPerHostName = coolDownConcurrentConnectionsCountPerHostName ?? CommandLineOptions.LPSWatchdogCommandOptions.CoolDownConcurrentConnectionsCountPerHostName;
             _coolDownRetryTimeInSeconds = coolDownRetryTimeInSeconds ?? CommandLineOptions.LPSWatchdogCommandOptions.CoolDownRetryTimeInSeconds;
+            _maxCoolingPeriod = maxCoolingPeriod ?? CommandLineOptions.LPSWatchdogCommandOptions.MaxCoolingPeriod;
+            _resumeCoolingAfter = resumeCoolingAfter ?? CommandLineOptions.LPSWatchdogCommandOptions.ResumeCoolingAfter;
             _suspensionMode = suspensionMode ?? CommandLineOptions.LPSWatchdogCommandOptions.SuspensionMode;
         }
 
@@ -57,6 +63,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 CoolDownConcurrentConnectionsCountPerHostName = bindingContext.ParseResult.GetValueForOption(_coolDownConcurrentConnectionsCountPerHostName),
                 CoolDownRetryTimeInSeconds = bindingContext.ParseResult.GetValueForOption(_coolDownRetryTimeInSeconds),
                 SuspensionMode = bindingContext.ParseResult.GetValueForOption(_suspensionMode),
+                MaxCoolingPeriod = bindingContext.ParseResult.GetValueForOption(_maxCoolingPeriod),
+                ResumeCoolingAfter = bindingContext.ParseResult.GetValueForOption(_resumeCoolingAfter)
             };
     }
 }

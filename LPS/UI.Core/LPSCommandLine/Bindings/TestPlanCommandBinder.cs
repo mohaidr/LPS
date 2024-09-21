@@ -14,20 +14,20 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
     {
         private Option<string> _testNameOption;
         private Option<int> _numberOfClientsOption;
-        private Option<int> _rampupPeriodOption;
+        private Option<int> _arrivalDelayOption;
         private Option<bool> _delayClientCreationOption;
         private Option<bool> _runInParallerOption;
 
         public TestPlanCommandBinder(
             Option<string>? testNameOption = null,
             Option<int>? numberOfClientsOption = null,
-            Option<int>? rampupPeriodOption = null,
+            Option<int>? arrivalDelayOption = null,
             Option<bool>? delayClientCreationOption = null,
             Option<bool>? runInParallerOption = null)
         {
             _testNameOption = testNameOption ?? CommandLineOptions.LPSCreateCommandOptions.TestNameOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCreateCommandOptions.NumberOfClientsOption;
-            _rampupPeriodOption = rampupPeriodOption ?? CommandLineOptions.LPSCreateCommandOptions.RampupPeriodOption;
+            _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCreateCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCreateCommandOptions.DelayClientCreation;
             _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCreateCommandOptions.RunInParaller;
         }
@@ -37,7 +37,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_testNameOption),
                 NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
-                RampUpPeriod = bindingContext.ParseResult.GetValueForOption(_rampupPeriodOption),
+                ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                 DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                 RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
             };

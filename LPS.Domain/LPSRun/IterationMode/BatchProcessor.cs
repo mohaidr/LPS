@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSRun.IterationMode
@@ -19,13 +20,13 @@ namespace LPS.Domain.LPSRun.IterationMode
             _watchdog = watchdog;
             _hostName = new Uri(_requestProfile.URL).Host;
         }
-        public async Task<int> SendBatchAsync(HttpRequestProfile.ExecuteCommand command, int batchSize, Func<bool> batchCondition)
+        public async Task<int> SendBatchAsync(HttpRequestProfile.ExecuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token)
         {
             List<Task> awaitableTasks = [];
             int _numberOfSentRequests = 0; 
             for (int b = 0; b < batchSize && batchCondition(); b++)
             {
-                await _watchdog.BalanceAsync(_hostName);
+                await _watchdog.BalanceAsync(_hostName, token);
                 awaitableTasks.Add(command.ExecuteAsync(_requestProfile));
                 _numberOfSentRequests++;
             }

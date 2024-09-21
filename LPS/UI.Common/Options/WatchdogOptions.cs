@@ -17,6 +17,8 @@ namespace LPS.UI.Common.Options
         public int? CoolDownRetryTimeInSeconds { get; set; }
         public int? MaxConcurrentConnectionsCountPerHostName { get; set; }
         public int? CoolDownConcurrentConnectionsCountPerHostName { get; set; }
+        public int? MaxCoolingPeriod { get; set; }
+        public int? ResumeCoolingAfter { get; set; }
         public SuspensionMode? SuspensionMode { get; set; }
     }
 }

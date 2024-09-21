@@ -45,6 +45,13 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(watchdog => watchdog.CoolDownRetryTimeInSeconds)
             .NotNull()
             .GreaterThan(0);
+            RuleFor(command => command.MaxCoolingPeriod)
+            .NotNull()
+            .GreaterThan(0);
+            RuleFor(command => command.ResumeCoolingAfter)
+            .NotNull()
+            .GreaterThan(0);
+
         }
     }
 }

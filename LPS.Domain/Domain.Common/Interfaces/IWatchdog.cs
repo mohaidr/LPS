@@ -11,15 +11,16 @@ namespace LPS.Domain.Common.Interfaces
         Cool,
         Cooling,
         Hot,
-        Unkown
+        Unknown
     }
     public interface IWatchdog
     {
         /// <summary>
-        /// Block the execution until the resources cool down.
+        /// Balances resource usage by initiating cooling if necessary.
         /// </summary>
-        /// <param name="hostName">The host name.</param>
-        /// <returns>Returns Cool if the resources cools down successfully and Unkown if exception happens during the cooldown process.</returns>
-        public Task<ResourceState> BalanceAsync(string hostName);
+        /// <param name="hostName">The host name to monitor.</param>
+        /// <param name="token">Cancellation token.</param>
+        /// <returns>The current resource state after balancing.</returns>
+        public Task<ResourceState> BalanceAsync(string hostName, CancellationToken token = default);
     }
 }

@@ -1,164 +1,184 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using HtmlAgilityPack;
 using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Monitoring.EventListeners;
 using LPS.Infrastructure.Monitoring.Metrics;
-using Microsoft.Extensions.Logging;
 
 namespace LPS.Infrastructure.Watchdog
 {
+    /// <summary>
+    /// Defines the suspension modes for resource monitoring.
+    /// </summary>
     public enum SuspensionMode
     {
         Any,
         All
     }
+
+    /// <summary>
+    /// Monitors system resources and manages cooling mechanisms based on defined thresholds.
+    /// </summary>
     public class Watchdog : IWatchdog
     {
-        private static SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
-        public double MaxMemoryMB { get { return _maxMemoryMB; } }
-        public double MaxCPUPercentage { get { return _maxCPUPercentage; } }
-        public double CoolDownMemoryMB { get { return _coolDownMemoryMB; } }
-        public double CoolDownCPUPercentage { get { return _coolDownCPUPercentage; } }
-        public SuspensionMode SuspensionMode { get { return _suspensionMode; } }
-        public int CoolDownRetryTimeInSeconds { get { return _coolDownRetryTimeInSeconds; } }
-        public int MaxConcurrentConnectionsCountPerHostName { get { return _maxConcurrentConnectionsCountPerHostName; } }
-        public int CoolDownConcurrentConnectionsCountPerHostName { get { return _coolDownConcurrentConnectionsCountPerHostName; } }
+        // Configuration properties
+        public double MaxMemoryMB { get; }
+        public double MaxCPUPercentage { get; }
+        public double CoolDownMemoryMB { get; }
+        public double CoolDownCPUPercentage { get; }
+        public SuspensionMode SuspensionMode { get; }
+        public int CoolDownRetryTimeInSeconds { get; }
+        public int MaxConcurrentConnectionsCountPerHostName { get; }
+        public int CoolDownConcurrentConnectionsCountPerHostName { get; }
+        public int MaxCoolingPeriod { get; }
+        public int ResumeCoolingAfter { get; }
 
-        private double _maxMemoryMB;
-        private double _maxCPUPercentage;
-        private double _coolDownMemoryMB;
-        private double _coolDownCPUPercentage;
-        private int _coolDownRetryTimeInSeconds;
-        private int _maxConcurrentConnectionsCountPerHostName;
-        private int _coolDownConcurrentConnectionsCountPerHostName;
+        // Private fields
+        private readonly ResourceEventListener _resourceListener;
+        private readonly ILogger _logger;
+        private readonly IRuntimeOperationIdProvider _operationIdProvider;
+
         private ResourceState _resourceState;
-        private SuspensionMode _suspensionMode;
 
-        private ResourceEventListener _lpsResourceListener;
-        Domain.Common.Interfaces.ILogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        CancellationTokenSource _cts;
-        private Watchdog(Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
+        private bool _isResourceUsageExceeded;
+        private bool _isResourceCoolingDown;
+
+        // Synchronization
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+
+        // Cooling state fields
+        private bool _isCoolingStarted = false;
+        private bool _isGCExecuted = false;
+        private bool _isCoolingPaused = false;
+        private readonly Stopwatch _maxCoolingStopwatch = new Stopwatch();
+        private readonly Stopwatch _resetToCoolingStopwatch = new Stopwatch();
+
+        private Watchdog(ILogger logger, IRuntimeOperationIdProvider operationIdProvider)
+            : this(
+                  memoryLimitMB: 1000,
+                  cpuLimit: 50,
+                  coolDownMemoryMB: 500,
+                  coolDownCPUPercentage: 30,
+                  maxConcurrentConnectionsPerHostName: 1000,
+                  coolDownConcurrentConnectionsCountPerHostName: 100,
+                  coolDownRetryTimeInSeconds: 1,
+                  maxCoolingPeriod: 60,
+                  resumeCoolingAfter: 300,
+                  suspensionMode: SuspensionMode.Any,
+                  logger: logger,
+                  operationIdProvider: operationIdProvider)
         {
-            _maxCPUPercentage = 50;
-            _maxMemoryMB = 1000;
-            _coolDownMemoryMB = 500;
-            _coolDownCPUPercentage = 30;
-            _suspensionMode = SuspensionMode.Any;
-            _maxConcurrentConnectionsCountPerHostName = 1000;
-            _coolDownConcurrentConnectionsCountPerHostName = 100;
-            _coolDownRetryTimeInSeconds = 1;
-            _resourceState = ResourceState.Cool;
-            _lpsResourceListener = new ResourceEventListener();
-            _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _cts = cts;
         }
 
-        public Watchdog(double memoryLimitMB,
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Watchdog"/> class with specified configuration.
+        /// </summary>
+        /// <param name="memoryLimitMB">Maximum allowed memory in MB.</param>
+        /// <param name="cpuLimit">Maximum allowed CPU percentage.</param>
+        /// <param name="coolDownMemoryMB">Memory threshold for cooldown.</param>
+        /// <param name="coolDownCPUPercentage">CPU threshold for cooldown.</param>
+        /// <param name="maxConcurrentConnectionsPerHostName">Maximum concurrent connections per host.</param>
+        /// <param name="coolDownConcurrentConnectionsCountPerHostName">Concurrent connections threshold for cooldown.</param>
+        /// <param name="coolDownRetryTimeInSeconds">Retry interval during cooldown.</param>
+        /// <param name="maxCoolingPeriod">Maximum duration for cooling.</param>
+        /// <param name="resumeCoolingAfter">Time after which cooling can be resumed.</param>
+        /// <param name="suspensionMode">Mode of suspension (Any or All).</param>
+        /// <param name="logger">The logger instance.</param>
+        /// <param name="operationIdProvider">The operation ID provider.</param>
+        public Watchdog(
+            double memoryLimitMB,
             double cpuLimit,
             double coolDownMemoryMB,
             double coolDownCPUPercentage,
             int maxConcurrentConnectionsPerHostName,
             int coolDownConcurrentConnectionsCountPerHostName,
             int coolDownRetryTimeInSeconds,
-            SuspensionMode suspensionMode, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            int maxCoolingPeriod,
+            int resumeCoolingAfter,
+            SuspensionMode suspensionMode,
+            ILogger logger,
+            IRuntimeOperationIdProvider operationIdProvider)
         {
-            _maxCPUPercentage = cpuLimit;
-            _maxMemoryMB = memoryLimitMB;
-            _coolDownMemoryMB = coolDownMemoryMB;
-            _coolDownCPUPercentage = coolDownCPUPercentage;
-            _suspensionMode = suspensionMode;
-            _maxConcurrentConnectionsCountPerHostName = maxConcurrentConnectionsPerHostName;
-            _coolDownConcurrentConnectionsCountPerHostName = coolDownConcurrentConnectionsCountPerHostName;
-            _coolDownRetryTimeInSeconds = coolDownRetryTimeInSeconds;
+            MaxMemoryMB = memoryLimitMB;
+            MaxCPUPercentage = cpuLimit;
+            CoolDownMemoryMB = coolDownMemoryMB;
+            CoolDownCPUPercentage = coolDownCPUPercentage;
+            SuspensionMode = suspensionMode;
+            MaxConcurrentConnectionsCountPerHostName = maxConcurrentConnectionsPerHostName;
+            CoolDownConcurrentConnectionsCountPerHostName = coolDownConcurrentConnectionsCountPerHostName;
+            CoolDownRetryTimeInSeconds = coolDownRetryTimeInSeconds;
+            MaxCoolingPeriod = maxCoolingPeriod;
+            ResumeCoolingAfter = resumeCoolingAfter;
             _resourceState = ResourceState.Cool;
-            _lpsResourceListener = new ResourceEventListener();
+            _resourceListener = new ResourceEventListener();
             _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _operationIdProvider = operationIdProvider;
         }
-        bool _isResourceUsageExceeded;
-        bool _isResourceCoolingDown;
 
-        private void UpdateResourceUsageFlag(string hostName)
+        public static Watchdog GetDefaultInstance(ILogger logger, IRuntimeOperationIdProvider operationIdProvider)
         {
-            bool memoryExceededTheLimit = _lpsResourceListener.MemoryUsageMB > _maxMemoryMB;
-            bool cpuExceededTheLimit = _lpsResourceListener.CPUPercentage >= _maxCPUPercentage;
-            bool hostActiveConnectionsExceededTheLimit = GetHostActiveConnectionsCount(hostName) > _maxConcurrentConnectionsCountPerHostName;
-            switch (_suspensionMode)
-            {
-                case SuspensionMode.Any:
-                    _isResourceUsageExceeded = memoryExceededTheLimit
-                        || cpuExceededTheLimit
-                        || hostActiveConnectionsExceededTheLimit;
-                    break;
-                case SuspensionMode.All:
-                    _isResourceUsageExceeded = memoryExceededTheLimit
-                        && cpuExceededTheLimit
-                        && hostActiveConnectionsExceededTheLimit
-                        ;
-                    break;
-            }
+            return new Watchdog(logger, operationIdProvider);
         }
 
-        private void UpdateResourceCoolingFlag(string hostName)
-        {
-            bool memoryExceedsTheCoolingLimit = _lpsResourceListener.MemoryUsageMB > _coolDownMemoryMB;
-            bool cpuExceedsTheCPULimit = _lpsResourceListener.CPUPercentage >= _coolDownCPUPercentage;
-            bool hostActiveConnectionsExceedsTheConnectionsLimit = GetHostActiveConnectionsCount(hostName) > _coolDownConcurrentConnectionsCountPerHostName;
-
-            switch (_suspensionMode)
-            {
-                case SuspensionMode.All:
-                    _isResourceCoolingDown = (memoryExceedsTheCoolingLimit
-                        && cpuExceedsTheCPULimit
-                        && hostActiveConnectionsExceedsTheConnectionsLimit)
-                        && _resourceState != ResourceState.Cool;
-                    break;
-                case SuspensionMode.Any:
-                    _isResourceCoolingDown = (memoryExceedsTheCoolingLimit
-                        || cpuExceedsTheCPULimit
-                        || hostActiveConnectionsExceedsTheConnectionsLimit)
-                        && _resourceState != ResourceState.Cool;
-                    break;
-            }
-
-        }
-        
-        public async Task<ResourceState> BalanceAsync(string hostName)
+        public async Task<ResourceState> BalanceAsync(string hostName, CancellationToken token = default)
         {
             try
             {
-                bool isGCExecuted = false;
+                await _semaphoreSlim.WaitAsync(token);
+
+                if (_isCoolingPaused && _resetToCoolingStopwatch.Elapsed.TotalSeconds > ResumeCoolingAfter)
+                {
+                    await _logger.LogAsync(_operationIdProvider.OperationId, "Resuming cooling if needed", LPSLoggingLevel.Information, token);
+                    _resetToCoolingStopwatch.Reset();
+                    _isCoolingPaused = false;
+                }
+
                 UpdateResourceUsageFlag(hostName);
                 UpdateResourceCoolingFlag(hostName);
-                _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
-                while (_resourceState != ResourceState.Cool)
+                _resourceState = DetermineResourceState();
+
+                while (_resourceState != ResourceState.Cool && !_isCoolingPaused && !token.IsCancellationRequested)
                 {
-                    if (!isGCExecuted)
+                    if (!_isCoolingStarted)
                     {
-                        GC.Collect();
-                        isGCExecuted = true;
+                        await StartCoolingAsync(token);
                     }
-                    await Task.Delay(_coolDownRetryTimeInSeconds * 1000);
+
+                    if (_maxCoolingStopwatch.Elapsed.TotalSeconds > MaxCoolingPeriod)
+                    {
+                        await PauseCoolingAsync(token);
+                        break;
+                    }
+
+                    if (!_isGCExecuted)
+                    {
+                        await ExecuteGarbageCollectionAsync(token);
+                    }
+
+                    await LogCoolingInitiationAsync(token);
+                    await Task.Delay(TimeSpan.FromSeconds(CoolDownRetryTimeInSeconds), token);
+
                     UpdateResourceUsageFlag(hostName);
                     UpdateResourceCoolingFlag(hostName);
-                    _resourceState = _isResourceUsageExceeded ? ResourceState.Hot : _isResourceCoolingDown ? ResourceState.Cooling : ResourceState.Cool;
+                    _resourceState = DetermineResourceState();
                 }
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Watchdog has failed to balance the resource usage.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
-                _resourceState = ResourceState.Unkown;
+                await _logger.LogAsync(_operationIdProvider.OperationId,
+                    $"Watchdog failed to balance resource usage.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}",
+                    LPSLoggingLevel.Error, token);
+                _resourceState = ResourceState.Unknown;
             }
+            finally
+            {
+                ResetCoolingState();
+                _semaphoreSlim.Release();
+            }
+
             return _resourceState;
         }
 
@@ -166,23 +186,88 @@ namespace LPS.Infrastructure.Watchdog
         {
             try
             {
-                int hostActiveConnectionsCount = MetricsDataMonitor
-                    .Get<ThroughputMetricMonitor>(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.URL!= null && metric.GetDimensionSet<ConnectionDimensionSet>().URL.Contains(hostName))
-                    .Select(metric => metric.GetDimensionSet<ConnectionDimensionSet>().ActiveRequestsCount)
-                    .Sum();
-                return hostActiveConnectionsCount;
+                return MetricsDataMonitor
+                    .Get<ThroughputMetricMonitor>(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.URL?.Contains(hostName) == true)
+                    .Sum(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.ActiveRequestsCount ?? 0);
             }
-            catch (Exception ex) {
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Failed to get the active connections count \n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
+            catch (Exception ex)
+            {
+                _logger.Log(_operationIdProvider.OperationId,
+                    $"Failed to get active connections count.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}",
+                    LPSLoggingLevel.Error);
                 return -1;
             }
-         
         }
 
-        public static Watchdog GetDefaultInstance(Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
+        private void UpdateResourceUsageFlag(string hostName)
         {
-            return new Watchdog(logger, runtimeOperationIdProvider, cts);
+            bool memoryExceeded = _resourceListener.MemoryUsageMB > MaxMemoryMB;
+            bool cpuExceeded = _resourceListener.CPUPercentage >= MaxCPUPercentage;
+            bool connectionsExceeded = GetHostActiveConnectionsCount(hostName) > MaxConcurrentConnectionsCountPerHostName;
+
+            _isResourceUsageExceeded = SuspensionMode switch
+            {
+                SuspensionMode.Any => memoryExceeded || cpuExceeded || connectionsExceeded,
+                SuspensionMode.All => memoryExceeded && cpuExceeded && connectionsExceeded,
+                _ => false
+            };
         }
 
+        private void UpdateResourceCoolingFlag(string hostName)
+        {
+            bool memoryExceedsCooldown = _resourceListener.MemoryUsageMB > CoolDownMemoryMB;
+            bool cpuExceedsCooldown = _resourceListener.CPUPercentage >= CoolDownCPUPercentage;
+            bool connectionsExceedsCooldown = GetHostActiveConnectionsCount(hostName) > CoolDownConcurrentConnectionsCountPerHostName;
+
+            bool coolingCondition = SuspensionMode switch
+            {
+                SuspensionMode.Any => memoryExceedsCooldown || cpuExceedsCooldown || connectionsExceedsCooldown,
+                SuspensionMode.All => memoryExceedsCooldown && cpuExceedsCooldown && connectionsExceedsCooldown,
+                _ => false
+            };
+
+            _isResourceCoolingDown = coolingCondition && _resourceState != ResourceState.Cool;
+        }
+
+        private ResourceState DetermineResourceState()
+        {
+            return _isResourceUsageExceeded
+                ? ResourceState.Hot
+                : _isResourceCoolingDown
+                    ? ResourceState.Cooling
+                    : ResourceState.Cool;
+        }
+
+        private async Task StartCoolingAsync(CancellationToken token)
+        {
+            await _logger.LogAsync(_operationIdProvider.OperationId, "Cooling has started", LPSLoggingLevel.Information, token);
+            _isCoolingStarted = true;
+            _maxCoolingStopwatch.Start();
+        }
+
+        private async Task PauseCoolingAsync(CancellationToken token)
+        {
+            _isCoolingPaused = true;
+            _resetToCoolingStopwatch.Start();
+            await _logger.LogAsync(_operationIdProvider.OperationId, $"Pausing cooling for {MaxCoolingPeriod} seconds", LPSLoggingLevel.Information, token);
+        }
+        private async Task ExecuteGarbageCollectionAsync(CancellationToken token)
+        {
+            GC.Collect();
+            _isGCExecuted = true;
+            await _logger.LogAsync(_operationIdProvider.OperationId, "Garbage collection executed", LPSLoggingLevel.Warning, token);
+        }
+
+        private async Task LogCoolingInitiationAsync(CancellationToken token)
+        {
+            await _logger.LogAsync(_operationIdProvider.OperationId, "Resource utilization limit reached - initiating cooling...", LPSLoggingLevel.Warning, token);
+        }
+
+        private void ResetCoolingState()
+        {
+            _maxCoolingStopwatch.Reset();
+            _isCoolingStarted = false;
+            _isGCExecuted = false;
+        }
     }
 }

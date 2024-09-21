@@ -51,6 +51,6 @@ namespace LPS.Domain
         public bool SameClientForEachTeastCase { get; private set; } = true;
         public bool IsValid { get; private set; }
         public int NumberOfClients { get; private set; }
-        public int RampUpPeriod { get; private set; }
+        public int ArrivalDelay { get; private set; }
     }
 }

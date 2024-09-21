@@ -28,13 +28,13 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         Option<HttpRun.IterationMode> _iterationModeOption;
         private Option<string> _testPlanNameOption;
         private Option<int> _numberOfClientsOption;
-        private Option<int> _rampupPeriodOption;
+        private Option<int> _arrivalDelayOption;
         private Option<bool> _delayClientCreationOption;
         private Option<bool> _runInParallerOption;
 
         public CommandBinder(Option<string>? testPlanNameOption = null,
             Option<int>? numberOfClientsOption = null,
-            Option<int>? rampupPeriodOption = null,
+            Option<int>? arrivalDelayOption = null,
             Option<bool>? delayClientCreationOption = null,
             Option<bool>? runInParallerOption = null,
             Option<string>? httpRunNameOption = null,
@@ -54,7 +54,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         {
             _testPlanNameOption = testPlanNameOption ?? CommandLineOptions.LPSCommandOptions.TestNameOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
-            _rampupPeriodOption = rampupPeriodOption ?? CommandLineOptions.LPSCommandOptions.RampupPeriodOption;
+            _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreation;
             _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCommandOptions.RunInParaller;
             _httpRunNameOption = httpRunNameOption ?? CommandLineOptions.LPSCommandOptions.RunNameOption;
@@ -80,7 +80,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_testPlanNameOption),
                 NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
-                RampUpPeriod = bindingContext.ParseResult.GetValueForOption(_rampupPeriodOption),
+                ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                 DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                 RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
                 LPSRuns = new List<HttpRun.SetupCommand>()

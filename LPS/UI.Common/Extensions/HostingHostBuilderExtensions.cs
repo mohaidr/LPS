@@ -88,9 +88,10 @@ namespace LPS.UI.Common.Extensions
                 using var serviceProvider = services.BuildServiceProvider();
                 var fileLogger = serviceProvider.GetRequiredService<ILogger>();
                 bool isDefaultConfigurationsApplied = false;
+
                 if (watchdogOptions == null)
                 {
-                    watchdog = Watchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILogger>(), serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>(), serviceProvider.GetRequiredService<CancellationTokenSource>());
+                    watchdog = Watchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILogger>(), serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>());
                     isDefaultConfigurationsApplied = true;
                     fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSWatchdogConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
                 }
@@ -100,7 +101,7 @@ namespace LPS.UI.Common.Extensions
                     var validationResults = lpsWatchdogValidator.Validate(watchdogOptions);
                     if (!validationResults.IsValid)
                     {
-                        watchdog = Watchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILogger>(), serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>(), serviceProvider.GetRequiredService<CancellationTokenSource>());
+                        watchdog = Watchdog.GetDefaultInstance(serviceProvider.GetRequiredService<ILogger>(), serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>());
                         isDefaultConfigurationsApplied = true;
                         fileLogger.Log("0000-0000-0000-0000", "Watchdog options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
                         validationResults.PrintValidationErrors();
@@ -114,7 +115,9 @@ namespace LPS.UI.Common.Extensions
                             watchdogOptions.MaxConcurrentConnectionsCountPerHostName.Value,
                             watchdogOptions.CoolDownConcurrentConnectionsCountPerHostName.Value,
                             watchdogOptions.CoolDownRetryTimeInSeconds.Value,
-                            watchdogOptions.SuspensionMode.Value, 
+                            watchdogOptions.MaxCoolingPeriod.Value,
+                            watchdogOptions.ResumeCoolingAfter.Value,
+                            watchdogOptions.SuspensionMode.Value,
                             serviceProvider.GetRequiredService<ILogger>(), 
                             serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>());
                     }

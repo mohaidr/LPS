@@ -31,7 +31,7 @@ namespace LPS.Domain
             public Guid? Id { get; set; }
             public string Name { get; set; }
             public int NumberOfClients { get; set; }
-            public int RampUpPeriod { get; set; }
+            public int ArrivalDelay { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
             public bool IsValid { get; set; }
@@ -45,7 +45,7 @@ namespace LPS.Domain
             {
                 this.Name = command.Name;
                 this.NumberOfClients= command.NumberOfClients;
-                this.RampUpPeriod= command.RampUpPeriod;
+                this.ArrivalDelay = command.ArrivalDelay;
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
                 this.RunInParallel = command.RunInParallel;

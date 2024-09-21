@@ -121,9 +121,9 @@ namespace LPS.Domain
                         httpClient = _lpsClientManager.CreateInstance(_lpsClientConfig);
                     }
                     awaitableTasks.Add(LoopRunsAsync(command, httpClient));
-                    if (this.RampUpPeriod > 0)
+                    if (this.ArrivalDelay > 0)
                     {
-                        await Task.Delay(this.RampUpPeriod, _cts.Token);
+                        await Task.Delay(this.ArrivalDelay, _cts.Token);
                     }
                 }
                 await Task.WhenAll(awaitableTasks.ToArray());
@@ -150,7 +150,7 @@ namespace LPS.Domain
                     continue;
                 }
                 string hostName = new Uri(((HttpRun)httpRun).LPSHttpRequestProfile.URL).Host;
-                await _watchdog.BalanceAsync(hostName);
+                await _watchdog.BalanceAsync(hostName, _cts.Token);
                 if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {
                     awaitableTasks.Add(ExecuteRunAsync(((HttpRun)httpRun), command, httpClient));

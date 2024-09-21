@@ -27,10 +27,10 @@ namespace LPS.UI.Core.LPSValidators
             .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")
             .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
 
-            RuleFor(command => command.RampUpPeriod)
-            .NotNull().WithMessage("The 'RampUp Period' must be a non-null value")
+            RuleFor(command => command.ArrivalDelay)
+            .NotNull().WithMessage("The 'Arrival Delay' must be a non-null value")
             .GreaterThan(0).When(command=> command.NumberOfClients>1)
-            .WithMessage("The 'RampUp Period' must be greater than 0");
+            .WithMessage("The 'Arrival Delay' must be greater than 0");
 
 
             RuleFor(command => command.DelayClientCreationUntilIsNeeded)

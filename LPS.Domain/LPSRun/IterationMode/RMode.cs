@@ -25,7 +25,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             int numberOfSentRequests = 0;
             for (int i = 0; i < _requestCount && !cancellationToken.IsCancellationRequested; i++)
             {
-                await _watchdog.BalanceAsync(_hostName);
+                await _watchdog.BalanceAsync(_hostName, cancellationToken);
                 await _command.ExecuteAsync(_requestProfile);
                 numberOfSentRequests++;
             }

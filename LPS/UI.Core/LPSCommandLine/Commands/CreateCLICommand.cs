@@ -58,7 +58,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     _planSetupCommand.Name = lpaTestPlan.Name;
                     _planSetupCommand.NumberOfClients = lpaTestPlan.NumberOfClients;
                     _planSetupCommand.DelayClientCreationUntilIsNeeded = lpaTestPlan.DelayClientCreationUntilIsNeeded;
-                    _planSetupCommand.RampUpPeriod = lpaTestPlan.RampUpPeriod;
+                    _planSetupCommand.ArrivalDelay = lpaTestPlan.ArrivalDelay;
                     _planSetupCommand.RunInParallel = lpaTestPlan.RunInParallel;
                     string json = SerializationHelper.Serialize(_planSetupCommand);
                     File.WriteAllText($"{lpaTestPlan.Name}.json", json);

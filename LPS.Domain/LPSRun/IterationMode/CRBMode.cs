@@ -36,7 +36,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                     {
                         coolDownWatch.Restart();
                         await Task.Yield();
-                        awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, batchSize, batchCondition));
+                        awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, batchSize, batchCondition, cancellationToken));
                         _requestCount -= batchSize;
                     }
                     newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
@@ -44,7 +44,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 else
                 {
                     coolDownWatch.Restart();
-                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, batchSize, batchCondition));
+                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, batchSize, batchCondition, cancellationToken));
                     _requestCount -= batchSize;
                     await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
                 }
