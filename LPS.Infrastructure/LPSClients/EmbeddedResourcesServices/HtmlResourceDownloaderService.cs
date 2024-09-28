@@ -1,132 +1,198 @@
-﻿using System;
-using System.Collections.Generic;
+﻿// HtmlResourceDownloaderService.cs
+using HtmlAgilityPack;
+using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Caching;
+using LPS.Infrastructure.Logger;
+using LPS.Infrastructure.LPSClients.URLServices;
+using LPS.Infrastructure.Monitoring.Metrics;
+using System;
+using System.IO;
 using System.Linq;
-using System.Text;
+using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Buffers;
+using LPS.Infrastructure.LPSClients.CachService;
+using Microsoft.Extensions.Caching.Memory;
+using System.Collections.Generic;
 
 namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
 {
-    using HtmlAgilityPack;
-    using LPS.Domain.Common.Interfaces;
-    using LPS.Infrastructure.Logger;
-    using LPS.Infrastructure.LPSClients.URLServices;
-    using LPS.Infrastructure.Monitoring.Metrics;
-    using System;
-    using System.IO;
-    using System.Linq;
-    using System.Net.Http;
-    using System.Threading;
-    using System.Threading.Tasks;
-
     public class HtmlResourceDownloaderService : IHtmlResourceDownloaderService
     {
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _operationIdProvider;
         private readonly IUrlSanitizationService _urlSanitizationService;
         private readonly HttpClient _httpClient;
+        private readonly ICacheService<string> _memoryCacheService;
+        private const int _bufferSize = 8 * 1024;
+        private const int _downloadTimeoutSeconds = 30;
 
         public HtmlResourceDownloaderService(
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider,
             IUrlSanitizationService urlSanitizationService,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            ICacheService<string> memoryCacheService)
         {
             _logger = logger;
             _operationIdProvider = operationIdProvider;
             _urlSanitizationService = urlSanitizationService;
             _httpClient = httpClient;
+            _memoryCacheService = memoryCacheService;
         }
 
         public async Task DownloadResourcesAsync(
             string baseUrl,
-            string htmlFilePath,
+            Guid requestProfileId,
             CancellationToken cancellationToken)
         {
             try
             {
-               await _logger.LogAsync(_operationIdProvider.OperationId, $"Starting resource download for {htmlFilePath}", LPSLoggingLevel.Verbose, cancellationToken);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Starting resource download for {requestProfileId}", LPSLoggingLevel.Verbose, cancellationToken);
 
-                // Read the HTML content from the saved file
-                string htmlContent = await File.ReadAllTextAsync(htmlFilePath, cancellationToken);
+                // Cache key for the resource URLs
+                string resourceUrlsCacheKey = $"ResourceUrls_{requestProfileId}";
 
-                // Load the HTML into HtmlAgilityPack for parsing
-                HtmlDocument doc = new HtmlDocument();
-                doc.LoadHtml(htmlContent);
+                // Try to get the cached resource URLs from IHtmlCacheService
+                string cachedResourceUrls = await _memoryCacheService.GetItemAsync(resourceUrlsCacheKey);
+                List<string> resourceUrls;
 
-                // Define XPath expressions for different resource types
-                var resourceSelectors = new[]
+                // If the resource URLs are cached, deserialize them
+                if (!(cachedResourceUrls == null))
                 {
-                "//img[@src]",
-                "//link[@rel='stylesheet' and @href]",
-                "//script[@src]"
-            };
-
-                var resourceUrls = resourceSelectors
-                    .SelectMany(xpath => doc.DocumentNode.SelectNodes(xpath) ?? Enumerable.Empty<HtmlNode>())
-                    .Select(node =>
+                    resourceUrls = cachedResourceUrls.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+                    await _logger.LogAsync(_operationIdProvider.OperationId, "Resource URLs retrieved from cache.", LPSLoggingLevel.Verbose, cancellationToken);
+                }
+                else
+                {
+                    // Retrieve HTML content if resource URLs are not cached
+                    string htmlCacheKey = $"HtmlContent_{requestProfileId}";
+                    string htmlContent = await _memoryCacheService.GetItemAsync(htmlCacheKey);
+                    if (string.IsNullOrEmpty(htmlContent))
                     {
-                        if (node.Name.Equals("img", StringComparison.OrdinalIgnoreCase) ||
-                            node.Name.Equals("script", StringComparison.OrdinalIgnoreCase))
+                        await _logger.LogAsync(_operationIdProvider.OperationId, "No cached item found of type html.", LPSLoggingLevel.Warning, cancellationToken);
+                        return;
+                    }
+                    await _logger.LogAsync(_operationIdProvider.OperationId, "No URLs Cached.", LPSLoggingLevel.Warning, cancellationToken);
+
+                    HtmlDocument doc = new HtmlDocument();
+                    doc.LoadHtml(htmlContent);
+
+                    var resourceSelectors = new[]
+                    {
+                        "//img[@src]",
+                        "//link[@rel='stylesheet' and @href]",
+                        "//script[@src]"
+                    };
+
+                    // Extract resource URLs
+                    resourceUrls = resourceSelectors
+                        .SelectMany(xpath => doc.DocumentNode.SelectNodes(xpath) ?? Enumerable.Empty<HtmlNode>())
+                        .Select(node =>
                         {
-                            return node.GetAttributeValue("src", null);
-                        }
-                        else if (node.Name.Equals("link", StringComparison.OrdinalIgnoreCase))
-                        {
-                            return node.GetAttributeValue("href", null);
-                        }
-                        return null;
-                    })
-                    .Where(url => !string.IsNullOrEmpty(url) && !url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
-                    .Distinct()
-                    .ToList();
+                            if (node.Name.Equals("img", StringComparison.OrdinalIgnoreCase) ||
+                                node.Name.Equals("script", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return node.GetAttributeValue("src", null);
+                            }
+                            else if (node.Name.Equals("link", StringComparison.OrdinalIgnoreCase))
+                            {
+                                return node.GetAttributeValue("href", null);
+                            }
+                            return null;
+                        })
+                        .Where(url => !string.IsNullOrEmpty(url) && !url.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                        .Distinct()
+                        .ToList();
+
+                    // Cache the extracted resource URLs as a comma-separated string
+                    string serializedResourceUrls = string.Join(",", resourceUrls);
+                    await _memoryCacheService.SetItemAsync(resourceUrlsCacheKey, serializedResourceUrls);
+
+                    await _logger.LogAsync(_operationIdProvider.OperationId, $"Extracted and cached {resourceUrls.Count} resource URLs.", LPSLoggingLevel.Verbose, cancellationToken);
+                }
 
                 await _logger.LogAsync(_operationIdProvider.OperationId, $"Found {resourceUrls.Count} resources to download.", LPSLoggingLevel.Verbose, cancellationToken);
 
-                // Directory to save downloaded resources
-                string baseDirectory = Path.GetDirectoryName(htmlFilePath);
-                string resourcesDirectory = Path.Combine(baseDirectory, "Resources");
-                Directory.CreateDirectory(resourcesDirectory);
-
-                // Download each resource
-                foreach (var resourceUrl in resourceUrls)
+                int maxDegreeOfParallelism = 5000;
+                using (SemaphoreSlim semaphore = new SemaphoreSlim(maxDegreeOfParallelism))
                 {
-                    try
+                    var downloadTasks = resourceUrls.Select(async resourceUrl =>
                     {
-                        // Resolve relative URLs
-                        Uri resourceUri = new Uri(new Uri(baseUrl), resourceUrl);
+                        bool semaphoreAcquired = false;
+                        await semaphore.WaitAsync(cancellationToken);
+                        semaphoreAcquired = true;
+                        try
+                        {
+                            await DownloadResourceAsync(baseUrl, resourceUrl, cancellationToken);
+                        }
+                        finally
+                        {
+                            if (semaphoreAcquired)
+                            {
+                                semaphore.Release();
+                            }
+                        }
+                    });
 
-                        // Sanitize the URL to create a valid file name
-                        string sanitizedUrl = _urlSanitizationService.Sanitize(resourceUri.AbsoluteUri);
-                        string fileExtension = Path.GetExtension(resourceUri.AbsolutePath);
-                        string fileName = $"{sanitizedUrl}{fileExtension}";
-                        string filePath = Path.Combine(resourcesDirectory, fileName);
-
-                        // Download the resource
-                        byte[] resourceData = await _httpClient.GetByteArrayAsync(resourceUri, cancellationToken);
-
-                        // Save to file
-                        await File.WriteAllBytesAsync(filePath, resourceData, cancellationToken);
-
-                        await _logger.LogAsync(_operationIdProvider.OperationId, $"Downloaded resource: {resourceUri}", LPSLoggingLevel.Verbose, cancellationToken);
-
-                        // Optionally, update metrics
-                    }
-                    catch (Exception ex)
-                    {
-                       await _logger.LogAsync(_operationIdProvider.OperationId, $"Failed to download resource {resourceUrl}: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
-                        // Continue with other resources
-                    }
+                    await Task.WhenAll(downloadTasks);
                 }
 
-                await _logger.LogAsync(_operationIdProvider.OperationId, $"Completed resource download for {htmlFilePath}", LPSLoggingLevel.Verbose, cancellationToken);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Completed resource download for {requestProfileId}", LPSLoggingLevel.Verbose, cancellationToken);
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_operationIdProvider.OperationId, $"Error in DownloadResourcesAsync: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
-                // Depending on requirements, decide whether to rethrow or handle the exception
                 throw;
             }
         }
-    }
 
+
+        private async Task DownloadResourceAsync(string baseUrl, string resourceUrl, CancellationToken cancellationToken)
+        {
+            try
+            {
+                Uri resourceUri = new Uri(new Uri(baseUrl), resourceUrl);
+
+                using (HttpResponseMessage response = await _httpClient.GetAsync(resourceUri, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
+                {
+                    response.EnsureSuccessStatusCode();
+
+                    using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_downloadTimeoutSeconds)))
+                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token))
+                    {
+                        CancellationToken linkedToken = linkedCts.Token;
+
+                        using (Stream responseStream = await response.Content.ReadAsStreamAsync(linkedToken))
+                        {
+                            byte[] buffer = ArrayPool<byte>.Shared.Rent(_bufferSize);
+                            try
+                            {
+                                int bytesRead;
+                                while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, _bufferSize), linkedToken)) > 0)
+                                {
+                                    // Process bytes if needed
+                                }
+                            }
+                            finally
+                            {
+                                ArrayPool<byte>.Shared.Return(buffer);
+                            }
+                        }
+                    }
+                }
+
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Downloaded resource: {resourceUri}", LPSLoggingLevel.Verbose, cancellationToken);
+            }
+            catch (OperationCanceledException oce) when (!cancellationToken.IsCancellationRequested)
+            {
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Download timed out for resource {resourceUrl}: {oce.Message}", LPSLoggingLevel.Error, cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Failed to download resource {resourceUrl}: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
+            }
+        }
+    }
 }

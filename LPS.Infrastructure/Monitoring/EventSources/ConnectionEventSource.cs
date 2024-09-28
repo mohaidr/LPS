@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics.Tracing;
 using System.Threading;
+using System.Threading.Tasks;
 
 [EventSource(Name = "lps.active.connections")]
 internal class ConnectionEventSource : EventSource
@@ -22,11 +23,11 @@ internal class ConnectionEventSource : EventSource
     private static Dictionary<string, int> _numberOfRequestsPerSecond = new Dictionary<string, int>();
 
     [Event(1, Message = "Connection established: {0}, Active connection count: {1}")]
-    internal void ConnectionEstablished(string hostName, int numberOfActiveConnections = -1)
+    internal async Task  ConnectionEstablished(string hostName, int numberOfActiveConnections = -1)
     {
         if (IsEnabled())
         {
-            semaphore.Wait();
+           await semaphore.WaitAsync();
             if (!_activeConnectionsCount.ContainsKey(hostName))
                 _activeConnectionsCount[hostName] = 0;
             try
@@ -44,11 +45,11 @@ internal class ConnectionEventSource : EventSource
     }
 
     [Event(2, Message = "Connection closed: {0}, Active connection count: {1}")]
-    internal void ConnectionClosed(string hostName, int numberOfActiveConnections = -1)
+    internal async Task ConnectionClosed(string hostName, int numberOfActiveConnections = -1)
     {
         if (IsEnabled())
         {
-            semaphore.Wait();
+            await semaphore.WaitAsync();
             if (!_activeConnectionsCount.ContainsKey(hostName))
                 return;
             try

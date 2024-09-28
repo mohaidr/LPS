@@ -125,10 +125,11 @@ namespace LPS.Infrastructure.Watchdog
 
         public async Task<ResourceState> BalanceAsync(string hostName, CancellationToken token = default)
         {
+            bool semaphoreAcquired = false;
             try
             {
                 await _semaphoreSlim.WaitAsync(token);
-
+                semaphoreAcquired = true;
                 if (_isCoolingPaused && _resetToCoolingStopwatch.Elapsed.TotalSeconds > ResumeCoolingAfter)
                 {
                     await _logger.LogAsync(_operationIdProvider.OperationId, "Resuming cooling if needed", LPSLoggingLevel.Information, token);
@@ -136,8 +137,8 @@ namespace LPS.Infrastructure.Watchdog
                     _isCoolingPaused = false;
                 }
 
-                UpdateResourceUsageFlag(hostName);
-                UpdateResourceCoolingFlag(hostName);
+                await UpdateResourceUsageFlagAsync(hostName);
+                await UpdateResourceCoolingFlagAsync(hostName);
                 _resourceState = DetermineResourceState();
 
                 while (_resourceState != ResourceState.Cool && !_isCoolingPaused && !token.IsCancellationRequested)
@@ -153,16 +154,16 @@ namespace LPS.Infrastructure.Watchdog
                         break;
                     }
 
-                    if (!_isGCExecuted)
+                  //  if (!_isGCExecuted)
                     {
-                        await ExecuteGarbageCollectionAsync(token);
+                        //await ExecuteGarbageCollectionAsync(token);
                     }
 
                     await LogCoolingInitiationAsync(token);
                     await Task.Delay(TimeSpan.FromSeconds(CoolDownRetryTimeInSeconds), token);
 
-                    UpdateResourceUsageFlag(hostName);
-                    UpdateResourceCoolingFlag(hostName);
+                    await UpdateResourceUsageFlagAsync(hostName);
+                    await UpdateResourceCoolingFlagAsync(hostName);
                     _resourceState = DetermineResourceState();
                 }
             }
@@ -176,34 +177,37 @@ namespace LPS.Infrastructure.Watchdog
             finally
             {
                 ResetCoolingState();
-                _semaphoreSlim.Release();
+                if (semaphoreAcquired)
+                {
+                    _semaphoreSlim.Release();
+                }
             }
 
             return _resourceState;
         }
 
-        private int GetHostActiveConnectionsCount(string hostName)
+        private async Task<int> GetHostActiveConnectionsCountAsync(string hostName)
         {
             try
             {
-                return MetricsDataMonitor
-                    .Get<ThroughputMetricMonitor>(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.URL?.Contains(hostName) == true)
-                    .Sum(metric => metric.GetDimensionSet<ConnectionDimensionSet>()?.ActiveRequestsCount ?? 0);
+                var data = await MetricsDataMonitor
+                    .GetAsync<ThroughputMetricMonitor>(metric => metric.GetDimensionSetAsync<ThroughputDimensionSet>().Result?.URL?.Contains(hostName) == true);
+                    return data.Sum(metric => metric.GetDimensionSetAsync<ThroughputDimensionSet>().Result?.ActiveRequestsCount ?? 0);
             }
             catch (Exception ex)
             {
-                _logger.Log(_operationIdProvider.OperationId,
+               await _logger.LogAsync(_operationIdProvider.OperationId,
                     $"Failed to get active connections count.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}",
                     LPSLoggingLevel.Error);
                 return -1;
             }
         }
 
-        private void UpdateResourceUsageFlag(string hostName)
+        private async Task UpdateResourceUsageFlagAsync(string hostName)
         {
             bool memoryExceeded = _resourceListener.MemoryUsageMB > MaxMemoryMB;
             bool cpuExceeded = _resourceListener.CPUPercentage >= MaxCPUPercentage;
-            bool connectionsExceeded = GetHostActiveConnectionsCount(hostName) > MaxConcurrentConnectionsCountPerHostName;
+            bool connectionsExceeded = (await GetHostActiveConnectionsCountAsync(hostName)) > MaxConcurrentConnectionsCountPerHostName;
 
             _isResourceUsageExceeded = SuspensionMode switch
             {
@@ -213,11 +217,11 @@ namespace LPS.Infrastructure.Watchdog
             };
         }
 
-        private void UpdateResourceCoolingFlag(string hostName)
+        private async Task UpdateResourceCoolingFlagAsync(string hostName)
         {
             bool memoryExceedsCooldown = _resourceListener.MemoryUsageMB > CoolDownMemoryMB;
             bool cpuExceedsCooldown = _resourceListener.CPUPercentage >= CoolDownCPUPercentage;
-            bool connectionsExceedsCooldown = GetHostActiveConnectionsCount(hostName) > CoolDownConcurrentConnectionsCountPerHostName;
+            bool connectionsExceedsCooldown = (await GetHostActiveConnectionsCountAsync(hostName)) > CoolDownConcurrentConnectionsCountPerHostName;
 
             bool coolingCondition = SuspensionMode switch
             {

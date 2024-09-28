@@ -93,12 +93,19 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         }
 
-        public IDimensionSet GetDimensionSet()
+        public async Task<IDimensionSet> GetDimensionSetAsync()
         {
-            return _dimensionSet;
+            if (_dimensionSet != null)
+            {
+                return _dimensionSet;
+            }
+            else {
+                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set is empty", LPSLoggingLevel.Error);
+                throw new InvalidOperationException("Dimension set is empty");
+            }
         }
 
-        public TDimensionSet GetDimensionSet<TDimensionSet>() where TDimensionSet : IDimensionSet
+        public async Task<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet
         {
             // Check if _dimensionSet is of the requested type TDimensionSet
             if (_dimensionSet is TDimensionSet dimensionSet)
@@ -107,7 +114,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             else
             {
-                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor", LPSLoggingLevel.Error);
+              await  _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor", LPSLoggingLevel.Error);
                 throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor");
             }
         }
@@ -192,7 +199,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             finally { }
         }
 
-        private class ProtectedConnectionDimensionSet : ConnectionDimensionSet
+        private class ProtectedConnectionDimensionSet : ThroughputDimensionSet
         {
             public bool StopUpdate { get; set; }
             public ProtectedConnectionDimensionSet(string name, string httpMethod, string url, string httpVersion)
@@ -218,7 +225,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 }
             }
         }
-
     }
 
     public readonly struct RequestsRate(string every, double value) : IEquatable<RequestsRate> 
@@ -250,7 +256,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return $"RequestsRate: Every = {Every}, Value = {Value}";
         }
     }
-    public class ConnectionDimensionSet : IDimensionSet
+    public class ThroughputDimensionSet : IDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
         public string RunName { get; protected set; }

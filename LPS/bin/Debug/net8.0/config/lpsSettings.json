@@ -4,7 +4,7 @@
       "LogFilePath": "logs/lpslog.log",
       "ConsoleLogingLevel": 1,
       "EnableConsoleLogging": true,
-      "DisableConsoleErrorLogging": false,
+      "DisableConsoleErrorLogging":true,
       "DisableFileLogging": false,
       "LoggingLevel": 0
     },

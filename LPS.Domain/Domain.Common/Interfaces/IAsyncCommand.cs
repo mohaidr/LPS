@@ -14,7 +14,8 @@ namespace LPS.Domain.Common.Interfaces
         Paused,
         Cancelled,
         Completed,
-        Failed
+        Failed,
+        Unkown
     }
     public interface IAsyncCommand<TEntity> where TEntity : IDomainEntity
     {

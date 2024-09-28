@@ -11,9 +11,9 @@ namespace LPS.Infrastructure.LPSClients.MetricsServices
 {
     public interface IMetricsService
     {
-        void AddMetrics(Guid requestId);
-        Task<bool> TryIncreaseConnectionsCount(HttpRequestProfile requestProfile, CancellationToken token);
-        Task<bool> TryDecreaseConnectionsCount(HttpRequestProfile requestProfile, bool isSuccessful, CancellationToken token);
-        Task<bool> TryUpdateResponseMetrics(HttpRequestProfile requestProfile, HttpResponse response, CancellationToken token);
+        Task AddMetricsAsync(Guid requestId);
+        Task<bool> TryIncreaseConnectionsCountAsync(HttpRequestProfile requestProfile, CancellationToken token);
+        Task<bool> TryDecreaseConnectionsCountAsync(HttpRequestProfile requestProfile, bool isSuccessful, CancellationToken token);
+        Task<bool> TryUpdateResponseMetricsAsync(HttpRequestProfile requestProfile, HttpResponse response, CancellationToken token);
     }
 }

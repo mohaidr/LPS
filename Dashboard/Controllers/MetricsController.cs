@@ -6,23 +6,29 @@ using LPS.Infrastructure.Monitoring.Command;
 using LPS.Infrastructure.Monitoring.Metrics;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System.Net.Sockets;
-
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace LPS.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class MetricsController: ControllerBase
+    public class MetricsController : ControllerBase
     {
         private static bool _isServerRunning = false;
         private static readonly object _lockObject = new object();
         private static Domain.Common.Interfaces.ILogger _logger;
-        private static IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private static ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunCommandStatusMonitor;
-        static CancellationToken _testCancellationToken;
+        private static IRuntimeOperationIdProvider? _runtimeOperationIdProvider;
+        private static ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>? _httpRunCommandStatusMonitor;
+        private static CancellationToken _testCancellationToken;
 
-        public MetricsController(Domain.Common.Interfaces.ILogger logger, ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunCommandStatusMonitor, IRuntimeOperationIdProvider runtimeOperationIdProvider, CancellationTokenSource cts)
+        public MetricsController(
+            Domain.Common.Interfaces.ILogger logger,
+            ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunCommandStatusMonitor,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            CancellationTokenSource cts)
         {
             _logger = logger;
             _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
@@ -40,35 +46,34 @@ namespace LPS.Controllers
         }
 
         [HttpGet]
-        public IActionResult Get()
+        public async Task<IActionResult> Get()
         {
             var metricsList = new List<MetricData>();
 
             // Define a local function to safely obtain endpoint details from a metric dimension set
             string? GetEndPointDetails(IDimensionSet dimensionSet)
             {
-                if (dimensionSet is LPSDurationMetricDimensionSet durationSet)
-                    return $"{durationSet.RunName} {durationSet.HttpMethod} {durationSet.URL} HTTP/{durationSet.HttpVersion}";
-                else if (dimensionSet is ResponseCodeDimensionSet responseSet)
-                    return $"{responseSet.RunName} {responseSet.HttpMethod} {responseSet.URL} HTTP/{responseSet.HttpVersion}";
-                else if (dimensionSet is ConnectionDimensionSet connectionSet)
-                    return $"{connectionSet.RunName} {connectionSet.HttpMethod} {connectionSet.URL} HTTP/{connectionSet.HttpVersion}";
-
-                return null; // or a default string if suitable
+                return dimensionSet switch
+                {
+                    LPSDurationMetricDimensionSet durationSet => $"{durationSet.RunName} {durationSet.HttpMethod} {durationSet.URL} HTTP/{durationSet.HttpVersion}",
+                    ResponseCodeDimensionSet responseSet => $"{responseSet.RunName} {responseSet.HttpMethod} {responseSet.URL} HTTP/{responseSet.HttpVersion}",
+                    ThroughputDimensionSet connectionSet => $"{connectionSet.RunName} {connectionSet.HttpMethod} {connectionSet.URL} HTTP/{connectionSet.HttpVersion}",
+                    _ => null // or a default string if suitable
+                };
             }
 
             // Helper action to add metrics to the list
-            Action<IEnumerable<dynamic>, string> addToList = (metrics, type) =>
+            async void AddToList(IEnumerable<dynamic> metrics, string type)
             {
                 foreach (var metric in metrics)
                 {
-                    var endPointDetails = GetEndPointDetails(metric.GetDimensionSet());
+                    var dimensionSet = await ((IMetricMonitor)metric).GetDimensionSetAsync();
+                    var endPointDetails = GetEndPointDetails(dimensionSet);
                     if (endPointDetails == null)
                         continue; // Skip metrics where endpoint details are not applicable or available
 
-                    var statusList = _httpRunCommandStatusMonitor.GetAllStatuses(((IMetricMonitor)metric).LPSHttpRun);
-                    string status = DetermineOverallStatus(statusList);
-
+                    var statusList = _httpRunCommandStatusMonitor?.GetAllStatuses(((IMetricMonitor)metric).LPSHttpRun);
+                    string status = statusList != null ? DetermineOverallStatus(statusList) : AsyncCommandStatus.Unkown.ToString();
 
                     var metricData = metricsList.FirstOrDefault(m => m.Endpoint == endPointDetails);
                     if (metricData == null)
@@ -80,8 +85,7 @@ namespace LPS.Controllers
                         };
                         metricsList.Add(metricData);
                     }
-                    else
-                    if (metricData.ExecutionStatus != status)
+                    else if (metricData.ExecutionStatus != status)
                     {
                         metricData.ExecutionStatus = status;
                     }
@@ -89,26 +93,51 @@ namespace LPS.Controllers
                     switch (type)
                     {
                         case "ResponseTime":
-                            metricData.ResponseTimeMetrics = metric.GetDimensionSet();
+                            metricData.ResponseTimeMetrics = await ((IMetricMonitor)metric).GetDimensionSetAsync(); ;
                             break;
                         case "ResponseCode":
-                            metricData.ResponseBreakDownMetrics = metric.GetDimensionSet();
+                            metricData.ResponseBreakDownMetrics = await ((IMetricMonitor)metric).GetDimensionSetAsync(); ;
                             break;
                         case "ConnectionsCount":
-                            metricData.ConnectionMetrics = metric.GetDimensionSet();
+                            metricData.ConnectionMetrics = await ((IMetricMonitor)metric).GetDimensionSetAsync(); ;
                             break;
                     }
                 }
-            };
-            // Fetch metrics by type
-            var responseTimeMetrics = MetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseTime);
-            var responseBreakDownMetrics = MetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ResponseCode);
-            var connectionsMetrics = MetricsDataMonitor.Get(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
+            }
 
-            // Populate the dictionary
-            addToList(responseTimeMetrics, "ResponseTime");
-            addToList(responseBreakDownMetrics, "ResponseCode");
-            addToList(connectionsMetrics, "ConnectionsCount");
+            try
+            {
+                // Initiate asynchronous fetching of metrics
+                var responseTimeMetricsTask = MetricsDataMonitor.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseTime);
+                var responseBreakDownMetricsTask = MetricsDataMonitor.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseCode);
+                var connectionsMetricsTask = MetricsDataMonitor.GetAsync(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
+
+                // Await all tasks to complete
+                await Task.WhenAll(responseTimeMetricsTask, responseBreakDownMetricsTask, connectionsMetricsTask);
+
+                // Retrieve the results
+                var responseTimeMetrics = responseTimeMetricsTask.Result;
+                var responseBreakDownMetrics = responseBreakDownMetricsTask.Result;
+                var connectionsMetrics = connectionsMetricsTask.Result;
+
+                // Populate the metrics list
+                AddToList(responseTimeMetrics, "ResponseTime");
+                AddToList(responseBreakDownMetrics, "ResponseCode");
+                AddToList(connectionsMetrics, "ConnectionsCount");
+            }
+            catch (Exception ex)
+            {
+                // Log the exception asynchronously
+                if (_logger != null)
+                {
+                    await _logger.LogAsync(
+                        _runtimeOperationIdProvider?.OperationId ?? "0000-0000-0000-0000",
+                        $"Failed to retrieve metrics.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}",
+                        LPSLoggingLevel.Error);
+                }
+
+                return StatusCode(500, "An error occurred while retrieving metrics.");
+            }
 
             return Ok(metricsList);
         }

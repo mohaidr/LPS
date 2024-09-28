@@ -46,12 +46,13 @@ namespace LPS
 
                     // Ensure static web assets are used correctly
                     webBuilder.UseStaticWebAssets();
-
-                    // Configure Kestrel to listen on the specified port
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
                         serverOptions.ListenAnyIP(GlobalSettings.Port);
-                    });
+                        serverOptions.AllowSynchronousIO = false; // Option to force async operations
+                    })
+                    .UseShutdownTimeout(TimeSpan.FromSeconds(30)); // Set shutdown timeout if necessary
+
                 })
                 .ConfigureAppConfiguration((configBuilder) =>
                 {

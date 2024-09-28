@@ -25,16 +25,16 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
-        public void AddMetrics(Guid requestId)
+        public async Task AddMetricsAsync(Guid requestId)
         {
-            _metrics.TryAdd(requestId.ToString(), MetricsDataMonitor.Get(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == requestId));
+            _metrics.TryAdd(requestId.ToString(), await MetricsDataMonitor.GetAsync(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == requestId));
         }
         private IEnumerable<IMetricMonitor> GetConnectionsMetrics(Guid requestId)
         {
             return _metrics[requestId.ToString()]
                     .Where(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
         }
-        public async Task<bool> TryIncreaseConnectionsCount(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token)
+        public async Task<bool> TryIncreaseConnectionsCountAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token)
         {
             try
             {
@@ -55,7 +55,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             }
         }
 
-        public async Task<bool> TryDecreaseConnectionsCount(HttpRequestProfile lpsHttpRequestProfile, bool isSuccessful, CancellationToken token)
+        public async Task<bool> TryDecreaseConnectionsCountAsync(HttpRequestProfile lpsHttpRequestProfile, bool isSuccessful, CancellationToken token)
         {
             try
             {
@@ -75,7 +75,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             }
         }
 
-        public async Task<bool> TryUpdateResponseMetrics(HttpRequestProfile lpsHttpRequestProfile, HttpResponse lpsResponse, CancellationToken token)
+        public async Task<bool> TryUpdateResponseMetricsAsync(HttpRequestProfile lpsHttpRequestProfile, HttpResponse lpsResponse, CancellationToken token)
         {
             try
             {

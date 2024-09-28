@@ -66,21 +66,30 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public IDimensionSet GetDimensionSet()
+        public async Task<IDimensionSet> GetDimensionSetAsync()
         {
-            return _dimensionSet;
+            if (_dimensionSet != null)
+            {
+                return _dimensionSet;
+            }
+            else
+            {
+                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set is empty", LPSLoggingLevel.Error);
+                throw new InvalidOperationException("Dimension set is empty");
+            }
         }
 
-        public TDimensionSet GetDimensionSet<TDimensionSet>() where TDimensionSet : IDimensionSet
+        public async Task<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet
         {
+            // Check if _dimensionSet is of the requested type TDimensionSet
             if (_dimensionSet is TDimensionSet dimensionSet)
             {
                 return dimensionSet;
             }
             else
             {
-                _logger?.Log(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricMonitor", LPSLoggingLevel.Error);
-                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSResponseCodeMetricMonitor");
+                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor", LPSLoggingLevel.Error);
+                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor");
             }
         }
 

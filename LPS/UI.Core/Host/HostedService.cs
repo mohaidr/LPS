@@ -84,17 +84,17 @@ namespace LPS.UI.Core.Host
                 AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {lpsTestPlanSetupCommand.Name}[/] to execute the plan[/]");
             }
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose);
-
             await _logger.Flush();
         }
         public async Task StopAsync(CancellationToken cancellationToken)
         {
 
             #pragma warning disable CS8602 // Dereference of a possibly null reference.
-            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "App Stopping in 5 Seconds", LPSLoggingLevel.Information);
+            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "App Stopping in 5 Seconds", LPSLoggingLevel.Information, cancellationToken);
             await Task.Delay(6000);
-            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose);
             await _logger?.Flush();
+            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
+            _programCompleted = true;
         }
 
         private void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
@@ -106,10 +106,10 @@ namespace LPS.UI.Core.Host
                 RequestCancellation(); // Cancel the CancellationTokenSource.
             }
         }
-
+        static bool _programCompleted;
         private async Task WatchForCancellationAsync()
         {
-            while (!_cancelRequested)
+            while (!_cancelRequested && !_programCompleted)
             {
                 if (Console.KeyAvailable) // Check for the Escape key
                 {
@@ -123,6 +123,7 @@ namespace LPS.UI.Core.Host
                 }
                 await Task.Delay(1000); // Poll every second
             }
+
         }
 
         private void RequestCancellation()

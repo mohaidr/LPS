@@ -53,7 +53,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             // Prepare the tuple to be added
             var metricsTuple = new Tuple<IList<string>, Dictionary<string, IMetricMonitor>>(new List<string>() { }, metrics);
             return _metrics.TryAdd(lpsHttpRun, metricsTuple);
-           // Try to add the new entry to the dictionary
+            // Try to add the new entry to the dictionary
         }
 
         public void Monitor(HttpRun lpsHttpRun, string executionId)
@@ -113,25 +113,25 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public static List<IMetricMonitor> Get(Func<IMetricMonitor, bool> predicate)
+        public static async Task<List<IMetricMonitor>> GetAsync(Func<IMetricMonitor, bool> predicate)
         {
             try
             {
-
                 // Return all metric monitors matching the predicate
                 return _metrics.Values
-                                  .SelectMany(x => x.Item2.Values)
-                                  .Where(predicate)
-                                  .ToList();
+                               .SelectMany(x => x.Item2.Values)
+                               .Where(predicate)
+                               .ToList();
             }
             catch (Exception ex)
             {
-                _logger?.Log(_lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Failed To get dimensions.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
+                await _logger?.LogAsync(_lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000",
+                    $"Failed To get dimensions.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 return null;
             }
         }
 
-        public static List<T> Get<T>(Func<T, bool> predicate) where T : IMetricMonitor
+        public static async Task<List<T>> GetAsync<T>(Func<T, bool> predicate) where T : IMetricMonitor
         {
             try
             {
@@ -143,10 +143,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             catch (Exception ex)
             {
-                _logger?.Log(_lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Failed To get dimensions.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
+                await _logger?.LogAsync(_lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000",
+                    $"Failed To get dimensions.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 return null;
             }
         }
-
     }
 }
