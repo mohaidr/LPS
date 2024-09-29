@@ -74,7 +74,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                         await _logger.LogAsync(_operationIdProvider.OperationId, "No cached item found of type html.", LPSLoggingLevel.Warning, cancellationToken);
                         return;
                     }
-                    await _logger.LogAsync(_operationIdProvider.OperationId, "No URLs Cached.", LPSLoggingLevel.Warning, cancellationToken);
+                    await _logger.LogAsync(_operationIdProvider.OperationId, $"No URLs cached for {baseUrl}.", LPSLoggingLevel.Warning, cancellationToken);
 
                     HtmlDocument doc = new HtmlDocument();
                     doc.LoadHtml(htmlContent);

@@ -62,7 +62,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 
                     // Sanitize the URL and prepare the file path
                     string sanitizedUrl = new UrlSanitizationService().Sanitize(_url);
-                    string directoryName = $"{sanitizedUrl}.Resources";
+                    string directoryName = $"{sanitizedUrl}.{_runtimeOperationIdProvider.OperationId}.Resources";
                     Directory.CreateDirectory(directoryName);
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
                     string filePath = Path.Combine(directoryName, $"{sanitizedUrl}_{timestamp}.{type}");
