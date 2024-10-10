@@ -20,18 +20,13 @@ using System.Net;
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
 
-    public class DurationMetricMonitor : IResponseMetric
+    public class DurationMetricCollector : BaseMetricCollector, IResponseMetricCollector
     {
-        private LPSDurationMetricDimensionSetProtected _dimensionSet { get; set; }
-        HttpRun _httpRun;
-        LongHistogram _histogram;
-        ResponseMetricEventSource _eventSource;
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-        public HttpRun LPSHttpRun { get { return _httpRun; } }
-        ILogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public bool IsStopped { get; private set; }
-        internal DurationMetricMonitor(HttpRun httpRun, ILogger logger = default, IRuntimeOperationIdProvider runtimeOperationIdProvider = default)
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
+        private readonly LPSDurationMetricDimensionSetProtected _dimensionSet;
+        readonly LongHistogram _histogram;
+        readonly ResponseMetricEventSource _eventSource;
+        internal DurationMetricCollector(HttpRun httpRun, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base (httpRun, logger, runtimeOperationIdProvider)
         {
             _httpRun = httpRun;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpRun);
@@ -40,9 +35,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
-        public LPSMetricType MetricType => LPSMetricType.ResponseTime;
+        protected override IDimensionSet DimensionSet => _dimensionSet;
 
-        public async Task<IResponseMetric> UpdateAsync(HttpResponse response)
+        public override LPSMetricType MetricType => LPSMetricType.ResponseTime;
+        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse response)
         {
             await _semaphore.WaitAsync();
             try
@@ -57,55 +53,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public IResponseMetric Update(HttpResponse httpResponse)
+        public IResponseMetricCollector Update(HttpResponse httpResponse)
         {
             return UpdateAsync(httpResponse).Result;
         }
 
-        public string Stringify()
-        {
-            try
-            {
-                return SerializationHelper.Serialize(_dimensionSet);
-            }
-            catch (Exception ex)
-            {
-                return string.Empty;
-            }
-        }
-
-        public async Task<IDimensionSet> GetDimensionSetAsync()
-        {
-            if (_dimensionSet != null)
-            {
-                return _dimensionSet;
-            }
-            else
-            {
-                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set is empty", LPSLoggingLevel.Error);
-                throw new InvalidOperationException("Dimension set is empty");
-            }
-        }
-
-        public async Task<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet
-        {
-            // Check if _dimensionSet is of the requested type TDimensionSet
-            if (_dimensionSet is TDimensionSet dimensionSet)
-            {
-                return dimensionSet;
-            }
-            else
-            {
-                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor", LPSLoggingLevel.Error);
-                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor");
-            }
-        }
-
-        public void Stop()
+        public override void Stop()
         {
             IsStopped = true;
         }
-        public void Start()
+        public override void Start()
         {
             IsStopped = false;
         }

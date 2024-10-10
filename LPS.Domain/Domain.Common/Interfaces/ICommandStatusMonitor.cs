@@ -9,6 +9,6 @@ namespace LPS.Domain.Domain.Common.Interfaces
         public void RegisterCommand(TCommand command, TEntity entity);
         public void UnRegisterCommand(TCommand command, TEntity entity);
         public bool IsAnyCommandOngoing(TEntity entity);
-        List<AsyncCommandStatus> GetAllStatuses(TEntity entity);
+        List<CommandExecutionStatus> GetAllStatuses(TEntity entity);
     }
 }

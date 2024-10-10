@@ -17,6 +17,12 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
         { 
             _headersService = headersService;
         }
+
+        public double AverageDataSent => _averageDataSent;
+        public double SumDataSent => _sumDataSent;
+        double _averageDataSent;
+        double _sumDataSent;
+
         public HttpRequestMessage Build(HttpRequestProfile lpsHttpRequestProfile)
         {
             var httpRequestMessage = new HttpRequestMessage();

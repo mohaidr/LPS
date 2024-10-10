@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
-    public class ResponseProcessingService : IResponseProcessingService
+    public class ResponseProcessorFactory : IResponseProcessorFactory
     {
         private readonly ICacheService<string> _memoryCache;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
 
-        public ResponseProcessingService(
+        public ResponseProcessorFactory(
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILogger logger,
             ICacheService<string> memoryCache)

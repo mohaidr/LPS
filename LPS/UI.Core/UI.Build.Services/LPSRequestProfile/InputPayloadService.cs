@@ -62,11 +62,11 @@ namespace LPS.UI.Core.UI.Build.Services
 
         public static string Parse(string input)
         {
-            if (input.StartsWith("URL:"))
+            if (input.StartsWith("URL:", StringComparison.OrdinalIgnoreCase))
             {
                 return ReadFromURL(input.Substring(4));
             }
-            else if (input.StartsWith("Path:"))
+            else if (input.StartsWith("Path:", StringComparison.OrdinalIgnoreCase))
             {
                 return ReadFromFile(input.Substring(5));
             }

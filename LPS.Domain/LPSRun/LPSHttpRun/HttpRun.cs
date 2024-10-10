@@ -14,7 +14,16 @@ using Newtonsoft.Json.Linq;
 
 namespace LPS.Domain
 {
-
+    public enum EntityExecutionStatus
+    {
+        NotStarted,
+        Ongoing,
+        Paused,
+        Cancelled,
+        Completed,
+        Failed,
+        Unkown
+    }
     public partial class HttpRun : Run, IBusinessEntity, ICloneable
     {
 
@@ -108,5 +117,7 @@ namespace LPS.Domain
 
         public IterationMode? Mode { get; private set; }
         public bool MaximizeThroughput { get; private set; }
+
+        public EntityExecutionStatus Status { get; private set; }
     }
 }

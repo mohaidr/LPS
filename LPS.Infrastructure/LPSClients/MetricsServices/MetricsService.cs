@@ -15,24 +15,26 @@ namespace LPS.Infrastructure.LPSClients.Metrics
 {
     public class MetricsService : IMetricsService
     {
-        private readonly ILogger _logger;
-        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private static readonly ConcurrentDictionary<string, IList<IMetricMonitor>> _metrics = new ConcurrentDictionary<string, IList<IMetricMonitor>>();
+        readonly ILogger _logger;
+        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new ConcurrentDictionary<string, IList<IMetricCollector>>();
+        readonly IMetricsQueryService _metricsQueryService;
 
-        public MetricsService(ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public MetricsService(ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IMetricsQueryService metricsQueryService)
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _metricsQueryService = metricsQueryService;
         }
 
         public async Task AddMetricsAsync(Guid requestId)
         {
-            _metrics.TryAdd(requestId.ToString(), await MetricsDataMonitor.GetAsync(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == requestId));
+            _metrics.TryAdd(requestId.ToString(), await _metricsQueryService.GetAsync(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == requestId));
         }
-        private IEnumerable<IMetricMonitor> GetConnectionsMetrics(Guid requestId)
+        private IEnumerable<IMetricCollector> GetConnectionsMetrics(Guid requestId)
         {
             return _metrics[requestId.ToString()]
-                    .Where(metric => metric.MetricType == LPSMetricType.ConnectionsCount);
+                    .Where(metric => metric.MetricType == LPSMetricType.Throughput);
         }
         public async Task<bool> TryIncreaseConnectionsCountAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token)
         {
@@ -42,7 +44,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
 
                 foreach (var metric in connectionsMetrics)
                 {
-                    ((IThroughputMetricMonitor)metric).IncreaseConnectionsCount();
+                    ((IThroughputMetricCollector)metric).IncreaseConnectionsCount();
                 }
                 return true;
             }
@@ -62,7 +64,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 var connectionsMetrics = GetConnectionsMetrics(lpsHttpRequestProfile.Id);
                 foreach (var metric in connectionsMetrics)
                 {
-                    ((IThroughputMetricMonitor)metric).DecreseConnectionsCount(isSuccessful);
+                    ((IThroughputMetricCollector)metric).DecreseConnectionsCount(isSuccessful);
                 }
                 return true;
             }
@@ -80,7 +82,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             try
             {
                 var responsMetrics = _metrics[lpsHttpRequestProfile.Id.ToString()].Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
-                await Task.WhenAll(responsMetrics.Select(metric => ((IResponseMetric)metric).UpdateAsync(lpsResponse)));
+                await Task.WhenAll(responsMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse)));
                 return true;
             }
             catch (Exception ex)

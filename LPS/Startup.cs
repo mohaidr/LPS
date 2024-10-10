@@ -34,9 +34,10 @@ namespace LPS
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     // Set the content root to the directory containing the executable
+                    #pragma warning disable CS8602 // Dereference of a possibly null reference.
                     var contentRoot = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+                    ArgumentNullException.ThrowIfNull(contentRoot);
                     webBuilder.UseContentRoot(contentRoot);
-
                     // Set the web root to the wwwroot folder within the content root
                     var webRoot = Path.Combine(contentRoot, "wwwroot");
                     webBuilder.UseWebRoot(webRoot);
@@ -67,16 +68,17 @@ namespace LPS
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    services.AddSingleton<IMonitoredRunRepository, MonitoredRunRepository>();
+                    services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
+                    services.AddSingleton<IMetricsQueryService, MetricsQueryService>();
+                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>>();
+                    services.AddSingleton<AppSettingsWritableOptions>();
+                    services.AddSingleton<CancellationTokenSource>();
+                    services.AddSingleton<IClientManager<HttpRequestProfile, Domain.HttpResponse, IClientService<HttpRequestProfile, Domain.HttpResponse>>, HttpClientManager>();
+                    services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                     services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<HttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), AppConstants.AppSettingsFileLocation);
-                    services.AddSingleton<AppSettingsWritableOptions>();
-                    services.AddSingleton<CancellationTokenSource>();
-                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>>();
-                    services.AddSingleton<IClientManager<HttpRequestProfile, Domain.HttpResponse, IClientService<HttpRequestProfile, Domain.HttpResponse>>, HttpClientManager>();
-                    services.AddSingleton<IClientService<HttpRequestProfile, Domain.HttpResponse>, HttpClientService>();
-                    services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
-                    services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddHostedService(p => p.ResolveWith<HostedService>(new { args }));
                     if (hostContext.HostingEnvironment.IsProduction())
                     {

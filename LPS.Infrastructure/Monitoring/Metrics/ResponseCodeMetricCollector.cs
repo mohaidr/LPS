@@ -12,17 +12,12 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class ResponseCodeMetricMonitor : IResponseMetric
+    public class ResponseCodeMetricCollector : BaseMetricCollector, IResponseMetricCollector
     {
-        HttpRun _httpRun;
-        ResponseMetricEventSource _eventSource;
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-        public HttpRun LPSHttpRun { get { return _httpRun; } }
-        ILogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public bool IsStopped { get; private set; }
+        ResponseMetricEventSource _eventSource;
 
-        internal ResponseCodeMetricMonitor(HttpRun httpRun, ILogger logger = default, IRuntimeOperationIdProvider runtimeOperationIdProvider = default)
+        internal ResponseCodeMetricCollector(HttpRun httpRun, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpRun, logger, runtimeOperationIdProvider)
         {
             _httpRun = httpRun;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpRun);
@@ -31,15 +26,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
-        public LPSMetricType MetricType => LPSMetricType.ResponseCode;
+        protected override IDimensionSet DimensionSet => _dimensionSet;
+
+        public override LPSMetricType MetricType => LPSMetricType.ResponseCode;
         private ProtectedResponseCodeDimensionSet _dimensionSet { get; set; }
 
-        public IResponseMetric Update(HttpResponse response)
+        public IResponseMetricCollector Update(HttpResponse response)
         {
             return UpdateAsync(response).Result;
         }
 
-        public async Task<IResponseMetric> UpdateAsync(HttpResponse response)
+        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse response)
         {
             await _semaphore.WaitAsync();
             try
@@ -54,51 +51,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public string Stringify()
-        {
-            try
-            {
-                return SerializationHelper.Serialize(_dimensionSet);
-            }
-            catch (Exception)
-            {
-                return string.Empty;
-            }
-        }
 
-        public async Task<IDimensionSet> GetDimensionSetAsync()
-        {
-            if (_dimensionSet != null)
-            {
-                return _dimensionSet;
-            }
-            else
-            {
-                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set is empty", LPSLoggingLevel.Error);
-                throw new InvalidOperationException("Dimension set is empty");
-            }
-        }
-
-        public async Task<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet
-        {
-            // Check if _dimensionSet is of the requested type TDimensionSet
-            if (_dimensionSet is TDimensionSet dimensionSet)
-            {
-                return dimensionSet;
-            }
-            else
-            {
-                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor", LPSLoggingLevel.Error);
-                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor");
-            }
-        }
-
-        public void Stop()
+        public override void Stop()
         {
             IsStopped = true;
         }
 
-        public void Start()
+        public override void Start()
         {
             IsStopped = false;
         }

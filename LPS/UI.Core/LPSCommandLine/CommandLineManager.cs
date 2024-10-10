@@ -37,6 +37,8 @@ namespace LPS.UI.Core.LPSCommandLine
         IMetricsDataMonitor _lpsMonitoringEnroller;
         CancellationTokenSource _cts;
         ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
+        
+        #pragma warning disable CS8618
         public CommandLineManager(
             string[] command_args,
             ILogger logger,

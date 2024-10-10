@@ -1,6 +1,7 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.UI.Core.Host;
 using System;
 using System.Threading;
@@ -10,14 +11,14 @@ namespace LPS.UI.Core
 {
     internal class LPSManager
     {
-        private ILogger _logger;
-        IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        IClientConfiguration<HttpRequestProfile> _config;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        IWatchdog _watchdog;
-        IMetricsDataMonitor _lpsMonitoringEnroller;
-        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
-        CancellationTokenSource _cts;
+        readonly ILogger _logger;
+        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpRequestProfile> _config;
+        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        readonly IWatchdog _watchdog;
+        readonly IMetricsDataMonitor _lpsMonitoringEnroller;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
+        readonly CancellationTokenSource _cts;
         internal LPSManager(ILogger logger,
                 IClientManager<HttpRequestProfile, HttpResponse,IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
                 IClientConfiguration<HttpRequestProfile> config,

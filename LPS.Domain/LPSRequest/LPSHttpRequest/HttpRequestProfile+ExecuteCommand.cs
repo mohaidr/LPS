@@ -9,70 +9,82 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
 
     public partial class HttpRequestProfile
     {
-        private class ProtectedAccessLPSRunExecuteCommand : HttpRun.ExecuteCommand
-        {
-            public new int SafelyIncrementNumberofSentRequests(HttpRun.ExecuteCommand command)
-            {
-                return base.SafelyIncrementNumberofSentRequests(command);
-            }
-            public new int SafelyIncrementNumberOfFailedRequests(HttpRun.ExecuteCommand command)
-            {
-                return base.SafelyIncrementNumberOfFailedRequests(command);
-            }
-            public new int SafelyIncrementNumberOfSuccessfulRequests(HttpRun.ExecuteCommand command)
-            {
-                return base.SafelyIncrementNumberOfSuccessfulRequests(command);
-            }
-        }
-
-        public class ExecuteCommand : IAsyncCommand<HttpRequestProfile> 
-        {
-            private IClientService<HttpRequestProfile, HttpResponse> _httpClientService { get; set; }
-            ILogger _logger;
-            IWatchdog _watchdog;
-            IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            CancellationTokenSource _cts;
-            public ExecuteCommand(IClientService<HttpRequestProfile,
+        readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
+        public class ExecuteCommand(IClientService<HttpRequestProfile,
                 HttpResponse> httpClientService,
-                HttpRun.ExecuteCommand runExecCommand, 
-                ILogger logger,
-                IWatchdog watchdog,
-                IRuntimeOperationIdProvider runtimeOperationIdProvider,
-                CancellationTokenSource cts)
-            {
-                _httpClientService = httpClientService;
-                RunExecuteCommand = runExecCommand;
-                _logger = logger;
-                _watchdog = watchdog;
-                _runtimeOperationIdProvider = runtimeOperationIdProvider;
-                _cts = cts;
-            }
-            private AsyncCommandStatus _executionStatus;
-            public AsyncCommandStatus Status => _executionStatus;
-            public HttpRun.ExecuteCommand RunExecuteCommand { get; set; }
-
+            ILogger logger,
+            IWatchdog watchdog,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            CancellationTokenSource cts) : IAsyncCommand<HttpRequestProfile>, IStateSubject
+        {
+            private IClientService<HttpRequestProfile, HttpResponse> _httpClientService { get; set; } = httpClientService;
+            readonly ILogger _logger = logger;
+            readonly IWatchdog _watchdog = watchdog;
+            readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            readonly CancellationTokenSource _cts = cts;
+            private CommandExecutionStatus _executionStatus;
+            private CommandExecutionStatus _aggregateStatus;
+            public CommandExecutionStatus Status => _executionStatus;
+            public CommandExecutionStatus AggregateStatus => _aggregateStatus;
+            readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
             async public Task ExecuteAsync(HttpRequestProfile entity)
             {
-                if (entity == null)
+                try
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPSHttpRequestProfile Entity Must Have a Value", LPSLoggingLevel.Error);
-                    throw new ArgumentNullException(nameof(entity));
+                    if (entity == null)
+                    {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, "LPSHttpRequestProfile Entity Must Have a Value", LPSLoggingLevel.Error);
+                        throw new ArgumentNullException(nameof(entity));
+                    }
+                    entity._httpClientService = this._httpClientService;
+                    entity._logger = this._logger;
+                    entity._watchdog = this._watchdog;
+                    entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
+                    entity._cts = this._cts;
+                    _executionStatus = CommandExecutionStatus.Ongoing;
+                    await entity.ExecuteAsync(this);
+                    _executionStatus = CommandExecutionStatus.Completed;
                 }
-                entity._httpClientService = this._httpClientService;
-                entity._logger = this._logger;
-                entity._watchdog = this._watchdog;
-                entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
-                entity._cts = this._cts;
-                await entity.ExecuteAsync(this);
+                catch {
+                    _executionStatus = CommandExecutionStatus.Failed;
+                }
+                finally {
+                    await _semaphoreSlim.WaitAsync();
+                    if (_aggregateStatus < _executionStatus)
+                    {
+                        _aggregateStatus = _executionStatus;
+                        NotifyObservers();
+                    }
+                    _semaphoreSlim.Release();
+                }
             }
-        }   
+            private List<IStateObserver> _observers = new List<IStateObserver>();
 
+            public void RegisterObserver(IStateObserver observer)
+            {
+                _observers.Add(observer);
+            }
+
+            public void RemoveObserver(IStateObserver observer)
+            {
+                _observers.Remove(observer);
+            }
+
+            public void NotifyObservers()
+            {
+                foreach (var observer in _observers)
+                {
+                    observer.NotifyMe(_aggregateStatus);
+                }
+            }
+        }
 
         async private Task ExecuteAsync(ExecuteCommand command)
         {
@@ -93,21 +105,17 @@ namespace LPS.Domain
                     {
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
-                    
-                    int sequenceNumber = _protectedCommand.SafelyIncrementNumberofSentRequests(command.RunExecuteCommand);
+                    await _semaphoreSlim.WaitAsync(_cts.Token);
+                    int sequenceNumber = ++this.LastSequenceId;
                     ((HttpRequestProfile)clonedEntity).LastSequenceId = sequenceNumber;
-                    this.LastSequenceId = sequenceNumber;
-                    await _httpClientService.SendAsync(((HttpRequestProfile)clonedEntity), _cts.Token);
+                    _semaphoreSlim.Release();
+                    await _httpClientService.SendAsync((HttpRequestProfile)clonedEntity, _cts.Token);
                     this.HasFailed = false;
-                    _protectedCommand.SafelyIncrementNumberOfSuccessfulRequests(command.RunExecuteCommand);
                 }
                 catch
                 {
-                    _protectedCommand.SafelyIncrementNumberOfFailedRequests(command.RunExecuteCommand);
                     this.HasFailed = true;
-                    //TODO: We removed the "throw" line as it is cuasing the whole test to exit
-                    //We need to think about not exiting the whole test when an exception occures here
-                    //OR Give option for the client to cancel the http run when the customer starts noticing failures 
+                    throw;
                 }
             }
         }

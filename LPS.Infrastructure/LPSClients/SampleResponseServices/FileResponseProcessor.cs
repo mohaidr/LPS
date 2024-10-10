@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly string _url;
         private bool _disposed = false;
-        private bool _isActive = false;
+        private bool _isInitialized = false;
 
         public string ResponseFilePath { get; private set; }
 
@@ -45,20 +45,21 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             string cacheKey = $"SampleResponse_{_url}";
             var semaphore = _semaphoreDictionary.GetOrAdd(cacheKey, new SemaphoreSlim(1, 1));
             bool lockAcquired = false;
-            await semaphore.WaitAsync(token);
-            lockAcquired = true;
             try
             {
+                await semaphore.WaitAsync(token);
+                lockAcquired = true;
+
                 if (_memoryCache.TryGetItem(cacheKey, out _))
                 {
                     // Response has been saved recently; no need to process
-                    _isActive = false;
+                    _isInitialized = false;
                     return;
                 }
                 else
                 {
                     // Proceed to initialize processing
-                    _isActive = true;
+                    _isInitialized = true;
 
                     // Sanitize the URL and prepare the file path
                     string sanitizedUrl = new UrlSanitizationService().Sanitize(_url);
@@ -99,7 +100,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             if (_disposed)
                 throw new ObjectDisposedException(nameof(FileResponseProcessor));
 
-            if (!_isActive)
+            if (!_isInitialized)
             {
                 // No-op processor; do nothing
                 return;
@@ -129,7 +130,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             {
                 _disposed = true;
 
-                if (_isActive)
+                if (_isInitialized)
                 {
                     try
                     {

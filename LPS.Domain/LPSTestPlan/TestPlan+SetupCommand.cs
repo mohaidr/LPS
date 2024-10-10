@@ -22,11 +22,8 @@ namespace LPS.Domain
 
             public void Execute(TestPlan entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
-                entity?.Setup(this);
+                ArgumentNullException.ThrowIfNull(entity);
+                entity.Setup(this);
             }
             public Guid? Id { get; set; }
             public string Name { get; set; }

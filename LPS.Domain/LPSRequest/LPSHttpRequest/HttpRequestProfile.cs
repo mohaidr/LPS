@@ -19,14 +19,12 @@ namespace LPS.Domain
         private HttpRequestProfile()
         {
         }
-        ProtectedAccessLPSRunExecuteCommand _protectedCommand;
         private HttpRequestProfile(ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
         }
 
         public HttpRequestProfile(
@@ -37,7 +35,6 @@ namespace LPS.Domain
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _protectedCommand = new ProtectedAccessLPSRunExecuteCommand();
             this.Setup(command);
         }
 

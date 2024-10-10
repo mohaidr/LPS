@@ -12,9 +12,9 @@ namespace LPS.Domain.LPSFlow
     {
         public class ExecuteCommand : IAsyncCommand<Session>
         {
-            private AsyncCommandStatus _executionStatus;
+            private CommandExecutionStatus _executionStatus;
 
-            public AsyncCommandStatus Status => _executionStatus;
+            public CommandExecutionStatus Status => _executionStatus;
             IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
             ILogger _logger;
             IWatchdog _watchdog;

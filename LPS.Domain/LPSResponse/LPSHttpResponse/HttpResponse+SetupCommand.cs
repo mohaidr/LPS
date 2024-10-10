@@ -39,10 +39,7 @@ namespace LPS.Domain
 
             public void Execute(HttpResponse entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
+                ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
             public HttpRequestProfile.SetupCommand LPSHttpRequestProfile { get; set; }

@@ -7,19 +7,22 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Common.Interfaces
 {
-    public enum AsyncCommandStatus
+    //it is important to give the enums number based on their strength as this will be used to calculate the aggregate status
+    // this design may change
+    public enum CommandExecutionStatus
     {
-        NotStarted,
-        Ongoing,
-        Paused,
-        Cancelled,
-        Completed,
-        Failed,
-        Unkown
+        NotStarted = 0,
+        ScheduledForClientExecution = 1,
+        Ongoing = 2,
+        Completed =3,
+        Paused = 4,
+        Cancelled =5,
+        Failed =6,
+        Unkown =-7,
     }
     public interface IAsyncCommand<TEntity> where TEntity : IDomainEntity
     {
-        public AsyncCommandStatus Status { get; }
+        public CommandExecutionStatus Status { get; }
         Task ExecuteAsync(TEntity entity);
     }
 }

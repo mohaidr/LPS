@@ -7,6 +7,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LPS", "LPS.csproj", "{FD1F3
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{6469EDE7-4979-40D0-B605-44AB742AC55B}"
 	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
 		..\Learning Resources.txt = ..\Learning Resources.txt
 		plans.txt = plans.txt
 	EndProjectSection
@@ -17,7 +18,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LPS.Infrastructure", "..\LP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LPS.UnitTest", "..\LPS.UnitTest\LPS.UnitTest.csproj", "{88BD4582-E061-4C33-8575-FAC3814D7DFA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dashboard", "..\Dashboard\Dashboard.csproj", "{79C1320F-92DC-48A6-9D3D-20CCAE05FAF6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dashboard", "..\Dashboard\Dashboard.csproj", "{79C1320F-92DC-48A6-9D3D-20CCAE05FAF6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

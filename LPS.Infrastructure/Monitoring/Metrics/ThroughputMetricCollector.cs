@@ -18,26 +18,23 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class ThroughputMetricMonitor : IThroughputMetricMonitor
+    public class ThroughputMetricCollector : BaseMetricCollector, IThroughputMetricCollector
     {
-        public LPSMetricType MetricType => LPSMetricType.ConnectionsCount;
-        HttpRun _httpRun;
-        public HttpRun LPSHttpRun => _httpRun;
         int _activeRequestssCount;
         int _requestsCount;
         int _successfulRequestsCount;
         int _failedRequestsCount;
         ProtectedConnectionDimensionSet _dimensionSet;
+        protected override IDimensionSet DimensionSet => _dimensionSet;
+
+        public override LPSMetricType MetricType => LPSMetricType.Throughput;
+
         RequestEventSource _eventSource;
         Stopwatch _throughputWatch;
         Timer _timer;
-        Domain.Common.Interfaces.ILogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        CancellationTokenSource _cts;
         private SpinLock _spinLock = new SpinLock();
-        public bool IsStopped { get; private set; }
         public bool IsTestStarted { get; private set; }
-        public ThroughputMetricMonitor(HttpRun httprun, CancellationTokenSource cts, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        public ThroughputMetricCollector(HttpRun httprun, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httprun, logger, runtimeOperationIdProvider)
         {
             _httpRun = httprun;
             _dimensionSet = new ProtectedConnectionDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);
@@ -45,7 +42,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _throughputWatch = new Stopwatch();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _cts = cts;
         }
 
         private void UpdateMetrics()
@@ -93,43 +89,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         }
 
-        public async Task<IDimensionSet> GetDimensionSetAsync()
-        {
-            if (_dimensionSet != null)
-            {
-                return _dimensionSet;
-            }
-            else {
-                await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set is empty", LPSLoggingLevel.Error);
-                throw new InvalidOperationException("Dimension set is empty");
-            }
-        }
-
-        public async Task<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet
-        {
-            // Check if _dimensionSet is of the requested type TDimensionSet
-            if (_dimensionSet is TDimensionSet dimensionSet)
-            {
-                return dimensionSet;
-            }
-            else
-            {
-              await  _logger?.LogAsync(_runtimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000", $"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor", LPSLoggingLevel.Error);
-                throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported by the LPSConnectionsMetricMonitor");
-            }
-        }
-
-        public string Stringify()
-        {
-            try
-            {
-                return SerializationHelper.Serialize(_dimensionSet);
-            }
-            catch (Exception ex)
-            {
-                return string.Empty;
-            }
-        }
         public bool IncreaseConnectionsCount()
         {
             bool lockTaken = false;
@@ -178,7 +137,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public void Start()
+        public override void Start()
         {
             _throughputWatch.Start();
             IsStopped = false;
@@ -186,7 +145,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             SchedualMetricsUpdate();
         }
 
-        public void Stop()
+        public override void Stop()
         {
             IsStopped = true;
             IsTestStarted = false;
@@ -201,6 +160,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class ProtectedConnectionDimensionSet : ThroughputDimensionSet
         {
+            [JsonIgnore]
             public bool StopUpdate { get; set; }
             public ProtectedConnectionDimensionSet(string name, string httpMethod, string url, string httpVersion)
             {

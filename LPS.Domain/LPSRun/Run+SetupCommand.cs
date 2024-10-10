@@ -24,10 +24,7 @@ namespace LPS.Domain
 
             public void Execute(Run entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
+                ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
             public Guid? Id { get; set; }

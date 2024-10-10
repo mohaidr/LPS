@@ -18,8 +18,8 @@ namespace LPS.Domain
     {
         public class RedoCommand : IAsyncCommand<TestPlan>
         {
-            private AsyncCommandStatus _executionStatus;
-            public AsyncCommandStatus Status => _executionStatus;
+            private CommandExecutionStatus _executionStatus;
+            public CommandExecutionStatus Status => _executionStatus;
             async public Task ExecuteAsync(TestPlan entity)
             {
                 await entity.RedoAsync(this);

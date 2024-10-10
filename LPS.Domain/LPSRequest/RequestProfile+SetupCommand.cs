@@ -28,10 +28,7 @@ namespace LPS.Domain
 
             public void Execute(RequestProfile entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
+                ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
         }

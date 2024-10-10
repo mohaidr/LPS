@@ -14,8 +14,8 @@
       "MaxCPUPercentage": 70,
       "CoolDownCPUPercentage": 50,
       "CoolDownRetryTimeInSeconds": 1,
-      "MaxConcurrentConnectionsCountPerHostName": 3000,
-      "CoolDownConcurrentConnectionsCountPerHostName": 1500,
+      "MaxConcurrentConnectionsCountPerHostName": 300000,
+      "CoolDownConcurrentConnectionsCountPerHostName": 290000,
       "MaxCoolingPeriod": 60,
       "ResumeCoolingAfter": 60,
       "SuspensionMode": 0

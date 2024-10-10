@@ -27,10 +27,7 @@ namespace LPS.Domain
 
             public void Execute(HttpRun entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
+                ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
 

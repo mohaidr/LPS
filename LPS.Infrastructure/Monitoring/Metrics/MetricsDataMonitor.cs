@@ -1,151 +1,113 @@
-﻿using LPS.Domain;
+﻿// MetricsDataMonitor.cs
+using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.Logger;
-using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class MetricsDataMonitor : IMetricsDataMonitor
+    public class MetricsDataMonitor : IMetricsDataMonitor, IDisposable
     {
-        private static Domain.Common.Interfaces.ILogger _logger;
-        private static IRuntimeOperationIdProvider _lpsRuntimeOperationIdProvider;
-        CancellationTokenSource _cts;
+        private readonly ILogger _logger;
+        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private readonly IMonitoredRunRepository _monitoredRunRepository;
 
-        // ConcurrentDictionary to manage both metrics and execution lists with multiple monitors per LPSHttpRun
-        private static ConcurrentDictionary<HttpRun, Tuple<IList<string>, Dictionary<string, IMetricMonitor>>> _metrics = new ConcurrentDictionary<HttpRun, Tuple<IList<string>, Dictionary<string, IMetricMonitor>>>();
-
-        public MetricsDataMonitor(Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider lpsRuntimeOperationIdProvider, CancellationTokenSource cts)
+        public MetricsDataMonitor(
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMonitoredRunRepository monitoredRunRepository)
         {
-            _logger = logger;
-            _lpsRuntimeOperationIdProvider = lpsRuntimeOperationIdProvider;
-            _cts = cts;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            _monitoredRunRepository = monitoredRunRepository ?? throw new ArgumentNullException(nameof(monitoredRunRepository));
         }
 
-        public bool TryRegister(HttpRun lpsHttpRun)
+        public bool TryRegister(HttpRun httpRun)
         {
-            // Check if the key already exists
-            if (_metrics.ContainsKey(lpsHttpRun))
+            if (_monitoredRunRepository.MonitoredRuns.ContainsKey(httpRun))
             {
-                // If it exists, return false indicating the registration did not proceed
                 return false;
             }
 
-            // Prepare the metrics dictionary for the given LPSHttpRun
-            var metrics = new Dictionary<string, IMetricMonitor>();
-            string breakDownMetricKey = $"{lpsHttpRun.Id}-BreakDown";
-            string durationMetricKey = $"{lpsHttpRun.Id}-Duration";
-            string connectionsMetricKey = $"{lpsHttpRun.Id}-Connections";
+            var metrics = CreateMetricCollectors(httpRun);
+            var monitoredRun = new MonitoredHttpRun(httpRun, metrics);
 
-            metrics[breakDownMetricKey] = new ResponseCodeMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
-            metrics[durationMetricKey] = new DurationMetricMonitor(lpsHttpRun, _logger, _lpsRuntimeOperationIdProvider);
-            metrics[connectionsMetricKey] = new ThroughputMetricMonitor(lpsHttpRun, _cts, _logger, _lpsRuntimeOperationIdProvider);
-
-            // Prepare the tuple to be added
-            var metricsTuple = new Tuple<IList<string>, Dictionary<string, IMetricMonitor>>(new List<string>() { }, metrics);
-            return _metrics.TryAdd(lpsHttpRun, metricsTuple);
-            // Try to add the new entry to the dictionary
+            return _monitoredRunRepository.MonitoredRuns.TryAdd(httpRun, monitoredRun);
         }
 
-        public void Monitor(HttpRun lpsHttpRun, string executionId)
+        private IReadOnlyDictionary<string, IMetricCollector> CreateMetricCollectors(HttpRun httpRun)
         {
-            try
+            return new Dictionary<string, IMetricCollector>
             {
-                var tuple = _metrics.GetOrAdd(lpsHttpRun, run =>
+                { $"{httpRun.Id}-BreakDown", new ResponseCodeMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
+                { $"{httpRun.Id}-Duration", new DurationMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
+                { $"{httpRun.Id}-Connections", new ThroughputMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) }
+            };
+        }
+
+        public void Monitor(HttpRun httpRun, string executionId)
+        {
+            var monitoredRun = _monitoredRunRepository.MonitoredRuns.GetOrAdd(httpRun, run =>
+            {
+                var metrics = CreateMetricCollectors(run);
+                return new MonitoredHttpRun(run, metrics);
+            });
+
+            lock (monitoredRun.ExecutionIds)
+            {
+                if (!monitoredRun.ExecutionIds.Contains(executionId))
                 {
-                    var metrics = new Dictionary<string, IMetricMonitor>();
-                    // Create and start all necessary monitors with unique IDs
-                    string breakDownMetricKey = $"{run.Id}-BreakDown";
-                    string durationMetricKey = $"{run.Id}-Duration";
-                    string connectionsMetricKey = $"{run.Id}-Connections";
-
-                    metrics[breakDownMetricKey] = new ResponseCodeMetricMonitor(run, _logger, _lpsRuntimeOperationIdProvider);
-                    metrics[durationMetricKey] = new DurationMetricMonitor(run, _logger, _lpsRuntimeOperationIdProvider);
-                    metrics[connectionsMetricKey] = new ThroughputMetricMonitor(run, _cts, _logger, _lpsRuntimeOperationIdProvider);
-
-                    return new Tuple<IList<string>, Dictionary<string, IMetricMonitor>>(new List<string>(), metrics);
-                });
-
-                // Add execution ID to the list if it doesn't already exist
-                if (!tuple.Item1.Contains(executionId))
-                {
-                    if (tuple.Item1.Count == 0)
+                    if (!monitoredRun.ExecutionIds.Any())
                     {
-                        foreach (var metric in tuple.Item2.Values)
+                        foreach (var metric in monitoredRun.Metrics.Values)
                         {
                             metric.Start();
                         }
                     }
 
-                    tuple.Item1.Add(executionId);
+                    monitoredRun.ExecutionIds.Add(executionId);
                 }
-            }
-            catch
-            {
-                throw;
             }
         }
 
-        public void Stop(HttpRun lpsHttpRun, string executionId)
+        public void Stop(HttpRun httpRun, string executionId)
         {
-            if (_metrics.TryGetValue(lpsHttpRun, out Tuple<IList<string>, Dictionary<string, IMetricMonitor>> tuple))
+            if (_monitoredRunRepository.MonitoredRuns.TryGetValue(httpRun, out var monitoredRun))
             {
-                // Remove the execution ID
-                tuple.Item1.Remove(executionId);
-
-                // If no more executions are linked, dispose of all metric monitors and remove from the dictionary
-                if (tuple.Item1.Count == 0)
+                lock (monitoredRun.ExecutionIds)
                 {
-                    foreach (var metric in tuple.Item2.Values)
+                    var executionIds = monitoredRun.ExecutionIds.ToList();
+                    executionIds.Remove(executionId);
+                    monitoredRun.ExecutionIds.Clear();
+                    foreach (var id in executionIds)
                     {
-                        metric.Stop(); // Stop monitoring
+                        monitoredRun.ExecutionIds.Add(id);
+                    }
+
+                    if (monitoredRun.ExecutionIds.IsEmpty)
+                    {
+                        foreach (var metric in monitoredRun.Metrics.Values)
+                        {
+                            metric.Stop();
+                        }
                     }
                 }
             }
         }
 
-        public static async Task<List<IMetricMonitor>> GetAsync(Func<IMetricMonitor, bool> predicate)
+        public void Dispose()
         {
-            try
+            foreach (var monitoredRun in _monitoredRunRepository.MonitoredRuns.Values)
             {
-                // Return all metric monitors matching the predicate
-                return _metrics.Values
-                               .SelectMany(x => x.Item2.Values)
-                               .Where(predicate)
-                               .ToList();
-            }
-            catch (Exception ex)
-            {
-                await _logger?.LogAsync(_lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000",
-                    $"Failed To get dimensions.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
-                return null;
-            }
-        }
-
-        public static async Task<List<T>> GetAsync<T>(Func<T, bool> predicate) where T : IMetricMonitor
-        {
-            try
-            {
-                // Return all metric monitors of type T that match the predicate
-                return _metrics.Values
-                               .SelectMany(entry => entry.Item2.Values.OfType<T>()) // Flatten the collection of monitors and filter by type T
-                               .Where(predicate) // Apply the predicate
-                               .ToList();
-            }
-            catch (Exception ex)
-            {
-                await _logger?.LogAsync(_lpsRuntimeOperationIdProvider.OperationId ?? "0000-0000-0000-0000",
-                    $"Failed To get dimensions.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}", LPSLoggingLevel.Error);
-                return null;
+                foreach (var metricCollector in monitoredRun.Metrics.Values)
+                {
+                    if (metricCollector is IDisposable disposable)
+                    {
+                        disposable.Dispose();
+                    }
+                }
             }
         }
     }

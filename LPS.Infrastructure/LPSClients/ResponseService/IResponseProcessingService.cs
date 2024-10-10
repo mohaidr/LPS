@@ -1,0 +1,19 @@
+﻿using LPS.Domain;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Net.Http;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+
+namespace LPS.Infrastructure.LPSClients.ResponseService
+{
+    public interface IResponseProcessingService
+    {
+        Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
+            HttpResponseMessage response,
+            HttpRequestProfile lpsHttpRequestProfile,
+            CancellationToken token);
+    }
+}

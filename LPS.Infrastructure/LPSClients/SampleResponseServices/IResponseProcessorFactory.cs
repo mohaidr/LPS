@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
-    public interface IResponseProcessingService
+    public interface IResponseProcessorFactory
     {
         /// <summary>
         /// Creates a response processor for handling response processing logic.

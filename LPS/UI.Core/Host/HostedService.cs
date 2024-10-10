@@ -11,61 +11,51 @@ using LPS.Infrastructure.Common;
 using Spectre.Console;
 using LPS.UI.Core.LPSCommandLine;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Metrics;
 
 namespace LPS.UI.Core.Host
 {
-    internal class HostedService : IHostedService
+    internal class HostedService(
+        dynamic command_args,
+        ILogger logger,
+        IClientConfiguration<HttpRequestProfile> config,
+        IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
+        IWatchdog watchdog,
+        IRuntimeOperationIdProvider runtimeOperationIdProvider,
+        IMetricsDataMonitor metricDataMonitor,
+        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunExecutionCommandStatusMonitor,
+        AppSettingsWritableOptions appSettings, 
+        CancellationTokenSource cts) : IHostedService
     {
-        ILogger _logger;
-        IClientConfiguration<HttpRequestProfile> _config;
-        IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        IWatchdog _watchdog;
-        AppSettingsWritableOptions _appSettings;
-        IMetricsDataMonitor _lPSMonitoringEnroller;
-        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
-        string[] _command_args;
-        CancellationTokenSource _cts;
+        readonly ILogger _logger = logger;
+        readonly IClientConfiguration<HttpRequestProfile> _config = config;
+        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager = httpClientManager;
+        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
+        readonly IWatchdog _watchdog = watchdog;
+        readonly AppSettingsWritableOptions _appSettings = appSettings;
+        readonly IMetricsDataMonitor _metricDataMonitor = metricDataMonitor;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+        readonly string[] _command_args = command_args.args;
+        readonly CancellationTokenSource _cts = cts;
         static bool _cancelRequested;
-        public HostedService(
-            dynamic command_args,
-            ILogger logger,
-            IClientConfiguration<HttpRequestProfile> config,
-            IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
-            IWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricsDataMonitor lPSMonitoringEnroller,
-            ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunExecutionCommandStatusMonitor,
-            AppSettingsWritableOptions appSettings, CancellationTokenSource cts)
-        {
-            _logger = logger;
-            _config = config;
-            _command_args = command_args.args;
-            _httpClientManager = httpClientManager;
-            _watchdog = watchdog;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _appSettings = appSettings;
-            _lPSMonitoringEnroller = lPSMonitoringEnroller;
-            _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
-            _cts = cts;
-        }
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
 
+            #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
             Console.CancelKeyPress += CancelKeyPressHandler;
             _ = WatchForCancellationAsync();
 
 
-            TestPlan.SetupCommand lpsTestPlanSetupCommand = new TestPlan.SetupCommand();
+            TestPlan.SetupCommand lpsTestPlanSetupCommand = new();
 
             if (_command_args != null && _command_args.Length > 0)
             {
-                var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand, _httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller, _cts);
+                var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand, _httpRunExecutionCommandStatusMonitor, _metricDataMonitor, _cts);
                 commandLineManager.Run(_cts.Token);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
             }
             else
             {
@@ -77,13 +67,13 @@ namespace LPS.UI.Core.Host
                 bool runTest = AnsiConsole.Confirm("Would you like to run your test now?");
                 if (runTest)
                 {
-                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller, _cts);
+                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _metricDataMonitor, _cts);
                     await lpsManager.RunAsync(lpsRun);
                 }
 
                 AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {lpsTestPlanSetupCommand.Name}[/] to execute the plan[/]");
             }
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             await _logger.Flush();
         }
         public async Task StopAsync(CancellationToken cancellationToken)

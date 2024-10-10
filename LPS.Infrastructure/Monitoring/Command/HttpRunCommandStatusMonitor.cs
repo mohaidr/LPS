@@ -43,17 +43,17 @@ namespace LPS.Infrastructure.Monitoring.Command
         {
             if (_commandRegistry.TryGetValue(entity, out var commands))
             {
-                return commands.Any(command => command.Status == AsyncCommandStatus.Ongoing);
+                return commands.Any(command => command.Status == CommandExecutionStatus.Ongoing);
             }
             return false;
         }
-        public List<AsyncCommandStatus> GetAllStatuses(TEntity entity)
+        public List<CommandExecutionStatus> GetAllStatuses(TEntity entity)
         {
             if (_commandRegistry.TryGetValue(entity, out var commands))
             {
                 return commands.Select(command => command.Status).ToList();
             }
-            return new List<AsyncCommandStatus>(); // Return an empty list if no commands are associated with the entity
+            return new List<CommandExecutionStatus>(); // Return an empty list if no commands are associated with the entity
         }
     }
 

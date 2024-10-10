@@ -42,10 +42,7 @@ namespace LPS.Domain
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
             public void Execute(HttpRequestProfile entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
+                ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
 

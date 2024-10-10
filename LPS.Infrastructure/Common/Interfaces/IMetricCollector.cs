@@ -9,9 +9,10 @@ namespace LPS.Infrastructure.Common.Interfaces
     {
         ResponseTime,
         ResponseCode,
-        ConnectionsCount
+        Throughput,
+        DataTransmission
     }
-    public interface IMetricMonitor
+    public interface IMetricCollector
     {
         public HttpRun LPSHttpRun { get; }
         public LPSMetricType MetricType { get; }

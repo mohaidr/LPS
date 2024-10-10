@@ -10,9 +10,9 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class BatchProcessor: IBatchProcessor<HttpRequestProfile.ExecuteCommand, HttpRequestProfile>
     {
-        HttpRequestProfile _requestProfile;
-        IWatchdog _watchdog;
-        string _hostName;
+        readonly HttpRequestProfile _requestProfile;
+        readonly IWatchdog _watchdog;
+        readonly string _hostName;
         public BatchProcessor(HttpRequestProfile requestProfile,
             IWatchdog watchdog ) 
         {

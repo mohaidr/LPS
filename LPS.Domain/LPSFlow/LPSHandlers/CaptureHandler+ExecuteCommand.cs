@@ -13,9 +13,9 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
     {
         public class ExecuteCommand : IAsyncCommand<CapturHandler>
         {
-            private AsyncCommandStatus _executionStatus;
+            private CommandExecutionStatus _executionStatus;
 
-            public AsyncCommandStatus Status => _executionStatus;
+            public CommandExecutionStatus Status => _executionStatus;
             ILogger _logger;
             IWatchdog _watchdog;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
