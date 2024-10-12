@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Http;
 using LPS.UI.Core;
 using Dashboard.Common;
 using System.Reflection;
+using LPS.Infrastructure.Common.Interfaces;
 
 
 namespace LPS
@@ -74,6 +75,8 @@ namespace LPS
                     services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>>();
                     services.AddSingleton<AppSettingsWritableOptions>();
                     services.AddSingleton<CancellationTokenSource>();
+                    services.AddSingleton<IConsoleLogger, ConsoleLogger>();
+                    services.AddSingleton<ILogFormatter, LogFormatter>();
                     services.AddSingleton<IClientManager<HttpRequestProfile, Domain.HttpResponse, IClientService<HttpRequestProfile, Domain.HttpResponse>>, HttpClientManager>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                     services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), AppConstants.AppSettingsFileLocation);

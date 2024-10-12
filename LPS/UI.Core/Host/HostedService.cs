@@ -74,7 +74,7 @@ namespace LPS.UI.Core.Host
                 AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {lpsTestPlanSetupCommand.Name}[/] to execute the plan[/]");
             }
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
-            await _logger.Flush();
+            await _logger.FlushAsync();
         }
         public async Task StopAsync(CancellationToken cancellationToken)
         {
@@ -82,7 +82,7 @@ namespace LPS.UI.Core.Host
             #pragma warning disable CS8602 // Dereference of a possibly null reference.
             await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "App Stopping in 5 Seconds", LPSLoggingLevel.Information, cancellationToken);
             await Task.Delay(6000);
-            await _logger?.Flush();
+            await _logger?.FlushAsync();
             await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
         }

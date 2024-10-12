@@ -1,8 +1,8 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.LPSClients;
-using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.Watchdog;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;
@@ -45,7 +45,9 @@ namespace LPS.UI.Common.Extensions
 
                     if (lpsFileOptions == null)
                     {
-                        fileLogger = FileLogger.GetDefaultInstance();
+                        fileLogger = new FileLogger(new LoggingConfiguration(),
+                         serviceProvider.GetRequiredService<IConsoleLogger>(),
+                         serviceProvider.GetRequiredService<ILogFormatter>());
                         isDefaultConfigurationsApplied = true;
                         fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSFileLoggerConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
                     }
@@ -55,20 +57,31 @@ namespace LPS.UI.Common.Extensions
                         var validationResults = loggerValidator.Validate(lpsFileOptions);
                         if (!validationResults.IsValid)
                         {
-                            fileLogger = FileLogger.GetDefaultInstance();
+                            fileLogger = new FileLogger(new LoggingConfiguration(),
+                                serviceProvider.GetRequiredService<IConsoleLogger>(),
+                                serviceProvider.GetRequiredService<ILogFormatter>());
                             isDefaultConfigurationsApplied = true;
                             fileLogger.Log("0000-0000-0000-0000", "Logger options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
                             validationResults.PrintValidationErrors();
                         }
                         else
                         {
+                            var loggingConfig = new LoggingConfiguration
+                            {
+                                LogFilePath = lpsFileOptions.LogFilePath,
+                                LoggingLevel = lpsFileOptions.LoggingLevel.Value,
+                                ConsoleLoggingLevel = lpsFileOptions.ConsoleLogingLevel.Value,
+                                EnableConsoleLogging = lpsFileOptions.EnableConsoleLogging.Value,
+                                DisableConsoleErrorLogging = lpsFileOptions.DisableConsoleErrorLogging.Value,
+                                DisableFileLogging = lpsFileOptions.DisableFileLogging.Value
+                            };
+
+                            // Initialize the logger with LoggingConfiguration and services like IConsoleLogger, ILogFormatter
                             fileLogger = new FileLogger(
-                                lpsFileOptions.LogFilePath,
-                                lpsFileOptions.LoggingLevel.Value,
-                                lpsFileOptions.ConsoleLogingLevel.Value,
-                                lpsFileOptions.EnableConsoleLogging.Value,
-                                lpsFileOptions.DisableConsoleErrorLogging.Value,
-                                lpsFileOptions.DisableFileLogging.Value);
+                                loggingConfig,
+                                serviceProvider.GetRequiredService<IConsoleLogger>(),
+                                serviceProvider.GetRequiredService<ILogFormatter>()
+                            );
                         }
                     }
 

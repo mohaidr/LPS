@@ -14,6 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using System.Buffers;
+using LPS.Infrastructure.LPSClients.URLServices;
 
 namespace LPS.Infrastructure.LPSClients.ResponseService
 {
@@ -24,17 +25,17 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         private readonly IResponseProcessorFactory _responseProcessorFactory;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-
         public ResponseProcessingService(
             ICacheService<string> memoryCacheService,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IUrlSanitizationService urlSanitizationService,
             IResponseProcessorFactory responseProcessorFactory = null)
         {
             _memoryCacheService = memoryCacheService;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _responseProcessorFactory = responseProcessorFactory ?? new ResponseProcessorFactory(_runtimeOperationIdProvider, _logger, _memoryCacheService);
+            _responseProcessorFactory = responseProcessorFactory ?? new ResponseProcessorFactory(_runtimeOperationIdProvider, _logger, _memoryCacheService, urlSanitizationService);
         }
         public double AverageDataReceived => _averageDataReceived;
         public double SumDataReceived => _sumDataReceived;

@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain;
 using LPS.Infrastructure.Logger;
-using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.MetricsServices;
 

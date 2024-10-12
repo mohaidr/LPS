@@ -22,7 +22,6 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
     {
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _operationIdProvider;
-        private readonly IUrlSanitizationService _urlSanitizationService;
         private readonly HttpClient _httpClient;
         private readonly ICacheService<string> _memoryCacheService;
         private const int _bufferSize = 8 * 1024;
@@ -31,13 +30,11 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
         public HtmlResourceDownloaderService(
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider,
-            IUrlSanitizationService urlSanitizationService,
             HttpClient httpClient,
             ICacheService<string> memoryCacheService)
         {
             _logger = logger;
             _operationIdProvider = operationIdProvider;
-            _urlSanitizationService = urlSanitizationService;
             _httpClient = httpClient;
             _memoryCacheService = memoryCacheService;
         }

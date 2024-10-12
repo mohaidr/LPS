@@ -14,15 +14,18 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         private readonly ICacheService<string> _memoryCache;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        readonly IUrlSanitizationService _urlSanitizationService;
 
         public ResponseProcessorFactory(
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILogger logger,
-            ICacheService<string> memoryCache)
+            ICacheService<string> memoryCache,
+            IUrlSanitizationService urlSanitizationService)
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _memoryCache = memoryCache;
+            _urlSanitizationService = urlSanitizationService;
         }
 
         public async Task<IResponseProcessor> CreateResponseProcessorAsync(string url,MimeType responseType, bool saveResponse, CancellationToken token)
@@ -39,7 +42,8 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                 url,
                 _memoryCache,
                 _logger,
-                _runtimeOperationIdProvider);
+                _runtimeOperationIdProvider, 
+                _urlSanitizationService);
 
             await processor.InitializeAsync(responseType.ToFileExtension(), token);
             return processor;

@@ -1,6 +1,4 @@
 ﻿using LPS.Domain;
-using LPS.Infrastructure.Monitoring.Metrics;
-using System;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Common.Interfaces

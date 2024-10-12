@@ -1,7 +1,7 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
-using LPS.Infrastructure.Monitoring.Metrics;
 using System;
 using System.Collections;
 using System.Collections.Generic;

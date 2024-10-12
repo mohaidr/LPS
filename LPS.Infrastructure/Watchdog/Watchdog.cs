@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.EventListeners;
 using LPS.Infrastructure.Monitoring.Metrics;
 

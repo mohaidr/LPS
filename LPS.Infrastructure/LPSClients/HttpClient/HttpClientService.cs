@@ -20,7 +20,7 @@ using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.SampleResponseServices;
 using Microsoft.Extensions.Caching.Memory;
 using LPS.Infrastructure.LPSClients.ResponseService;
-using LPS.Infrastructure.Monitoring.Metrics;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -38,10 +38,12 @@ namespace LPS.Infrastructure.LPSClients
         readonly IMessageService _messageService;
         readonly IResponseProcessingService _responseProcessingService;
         readonly IMetricsQueryService _metricsQueryService;
+        readonly IUrlSanitizationService _urlSanitizationService;
         object _lock = new();
         public HttpClientService(IClientConfiguration<HttpRequestProfile> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsQueryService metricsQueryService,
+            IUrlSanitizationService urlSanitizationService = null,
             IMessageService messageService = null,
             IHttpHeadersService headersService = null,
             IMetricsService metricsService = null,
@@ -60,7 +62,8 @@ namespace LPS.Infrastructure.LPSClients
             {
                 SizeLimit = 1024
             }));
-            _responseProcessingService = responseProcessingService ?? new ResponseProcessingService(_memoryCacheService, _logger, _runtimeOperationIdProvider);
+            _urlSanitizationService = urlSanitizationService ?? new UrlSanitizationService();
+            _responseProcessingService = responseProcessingService ?? new ResponseProcessingService(_memoryCacheService, _logger, _runtimeOperationIdProvider, _urlSanitizationService);
             SocketsHttpHandler socketsHandler = new SocketsHttpHandler
             {
                 PooledConnectionLifetime = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).PooledConnectionLifetime,
@@ -155,7 +158,7 @@ namespace LPS.Infrastructure.LPSClients
             {
                 if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && lpsHttpRequestProfile.Id == responseCommand.LPSHttpRequestProfileId)
                 {
-                    var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, new UrlSanitizationService(), client, _memoryCacheService);
+                    var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, client, _memoryCacheService);
                     await htmlResourceDownloader.DownloadResourcesAsync(lpsHttpRequestProfile.URL, lpsHttpRequestProfile.Id, token);
                 }
                 return true;

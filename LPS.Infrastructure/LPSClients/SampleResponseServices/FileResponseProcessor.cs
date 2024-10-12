@@ -21,19 +21,21 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         private readonly string _url;
         private bool _disposed = false;
         private bool _isInitialized = false;
-
+        readonly IUrlSanitizationService _urlSanitizationService;
         public string ResponseFilePath { get; private set; }
 
         public FileResponseProcessor(
             string url,
             ICacheService<string> memoryCache,
             ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IUrlSanitizationService urlSanitizationService)
         {
             _url = url;
             _memoryCache = memoryCache;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _urlSanitizationService = urlSanitizationService;
         }
 
         /// <summary>
@@ -62,7 +64,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                     _isInitialized = true;
 
                     // Sanitize the URL and prepare the file path
-                    string sanitizedUrl = new UrlSanitizationService().Sanitize(_url);
+                    string sanitizedUrl =_urlSanitizationService.Sanitize(_url);
                     string directoryName = $"{sanitizedUrl}.{_runtimeOperationIdProvider.OperationId}.Resources";
                     Directory.CreateDirectory(directoryName);
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
@@ -97,8 +99,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 
         public async Task ProcessResponseChunkAsync(byte[] buffer, int offset, int count, CancellationToken token)
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(FileResponseProcessor));
+            ObjectDisposedException.ThrowIf(_disposed, nameof(FileResponseProcessor));
 
             if (!_isInitialized)
             {
