@@ -4,7 +4,7 @@
       "LogFilePath": "logs/lpslog.log",
       "ConsoleLogingLevel": 1,
       "EnableConsoleLogging": true,
-      "DisableConsoleErrorLogging":false,
+      "DisableConsoleErrorLogging":true,
       "DisableFileLogging": false,
       "LoggingLevel": 0
     },
@@ -14,8 +14,8 @@
       "MaxCPUPercentage": 70,
       "CoolDownCPUPercentage": 50,
       "CoolDownRetryTimeInSeconds": 1,
-      "MaxConcurrentConnectionsCountPerHostName": 300000,
-      "CoolDownConcurrentConnectionsCountPerHostName": 290000,
+      "MaxConcurrentConnectionsCountPerHostName": 1000,
+      "CoolDownConcurrentConnectionsCountPerHostName": 700,
       "MaxCoolingPeriod": 60,
       "ResumeCoolingAfter": 60,
       "SuspensionMode": 0

@@ -41,7 +41,7 @@ namespace LPS.Domain
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
                 _cts = cts;
-                _executionStatus = CommandExecutionStatus.ScheduledForClientExecution;
+                _executionStatus = CommandExecutionStatus.Scheduled;
             }
             private CommandExecutionStatus _executionStatus;
             public CommandExecutionStatus Status => _executionStatus;

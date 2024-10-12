@@ -43,7 +43,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 { $"{httpRun.Id}-BreakDown", new ResponseCodeMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
                 { $"{httpRun.Id}-Duration", new DurationMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
-                { $"{httpRun.Id}-Connections", new ThroughputMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) }
+                { $"{httpRun.Id}-Throughput", new ThroughputMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
+                { $"{httpRun.Id}-DataTransmission", new DataTransmissionMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) }
             };
         }
 
@@ -66,7 +67,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                             metric.Start();
                         }
                     }
-
                     monitoredRun.ExecutionIds.Add(executionId);
                 }
             }

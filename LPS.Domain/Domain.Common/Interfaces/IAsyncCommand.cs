@@ -12,7 +12,7 @@ namespace LPS.Domain.Common.Interfaces
     public enum CommandExecutionStatus
     {
         NotStarted = 0,
-        ScheduledForClientExecution = 1,
+        Scheduled = 1,
         Ongoing = 2,
         Completed =3,
         Paused = 4,

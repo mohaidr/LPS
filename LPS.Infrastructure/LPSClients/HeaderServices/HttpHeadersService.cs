@@ -41,7 +41,7 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                 }
             }
         }
-        private void SetContentHeader(HttpRequestMessage message, string name, string value)
+        private static void SetContentHeader(HttpRequestMessage message, string name, string value)
         {
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
                 return;
@@ -78,7 +78,7 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                     throw new NotSupportedException("Unsupported Content Header, the currently supported headers are (content-type, content-encoding, content-length, content-language, content-disposition, content-location, content-md5, content-range, expires, last-modified)");
             }
         }
-        private void SetRequestHeader(HttpRequestMessage message, string name, string value)
+        private static void SetRequestHeader(HttpRequestMessage message, string name, string value)
         {
 
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
@@ -320,7 +320,7 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                     throw new NotSupportedException($"header {name} is an unsupported request header.");
             }
         }
-        private void SetUserHeader(HttpRequestMessage message, string name, string value)
+        private static void SetUserHeader(HttpRequestMessage message, string name, string value)
         {
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
                 return;

@@ -1,16 +1,15 @@
 ﻿using LPS.Domain.Common.Interfaces;
-using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Command;
 using LPS.Infrastructure.Monitoring.Metrics;
 using Microsoft.AspNetCore.Mvc;
 using System;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.Controllers
 {
@@ -27,6 +26,7 @@ namespace LPS.Controllers
         readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>? _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
 
+        // MetricData class extended to hold Data Transmission metrics
         private class MetricData
         {
             public string Endpoint { get; set; }
@@ -34,6 +34,7 @@ namespace LPS.Controllers
             public object ResponseBreakDownMetrics { get; set; }
             public object ResponseTimeMetrics { get; set; }
             public object ConnectionMetrics { get; set; }
+            public object DataTransmissionMetrics { get; set; } 
         }
 
         [HttpGet]
@@ -47,19 +48,22 @@ namespace LPS.Controllers
                 var responseTimeMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseTime);
                 var responseBreakDownMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseCode);
                 var connectionsMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.Throughput);
+                var dataTransmissionMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.DataTransmission);
 
                 // Await all tasks to complete
-                await Task.WhenAll(responseTimeMetricsTask, responseBreakDownMetricsTask, connectionsMetricsTask);
+                await Task.WhenAll(responseTimeMetricsTask, responseBreakDownMetricsTask, connectionsMetricsTask, dataTransmissionMetricsTask);
 
                 // Retrieve the results
                 var responseTimeMetrics = responseTimeMetricsTask.Result;
                 var responseBreakDownMetrics = responseBreakDownMetricsTask.Result;
                 var connectionsMetrics = connectionsMetricsTask.Result;
+                var dataTransmissionMetrics = dataTransmissionMetricsTask.Result; // Get data transmission metrics
 
                 // Populate the metrics list
                 AddToList(responseTimeMetrics, "ResponseTime");
                 AddToList(responseBreakDownMetrics, "ResponseCode");
                 AddToList(connectionsMetrics, "ConnectionsCount");
+                AddToList(dataTransmissionMetrics, "DataTransmission"); // Add DataTransmission to the list
             }
             catch (Exception ex)
             {
@@ -108,13 +112,16 @@ namespace LPS.Controllers
                     switch (type)
                     {
                         case "ResponseTime":
-                            metricData.ResponseTimeMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync(); ;
+                            metricData.ResponseTimeMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
                             break;
                         case "ResponseCode":
-                            metricData.ResponseBreakDownMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync(); ;
+                            metricData.ResponseBreakDownMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
                             break;
                         case "ConnectionsCount":
-                            metricData.ConnectionMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync(); ;
+                            metricData.ConnectionMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
+                            break;
+                        case "DataTransmission":  // Handle data transmission metrics
+                            metricData.DataTransmissionMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
                             break;
                     }
                 }
@@ -128,6 +135,7 @@ namespace LPS.Controllers
                     LPSDurationMetricDimensionSet durationSet => $"{durationSet.RunName} {durationSet.HttpMethod} {durationSet.URL} HTTP/{durationSet.HttpVersion}",
                     ResponseCodeDimensionSet responseSet => $"{responseSet.RunName} {responseSet.HttpMethod} {responseSet.URL} HTTP/{responseSet.HttpVersion}",
                     ThroughputDimensionSet connectionSet => $"{connectionSet.RunName} {connectionSet.HttpMethod} {connectionSet.URL} HTTP/{connectionSet.HttpVersion}",
+                    LPSDataTransmissionMetricDimensionSet dataTransmissionSet => $"{dataTransmissionSet.RunName} {dataTransmissionSet.HttpMethod} {dataTransmissionSet.URL} HTTP/{dataTransmissionSet.HttpVersion}",  // New case for DataTransmission
                     _ => null // or a default string if suitable
                 };
             }
@@ -139,7 +147,7 @@ namespace LPS.Controllers
                 return "NotRunning";
             if (statuses.All(status => status == CommandExecutionStatus.NotStarted))
                 return "NotStarted";
-            if (statuses.All(status => status == CommandExecutionStatus.Completed || status == CommandExecutionStatus.ScheduledForClientExecution) && statuses.Any(status => status == CommandExecutionStatus.ScheduledForClientExecution))
+            if (statuses.All(status => status == CommandExecutionStatus.Completed || status == CommandExecutionStatus.Scheduled) && statuses.Any(status => status == CommandExecutionStatus.Scheduled))
                 return "Scheduled";
             if (statuses.All(status => status == CommandExecutionStatus.Completed))
                 return "Completed";

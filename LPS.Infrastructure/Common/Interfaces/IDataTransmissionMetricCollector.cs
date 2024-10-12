@@ -9,9 +9,8 @@ namespace LPS.Infrastructure.Common.Interfaces
 {
     public interface IDataTransmissionMetricCollector
     {
-        public Task UpdateDataSentAsync(double dataSize, CancellationToken token);
+        public void UpdateDataSentAsync(double dataSize, CancellationToken token);
 
-        public Task UpdateDataReceivedAsync(double dataSize, CancellationToken token);
-        // Add more logic as needed for monitoring data sent/received
+        public void UpdateDataReceivedAsync(double dataSize, CancellationToken token);
     }
 }

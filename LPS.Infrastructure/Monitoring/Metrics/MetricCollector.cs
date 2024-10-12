@@ -9,22 +9,15 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public abstract class BaseMetricCollector : IMetricCollector
+    public abstract class BaseMetricCollector(HttpRun httpRun, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : IMetricCollector
     {
-        protected HttpRun _httpRun;
+        protected HttpRun _httpRun = httpRun;
         protected abstract IDimensionSet DimensionSet { get; }
-        protected ILogger _logger;
-        protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        protected ILogger _logger = logger;
+        protected IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
 
         public HttpRun LPSHttpRun => _httpRun;
         public bool IsStopped { get; protected set; }
-
-        public BaseMetricCollector(HttpRun httpRun, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
-        {
-            _httpRun = httpRun;
-            _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        }
 
         public abstract LPSMetricType MetricType { get; }
 

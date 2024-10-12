@@ -93,18 +93,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
     }
-    public class ResponseSummary
+    public class ResponseSummary(string httpStatusCode, string httpStatusReason, int count)
     {
-        public string HttpStatusCode { get; private set; }
-        public string HttpStatusReason { get; private set; }
-        public int Count { get; set; }
-
-        public ResponseSummary(string httpStatusCode, string httpStatusReason, int count)
-        {
-            HttpStatusCode = httpStatusCode;
-            HttpStatusReason = httpStatusReason;
-            Count = count;
-        }
+        public string HttpStatusCode { get; private set; } = httpStatusCode;
+        public string HttpStatusReason { get; private set; } = httpStatusReason;
+        public int Count { get; set; } = count;
     }
     public class ResponseCodeDimensionSet : IDimensionSet
     {

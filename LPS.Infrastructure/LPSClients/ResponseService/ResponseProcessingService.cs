@@ -15,11 +15,13 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Memory;
 using System.Buffers;
 using LPS.Infrastructure.LPSClients.URLServices;
+using LPS.Infrastructure.LPSClients.MetricsServices;
 
 namespace LPS.Infrastructure.LPSClients.ResponseService
 {
     public class ResponseProcessingService : IResponseProcessingService
     {
+        private readonly IMetricsService _metricsService;
         private readonly ICacheService<string> _memoryCacheService;
         private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
         private readonly IResponseProcessorFactory _responseProcessorFactory;
@@ -30,20 +32,17 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IUrlSanitizationService urlSanitizationService,
+            IMetricsService metricsService,
             IResponseProcessorFactory responseProcessorFactory = null)
         {
             _memoryCacheService = memoryCacheService;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _responseProcessorFactory = responseProcessorFactory ?? new ResponseProcessorFactory(_runtimeOperationIdProvider, _logger, _memoryCacheService, urlSanitizationService);
+            _metricsService = metricsService;
         }
-        public double AverageDataReceived => _averageDataReceived;
-        public double SumDataReceived => _sumDataReceived;
-        double _averageDataReceived;
-        long _sumDataReceived;
-        int _responseCount;
-        
-        SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+
+        readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
         public async Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage response,
             HttpRequestProfile lpsHttpRequestProfile,
@@ -122,16 +121,13 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     }
                     await _semaphoreSlim.WaitAsync(token);
                     isSemaphoreAcquired = true;
-                    _responseCount++;
-                    _sumDataReceived += responseSize;
-                    _averageDataReceived = _sumDataReceived / _responseCount;
                 }
                 finally
                 {
                     if(isSemaphoreAcquired) 
                         _semaphoreSlim.Release();
-
                     _bufferPool.Return(buffer);
+                    await _metricsService.TryUpdateDataReceivedAsync(lpsHttpRequestProfile.Id, responseSize, token);
                     if (memoryStream != null)
                     {
                         await memoryStream.DisposeAsync();
@@ -157,7 +153,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             }
         }
 
-        private long CalculateHeadersSize(HttpResponseMessage response)
+        private static long CalculateHeadersSize(HttpResponseMessage response)
         {
             long size = 0;
 

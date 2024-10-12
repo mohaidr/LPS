@@ -12,36 +12,32 @@ using LPS.Infrastructure.LPSClients.MetricsServices;
 
 namespace LPS.Infrastructure.LPSClients.Metrics
 {
-    public class MetricsService : IMetricsService
+    public class MetricsService(ILogger logger, 
+        IRuntimeOperationIdProvider runtimeOperationIdProvider, 
+        IMetricsQueryService metricsQueryService) : IMetricsService
     {
-        readonly ILogger _logger;
-        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new ConcurrentDictionary<string, IList<IMetricCollector>>();
-        readonly IMetricsQueryService _metricsQueryService;
+        readonly ILogger _logger = logger;
+        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
+        readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new();
+        readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
 
-        public MetricsService(ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IMetricsQueryService metricsQueryService)
+        private async Task QueryMetricsAsync(Guid requestId)
         {
-            _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _metricsQueryService = metricsQueryService;
+            _metrics.TryAdd(requestId.ToString(), 
+                await _metricsQueryService.GetAsync(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == requestId));
         }
-
-        public async Task AddMetricsAsync(Guid requestId)
+        private async Task<IEnumerable<IMetricCollector>> GetThrouputMetricsAsync(Guid requestId)
         {
-            _metrics.TryAdd(requestId.ToString(), await _metricsQueryService.GetAsync(metric => metric.LPSHttpRun.LPSHttpRequestProfile.Id == requestId));
-        }
-        private IEnumerable<IMetricCollector> GetConnectionsMetrics(Guid requestId)
-        {
+            await QueryMetricsAsync(requestId);
             return _metrics[requestId.ToString()]
                     .Where(metric => metric.MetricType == LPSMetricType.Throughput);
         }
-        public async Task<bool> TryIncreaseConnectionsCountAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token)
+        public async Task<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
             try
             {
-                var connectionsMetrics = GetConnectionsMetrics(lpsHttpRequestProfile.Id);
-
-                foreach (var metric in connectionsMetrics)
+                var connectionsMetrics = GetThrouputMetricsAsync(requestId);
+                foreach (var metric in await connectionsMetrics)
                 {
                     ((IThroughputMetricCollector)metric).IncreaseConnectionsCount();
                 }
@@ -56,12 +52,12 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             }
         }
 
-        public async Task<bool> TryDecreaseConnectionsCountAsync(HttpRequestProfile lpsHttpRequestProfile, bool isSuccessful, CancellationToken token)
+        public async Task<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
         {
             try
             {
-                var connectionsMetrics = GetConnectionsMetrics(lpsHttpRequestProfile.Id);
-                foreach (var metric in connectionsMetrics)
+                var throughputMetrics = GetThrouputMetricsAsync(requestId);
+                foreach (var metric in await throughputMetrics)
                 {
                     ((IThroughputMetricCollector)metric).DecreseConnectionsCount(isSuccessful);
                 }
@@ -76,11 +72,12 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             }
         }
 
-        public async Task<bool> TryUpdateResponseMetricsAsync(HttpRequestProfile lpsHttpRequestProfile, HttpResponse lpsResponse, CancellationToken token)
+        public async Task<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse lpsResponse, CancellationToken token)
         {
             try
             {
-                var responsMetrics = _metrics[lpsHttpRequestProfile.Id.ToString()].Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
+                await QueryMetricsAsync(requestId);
+                var responsMetrics = _metrics[requestId.ToString()].Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
                 await Task.WhenAll(responsMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse)));
                 return true;
             }
@@ -91,5 +88,50 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             }
 
         }
+        private async Task<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId)
+        {
+            await QueryMetricsAsync(requestId);
+            return _metrics[requestId.ToString()]
+                    .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
+        }
+        public async Task<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, CancellationToken token)
+        {
+            try
+            {
+                var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
+                foreach (var metric in dataTransmissionMetrics)
+                {
+                    ((IDataTransmissionMetricCollector)metric).UpdateDataSentAsync(dataSize, token);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                                       $"Failed to update data sent metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
+                                       LPSLoggingLevel.Error, token);
+                return false;
+            }
+        }
+        public async Task<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, CancellationToken token)
+        {
+            try
+            {
+                var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
+                foreach (var metric in dataTransmissionMetrics)
+                {
+                    ((IDataTransmissionMetricCollector)metric).UpdateDataReceivedAsync(dataSize, token);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                                       $"Failed to update data received metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
+                                       LPSLoggingLevel.Error, token);
+                return false;
+            }
+        }
+
     }
 }

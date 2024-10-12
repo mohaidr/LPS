@@ -6,16 +6,11 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Caching
 {
-    public class MemoryCacheService<T> : ICacheService<T>
+    public class MemoryCacheService<T>(IMemoryCache memoryCache,
+        TimeSpan? defaultCacheDuration = null) : ICacheService<T>
     {
-        private readonly IMemoryCache _memoryCache;
-        private readonly TimeSpan _defaultCacheDuration;
-
-        public MemoryCacheService(IMemoryCache memoryCache, TimeSpan? defaultCacheDuration = null)
-        {
-            _memoryCache = memoryCache;
-            _defaultCacheDuration = defaultCacheDuration ?? TimeSpan.FromSeconds(30);
-        }
+        private readonly IMemoryCache _memoryCache = memoryCache;
+        private readonly TimeSpan _defaultCacheDuration = defaultCacheDuration ?? TimeSpan.FromSeconds(30);
 
         public Task<T> GetItemAsync(string key)
         {

@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly IResponseProcessingService _responseProcessingService;
         readonly IMetricsQueryService _metricsQueryService;
         readonly IUrlSanitizationService _urlSanitizationService;
-        object _lock = new();
+        readonly object _lock = new();
         public HttpClientService(IClientConfiguration<HttpRequestProfile> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsQueryService metricsQueryService,
@@ -56,15 +56,16 @@ namespace LPS.Infrastructure.LPSClients
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _memoryCacheService = memoryCacheService;
             _headersService = headersService ?? new HttpHeadersService();
-            _messageService = messageService ?? new MessageService(_headersService);
             _metricsService = metricsService ?? new MetricsService(_logger, _runtimeOperationIdProvider, _metricsQueryService);
             _memoryCacheService = memoryCacheService ?? new MemoryCacheService<string>(new MemoryCache(new MemoryCacheOptions
             {
                 SizeLimit = 1024
             }));
+
             _urlSanitizationService = urlSanitizationService ?? new UrlSanitizationService();
-            _responseProcessingService = responseProcessingService ?? new ResponseProcessingService(_memoryCacheService, _logger, _runtimeOperationIdProvider, _urlSanitizationService);
-            SocketsHttpHandler socketsHandler = new SocketsHttpHandler
+            _messageService = messageService ?? new MessageService(_headersService, _metricsService);
+            _responseProcessingService = responseProcessingService ?? new ResponseProcessingService(_memoryCacheService, _logger, _runtimeOperationIdProvider, _urlSanitizationService, _metricsService);
+            SocketsHttpHandler socketsHandler = new()
             {
                 PooledConnectionLifetime = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).PooledConnectionLifetime,
                 PooledConnectionIdleTimeout = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).PooledConnectionIdleTimeout,
@@ -87,14 +88,13 @@ namespace LPS.Infrastructure.LPSClients
         }
         public async Task<HttpResponse> SendAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token = default)
         {
-            await _metricsService.AddMetricsAsync(lpsHttpRequestProfile.Id);
             int sequenceNumber = lpsHttpRequestProfile.LastSequenceId;
             HttpResponse lpsHttpResponse;
             Stopwatch stopWatch = new();
             try
             {
-                var httpRequestMessage = _messageService.Build(lpsHttpRequestProfile);
-                await _metricsService.TryIncreaseConnectionsCountAsync(lpsHttpRequestProfile, token);
+                var httpRequestMessage = await _messageService.BuildAsync(lpsHttpRequestProfile, token);
+                await _metricsService.TryIncreaseConnectionsCountAsync(lpsHttpRequestProfile.Id, token);
                 stopWatch.Start();
                 var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token);
                 stopWatch.Stop();
@@ -109,16 +109,16 @@ namespace LPS.Infrastructure.LPSClients
                 lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
                 lpsHttpResponse.SetHttpRequestProfile(lpsHttpRequestProfile);
 
-                await _metricsService.TryUpdateResponseMetricsAsync(lpsHttpRequestProfile, lpsHttpResponse, token);
+                await _metricsService.TryUpdateResponseMetricsAsync(lpsHttpRequestProfile.Id, lpsHttpResponse, token);
 
-                await _metricsService.TryDecreaseConnectionsCountAsync(lpsHttpRequestProfile, response.IsSuccessStatusCode, token);
+                await _metricsService.TryDecreaseConnectionsCountAsync(lpsHttpRequestProfile.Id, response.IsSuccessStatusCode, token);
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.Httpversion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbose, token);
 
             }
             catch (Exception ex)
             {
-                await _metricsService.TryDecreaseConnectionsCountAsync(lpsHttpRequestProfile, false, token);
+                await _metricsService.TryDecreaseConnectionsCountAsync(lpsHttpRequestProfile.Id, false, token);
 
                 HttpResponse.SetupCommand lpsResponseCommand = new HttpResponse.SetupCommand
                 {
@@ -132,7 +132,7 @@ namespace LPS.Infrastructure.LPSClients
 
                 lpsHttpResponse = new HttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
                 lpsHttpResponse.SetHttpRequestProfile(lpsHttpRequestProfile);
-                await _metricsService.TryUpdateResponseMetricsAsync(lpsHttpRequestProfile, lpsHttpResponse, token);
+                await _metricsService.TryUpdateResponseMetricsAsync(lpsHttpRequestProfile.Id, lpsHttpResponse, token);
 
 
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer")))
