@@ -22,14 +22,21 @@ namespace LPS.Domain.LPSRun.IterationMode
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
-            int numberOfSentRequests = 0;
-            for (int i = 0; i < _requestCount && !cancellationToken.IsCancellationRequested; i++)
+            try
             {
-                await _watchdog.BalanceAsync(_hostName, cancellationToken);
-                await _command.ExecuteAsync(_requestProfile);
-                numberOfSentRequests++;
+                int numberOfSentRequests = 0;
+                for (int i = 0; i < _requestCount && !cancellationToken.IsCancellationRequested; i++)
+                {
+                    await _watchdog.BalanceAsync(_hostName, cancellationToken);
+                    await _command.ExecuteAsync(_requestProfile);
+                    numberOfSentRequests++;
+                }
+                return numberOfSentRequests;
             }
-            return numberOfSentRequests;
+            catch 
+            {
+                throw;
+            }
         }
         public class Builder : IBuilder<RMode>
         {

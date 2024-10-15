@@ -7,6 +7,7 @@ using static LPS.Domain.HttpRun;
 using LPS.Domain.Common.Interfaces;
 using System.Reflection;
 using LPS.Infrastructure.Watchdog;
+using LPS.Domain.Domain.Common.Enums;
 
 namespace LPS.UI.Core.LPSCommandLine
 {

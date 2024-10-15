@@ -1,6 +1,7 @@
 ﻿using HdrHistogram;
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
@@ -47,7 +48,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private void UpdateMetrics()
         {
             bool lockTaken = false;
-            bool isCoolDown = _httpRun.Mode == HttpRun.IterationMode.DCB || _httpRun.Mode == HttpRun.IterationMode.CRB || _httpRun.Mode == HttpRun.IterationMode.CB;
+            bool isCoolDown = _httpRun.Mode == IterationMode.DCB || _httpRun.Mode == IterationMode.CRB || _httpRun.Mode == IterationMode.CB;
             int cooldownPeriod = isCoolDown ? _httpRun.CoolDownTime.Value : 1;
 
             if (IsTestStarted)

@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using static LPS.Domain.HttpRun;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 
 namespace LPS.Domain
 {
@@ -18,8 +19,8 @@ namespace LPS.Domain
     {
         public class RedoCommand : IAsyncCommand<TestPlan>
         {
-            private CommandExecutionStatus _executionStatus;
-            public CommandExecutionStatus Status => _executionStatus;
+            private ExecutionStatus _executionStatus;
+            public ExecutionStatus Status => _executionStatus;
             async public Task ExecuteAsync(TestPlan entity)
             {
                 await entity.RedoAsync(this);

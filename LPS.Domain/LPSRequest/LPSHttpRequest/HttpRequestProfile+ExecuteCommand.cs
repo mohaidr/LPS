@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.Domain
@@ -29,11 +30,14 @@ namespace LPS.Domain
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
             readonly CancellationTokenSource _cts = cts;
-            private CommandExecutionStatus _executionStatus;
-            private CommandExecutionStatus _aggregateStatus;
-            public CommandExecutionStatus Status => _executionStatus;
-            public CommandExecutionStatus AggregateStatus => _aggregateStatus;
+            private ExecutionStatus _executionStatus;
+            private ExecutionStatus _aggregateStatus;
+            public ExecutionStatus Status => _executionStatus;
+            public ExecutionStatus AggregateStatus => _aggregateStatus;
             readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
+            //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
+            //and need to clean it up and use clear contracts as any change in the logic here will break
+            //the system 
             async public Task ExecuteAsync(HttpRequestProfile entity)
             {
                 try
@@ -48,14 +52,21 @@ namespace LPS.Domain
                     entity._watchdog = this._watchdog;
                     entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
                     entity._cts = this._cts;
-                    _executionStatus = CommandExecutionStatus.Ongoing;
+                    _executionStatus = ExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this);
-                    _executionStatus = CommandExecutionStatus.Completed;
+                    _executionStatus = ExecutionStatus.Completed;
                 }
-                catch {
-                    _executionStatus = CommandExecutionStatus.Failed;
+                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+                {
+                    _executionStatus = ExecutionStatus.Cancelled;
+                    throw;
                 }
-                finally {
+                catch
+                {
+                    _executionStatus = ExecutionStatus.Failed;
+                }
+                finally
+                {
                     await _semaphoreSlim.WaitAsync();
                     if (_aggregateStatus < _executionStatus)
                     {
@@ -65,7 +76,8 @@ namespace LPS.Domain
                     _semaphoreSlim.Release();
                 }
             }
-            private List<IStateObserver> _observers = new List<IStateObserver>();
+
+            private List<IStateObserver> _observers = new();
 
             public void RegisterObserver(IStateObserver observer)
             {
@@ -84,6 +96,7 @@ namespace LPS.Domain
                     observer.NotifyMe(_aggregateStatus);
                 }
             }
+
         }
 
         async private Task ExecuteAsync(ExecuteCommand command)

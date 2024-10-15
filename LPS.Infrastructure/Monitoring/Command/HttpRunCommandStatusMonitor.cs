@@ -1,5 +1,6 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Concurrent;
@@ -43,17 +44,17 @@ namespace LPS.Infrastructure.Monitoring.Command
         {
             if (_commandRegistry.TryGetValue(entity, out var commands))
             {
-                return commands.Any(command => command.Status == CommandExecutionStatus.Ongoing);
+                return commands.Any(command => command.Status == ExecutionStatus.Ongoing);
             }
             return false;
         }
-        public List<CommandExecutionStatus> GetAllStatuses(TEntity entity)
+        public List<ExecutionStatus> GetAllStatuses(TEntity entity)
         {
             if (_commandRegistry.TryGetValue(entity, out var commands))
             {
                 return commands.Select(command => command.Status).ToList();
             }
-            return new List<CommandExecutionStatus>(); // Return an empty list if no commands are associated with the entity
+            return new List<ExecutionStatus>(); // Return an empty list if no commands are associated with the entity
         }
     }
 

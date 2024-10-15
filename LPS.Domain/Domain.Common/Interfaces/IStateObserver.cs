@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +10,6 @@ namespace LPS.Domain.Domain.Common.Interfaces
 {
     public interface IStateObserver
     {
-        void NotifyMe(CommandExecutionStatus status);
+        void NotifyMe(ExecutionStatus status);
     }
 }

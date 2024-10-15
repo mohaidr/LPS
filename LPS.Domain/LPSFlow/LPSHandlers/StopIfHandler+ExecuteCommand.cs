@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -13,9 +14,9 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
     {
         public class ExecuteCommand : IAsyncCommand<StopIfHandler>
         {
-            private CommandExecutionStatus _executionStatus;
+            private ExecutionStatus _executionStatus;
 
-            public CommandExecutionStatus Status => _executionStatus;
+            public ExecutionStatus Status => _executionStatus;
             ILogger _logger;
             IWatchdog _watchdog;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;

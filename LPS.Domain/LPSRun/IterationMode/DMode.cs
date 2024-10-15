@@ -23,16 +23,23 @@ namespace LPS.Domain.LPSRun.IterationMode
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
-            int numberOfSentRequests = 0;
-            var stopwatch = Stopwatch.StartNew();
-            while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested)
+            try
             {
-                await _watchdog.BalanceAsync(_hostName, cancellationToken);
-                await _command.ExecuteAsync(_requestProfile);
-                numberOfSentRequests++;
+                int numberOfSentRequests = 0;
+                var stopwatch = Stopwatch.StartNew();
+                while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested)
+                {
+                    await _watchdog.BalanceAsync(_hostName, cancellationToken);
+                    await _command.ExecuteAsync(_requestProfile);
+                    numberOfSentRequests++;
+                }
+                stopwatch.Stop();
+                return numberOfSentRequests;
             }
-            stopwatch.Stop();
-            return numberOfSentRequests;
+            catch
+            {
+                throw;
+            }
         }
 
         public class Builder : IBuilder<DMode>

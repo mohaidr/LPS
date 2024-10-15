@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSRun.IterationMode;
 using System;
@@ -41,11 +42,11 @@ namespace LPS.Domain
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
                 _cts = cts;
-                _executionStatus = CommandExecutionStatus.Scheduled;
+                _executionStatus = ExecutionStatus.Scheduled;
             }
-            private CommandExecutionStatus _executionStatus;
-            public CommandExecutionStatus Status => _executionStatus;
-            private CommandExecutionStatus _finalStatus;
+            private ExecutionStatus _executionStatus;
+            private ExecutionStatus _finalStatus;
+            public ExecutionStatus Status => _executionStatus;
 
             public async Task ExecuteAsync(HttpRun entity)
             {
@@ -64,18 +65,25 @@ namespace LPS.Domain
 
                 try
                 {
-                    _executionStatus = CommandExecutionStatus.Ongoing;
+                    _executionStatus = ExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this);
                     _executionStatus = _finalStatus;
                 }
-                catch
+                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
                 {
-                    _executionStatus = CommandExecutionStatus.Failed;
+                    _executionStatus = ExecutionStatus.Cancelled;
                     throw;
                 }
+                catch
+                {
+                    _executionStatus = ExecutionStatus.Failed;
+                }
+                finally {
+                    if (_finalStatus > _executionStatus)
+                        _executionStatus = _finalStatus;
+                }
             }
-
-            public void NotifyMe(CommandExecutionStatus status)
+            public void NotifyMe(ExecutionStatus status)
             {
                 _finalStatus = status;
             }
@@ -136,10 +144,9 @@ namespace LPS.Domain
                 return;
             }
             var profileCommand = new HttpRequestProfile.ExecuteCommand(_httpClientService, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
+            profileCommand.RegisterObserver(command);
             try
             {
-
-                profileCommand.RegisterObserver(command);
 
                 await LogRequestDetails();
 
@@ -215,9 +222,13 @@ namespace LPS.Domain
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
 
             }
+            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+            {
+                throw;
+            }
             finally
             {
-                //profileCommand.RemoveObserver(command);
+                profileCommand.RemoveObserver(command);
             }
         }
     }

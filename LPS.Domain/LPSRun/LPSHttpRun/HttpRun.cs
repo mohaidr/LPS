@@ -8,40 +8,15 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Domain.LPSFlow;
 using Newtonsoft.Json.Linq;
 
 namespace LPS.Domain
 {
-    public enum EntityExecutionStatus
-    {
-        NotStarted,
-        Ongoing,
-        Paused,
-        Cancelled,
-        Completed,
-        Failed,
-        Unkown
-    }
     public partial class HttpRun : Run, IBusinessEntity, ICloneable
     {
-
-
-        public enum IterationMode
-        {
-            /* 
-            * D refers to Duration
-            * C refers to Cool Down
-            * B refers to Batch Size  
-            * R refers to Request Count
-            */
-            DCB = 0,
-            CRB = 1,
-            CB = 2,
-            R = 3,
-            D = 4
-        }
 
         private HttpRun()
         {
@@ -118,6 +93,6 @@ namespace LPS.Domain
         public IterationMode? Mode { get; private set; }
         public bool MaximizeThroughput { get; private set; }
 
-        public EntityExecutionStatus Status { get; private set; }
+        public ExecutionStatus Status { get; private set; }
     }
 }

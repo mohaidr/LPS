@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSRun.LPSHttpRun.Scheduler;
 using Microsoft.VisualBasic;
@@ -50,8 +51,8 @@ namespace LPS.Domain
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _cts = cts;
             }
-            private CommandExecutionStatus _executionStatus;
-            public CommandExecutionStatus Status => _executionStatus;
+            private ExecutionStatus _executionStatus;
+            public ExecutionStatus Status => _executionStatus;
             async public Task ExecuteAsync(TestPlan entity)
             {
                 if (entity == null)

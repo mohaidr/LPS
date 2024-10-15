@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
@@ -39,7 +40,7 @@ namespace LPS.UI.Core.UI.Build.Services
 
                     AnsiConsole.MarkupLine("[blue]D[/] stands for duration. [blue]C[/] stands for Cool Down, [blue]R[/] stands for Request Count, [blue]B[/] stands for Batch Size");
                     _validator.PrintValidationErrors(nameof(Command.Mode));
-                    _command.Mode = AnsiConsole.Ask<HttpRun.IterationMode>("At which [green]'Mode'[/] the 'HTTP RUN' should be executed?"); ;
+                    _command.Mode = AnsiConsole.Ask<IterationMode>("At which [green]'Mode'[/] the 'HTTP RUN' should be executed?"); ;
                     continue;
                 }
 

@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -15,9 +16,9 @@ namespace LPS.Domain.LPSFlow
         private IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
         public class ExecuteCommand : IAsyncCommand<Flow>
         {
-            private CommandExecutionStatus _executionStatus;
+            private ExecutionStatus _executionStatus;
 
-            public CommandExecutionStatus Status => _executionStatus;
+            public ExecutionStatus Status => _executionStatus;
             IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
             ILogger _logger;
             IWatchdog _watchdog;

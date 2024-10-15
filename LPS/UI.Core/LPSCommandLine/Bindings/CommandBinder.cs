@@ -7,6 +7,7 @@ using System.CommandLine;
 using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
+using LPS.Domain.Domain.Common.Enums;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
@@ -25,7 +26,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string> _urlOption;
         private Option<IList<string>> _headerOption;
         private Option<string> _payloadOption;
-        Option<HttpRun.IterationMode> _iterationModeOption;
+        Option<IterationMode> _iterationModeOption;
         private Option<string> _testPlanNameOption;
         private Option<int> _numberOfClientsOption;
         private Option<int> _arrivalDelayOption;
@@ -39,7 +40,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<bool>? runInParallerOption = null,
             Option<string>? httpRunNameOption = null,
             Option<int?>? requestCountOption = null,
-            Option<HttpRun.IterationMode>? iterationModeOption = null,
+            Option<IterationMode>? iterationModeOption = null,
             Option<int?>? duratiion = null,
             Option<int?>? coolDownTime = null,
             Option<bool>? maximizeThroughput = null,

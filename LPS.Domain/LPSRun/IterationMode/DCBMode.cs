@@ -51,6 +51,7 @@ namespace LPS.Domain.LPSRun.IterationMode
 
             coolDownWatch.Stop();
             stopwatch.Stop();
+
             try
             {
                 var results = await Task.WhenAll(awaitableTasks);

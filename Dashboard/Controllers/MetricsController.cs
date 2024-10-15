@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 
 namespace LPS.Controllers
 {
@@ -92,7 +93,7 @@ namespace LPS.Controllers
                         continue; // Skip metrics where endpoint details are not applicable or available
 
                     var statusList = _httpRunCommandStatusMonitor?.GetAllStatuses(((IMetricCollector)metric).LPSHttpRun);
-                    string status = statusList != null ? DetermineOverallStatus(statusList) : CommandExecutionStatus.Unkown.ToString();
+                    string status = statusList != null ? DetermineOverallStatus(statusList) : ExecutionStatus.Unkown.ToString();
 
                     var metricData = metricsList.FirstOrDefault(m => m.Endpoint == endPointDetails);
                     if (metricData == null)
@@ -141,23 +142,22 @@ namespace LPS.Controllers
             }
         }
 
-        private static string DetermineOverallStatus(List<CommandExecutionStatus> statuses)
+        private static string DetermineOverallStatus(List<ExecutionStatus> statuses)
         {
-            if (statuses.Count == 0)
-                return "NotRunning";
-            if (statuses.All(status => status == CommandExecutionStatus.NotStarted))
-                return "NotStarted";
-            if (statuses.All(status => status == CommandExecutionStatus.Completed || status == CommandExecutionStatus.Scheduled) && statuses.Any(status => status == CommandExecutionStatus.Scheduled))
+
+            if (statuses.Count == 0 || statuses.All(status => status == ExecutionStatus.PendingExecution))
+                return "PendingExecution";
+            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Scheduled) && statuses.Any(status => status == ExecutionStatus.Scheduled))
                 return "Scheduled";
-            if (statuses.All(status => status == CommandExecutionStatus.Completed))
+            if (statuses.All(status => status == ExecutionStatus.Completed))
                 return "Completed";
-            if (statuses.All(status => status == CommandExecutionStatus.Completed || status == CommandExecutionStatus.Paused) && statuses.Any(status => status == CommandExecutionStatus.Paused))
+            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Paused) && statuses.Any(status => status == ExecutionStatus.Paused))
                 return "Paused";
-            if (statuses.All(status => status == CommandExecutionStatus.Completed || status == CommandExecutionStatus.Failed) && statuses.Any(status => status == CommandExecutionStatus.Failed))
+            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Failed) && statuses.Any(status => status == ExecutionStatus.Failed))
                 return "Failed";
-            if (statuses.All(status => status == CommandExecutionStatus.Completed || status == CommandExecutionStatus.Cancelled) && statuses.Any(status => status == CommandExecutionStatus.Cancelled))
+            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Cancelled) && statuses.Any(status => status == ExecutionStatus.Cancelled))
                 return "Cancelled";
-            if (statuses.Any(status => status == CommandExecutionStatus.Ongoing))
+            if (statuses.Any(status => status == ExecutionStatus.Ongoing))
                 return "Ongoing";
             return "Undefined"; // Default case, should ideally never be reached
         }
