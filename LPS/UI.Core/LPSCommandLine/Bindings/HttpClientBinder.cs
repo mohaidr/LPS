@@ -28,9 +28,9 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
          Option<int?>? poolConnectionIdelTimeoutOption = null,
          Option<int?>? clientTimeoutOption = null)
         {
-            _maxConnectionsPerServerption = maxConnectionsPerServerption ?? CommandLineOptions.LPSHttpClientCommandOptions.MaxConnectionsPerServerption;
-            _poolConnectionLifeTimeOption = poolConnectionLifeTimeOption ?? CommandLineOptions.LPSHttpClientCommandOptions.PoolConnectionLifeTimeOption;
-            _poolConnectionIdelTimeoutOption = poolConnectionIdelTimeoutOption ?? CommandLineOptions.LPSHttpClientCommandOptions.PoolConnectionIdelTimeoutOption;
+            _maxConnectionsPerServerption = maxConnectionsPerServerption ?? CommandLineOptions.LPSHttpClientCommandOptions.MaxConnectionsPerServerOption;
+            _poolConnectionLifeTimeOption = poolConnectionLifeTimeOption ?? CommandLineOptions.LPSHttpClientCommandOptions.PoolConnectionLifetimeOption;
+            _poolConnectionIdelTimeoutOption = poolConnectionIdelTimeoutOption ?? CommandLineOptions.LPSHttpClientCommandOptions.PoolConnectionIdleTimeoutOption;
             _clientTimeoutOption = clientTimeoutOption ?? CommandLineOptions.LPSHttpClientCommandOptions.ClientTimeoutOption;
         }
 

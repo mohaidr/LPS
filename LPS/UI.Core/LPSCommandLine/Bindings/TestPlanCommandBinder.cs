@@ -29,7 +29,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCreateCommandOptions.NumberOfClientsOption;
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCreateCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCreateCommandOptions.DelayClientCreation;
-            _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCreateCommandOptions.RunInParaller;
+            _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCreateCommandOptions.RunInParallel;
         }
 
         protected override TestPlan.SetupCommand GetBoundValue(BindingContext bindingContext) =>

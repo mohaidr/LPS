@@ -46,12 +46,12 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _nameOption = nameOption ?? CommandLineOptions.LPSAddCommandOptions.RunNameOption;
             _maximizeThroughputOption = maximizeThroughput ?? CommandLineOptions.LPSAddCommandOptions.MaximizeThroughputOption;
             _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSAddCommandOptions.IterationModeOption;
-            _duration = duratiion ?? CommandLineOptions.LPSAddCommandOptions.Duratiion;
+            _duration = duratiion ?? CommandLineOptions.LPSAddCommandOptions.Duration;
             _batchSize = batchSizeOption ?? CommandLineOptions.LPSAddCommandOptions.BatchSize;
             _coolDownTime = coolDownTime ?? CommandLineOptions.LPSAddCommandOptions.CoolDownTime;
             _requestCountOption = requestCountOption ?? CommandLineOptions.LPSAddCommandOptions.RequestCountOption;
             _httpMethodOption = httpMethodOption ?? CommandLineOptions.LPSAddCommandOptions.HttpMethodOption;
-            _httpversionOption = httpversionOption ?? CommandLineOptions.LPSAddCommandOptions.HttpversionOption;
+            _httpversionOption = httpversionOption ?? CommandLineOptions.LPSAddCommandOptions.HttpVersionOption;
             _urlOption = urlOption ?? CommandLineOptions.LPSAddCommandOptions.UrlOption;
             _headerOption = headerOption ?? CommandLineOptions.LPSAddCommandOptions.HeaderOption;
             _payloadOption = payloadOption ?? CommandLineOptions.LPSAddCommandOptions.PayloadOption;

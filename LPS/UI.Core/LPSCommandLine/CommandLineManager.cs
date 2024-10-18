@@ -56,6 +56,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _logger = logger;
             _command = command;
             _command_args = command_args;
+            _command_args = command_args.Select(arg => arg.ToLowerInvariant()).ToArray();
             _config = config;
             _httpClientManager = httpClientManager;
             _watchdog = watchdog;

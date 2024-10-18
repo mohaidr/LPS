@@ -57,7 +57,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreation;
-            _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCommandOptions.RunInParaller;
+            _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCommandOptions.RunInParallel;
             _httpRunNameOption = httpRunNameOption ?? CommandLineOptions.LPSCommandOptions.RunNameOption;
             _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSCommandOptions.IterationModeOption;
             _duration = duratiion ?? CommandLineOptions.LPSCommandOptions.Duration;
@@ -66,7 +66,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _requestCountOption = requestCountOption ?? CommandLineOptions.LPSCommandOptions.RequestCountOption;
             _maximizeThroughputOption = maximizeThroughput ?? CommandLineOptions.LPSCommandOptions.MaximizeThroughputOption;
             _httpMethodOption = httpMethodOption ?? CommandLineOptions.LPSCommandOptions.HttpMethodOption;
-            _httpversionOption = httpversionOption ?? CommandLineOptions.LPSCommandOptions.HttpversionOption;
+            _httpversionOption = httpversionOption ?? CommandLineOptions.LPSCommandOptions.HttpVersionOption;
             _urlOption = urlOption ?? CommandLineOptions.LPSCommandOptions.UrlOption;
             _headerOption = headerOption ?? CommandLineOptions.LPSCommandOptions.HeaderOption;
             _payloadOption = payloadOption ?? CommandLineOptions.LPSCommandOptions.PayloadOption;
