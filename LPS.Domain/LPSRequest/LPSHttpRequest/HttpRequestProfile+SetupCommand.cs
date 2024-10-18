@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +26,7 @@ namespace LPS.Domain
                 HttpHeaders = new Dictionary<string, string>();
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
+            [JsonIgnore]
             public Guid? Id { get; set; }
 
             public string HttpMethod { get; set; }
@@ -38,7 +40,9 @@ namespace LPS.Domain
             public bool? DownloadHtmlEmbeddedResources { get; set; }
             public bool? SaveResponse { get; set; }
 
+            [JsonIgnore]
             public bool IsValid { get; set; }
+            [JsonIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
             public void Execute(HttpRequestProfile entity)
             {

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace LPS.Domain
@@ -25,13 +26,16 @@ namespace LPS.Domain
                 ArgumentNullException.ThrowIfNull(entity);
                 entity.Setup(this);
             }
+            [JsonIgnore]
             public Guid? Id { get; set; }
             public string Name { get; set; }
             public int NumberOfClients { get; set; }
             public int ArrivalDelay { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
+            [JsonIgnore]
             public bool IsValid { get; set; }
+            [JsonIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
         }
 

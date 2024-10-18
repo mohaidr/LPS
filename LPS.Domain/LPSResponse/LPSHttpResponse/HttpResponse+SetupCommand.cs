@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ namespace LPS.Domain
             {
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
+            [JsonIgnore]
             public Guid? Id { get; set; }
 
             public MimeType ContentType { get; set; }
@@ -32,8 +34,10 @@ namespace LPS.Domain
             public Dictionary<string, string> ResponseContentHeaders { get; set; }
             public Dictionary<string, string> ResponseHeaders { get; set; }
             public bool IsSuccessStatusCode { get; set; }
+            [JsonIgnore]
             public bool IsValid { get; set; }
             public Guid LPSHttpRequestProfileId { get; set; }
+            [JsonIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
             public TimeSpan ResponseTime { get; set; }
 

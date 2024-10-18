@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,7 @@ namespace LPS.Domain
             }
 
             public HttpRequestProfile.SetupCommand LPSRequestProfile { get; set; } // only used to return data
+            [JsonIgnore]
             public Guid? Id { get; set; }
 
             public int? RequestCount { get; set; }
@@ -43,8 +45,10 @@ namespace LPS.Domain
 
             public int? CoolDownTime { get; set; }
             public string Name { get; set; }
+            [JsonIgnore]
             public bool IsValid { get; set; }
             public IterationMode? Mode { get; set; }
+            [JsonIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
         }
 
