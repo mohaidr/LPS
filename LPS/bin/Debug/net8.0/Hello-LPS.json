@@ -1,62 +1,47 @@
 {
-  "lpsRuns": [
-  {
-      "lpsRequestProfile": {
-        "id": null,
-        "httpMethod": "GET",
-        "url": "https://urnice.azure-api.net/echo/resource",
-        "payload": null,
-        "httpversion": "2.0",
-        "httpHeaders": {
-          "Hello-Header": ""
+    "lpsRuns": [
+        {
+            "lpsRequestProfile": {
+                "httpMethod": "GET",
+                "url": "https://www.example.com",
+                "payload": null,
+                "httpversion": "2.0",
+                "httpHeaders": {
+                    "Hello-Header": "Hello-Header"
+                },
+                "downloadHtmlEmbeddedResources": false,
+                "saveResponse": false
+            },
+            "requestCount": 100000,
+            "duration": null,
+            "batchSize": null,
+            "coolDownTime": null,
+            "name": "Hello-Run-Urnice",
+            "mode": "R"
         },
-        "downloadHtmlEmbeddedResources": false,
-        "saveResponse": false,
-        "isValid": true,
-        "validationErrors": {}
-      },
-      "id": null,
-      "requestCount": 100000,
-      "duration": null,
-      "batchSize": null,
-      "coolDownTime": null,
-      "name": "Hello-Run-Urnice",
-      "isValid": true,
-      "mode": 3,
-      "validationErrors": {}
-    },
-  {
-      "lpsRequestProfile": {
-        "id": null,
-        "httpMethod": "GET",
-        "url": "https://www.example.com",
-        "payload": null,
-        "httpversion": "2.0",
-        "httpHeaders": {
-          "Hello-Header": "Header"
-        },
-        "downloadHtmlEmbeddedResources": false,
-        "saveResponse": false,
-        "isValid": true,
-        "validationErrors": {}
-      },
-      "id": null,
-      "requestCount": null,
-      "duration": 6000,
-      "batchSize": null,
-      "coolDownTime": null,
-      "name": "Hello-Run-Example",
-      "isValid": true,
-      "mode": 4,
-      "validationErrors": {}
-    }
-  ],
-  "id": null,
-  "name": "Hello-LPS",
-  "numberOfClients": 5,
-  "rampUpPeriod": 4000,
-  "delayClientCreationUntilIsNeeded": false,
-  "runInParallel": true,
-  "isValid": true,
-  "validationErrors": {}
+        {
+            "lpsRequestProfile": {
+                "httpMethod": "GET",
+                "url": "https://www.example.com",
+                "payload": null,
+                "httpversion": "2.0",
+                "httpHeaders": {
+                    "Hello-Header": "Header"
+                },
+                "downloadHtmlEmbeddedResources": false,
+                "saveResponse": false
+            },
+            "requestCount": null,
+            "duration": 6000,
+            "batchSize": null,
+            "coolDownTime": null,
+            "name": "Hello-Run-Example",
+            "mode": "D"
+        }
+    ],
+    "name": "Hello-LPS",
+    "numberOfClients": 5,
+    "arrivalDelay": 4000,
+    "delayClientCreationUntilIsNeeded": false,
+    "runInParallel": true
 }
