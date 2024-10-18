@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Caching
 {
-    public interface ICacheService<T>
+    public interface ICacheService<TItem>
     {
-        Task<T> GetItemAsync(string key);
-        Task SetItemAsync(string key, T item, TimeSpan? duration = null);
-        bool TryGetItem(string key, out T item);
+        Task<TItem> GetItemAsync(string key);
+        Task SetItemAsync(string key, TItem item, TimeSpan? duration = null);
+        bool TryGetItem(string key, out TItem item);
         Task RemoveItemAsync(string key);
     }
 }

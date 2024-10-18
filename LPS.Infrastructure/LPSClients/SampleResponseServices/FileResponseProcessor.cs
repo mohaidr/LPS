@@ -42,7 +42,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         /// Initializes the FileStream and updates the cache with no expiration.
         /// This method manages the semaphore internally.
         /// </summary>
-        public async Task InitializeAsync(string type, CancellationToken token)
+        public async Task InitializeAsync(string fileExtension, CancellationToken token)
         {
             string cacheKey = $"SampleResponse_{_url}";
             var semaphore = _semaphoreDictionary.GetOrAdd(cacheKey, new SemaphoreSlim(1, 1));
@@ -52,10 +52,10 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                 await semaphore.WaitAsync(token);
                 lockAcquired = true;
 
-                if (_memoryCache.TryGetItem(cacheKey, out _))
+                if (_memoryCache.TryGetItem(cacheKey, out string responseFilePath))
                 {
-                    // Response has been saved recently; no need to process
                     _isInitialized = false;
+                    ResponseFilePath = responseFilePath;
                     return;
                 }
                 else
@@ -68,13 +68,13 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                     string directoryName = $"{sanitizedUrl}.{_runtimeOperationIdProvider.OperationId}.Resources";
                     Directory.CreateDirectory(directoryName);
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
-                    string filePath = Path.Combine(directoryName, $"{sanitizedUrl}_{timestamp}.{type}");
+                    string filePath = Path.Combine(directoryName, $"{sanitizedUrl}_{timestamp}{fileExtension}");
 
                     _fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true);
                     ResponseFilePath = filePath;
 
                     // Set cache with no expiration (using TimeSpan.MaxValue)
-                    await _memoryCache.SetItemAsync(cacheKey, _url, TimeSpan.MaxValue);
+                    await _memoryCache.SetItemAsync(cacheKey, filePath, TimeSpan.MaxValue);
                 }
             }
             catch (Exception ex)
@@ -109,7 +109,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 
             try
             {
-                await _fileStream.WriteAsync(buffer, offset, count, token);
+                await _fileStream.WriteAsync(buffer.AsMemory(offset, count), token);
             }
             catch (Exception ex)
             {
@@ -140,7 +140,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 
                         string cacheKey = $"SampleResponse_{_url}";
                         // Update cache entry with default cache duration
-                        await _memoryCache.SetItemAsync(cacheKey, _url);
+                        await _memoryCache.SetItemAsync(cacheKey, _fileStream.Name);
                         await _logger.LogAsync(
                             _runtimeOperationIdProvider.OperationId,
                             $"Sample response saved for URL: {_url}",
