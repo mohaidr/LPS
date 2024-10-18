@@ -144,21 +144,20 @@ namespace LPS.Controllers
 
         private static string DetermineOverallStatus(List<ExecutionStatus> statuses)
         {
-
             if (statuses.Count == 0 || statuses.All(status => status == ExecutionStatus.PendingExecution))
                 return "PendingExecution";
-            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Scheduled) && statuses.Any(status => status == ExecutionStatus.Scheduled))
+            if (statuses.Any(status => status == ExecutionStatus.Scheduled) && !statuses.Any(status => status == ExecutionStatus.Ongoing))
                 return "Scheduled";
+            if (statuses.Any(status => status == ExecutionStatus.Ongoing))
+                return "Ongoing";
+            if (statuses.Any(status => status == ExecutionStatus.Failed))
+                return "Failed";
+            if (statuses.Any(status => status == ExecutionStatus.Cancelled) && !statuses.Any(status => status == ExecutionStatus.Failed))
+                return "Cancelled";
             if (statuses.All(status => status == ExecutionStatus.Completed))
                 return "Completed";
             if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Paused) && statuses.Any(status => status == ExecutionStatus.Paused))
                 return "Paused";
-            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Failed) && statuses.Any(status => status == ExecutionStatus.Failed))
-                return "Failed";
-            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Cancelled) && statuses.Any(status => status == ExecutionStatus.Cancelled))
-                return "Cancelled";
-            if (statuses.Any(status => status == ExecutionStatus.Ongoing))
-                return "Ongoing";
             return "Undefined"; // Default case, should ideally never be reached
         }
     }
