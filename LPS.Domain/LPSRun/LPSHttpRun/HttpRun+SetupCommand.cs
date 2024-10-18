@@ -47,6 +47,7 @@ namespace LPS.Domain
             public string Name { get; set; }
             [JsonIgnore]
             public bool IsValid { get; set; }
+            [JsonConverter(typeof(JsonStringEnumConverter))]
             public IterationMode? Mode { get; set; }
             [JsonIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
