@@ -51,6 +51,9 @@ namespace LPS.Domain
         public Dictionary<string, string> HttpHeaders { get; protected set; }
 
         public bool DownloadHtmlEmbeddedResources { get; protected set; }
+
+        public bool SupportH2C { get; protected set; }
+
         public bool SaveResponse { get; protected set; }
     }
 }

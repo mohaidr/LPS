@@ -54,7 +54,11 @@ namespace LPS.Domain
                     entity._cts = this._cts;
                     _executionStatus = ExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this);
-                    _executionStatus = ExecutionStatus.Completed;
+
+                    if (!entity.HasFailed)
+                        _executionStatus = ExecutionStatus.Completed;
+                    else
+                        _executionStatus = ExecutionStatus.Failed;
                 }
                 catch (OperationCanceledException) when (_cts.IsCancellationRequested)
                 {
@@ -122,8 +126,11 @@ namespace LPS.Domain
                     int sequenceNumber = ++this.LastSequenceId;
                     ((HttpRequestProfile)clonedEntity).LastSequenceId = sequenceNumber;
                     _semaphoreSlim.Release();
-                    await _httpClientService.SendAsync((HttpRequestProfile)clonedEntity, _cts.Token);
-                    this.HasFailed = false;
+                    var response = await _httpClientService.SendAsync((HttpRequestProfile)clonedEntity, _cts.Token);
+                    if (response.IsSuccessStatusCode)
+                        this.HasFailed = false; // HasFailed is not valid property here, think of this as an entity you just fetch from DB to execute, so this has to change
+                    else
+                        this.HasFailed = true;
                 }
                 catch
                 {

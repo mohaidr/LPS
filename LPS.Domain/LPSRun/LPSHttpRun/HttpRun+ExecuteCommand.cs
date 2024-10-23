@@ -67,7 +67,6 @@ namespace LPS.Domain
                 {
                     _executionStatus = ExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this);
-                    Console.WriteLine("This is Final Status"+_finalStatus);
                     _executionStatus = _finalStatus;
                 }
                 catch (OperationCanceledException) when (_cts.IsCancellationRequested)

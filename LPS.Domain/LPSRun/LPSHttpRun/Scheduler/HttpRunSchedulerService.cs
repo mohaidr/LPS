@@ -34,18 +34,25 @@ namespace LPS.Domain.LPSRun.LPSHttpRun.Scheduler
 
         public async Task ScheduleHttpRunExecution(DateTime scheduledTime, HttpRun httpRun, IClientService<HttpRequestProfile, HttpResponse> httpClient)
         {
-            HttpRun.ExecuteCommand httpRunCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _cts);
-            _httpRunExecutionCommandStatusMonitor.RegisterCommand(httpRunCommand, httpRun);
-
-            var delayTime = (int)(scheduledTime - DateTime.Now).TotalMilliseconds;
-            if (delayTime > 0)
+            try
             {
-                await Task.Delay(delayTime);
-            }
+                HttpRun.ExecuteCommand httpRunCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _cts);
+                _httpRunExecutionCommandStatusMonitor.RegisterCommand(httpRunCommand, httpRun);
 
-            _lpsMetricsDataMonitor?.Monitor(httpRun, httpRunCommand.GetHashCode().ToString());
-            await httpRunCommand.ExecuteAsync(httpRun);
-            _lpsMetricsDataMonitor?.Stop(httpRun, httpRunCommand.GetHashCode().ToString());
+                var delayTime = (int)(scheduledTime - DateTime.Now).TotalMilliseconds;
+                if (delayTime > 0)
+                {
+                    await Task.Delay(delayTime);
+                }
+
+                _lpsMetricsDataMonitor?.Monitor(httpRun, httpRunCommand.GetHashCode().ToString());
+                await httpRunCommand.ExecuteAsync(httpRun);
+                _lpsMetricsDataMonitor?.Stop(httpRun, httpRunCommand.GetHashCode().ToString());
+            }
+            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Scheduled execution of '{httpRun.Name}' has been cancelled", LPSLoggingLevel.Warning);
+            }
         }
     }
 }

@@ -37,22 +37,33 @@ namespace LPS.Domain
                 RuleFor(command => command.HttpMethod)
                     .Must(httpMethod => _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
                     .WithMessage("The supported 'Http Methods' are (\"GET\", \"HEAD\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\", \"CONNECT\", \"OPTIONS\", \"TRACE\") ");
-                RuleFor(command => command.URL).Must(url =>
-                {
-                    Uri result;
-                    return Uri.TryCreate(url, UriKind.Absolute, out result)
-                    && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
-                }).WithMessage("The 'URL' must be a valid URL according to RFC 3986");
+                RuleFor(command => command.URL)
+                    .Must(url =>
+                    {
+                        return Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                        && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+                    }).WithMessage("The 'URL' must be a valid URL according to RFC 3986");
                 RuleFor(command => command.SaveResponse)
-                .NotNull()
-                .WithMessage("'Save Response' must be (y) or (n)");
+                    .NotNull()
+                    .WithMessage("'SupportH2C' must be (y) or (n)");
                 RuleFor(command => command.DownloadHtmlEmbeddedResources)
-                    .NotNull().When(command => command.SaveResponse.HasValue && command.SaveResponse.Value)
+                    .NotNull()
                     .WithMessage("'Download Html Embedded Resources' must be (y) or (n)");
-
+                RuleFor(command => command.SupportH2C)
+                    .NotNull()
+                    .WithMessage("'SupportH2C' must be (y) or (n)");
+                // Enforce HTTP when SupportH2C is true
+                When(command => command.SupportH2C == true, () =>
+                {
+                    RuleFor(command => command.URL)
+                        .Must(url =>
+                        {
+                            return Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                                && result.Scheme == Uri.UriSchemeHttp;
+                        }).WithMessage("When 'SupportH2C' is enabled, the 'URL' must use the HTTP scheme.");
+                });
 
                 //TODO: Validate http headers
-
                 #endregion
 
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)

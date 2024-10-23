@@ -1,21 +1,12 @@
-﻿using HdrHistogram;
-using LPS.Domain;
+﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
-using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Monitoring.EventSources;
-using Microsoft.Extensions.Logging;
-using Spectre.Console.Rendering;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
@@ -30,11 +21,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
 
-        RequestEventSource _eventSource;
-        Stopwatch _throughputWatch;
+        readonly RequestEventSource _eventSource;
+        readonly Stopwatch _throughputWatch;
         Timer _timer;
-        private SpinLock _spinLock = new SpinLock();
-        public bool IsTestStarted { get; private set; }
+        private SpinLock _spinLock = new();
+        private SpinLock _elapsedSpinLock = new();
         public ThroughputMetricCollector(HttpRun httprun, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httprun, logger, runtimeOperationIdProvider)
         {
             _httpRun = httprun;
@@ -44,39 +35,45 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
-
+        readonly object lockObject = new();
         private void UpdateMetrics()
         {
-            bool lockTaken = false;
             bool isCoolDown = _httpRun.Mode == IterationMode.DCB || _httpRun.Mode == IterationMode.CRB || _httpRun.Mode == IterationMode.CB;
             int cooldownPeriod = isCoolDown ? _httpRun.CoolDownTime.Value : 1;
 
-            if (IsTestStarted)
+            if (!IsStopped)
             {
                 try
                 {
-                    _spinLock.Enter(ref lockTaken);
-                    var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
-                    var requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / (timeElapsed / 1000)), 2));
-                    var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
-                    if (isCoolDown && timeElapsed > cooldownPeriod)
+                    lock (lockObject)
                     {
-                        requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
+                        var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
+                        var requestsRate = new RequestsRate(string.Empty, 0);
+                        var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
+
+                        if (timeElapsed > 1000)
+                        {
+                            requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / (timeElapsed / 1000)), 2));
+                        }
+                        if (isCoolDown && timeElapsed > cooldownPeriod)
+                        {
+                            requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
+                        }
+                        _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown);
                     }
-                    _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown);
                 }
                 finally
                 {
-                    if (lockTaken)
-                        _spinLock.Exit();
                 }
             }
         }
+
+        // A timer is necessary for periods of inactivity while the test is still running, such as during a watchdog check or the time between the start and completion of a request, etc.
         private void SchedualMetricsUpdate()
         {
             _timer = new Timer(_ =>
             {
-                if (IsTestStarted && !IsStopped)
+                if (!IsStopped)
                 {
                     try
                     {
@@ -96,9 +93,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             try
             {
                 _spinLock.Enter(ref lockTaken);
-                _dimensionSet.Update(++_activeRequestssCount, ++_requestsCount);
+                ++_activeRequestssCount;
+                ++_requestsCount;
                 _eventSource.AddRequest();
-                IsTestStarted = true;
+                UpdateMetrics();
                 return true;
             }
             catch (Exception ex)
@@ -109,7 +107,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 if (lockTaken)
                     _spinLock.Exit();
-                UpdateMetrics();
             }
         }
 
@@ -120,10 +117,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 _spinLock.Enter(ref lockTaken);
                 if (isSuccess)
-                    _dimensionSet.Update(--_activeRequestssCount, _requestsCount, ++_successfulRequestsCount);
+                {
+                    --_activeRequestssCount;
+                    ++_successfulRequestsCount;
+                }
                 else
-                    _dimensionSet.Update(--_activeRequestssCount, _requestsCount, _successfulRequestsCount, ++_failedRequestsCount);
+                {
+                    --_activeRequestssCount;
+                    ++_failedRequestsCount;
+                }
 
+                UpdateMetrics();
                 return true;
             }
             catch (Exception ex)
@@ -134,7 +138,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 if (lockTaken)
                     _spinLock.Exit();
-                UpdateMetrics();
             }
         }
 
@@ -149,7 +152,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public override void Stop()
         {
             IsStopped = true;
-            IsTestStarted = false;
             _dimensionSet.StopUpdate = true;
             try
             {
@@ -188,7 +190,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public readonly struct RequestsRate(string every, double value) : IEquatable<RequestsRate> 
+    public readonly struct RequestsRate(string every, double value) : IEquatable<RequestsRate>
     {
         public double Value { get; } = value;
         public string Every { get; } = every;

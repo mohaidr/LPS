@@ -23,6 +23,7 @@ namespace LPS.Domain
                 Httpversion = "2.0";
                 DownloadHtmlEmbeddedResources = false;
                 SaveResponse = false;
+                SupportH2C = false;
                 HttpHeaders = new Dictionary<string, string>();
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
@@ -39,6 +40,7 @@ namespace LPS.Domain
             public Dictionary<string, string> HttpHeaders { get; set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
             public bool? SaveResponse { get; set; }
+            public bool? SupportH2C { get; set; }
 
             [JsonIgnore]
             public bool IsValid { get; set; }
@@ -68,6 +70,7 @@ namespace LPS.Domain
                 this.HttpHeaders = new Dictionary<string, string>();
                 this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.HasValue? command.DownloadHtmlEmbeddedResources.Value: false;
                 this.SaveResponse = command.SaveResponse.Value;
+                this.SupportH2C = command.SupportH2C.Value;
                 if (command.HttpHeaders != null)
                 {
                     foreach (var header in command.HttpHeaders)
@@ -97,7 +100,8 @@ namespace LPS.Domain
                 clone.Payload = this.Payload;
                 clone.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
                 clone.SaveResponse = this.SaveResponse;
-                clone.HttpHeaders = new Dictionary<string, string>();
+                clone.SupportH2C = this.SupportH2C;
+                clone.HttpHeaders = [];
                 if (this.HttpHeaders != null)
                 {
                     foreach (var header in this.HttpHeaders)

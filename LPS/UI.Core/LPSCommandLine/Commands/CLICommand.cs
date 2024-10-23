@@ -20,15 +20,15 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 {
     internal class CLICommand : ICLICommand
     {
-        private string[] _args;
-        ILogger _logger;
+        private readonly string[] _args;
+        readonly ILogger _logger;
         IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
         IClientConfiguration<HttpRequestProfile> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        IWatchdog _watchdog;
-        Command _rootCliCommand;
-        IMetricsDataMonitor _lpsMonitoringEnroller;
-        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
+        readonly IWatchdog _watchdog;
+        readonly Command _rootCliCommand;
+        readonly IMetricsDataMonitor _lpsMonitoringEnroller;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
        CancellationTokenSource _cts;
         public CLICommand(
             Command rootCliCommand,
@@ -89,6 +89,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     HttpMethod = lpsTestPlan.LPSRuns[0].LPSRequestProfile.HttpMethod,
                     DownloadHtmlEmbeddedResources = lpsTestPlan.LPSRuns[0].LPSRequestProfile.DownloadHtmlEmbeddedResources,
                     SaveResponse = lpsTestPlan.LPSRuns[0].LPSRequestProfile.SaveResponse,
+                    SupportH2C = lpsTestPlan.LPSRuns[0].LPSRequestProfile.SupportH2C,
                     Payload = lpsTestPlan.LPSRuns[0].LPSRequestProfile.Payload,
                     Httpversion = lpsTestPlan.LPSRuns[0].LPSRequestProfile.Httpversion,
                     HttpHeaders = lpsTestPlan.LPSRuns[0].LPSRequestProfile.HttpHeaders,

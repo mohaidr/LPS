@@ -11,13 +11,18 @@ using System.Linq;
 using LPS.Infrastructure.LPSClients.MetricsServices;
 using System.Net;
 using Microsoft.Extensions.Caching.Memory;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
     public class MessageService(IHttpHeadersService headersService,
                                 IMetricsService metricsService,
+                                ILogger logger,
+                                IRuntimeOperationIdProvider runtimeOperationIdProvider,
                                 ICacheService<long> memoryCacheService = null) : IMessageService
     {
+        readonly ILogger _logger = logger;
+        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly IHttpHeadersService _headersService = headersService;
         readonly IMetricsService _metricsService = metricsService;
         readonly ICacheService<long> _memoryCacheService = memoryCacheService ?? new MemoryCacheService<long>(new MemoryCache(new MemoryCacheOptions
@@ -35,6 +40,17 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
 
             bool supportsContent = lpsHttpRequestProfile.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) || lpsHttpRequestProfile.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase) || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch";
             httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.Httpversion);
+
+            if (lpsHttpRequestProfile.SupportH2C)
+            {
+                if (httpRequestMessage.Version != HttpVersion.Version20)
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"SupportH2C was enabled on a non-HTTP/2 protocol, so the version is being overridden from {httpRequestMessage.Version} to {HttpVersion.Version20}.", LPSLoggingLevel.Warning, token);
+                    httpRequestMessage.Version = HttpVersion.Version20;
+                }
+                httpRequestMessage.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
+            }
+
             httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload ?? string.Empty) : null;
 
             // Apply headers to the request
@@ -101,6 +117,6 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             };
         }
 
-      
+
     }
 }

@@ -20,8 +20,8 @@ namespace LPS.UI.Core.LPSValidators
             .NotEmpty().WithMessage("The 'Name' must not be empty")
             .Matches("^[a-zA-Z0-9 _-]+$")
             .WithMessage("The 'Name' does not accept special charachters")
-            .Length(1, 20)
-            .WithMessage("The 'Name' should be between 1 and 20 characters");
+            .Length(1, 60)
+            .WithMessage("The 'Name' should be between 1 and 60 characters");
 
             RuleFor(command => command.NumberOfClients)
             .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")

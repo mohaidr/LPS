@@ -49,13 +49,20 @@ namespace LPS.UI.Core.UI.Build.Services
                     _command.Httpversion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
                     continue;
                 }
+                if (!_validator.Validate(nameof(Command.SupportH2C)) && Command.URL.StartsWith("http://") && Command.Httpversion.Equals("2.0"))
+                {
+                    _validator.PrintValidationErrors(nameof(Command.SupportH2C));
+                    Command.SupportH2C = AnsiConsole.Confirm("Would you like to [green]'Perform'[/] Http2 over cleartext?", false);
+                    continue;
+                }
                 if (!_validator.Validate(nameof(Command.SaveResponse)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.SaveResponse));
                     Command.SaveResponse = AnsiConsole.Confirm("Would you like to [green]'Save'[/] the http responses?", false);
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)) && Command.SaveResponse.Value)
+
+                if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.DownloadHtmlEmbeddedResources));
                     Command.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false);
@@ -83,6 +90,7 @@ namespace LPS.UI.Core.UI.Build.Services
                 _command.Httpversion = string.Empty;
                 _command.DownloadHtmlEmbeddedResources = null;
                 _command.SaveResponse = null;
+                _command.SupportH2C = null;
             }
         }
     }

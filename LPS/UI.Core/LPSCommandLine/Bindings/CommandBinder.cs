@@ -22,6 +22,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string> _httpMethodOption;
         private Option<bool> _downloadHtmlEmbeddedResourcesOption;
         private Option<bool> _saveResponseOption;
+        private Option<bool> _supportH2C;
         private Option<string> _httpversionOption;
         private Option<string> _urlOption;
         private Option<IList<string>> _headerOption;
@@ -51,7 +52,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<IList<string>>? headerOption = null,
             Option<string>? payloadOption = null,
             Option<bool>? downloadHtmlEmbeddedResourcesOption = null,
-            Option<bool>? saveResponseOption = null)
+            Option<bool>? saveResponseOption = null,
+            Option<bool>? supportH2C = null)
         {
             _testPlanNameOption = testPlanNameOption ?? CommandLineOptions.LPSCommandOptions.TestNameOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
@@ -72,7 +74,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _payloadOption = payloadOption ?? CommandLineOptions.LPSCommandOptions.PayloadOption;
             _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? CommandLineOptions.LPSCommandOptions.DownloadHtmlEmbeddedResources;
             _saveResponseOption = saveResponseOption ?? CommandLineOptions.LPSCommandOptions.SaveResponse;
-
+            _supportH2C = supportH2C ?? CommandLineOptions.LPSCommandOptions.SupportH2C;
         }
 
         protected override TestPlan.SetupCommand GetBoundValue(BindingContext bindingContext)
@@ -101,6 +103,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                             Httpversion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
                             DownloadHtmlEmbeddedResources = bindingContext.ParseResult.GetValueForOption(_downloadHtmlEmbeddedResourcesOption),
                             SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
+                            SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),
                             URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
                             Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
                             HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),

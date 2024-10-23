@@ -63,7 +63,7 @@ namespace LPS.Infrastructure.LPSClients
             }));
 
             _urlSanitizationService = urlSanitizationService ?? new UrlSanitizationService();
-            _messageService = messageService ?? new MessageService(_headersService, _metricsService);
+            _messageService = messageService ?? new MessageService(_headersService, _metricsService, _logger, _runtimeOperationIdProvider);
             _responseProcessingService = responseProcessingService ?? new ResponseProcessingService(_memoryCacheService, _logger, _runtimeOperationIdProvider, _urlSanitizationService, _metricsService);
             SocketsHttpHandler socketsHandler = new()
             {
@@ -77,7 +77,6 @@ namespace LPS.Infrastructure.LPSClients
             };
             httpClient = new HttpClient(socketsHandler)
             {
-                DefaultRequestVersion = HttpVersion.Version20,
                 Timeout = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).Timeout
             };
             lock (_lock)

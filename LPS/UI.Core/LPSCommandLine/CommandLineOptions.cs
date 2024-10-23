@@ -71,6 +71,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 MaximizeThroughputOption.AddAlias("-mt");
                 DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
                 SaveResponse.AddAlias("-sr");
+                SupportH2C.AddAlias("-sh2c");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(TestNameOption, "--testname");
@@ -92,6 +93,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(MaximizeThroughputOption, "--maximizethroughput");
                 AddCaseInsensitiveAliases(DownloadHtmlEmbeddedResources, "--downloadhtmlembeddedresources");
                 AddCaseInsensitiveAliases(SaveResponse, "--saveresponse");
+                AddCaseInsensitiveAliases(SupportH2C, "--supporth2c");
             }
 
             public static Option<string> TestNameOption { get; } = new Option<string>(
@@ -203,6 +205,11 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false
             };
+            public static Option<bool> SupportH2C { get; } = new Option<bool>(
+                "--supportH2C", () => false, "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
+            {
+                IsRequired = false
+            };
 
             public static Option<string> PayloadOption { get; } = new Option<string>(
                 "--payload", () => string.Empty, "Request payload")
@@ -282,6 +289,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 MaximizeThroughputOption.AddAlias("-mt");
                 DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
                 SaveResponse.AddAlias("-sr");
+                SupportH2C.AddAlias("-h2c");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(TestNameOption, "--testname");
@@ -299,6 +307,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(MaximizeThroughputOption, "--maximizethroughput");
                 AddCaseInsensitiveAliases(DownloadHtmlEmbeddedResources, "--downloadhtmlembeddedresources");
                 AddCaseInsensitiveAliases(SaveResponse, "--saveresponse");
+                AddCaseInsensitiveAliases(SupportH2C, "--supporth2c");
             }
 
             public static Option<string> TestNameOption { get; } = new Option<string>(
@@ -376,6 +385,12 @@ namespace LPS.UI.Core.LPSCommandLine
 
             public static Option<bool> SaveResponse { get; } = new Option<bool>(
                 "--saveresponse", () => false, "Save HTTP response")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> SupportH2C { get; } = new Option<bool>(
+                "--supporth2c", () => false, "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
             {
                 IsRequired = false
             };
