@@ -15,30 +15,30 @@ using Newtonsoft.Json.Linq;
 
 namespace LPS.Domain
 {
-    public partial class HttpRun : Run, IBusinessEntity, ICloneable
+    public partial class HttpIteration : Iteration, IBusinessEntity, ICloneable
     {
 
-        private HttpRun()
+        private HttpIteration()
         {
-            Type = LPSRunType.HttpRun;
+            Type = IterationType.Http;
         }
 
         private IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
-        private HttpRun(
+        private HttpIteration(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            Type = LPSRunType.HttpRun;
+            Type = IterationType.Http;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
 
-        public HttpRun(SetupCommand command,
+        public HttpIteration(SetupCommand command,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
-            Type = LPSRunType.HttpRun;
+            Type = IterationType.Http;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);
@@ -72,12 +72,12 @@ namespace LPS.Domain
         }
 
 
-        public HttpRequestProfile LPSHttpRequestProfile { get; protected set; }
+        public HttpRequestProfile RequestProfile { get; protected set; }
 
         public void SetHttpRequestProfile(HttpRequestProfile lPSHttpRequestProfile)
         {
-            string httpRunName = this.Name ?? string.Empty;
-            LPSHttpRequestProfile = lPSHttpRequestProfile != null && lPSHttpRequestProfile.IsValid ? lPSHttpRequestProfile : throw new InvalidLPSEntityException($"In the HTTP run '{httpRunName}', the referenced LPS Entity of type {typeof(HttpRequestProfile)} is either null or invalid.");
+            string httpIterationName = this.Name ?? string.Empty;
+            RequestProfile = lPSHttpRequestProfile != null && lPSHttpRequestProfile.IsValid ? lPSHttpRequestProfile : throw new InvalidLPSEntityException($"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpRequestProfile)} is either null or invalid.");
         }
 
         //TODO: To be implemented

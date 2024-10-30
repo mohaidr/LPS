@@ -18,13 +18,13 @@ namespace LPS.Controllers
     [Route("api/[controller]")]
     public class MetricsController(
         Domain.Common.Interfaces.ILogger logger,
-        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunCommandStatusMonitor,
+        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpRunCommandStatusMonitor,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsQueryService metricsQueryService) : ControllerBase
     {
         readonly Domain.Common.Interfaces.ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider? _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>? _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>? _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
 
         // MetricData class extended to hold Data Transmission metrics
@@ -92,7 +92,7 @@ namespace LPS.Controllers
                     if (endPointDetails == null)
                         continue; // Skip metrics where endpoint details are not applicable or available
 
-                    var statusList = _httpRunCommandStatusMonitor?.GetAllStatuses(((IMetricCollector)metric).LPSHttpRun);
+                    var statusList = _httpRunCommandStatusMonitor?.GetAllStatuses(((IMetricCollector)metric).HttpIteration);
                     string status = statusList != null ? DetermineOverallStatus(statusList) : ExecutionStatus.Unkown.ToString();
 
                     var metricData = metricsList.FirstOrDefault(m => m.Endpoint == endPointDetails);
@@ -133,10 +133,10 @@ namespace LPS.Controllers
             {
                 return dimensionSet switch
                 {
-                    LPSDurationMetricDimensionSet durationSet => $"{durationSet.RunName} {durationSet.HttpMethod} {durationSet.URL} HTTP/{durationSet.HttpVersion}",
-                    ResponseCodeDimensionSet responseSet => $"{responseSet.RunName} {responseSet.HttpMethod} {responseSet.URL} HTTP/{responseSet.HttpVersion}",
-                    ThroughputDimensionSet connectionSet => $"{connectionSet.RunName} {connectionSet.HttpMethod} {connectionSet.URL} HTTP/{connectionSet.HttpVersion}",
-                    LPSDataTransmissionMetricDimensionSet dataTransmissionSet => $"{dataTransmissionSet.RunName} {dataTransmissionSet.HttpMethod} {dataTransmissionSet.URL} HTTP/{dataTransmissionSet.HttpVersion}",  // New case for DataTransmission
+                    LPSDurationMetricDimensionSet durationSet => $"{durationSet.IterationName} {durationSet.HttpMethod} {durationSet.URL} HTTP/{durationSet.HttpVersion}",
+                    ResponseCodeDimensionSet responseSet => $"{responseSet.IterationName} {responseSet.HttpMethod} {responseSet.URL} HTTP/{responseSet.HttpVersion}",
+                    ThroughputDimensionSet connectionSet => $"{connectionSet.IterationName} {connectionSet.HttpMethod} {connectionSet.URL} HTTP/{connectionSet.HttpVersion}",
+                    LPSDataTransmissionMetricDimensionSet dataTransmissionSet => $"{dataTransmissionSet.IterationName} {dataTransmissionSet.HttpMethod} {dataTransmissionSet.URL} HTTP/{dataTransmissionSet.HttpVersion}",  // New case for DataTransmission
                     _ => null // or a default string if suitable
                 };
             }

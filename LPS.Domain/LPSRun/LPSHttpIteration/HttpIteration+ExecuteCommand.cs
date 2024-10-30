@@ -12,9 +12,9 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain
 {
-    public partial class HttpRun
+    public partial class HttpIteration
     {
-        public class ExecuteCommand : IAsyncCommand<HttpRun>, IStateObserver
+        public class ExecuteCommand : IAsyncCommand<HttpIteration>, IStateObserver
         {
             readonly IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
             readonly ILogger _logger;
@@ -48,7 +48,7 @@ namespace LPS.Domain
             private ExecutionStatus _finalStatus;
             public ExecutionStatus Status => _executionStatus;
 
-            public async Task ExecuteAsync(HttpRun entity)
+            public async Task ExecuteAsync(HttpIteration entity)
             {
                 if (entity == null)
                 {
@@ -100,17 +100,17 @@ namespace LPS.Domain
             logEntry.AppendLine($"Duration: {this.Duration}");
             logEntry.AppendLine($"Batch Size: {this.BatchSize}");
             logEntry.AppendLine($"Cool Down Time: {this.CoolDownTime}");
-            logEntry.AppendLine($"Http Method: {this.LPSHttpRequestProfile.HttpMethod.ToUpper()}");
-            logEntry.AppendLine($"Http Version: {this.LPSHttpRequestProfile.Httpversion}");
-            logEntry.AppendLine($"URL: {this.LPSHttpRequestProfile.URL}");
+            logEntry.AppendLine($"Http Method: {this.RequestProfile.HttpMethod.ToUpper()}");
+            logEntry.AppendLine($"Http Version: {this.RequestProfile.HttpVersion}");
+            logEntry.AppendLine($"URL: {this.RequestProfile.URL}");
 
-            if (!string.IsNullOrEmpty(this.LPSHttpRequestProfile.Payload) &&
-                (this.LPSHttpRequestProfile.HttpMethod.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
-                 this.LPSHttpRequestProfile.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
-                 this.LPSHttpRequestProfile.HttpMethod.Equals("PATCH", StringComparison.OrdinalIgnoreCase)))
+            if (!string.IsNullOrEmpty(this.RequestProfile.Payload) &&
+                (this.RequestProfile.HttpMethod.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
+                 this.RequestProfile.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
+                 this.RequestProfile.HttpMethod.Equals("PATCH", StringComparison.OrdinalIgnoreCase)))
             {
                 logEntry.AppendLine("...Begin Request Body...");
-                logEntry.AppendLine(this.LPSHttpRequestProfile.Payload);
+                logEntry.AppendLine(this.RequestProfile.Payload);
                 logEntry.AppendLine("...End Request Body...");
             }
             else
@@ -118,10 +118,10 @@ namespace LPS.Domain
                 logEntry.AppendLine("...Empty Payload...");
             }
 
-            if (this.LPSHttpRequestProfile.HttpHeaders != null && this.LPSHttpRequestProfile.HttpHeaders.Count > 0)
+            if (this.RequestProfile.HttpHeaders != null && this.RequestProfile.HttpHeaders.Count > 0)
             {
                 logEntry.AppendLine("...Begin Request Headers...");
-                foreach (var header in this.LPSHttpRequestProfile.HttpHeaders)
+                foreach (var header in this.RequestProfile.HttpHeaders)
                 {
                     logEntry.AppendLine($"{header.Key}: {header.Value}");
                 }
@@ -156,7 +156,7 @@ namespace LPS.Domain
                 switch (this.Mode)
                 {
                     case IterationMode.DCB:
-                        batchProcessor = new BatchProcessor(LPSHttpRequestProfile, _watchdog);
+                        batchProcessor = new BatchProcessor(RequestProfile, _watchdog);
                         iterationModeService = new DCBMode.Builder()
                             .SetCommand(profileCommand)
                             .SetDuration(this.Duration.Value)
@@ -168,7 +168,7 @@ namespace LPS.Domain
                         break;
 
                     case IterationMode.CRB:
-                        batchProcessor = new BatchProcessor(LPSHttpRequestProfile, _watchdog);
+                        batchProcessor = new BatchProcessor(RequestProfile, _watchdog);
                         iterationModeService = new CRBMode.Builder()
                             .SetCommand(profileCommand)
                             .SetRequestCount(this.RequestCount.Value)
@@ -180,7 +180,7 @@ namespace LPS.Domain
                         break;
 
                     case IterationMode.CB:
-                        batchProcessor = new BatchProcessor(LPSHttpRequestProfile, _watchdog);
+                        batchProcessor = new BatchProcessor(RequestProfile, _watchdog);
                         iterationModeService = new CBMode.Builder()
                             .SetCommand(profileCommand)
                             .SetCoolDownTime(this.CoolDownTime.Value)
@@ -195,7 +195,7 @@ namespace LPS.Domain
                             .SetCommand(profileCommand)
                             .SetRequestCount(this.RequestCount.Value)
                             .SetWatchdog(_watchdog)
-                            .SetRequestProfile(LPSHttpRequestProfile)
+                            .SetRequestProfile(RequestProfile)
                             .Build();
                         break;
 
@@ -204,7 +204,7 @@ namespace LPS.Domain
                             .SetCommand(profileCommand)
                             .SetDuration(this.Duration.Value)
                             .SetWatchdog(_watchdog)
-                            .SetRequestProfile(LPSHttpRequestProfile)
+                            .SetRequestProfile(RequestProfile)
                             .Build();
                         break;
 
@@ -218,7 +218,7 @@ namespace LPS.Domain
                     _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {_numberOfSentRequests} request(s) to {this.LPSHttpRequestProfile.URL}", LPSLoggingLevel.Verbose, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {_numberOfSentRequests} request(s) to {this.RequestProfile.URL}", LPSLoggingLevel.Verbose, _cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
 
             }

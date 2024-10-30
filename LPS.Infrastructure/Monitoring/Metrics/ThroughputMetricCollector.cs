@@ -25,12 +25,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         readonly Stopwatch _throughputWatch;
         Timer _timer;
         private SpinLock _spinLock = new();
-        private SpinLock _elapsedSpinLock = new();
-        public ThroughputMetricCollector(HttpRun httprun, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httprun, logger, runtimeOperationIdProvider)
+        public ThroughputMetricCollector(HttpIteration httpIteration, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
-            _httpRun = httprun;
-            _dimensionSet = new ProtectedConnectionDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);
-            _eventSource = RequestEventSource.GetInstance(_httpRun);
+            _httpIteration = httpIteration;
+            _dimensionSet = new ProtectedConnectionDimensionSet(_httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
+            _eventSource = RequestEventSource.GetInstance(_httpIteration);
             _throughputWatch = new Stopwatch();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -38,8 +37,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         readonly object lockObject = new();
         private void UpdateMetrics()
         {
-            bool isCoolDown = _httpRun.Mode == IterationMode.DCB || _httpRun.Mode == IterationMode.CRB || _httpRun.Mode == IterationMode.CB;
-            int cooldownPeriod = isCoolDown ? _httpRun.CoolDownTime.Value : 1;
+            bool isCoolDown = _httpIteration.Mode == IterationMode.DCB || _httpIteration.Mode == IterationMode.CRB || _httpIteration.Mode == IterationMode.CB;
+            int cooldownPeriod = isCoolDown ? _httpIteration.CoolDownTime.Value : 1;
 
             if (!IsStopped)
             {
@@ -167,7 +166,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             public bool StopUpdate { get; set; }
             public ProtectedConnectionDimensionSet(string name, string httpMethod, string url, string httpVersion)
             {
-                RunName = name;
+                IterationName = name;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -222,7 +221,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class ThroughputDimensionSet : IDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
-        public string RunName { get; protected set; }
+        public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }
         public string HttpVersion { get; protected set; }

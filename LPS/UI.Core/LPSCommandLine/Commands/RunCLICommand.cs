@@ -78,31 +78,45 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     Plan.SetupCommand setupCommand = ConfigurationService.FetchConfiguration(configFile);
                     var plan = new Plan(setupCommand, _logger, _runtimeOperationIdProvider);
-
-                    foreach (var roundCommand in setupCommand.Rounds)
+                    if (plan.IsValid)
                     {
-                        var roundEntity = new Round(roundCommand, _logger, _runtimeOperationIdProvider);
-                        plan.AddRound(roundEntity);
-
-                        foreach (var iterationCommand in roundCommand.Iterations)
+                        foreach (var roundCommand in setupCommand.Rounds)
                         {
-                            var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
-                            iterationEntity.SetHttpRequestProfile(new HttpRequestProfile(iterationCommand.RequestProfile, _logger, _runtimeOperationIdProvider));
-                            roundEntity.AddIteration(iterationEntity);
+                            var roundEntity = new Round(roundCommand, _logger, _runtimeOperationIdProvider);
+                            if (roundEntity.IsValid)
+                            {
+                                foreach (var iterationCommand in roundCommand.Iterations)
+                                {
+                                    var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
+                                    if (iterationEntity.IsValid)
+                                    {
+                                        var requestProfile = new HttpRequestProfile(iterationCommand.RequestProfile, _logger, _runtimeOperationIdProvider);
+                                        if (requestProfile.IsValid)
+                                        {
+                                            iterationEntity.SetHttpRequestProfile(requestProfile);
+                                            roundEntity.AddIteration(iterationEntity);
+                                            plan.AddRound(roundEntity);
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    await new LPSManager(
-                        _logger,
-                        _httpClientManager,
-                        _config,
-                        _watchdog,
-                        _runtimeOperationIdProvider,
-                        _httpIterationExecutionCommandStatusMonitor,
-                        _lPSMonitoringEnroller,
-                        _dashboardConfig,
-                        _cts
-                    ).RunAsync(plan);
+                    if (plan.GetReadOnlyRounds().Any())
+                    {
+                        await new LPSManager(
+                            _logger,
+                            _httpClientManager,
+                            _config,
+                            _watchdog,
+                            _runtimeOperationIdProvider,
+                            _httpIterationExecutionCommandStatusMonitor,
+                            _lPSMonitoringEnroller,
+                            _dashboardConfig,
+                            _cts
+                        ).RunAsync(plan);
+                    }
                 }
                 catch (Exception ex)
                 {

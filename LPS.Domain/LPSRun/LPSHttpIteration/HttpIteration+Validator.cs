@@ -16,18 +16,18 @@ using LPS.Domain.Domain.Common.Validation;
 namespace LPS.Domain
 {
 
-    public partial class HttpRun
+    public partial class HttpIteration
     {
 
-        new public class Validator : CommandBaseValidator<HttpRun, HttpRun.SetupCommand>
+        new public class Validator : CommandBaseValidator<HttpIteration, HttpIteration.SetupCommand>
         {
             public override SetupCommand Command => _command;
-            public override HttpRun Entity => _entity;
+            public override HttpIteration Entity => _entity;
             ILogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             SetupCommand _command;
-            HttpRun _entity;
-            public Validator(HttpRun entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            HttpIteration _entity;
+            public Validator(HttpIteration entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;

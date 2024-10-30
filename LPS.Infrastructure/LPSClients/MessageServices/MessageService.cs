@@ -39,9 +39,9 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             };
 
             bool supportsContent = lpsHttpRequestProfile.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) || lpsHttpRequestProfile.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase) || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch";
-            httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.Httpversion);
+            httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.HttpVersion);
 
-            if (lpsHttpRequestProfile.SupportH2C)
+            if (lpsHttpRequestProfile.SupportH2C.HasValue && lpsHttpRequestProfile.SupportH2C.Value)
             {
                 if (httpRequestMessage.Version != HttpVersion.Version20)
                 {
@@ -80,7 +80,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             long size = 0;
 
             // Calculate the size of the request line (HTTP method + URL + version)
-            size += Encoding.UTF8.GetByteCount($"{profile.HttpMethod} {profile.URL} HTTP/{profile.Httpversion}\r\n");
+            size += Encoding.UTF8.GetByteCount($"{profile.HttpMethod} {profile.URL} HTTP/{profile.HttpVersion}\r\n");
 
             // Calculate the size of the headers in the profile
             foreach (var header in profile.HttpHeaders)

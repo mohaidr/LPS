@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Text.Json;
-
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace LPS.Infrastructure.Common
 {
@@ -13,6 +14,18 @@ namespace LPS.Infrastructure.Common
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = true
         };
+
+        // YAML Serializer and Deserializer with camelCase convention
+        private static readonly ISerializer YamlSerializer = new SerializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitDefaults)
+            .ConfigureDefaultValuesHandling(DefaultValuesHandling.OmitNull)
+            .Build();
+
+        private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder()
+            .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .Build();
+
         public static bool IsSerializable<T>(Type type = null)
         {
             type = type ?? typeof(T);
@@ -63,6 +76,32 @@ namespace LPS.Infrastructure.Common
             catch (Exception ex)
             {
                 throw new InvalidOperationException($"Serialization Has Failed {ex.Message}");
+            }
+        }
+
+        // New Method: Serialize to YAML
+        public static string SerializeToYaml<T>(T obj)
+        {
+            try
+            {
+                return YamlSerializer.Serialize(obj);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"YAML Serialization Has Failed: {ex.Message}");
+            }
+        }
+
+        // New Method: Deserialize from YAML
+        public static T DeserializeFromYaml<T>(string yamlString)
+        {
+            try
+            {
+                return YamlDeserializer.Deserialize<T>(yamlString);
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"YAML Deserialization Has Failed: {ex.Message}");
             }
         }
     }

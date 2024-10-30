@@ -15,19 +15,19 @@ using LPS.Domain.Domain.Common.Validation;
 namespace LPS.Domain
 {
 
-    public partial class TestPlan
+    public partial class Plan
     {
    
-        public class Validator: CommandBaseValidator<TestPlan, TestPlan.SetupCommand>
+        public class Validator: CommandBaseValidator<Plan, Plan.SetupCommand>
         {
 
             ILogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            TestPlan _entity;
-            TestPlan.SetupCommand _command;
+            Plan _entity;
+            Plan.SetupCommand _command;
             public override SetupCommand Command => _command;
-            public override TestPlan Entity => _entity;
-            public Validator(TestPlan entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public override Plan Entity => _entity;
+            public Validator(Plan entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -42,27 +42,12 @@ namespace LPS.Domain
                 .WithMessage("The 'Name' does not accept special charachters")
                 .Length(1, 60)
                 .WithMessage("The 'Name' should be between 1 and 60 characters");
-
-                RuleFor(command => command.NumberOfClients)
-                .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")
-                .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
-
-                RuleFor(command => command.ArrivalDelay)
-                .NotNull().WithMessage("The 'Arrival Delay' must be a non-null value")
-                .GreaterThan(0).When(command => command.NumberOfClients > 1)
-                .WithMessage("The 'Arrival Delay' must be greater than 0");
-
-
-                RuleFor(command => command.DelayClientCreationUntilIsNeeded)
-                .NotNull().WithMessage("'Delay Client Creation Until Is Needed' must be (y) or (n)");
-
-                RuleFor(command => command.RunInParallel)
-                .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
                 #endregion
+
 
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Plan: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Plan: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
 
                 _command.IsValid = base.Validate();

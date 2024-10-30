@@ -6,16 +6,16 @@ using System.Text.RegularExpressions;
 namespace LPS.Domain
 {
 
-    public partial class Run
+    public partial class Iteration
     {
    
-        public class Validator: CommandBaseValidator<Run, Run.SetupCommand>
+        public class Validator: CommandBaseValidator<Iteration, Iteration.SetupCommand>
         {
             ILogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            Run _entity;
+            Iteration _entity;
             SetupCommand _command;
-            public Validator(Run entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public Validator(Iteration entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -35,7 +35,7 @@ namespace LPS.Domain
 
             public override SetupCommand Command => _command;
 
-            public override Run Entity => _entity;
+            public override Iteration Entity => _entity;
 
         }
     }

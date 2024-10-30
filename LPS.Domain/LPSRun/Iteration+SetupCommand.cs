@@ -13,16 +13,16 @@ using LPS.Domain.Common.Interfaces;
 namespace LPS.Domain
 {
 
-    public partial class Run
+    public partial class Iteration
     {
-        public class SetupCommand : ICommand<Run>
+        public class SetupCommand : ICommand<Iteration>
         {
 
             public SetupCommand()
             {
             }
 
-            public void Execute(Run entity)
+            public void Execute(Iteration entity)
             {
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);

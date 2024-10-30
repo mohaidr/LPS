@@ -11,25 +11,25 @@ using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
-    public enum LPSRunType
+    public enum IterationType
     { 
-        HttpRun,
-        WebSocketRun
+        Http,
+        WebSocket //To Be Implemented
     }
     //This should be a Non-Entity Superclass
-    public partial class Run : IValidEntity, IDomainEntity
+    public partial class Iteration : IValidEntity, IDomainEntity
     {
         protected ILogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected IWatchdog _watchdog;
         protected IMetricsDataMonitor _lpsMonitoringEnroller;
         protected CancellationTokenSource _cts;
-        protected Run()
+        protected Iteration()
         {
             Id = Guid.NewGuid();
         }
 
-        public Run(SetupCommand command, ILogger logger, 
+        public Iteration(SetupCommand command, ILogger logger, 
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             Id = Guid.NewGuid();
@@ -42,6 +42,6 @@ namespace LPS.Domain
         public string Name { get; protected set; }
         public bool IsValid { get; protected set; }
 
-        public LPSRunType Type { get; protected set; }
+        public IterationType Type { get; protected set; }
     }
 }

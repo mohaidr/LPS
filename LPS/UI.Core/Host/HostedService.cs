@@ -90,13 +90,8 @@ namespace LPS.UI.Core.Host
         }
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-            var exitAfter =  _appSettings.DashboardConfigurationOptions.Value.PullEvery.HasValue ? _appSettings.DashboardConfigurationOptions.Value.PullEvery.Value + 1 : 6;
-            #pragma warning disable CS8602 // Dereference of a possibly null reference.
-            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, $"App Stopping in {exitAfter} Seconds", LPSLoggingLevel.Information, cancellationToken);
-
-            await Task.Delay(TimeSpan.FromSeconds(exitAfter));
-            await _logger?.FlushAsync();
-            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
+            await _logger.FlushAsync();
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
         }
 

@@ -45,19 +45,28 @@ namespace LPS.UI.Core
         }
         public async Task RunAsync(Plan plan)
         {
-            var count = plan.GetReadOnlyRounds().Count();
-            if (plan!=null && plan.IsValid && count > 0)
+            try
             {
-                if (_dashboardConfig.Value.BuiltInDashboard.HasValue && _dashboardConfig.Value.BuiltInDashboard.Value)
+                var count = plan.GetReadOnlyRounds().Count();
+                if (plan != null && plan.IsValid && count > 0)
                 {
-                    var port = _dashboardConfig.Value?.Port ?? GlobalSettings.Port;
-                    var queryParams = $"pullevery={_dashboardConfig.Value?.PullEvery ?? 5}";
-                    Host.Dashboard.Start(port, queryParams);
+                    if (_dashboardConfig.Value.BuiltInDashboard.HasValue && _dashboardConfig.Value.BuiltInDashboard.Value)
+                    {
+                        var port = _dashboardConfig.Value?.Port ?? GlobalSettings.Port;
+                        var queryParams = $"refreshrate={_dashboardConfig.Value?.RefreshRate ?? 5}";
+                        Host.Dashboard.Start(port, queryParams);
+                    }
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
+                    await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
+                        .ExecuteAsync(plan);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
                 }
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
-                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
-                    .ExecuteAsync(plan);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
+            }
+            finally 
+            {
+                    var refreshInterval = _dashboardConfig.Value.RefreshRate.HasValue ? _dashboardConfig.Value.RefreshRate.Value + 1 : 6;
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Please hold on; we allow time for the client to refresh the metrics. Expected shutdown in {refreshInterval} seconds.", LPSLoggingLevel.Information);
+                    await Task.Delay(TimeSpan.FromSeconds(refreshInterval));
             }
         }
 

@@ -29,7 +29,7 @@
     "LPSDashboardConfiguration": {
       "BuiltInDashboard": true,
       "Port": 8009,
-      "PullEvery": 5
+      "RefreshRate": 5
     }
   }
 }

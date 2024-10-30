@@ -31,7 +31,7 @@ namespace LPS.Domain.LPSFlow
             }
             public ExecuteCommand(IClientService<HttpRequestProfile,
                 HttpResponse> httpClientService,
-                TestPlan.ExecuteCommand planExecCommand,
+                Round.ExecuteCommand roundExecCommand,
                 ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,

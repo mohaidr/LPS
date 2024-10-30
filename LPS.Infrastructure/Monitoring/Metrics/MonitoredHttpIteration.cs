@@ -9,16 +9,16 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class MonitoredHttpRun
+    public class MonitoredHttpIteration
     {
-        public HttpRun HttpRun { get; }
+        public HttpIteration HttpIteration { get; }
         public ConcurrentBag<string> ExecutionIds { get; }
         public IReadOnlyDictionary<string, IMetricCollector> Metrics { get; }
 
-        public MonitoredHttpRun(HttpRun httpRun, IReadOnlyDictionary<string, IMetricCollector> metrics)
+        public MonitoredHttpIteration(HttpIteration httpIteration, IReadOnlyDictionary<string, IMetricCollector> metrics)
         {
-            HttpRun = httpRun;
-            ExecutionIds = new ConcurrentBag<string>();
+            HttpIteration = httpIteration;
+            ExecutionIds = [];
             Metrics = metrics;
         }
     }

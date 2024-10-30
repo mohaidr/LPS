@@ -31,6 +31,15 @@ namespace LPS.Domain
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
+            public SetupCommand Clone()
+            {
+                return new SetupCommand
+                {
+                    Id = this.Id,
+                    IsValid = this.IsValid,
+                    ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
+                };
+            }
         }
 
 

@@ -15,13 +15,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class ResponseCodeMetricCollector : BaseMetricCollector, IResponseMetricCollector
     {
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-        ResponseMetricEventSource _eventSource;
+        readonly ResponseMetricEventSource _eventSource;
 
-        internal ResponseCodeMetricCollector(HttpRun httpRun, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpRun, logger, runtimeOperationIdProvider)
+        internal ResponseCodeMetricCollector(HttpIteration httpIteration, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
-            _httpRun = httpRun;
-            _eventSource = ResponseMetricEventSource.GetInstance(_httpRun);
-            _dimensionSet = new ProtectedResponseCodeDimensionSet(_httpRun.Name, _httpRun.LPSHttpRequestProfile.HttpMethod, _httpRun.LPSHttpRequestProfile.URL, _httpRun.LPSHttpRequestProfile.Httpversion);
+            _httpIteration = httpIteration;
+            _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
+            _dimensionSet = new ProtectedResponseCodeDimensionSet(_httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
@@ -66,7 +66,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             public ProtectedResponseCodeDimensionSet(string name, string httpMethod, string url, string httpVersion)
             {
-                RunName = name;
+                IterationName = name;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -108,7 +108,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
 
         public DateTime TimeStamp { get; protected set; }
-        public string RunName { get; protected set; }
+        public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }
         public string HttpVersion { get; protected set; }

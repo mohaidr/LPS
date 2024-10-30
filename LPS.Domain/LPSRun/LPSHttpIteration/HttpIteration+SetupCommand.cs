@@ -11,55 +11,79 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
+using YamlDotNet.Serialization;
 
 namespace LPS.Domain
 {
 
-    public partial class HttpRun
+    public partial class HttpIteration
     {
-        new public class SetupCommand : ICommand<HttpRun>, IValidCommand<HttpRun>
+        new public class SetupCommand : ICommand<HttpIteration>, IValidCommand<HttpIteration>
         {
 
             public SetupCommand()
             {
                 MaximizeThroughput = false;
-                LPSRequestProfile = new HttpRequestProfile.SetupCommand();
+                RequestProfile = new HttpRequestProfile.SetupCommand();
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
 
-            public void Execute(HttpRun entity)
+            public void Execute(HttpIteration entity)
             {
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
 
-            public HttpRequestProfile.SetupCommand LPSRequestProfile { get; set; } // only used to return data
             [JsonIgnore]
+            [YamlIgnore]
             public Guid? Id { get; set; }
-
-            public int? RequestCount { get; set; }
-            public bool? MaximizeThroughput { get; set; }
-            public int? Duration { get; set; }
-
-            public int? BatchSize { get; set; }
-
-            public int? CoolDownTime { get; set; }
             public string Name { get; set; }
+            public bool? MaximizeThroughput { get; set; }
+            public IterationMode? Mode { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public int? RequestCount { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public int? Duration { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public int? BatchSize { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+            public int? CoolDownTime { get; set; }
+            public HttpRequestProfile.SetupCommand RequestProfile { get; set; } // only used to return data
+
             [JsonIgnore]
+            [YamlIgnore]
             public bool IsValid { get; set; }
             [JsonConverter(typeof(JsonStringEnumConverter))]
-            public IterationMode? Mode { get; set; }
             [JsonIgnore]
+            [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
+
+            public SetupCommand Clone()
+            {
+                return new SetupCommand
+                {
+                    Id = this.Id,
+                    Name = this.Name,
+                    MaximizeThroughput = this.MaximizeThroughput,
+                    Mode = this.Mode,
+                    RequestCount = this.RequestCount,
+                    Duration = this.Duration,
+                    BatchSize = this.BatchSize,
+                    CoolDownTime = this.CoolDownTime,
+                    RequestProfile = this.RequestProfile?.Clone(), // Assuming HttpRequestProfile.SetupCommand also has a Clone method
+                    IsValid = this.IsValid,
+                    ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
+                };
+            }
         }
 
         private void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setupcommand
-            var lPSRunSetUpCommand = new Run.SetupCommand() { Id = command.Id, Name = command.Name }; // if there are fields has to be set, then pass them here.
-            base.Setup(lPSRunSetUpCommand);
+            var IterationSetUpCommand = new Iteration.SetupCommand() { Id = command.Id, Name = command.Name }; // if there are fields has to be set, then pass them here.
+            base.Setup(IterationSetUpCommand);
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && lPSRunSetUpCommand.IsValid)
+            if (command.IsValid && IterationSetUpCommand.IsValid)
             {
                 this.RequestCount = command.RequestCount;
                 this.MaximizeThroughput = command.MaximizeThroughput.Value;
@@ -78,14 +102,14 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            HttpRun clone = new HttpRun(_logger, _runtimeOperationIdProvider);
+            HttpIteration clone = new(_logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 clone.Id = this.Id;
                 clone.Name = this.Name;
                 clone.RequestCount = this.RequestCount;
                 clone.Mode = this.Mode;
-                clone.LPSHttpRequestProfile = (HttpRequestProfile)this.LPSHttpRequestProfile.Clone();
+                clone.RequestProfile = (HttpRequestProfile)this.RequestProfile.Clone();
                 clone.Duration = this.Duration;
                 clone.CoolDownTime = this.CoolDownTime; ;
                 clone.BatchSize = this.BatchSize;

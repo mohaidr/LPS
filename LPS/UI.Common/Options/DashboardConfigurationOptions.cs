@@ -10,6 +10,6 @@ namespace LPS.UI.Common.Options
     {
         public bool? BuiltInDashboard { get; set; }
         public int? Port { get; set; }
-        public int? PullEvery { get; set; }
+        public int? RefreshRate { get; set; }
     }
 }

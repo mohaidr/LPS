@@ -12,7 +12,7 @@ namespace LPS.Infrastructure.Common.Interfaces
     }
     public interface IMetricCollector
     {
-        public HttpRun LPSHttpRun { get; }
+        public HttpIteration HttpIteration { get; }
         public LPSMetricType MetricType { get; }
         public string Stringify();
         public Task<IDimensionSet> GetDimensionSetAsync();

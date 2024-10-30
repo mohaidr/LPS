@@ -11,7 +11,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class DataTransmissionMetricCollector : BaseMetricCollector, IDataTransmissionMetricCollector
     {
         private SpinLock _spinLock = new();
-        private SpinLock _elapsedSpinLock = new();
         private double _totalDataSent = 0;
         private double _totalDataReceived = 0;
         private int _dataSentCount = 0;
@@ -20,11 +19,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private Timer _timer;
         readonly Stopwatch _dataTransmissionWatch;
 
-        internal DataTransmissionMetricCollector(HttpRun httpRun, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
-            : base(httpRun, logger, runtimeOperationIdProvider)
+        internal DataTransmissionMetricCollector(HttpIteration httpIteration, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            : base(httpIteration, logger, runtimeOperationIdProvider)
         {
-            _httpRun = httpRun;
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(httpRun.Name, httpRun.LPSHttpRequestProfile.HttpMethod, httpRun.LPSHttpRequestProfile.URL, httpRun.LPSHttpRequestProfile.Httpversion);
+            _httpIteration = httpIteration;
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(httpIteration.Name, httpIteration.RequestProfile.HttpMethod, httpIteration.RequestProfile.URL, httpIteration.RequestProfile.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _dataTransmissionWatch = new Stopwatch();
@@ -144,7 +143,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             public LPSDurationMetricDimensionSetProtected(string name, string httpMethod, string url, string httpVersion)
             {
-                RunName = name;
+                IterationName = name;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -175,7 +174,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public bool StopUpdate { get; set; }
         public DateTime TimeStamp { get; protected set; }
         public double TimeElapsedInSeconds { get; protected set; }
-        public string RunName { get; protected set; }
+        public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }
         public string HttpVersion { get; protected set; }

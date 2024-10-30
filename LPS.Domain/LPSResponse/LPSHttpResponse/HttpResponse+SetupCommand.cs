@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using YamlDotNet.Serialization;
 
 namespace LPS.Domain
 {
@@ -25,6 +26,7 @@ namespace LPS.Domain
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             [JsonIgnore]
+            [YamlIgnore]
             public Guid? Id { get; set; }
 
             public MimeType ContentType { get; set; }
@@ -35,9 +37,11 @@ namespace LPS.Domain
             public Dictionary<string, string> ResponseHeaders { get; set; }
             public bool IsSuccessStatusCode { get; set; }
             [JsonIgnore]
+            [YamlIgnore]
             public bool IsValid { get; set; }
             public Guid LPSHttpRequestProfileId { get; set; }
             [JsonIgnore]
+            [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
             public TimeSpan ResponseTime { get; set; }
 

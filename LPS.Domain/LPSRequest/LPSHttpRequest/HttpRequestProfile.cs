@@ -46,13 +46,13 @@ namespace LPS.Domain
 
         public string Payload { get; protected set; }
 
-        public string Httpversion { get; protected set; }
+        public string HttpVersion { get; protected set; }
 
         public Dictionary<string, string> HttpHeaders { get; protected set; }
 
         public bool DownloadHtmlEmbeddedResources { get; protected set; }
 
-        public bool SupportH2C { get; protected set; }
+        public bool? SupportH2C { get; protected set; }
 
         public bool SaveResponse { get; protected set; }
     }

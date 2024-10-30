@@ -11,10 +11,10 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Command
 {
-    public class HttpRunCommandStatusMonitor<TCommand, TEntity> : 
+    public class HttpIterationCommandStatusMonitor<TCommand, TEntity> : 
         ICommandStatusMonitor<TCommand, TEntity>
         where TCommand : IAsyncCommand<TEntity>
-        where TEntity : HttpRun
+        where TEntity : HttpIteration
     {
         private readonly ConcurrentDictionary<TEntity, ConcurrentBag<TCommand>> _commandRegistry = new ConcurrentDictionary<TEntity, ConcurrentBag<TCommand>>();
 

@@ -8,87 +8,80 @@ using System.Linq;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class MetricsDataMonitor : IMetricsDataMonitor, IDisposable
+    public class MetricsDataMonitor(
+        ILogger logger,
+        IRuntimeOperationIdProvider runtimeOperationIdProvider,
+        IMonitoredIterationRepository monitoredRunRepository) : IMetricsDataMonitor, IDisposable
     {
-        private readonly ILogger _logger;
-        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly IMonitoredRunRepository _monitoredRunRepository;
+        private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+        private readonly IMonitoredIterationRepository _monitoredIterationsRepository = monitoredRunRepository ?? throw new ArgumentNullException(nameof(monitoredRunRepository));
 
-        public MetricsDataMonitor(
-            ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMonitoredRunRepository monitoredRunRepository)
+        public bool TryRegister(HttpIteration httpIteration)
         {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-            _monitoredRunRepository = monitoredRunRepository ?? throw new ArgumentNullException(nameof(monitoredRunRepository));
-        }
-
-        public bool TryRegister(HttpRun httpRun)
-        {
-            if (_monitoredRunRepository.MonitoredRuns.ContainsKey(httpRun))
+            if (_monitoredIterationsRepository.MonitoredIterations.ContainsKey(httpIteration))
             {
                 return false;
             }
 
-            var metrics = CreateMetricCollectors(httpRun);
-            var monitoredRun = new MonitoredHttpRun(httpRun, metrics);
+            var metrics = CreateMetricCollectors(httpIteration);
+            var monitoredIteration = new MonitoredHttpIteration(httpIteration, metrics);
 
-            return _monitoredRunRepository.MonitoredRuns.TryAdd(httpRun, monitoredRun);
+            return _monitoredIterationsRepository.MonitoredIterations.TryAdd(httpIteration, monitoredIteration);
         }
 
-        private IReadOnlyDictionary<string, IMetricCollector> CreateMetricCollectors(HttpRun httpRun)
+        private IReadOnlyDictionary<string, IMetricCollector> CreateMetricCollectors(HttpIteration httpIteration)
         {
             return new Dictionary<string, IMetricCollector>
             {
-                { $"{httpRun.Id}-BreakDown", new ResponseCodeMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
-                { $"{httpRun.Id}-Duration", new DurationMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
-                { $"{httpRun.Id}-Throughput", new ThroughputMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) },
-                { $"{httpRun.Id}-DataTransmission", new DataTransmissionMetricCollector(httpRun, _logger, _runtimeOperationIdProvider) }
+                { $"{httpIteration.Id}-BreakDown", new ResponseCodeMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Id}-Duration", new DurationMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Id}-Throughput", new ThroughputMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Id}-DataTransmission", new DataTransmissionMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) }
             };
         }
 
-        public void Monitor(HttpRun httpRun, string executionId)
+        public void Monitor(HttpIteration httpIteration, string executionId)
         {
-            var monitoredRun = _monitoredRunRepository.MonitoredRuns.GetOrAdd(httpRun, run =>
+            var monitoredIteration = _monitoredIterationsRepository.MonitoredIterations.GetOrAdd(httpIteration, iteration =>
             {
-                var metrics = CreateMetricCollectors(run);
-                return new MonitoredHttpRun(run, metrics);
+                var metrics = CreateMetricCollectors(iteration);
+                return new MonitoredHttpIteration(iteration, metrics);
             });
 
-            lock (monitoredRun.ExecutionIds)
+            lock (monitoredIteration.ExecutionIds)
             {
-                if (!monitoredRun.ExecutionIds.Contains(executionId))
+                if (!monitoredIteration.ExecutionIds.Contains(executionId))
                 {
-                    if (!monitoredRun.ExecutionIds.Any())
+                    if (!monitoredIteration.ExecutionIds.Any())
                     {
-                        foreach (var metric in monitoredRun.Metrics.Values)
+                        foreach (var metric in monitoredIteration.Metrics.Values)
                         {
                             metric.Start();
                         }
                     }
-                    monitoredRun.ExecutionIds.Add(executionId);
+                    monitoredIteration.ExecutionIds.Add(executionId);
                 }
             }
         }
 
-        public void Stop(HttpRun httpRun, string executionId)
+        public void Stop(HttpIteration httpIteration, string executionId)
         {
-            if (_monitoredRunRepository.MonitoredRuns.TryGetValue(httpRun, out var monitoredRun))
+            if (_monitoredIterationsRepository.MonitoredIterations.TryGetValue(httpIteration, out var monitoredIteration))
             {
-                lock (monitoredRun.ExecutionIds)
+                lock (monitoredIteration.ExecutionIds)
                 {
-                    var executionIds = monitoredRun.ExecutionIds.ToList();
+                    var executionIds = monitoredIteration.ExecutionIds.ToList();
                     executionIds.Remove(executionId);
-                    monitoredRun.ExecutionIds.Clear();
+                    monitoredIteration.ExecutionIds.Clear();
                     foreach (var id in executionIds)
                     {
-                        monitoredRun.ExecutionIds.Add(id);
+                        monitoredIteration.ExecutionIds.Add(id);
                     }
 
-                    if (monitoredRun.ExecutionIds.IsEmpty)
+                    if (monitoredIteration.ExecutionIds.IsEmpty)
                     {
-                        foreach (var metric in monitoredRun.Metrics.Values)
+                        foreach (var metric in monitoredIteration.Metrics.Values)
                         {
                             metric.Stop();
                         }
@@ -99,9 +92,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public void Dispose()
         {
-            foreach (var monitoredRun in _monitoredRunRepository.MonitoredRuns.Values)
+            foreach (var monitoredIteration in _monitoredIterationsRepository.MonitoredIterations.Values)
             {
-                foreach (var metricCollector in monitoredRun.Metrics.Values)
+                foreach (var metricCollector in monitoredIteration.Metrics.Values)
                 {
                     if (metricCollector is IDisposable disposable)
                     {

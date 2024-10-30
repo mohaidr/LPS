@@ -17,10 +17,10 @@ using Newtonsoft.Json;
 namespace LPS.Domain
 {
 
-    public partial class TestPlan
+    public partial class Plan
     {
         IHttpRunSchedulerService _httpRunSchedulerService;
-        public class ExecuteCommand : IAsyncCommand<TestPlan>
+        public class ExecuteCommand : IAsyncCommand<Plan>
         {
             readonly ILogger _logger;
             readonly IWatchdog _watchdog;
@@ -28,7 +28,7 @@ namespace LPS.Domain
             readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _lpsClientManager;
             readonly IClientConfiguration<HttpRequestProfile> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
-            readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
+            readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpRunExecutionCommandStatusMonitor;
             readonly CancellationTokenSource _cts;
             protected ExecuteCommand()
             {
@@ -38,7 +38,7 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpRequestProfile> lpsClientConfig,
-                ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunExecutionCommandStatusMonitor,
+                ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpRunExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 CancellationTokenSource cts)
             {
@@ -53,11 +53,11 @@ namespace LPS.Domain
             }
             private ExecutionStatus _executionStatus;
             public ExecutionStatus Status => _executionStatus;
-            async public Task ExecuteAsync(TestPlan entity)
+            async public Task ExecuteAsync(Plan entity)
             {
                 if (entity == null)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPSTestPlan Entity Must Have a Value", LPSLoggingLevel.Error);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "Plan Entity Must Have a Value", LPSLoggingLevel.Error);
                     throw new ArgumentNullException(nameof(entity));
                 }
                 entity._logger = this._logger;
@@ -72,80 +72,47 @@ namespace LPS.Domain
                 await entity.ExecuteAsync(this);
             }
 
-            //TODO:: When implementing IQueryable repository so you can run a subset of the defined Runs
-            public IList<Guid> SelectedRuns { get { throw new NotImplementedException(); } set { throw new NotImplementedException(); } }
+            //TODO:: When implementing IQueryable repository so you can run a subset of the defined Rounds
+            public IList<Guid> SelectedRounds { get { throw new NotImplementedException(); } set { throw new NotImplementedException(); } }
         }
         async private Task ExecuteAsync(ExecuteCommand command)
         {
-            if (this.IsValid && this._lPSRuns.Count > 0)
+            if (this.IsValid && this.Rounds.Count > 0)
             {
-                List<Task> awaitableTasks = new();
-                #region Loggin Plan Details
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbose, _cts.Token));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbose, _cts.Token));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbose, _cts.Token));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbose, _cts.Token));
-                #endregion
-
-
                 RegisterHttpRunsForMonitor(); // Optionally pre-register HTTP runs for monitoring to include them in the dashboard immediately, even with empty execution lists, rather than waiting for each run to start.
 
-                if (!this.DelayClientCreationUntilIsNeeded.Value)
+                List<Task> awaitableTasks = new();
+                #region Loggin Round Details
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbose, _cts.Token));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbose, _cts.Token));
+                #endregion
+
+                foreach (var round in Rounds)
                 {
-                    for (int i = 0; i < this.NumberOfClients; i++)
-                    {
-                        _lpsClientManager.CreateAndQueueClient(_lpsClientConfig);
-                    }
+                    var roundExecCommand = new Round.ExecuteCommand(_logger, 
+                        _watchdog, 
+                        _runtimeOperationIdProvider, 
+                        _lpsClientManager, 
+                        _lpsClientConfig, 
+                        _httpRunExecutionCommandStatusMonitor, 
+                        _lpsMetricsDataMonitor, 
+                        _cts);
+                    await roundExecCommand.ExecuteAsync(round);
                 }
 
-                for (int i = 0; i < this.NumberOfClients && !_cts.Token.IsCancellationRequested; i++)
-                {
-                    IClientService<HttpRequestProfile, HttpResponse> httpClient;
-                    if (!this.DelayClientCreationUntilIsNeeded.Value)
-                    {
-                        httpClient = _lpsClientManager.DequeueClient();
-                    }
-                    else
-                    {
-                        httpClient = _lpsClientManager.CreateInstance(_lpsClientConfig);
-                    }
-                    int delayTime = i * this.ArrivalDelay;
-                    awaitableTasks.Add(SchedualHttpRunsForExecution(httpClient, DateTime.Now.AddMilliseconds(delayTime)));
-                }
-                await Task.WhenAll([..awaitableTasks]);
             }
         }
 
         private void RegisterHttpRunsForMonitor()
         {
-            foreach (var run in this.LPSRuns)
+            foreach (var round in Rounds)
             {
-                if(run.Type == LPSRunType.HttpRun)
-                _lpsMetricsDataMonitor.TryRegister((HttpRun)run);
-            }
-        }
-
-        async Task SchedualHttpRunsForExecution(IClientService<HttpRequestProfile, HttpResponse> httpClient, DateTime executionTime)
-        {
-            List<Task> awaitableTasks = [];
-            foreach (var httpRun in this.LPSRuns.Where(run=> run.Type == LPSRunType.HttpRun))
-            {
-                if (httpRun == null || !httpRun.IsValid)
+                foreach (var iteration in round.GetReadOnlyIterations())
                 {
-                    continue;
-                }
-                string hostName = new Uri(((HttpRun)httpRun).LPSHttpRequestProfile.URL).Host;
-                await _watchdog.BalanceAsync(hostName, _cts.Token);
-                if (this.RunInParallel.HasValue && this.RunInParallel.Value)
-                {
-                    awaitableTasks.Add(_httpRunSchedulerService.ScheduleHttpRunExecution(executionTime, (HttpRun)httpRun, httpClient));
-                }
-                else
-                {
-                    await _httpRunSchedulerService.ScheduleHttpRunExecution(executionTime, (HttpRun)httpRun, httpClient);
+                    if (iteration.Type == IterationType.Http)
+                        _lpsMetricsDataMonitor.TryRegister((HttpIteration)iteration);
                 }
             }
-            await Task.WhenAll(awaitableTasks);
         }
     }
 }

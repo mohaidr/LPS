@@ -13,17 +13,17 @@ namespace LPS.Infrastructure.Monitoring.EventSources
     [EventSource(Name = "lps.request.counter")]
     public class RequestEventSource : EventSource
     {
-        private static readonly ConcurrentDictionary<HttpRun, RequestEventSource> instances = new ConcurrentDictionary<HttpRun, RequestEventSource>();
+        private static readonly ConcurrentDictionary<HttpIteration, RequestEventSource> instances = new ConcurrentDictionary<HttpIteration, RequestEventSource>();
 
         private IncrementingEventCounter requestIncrementCounter;
 
-        private RequestEventSource(HttpRun lpshttpRun)
+        private RequestEventSource(HttpIteration lpshttpRun)
         {
-            if (lpshttpRun != null && lpshttpRun.LPSHttpRequestProfile != null &&  Uri.TryCreate(lpshttpRun.LPSHttpRequestProfile.URL, UriKind.Absolute, out Uri uriResult))
+            if (lpshttpRun != null && lpshttpRun.RequestProfile != null &&  Uri.TryCreate(lpshttpRun.RequestProfile.URL, UriKind.Absolute, out Uri uriResult))
             {
                 this.requestIncrementCounter = new IncrementingEventCounter("requestsPerSecond", this)
                 {
-                    DisplayName = $"{lpshttpRun.LPSHttpRequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.requests.per.second",
+                    DisplayName = $"{lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.requests.per.second",
                     DisplayRateTimeScale = TimeSpan.FromSeconds(1) // This sets the rate to per second
                 };
             }
@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.Monitoring.EventSources
             }
         }
 
-        public static RequestEventSource GetInstance(HttpRun lpsHttpRun)
+        public static RequestEventSource GetInstance(HttpIteration lpsHttpRun)
         {
             return instances.GetOrAdd(lpsHttpRun, (run) => new RequestEventSource(run));
         }

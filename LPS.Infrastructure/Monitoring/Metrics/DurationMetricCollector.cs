@@ -26,11 +26,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly LPSDurationMetricDimensionSetProtected _dimensionSet;
         readonly LongHistogram _histogram;
         readonly ResponseMetricEventSource _eventSource;
-        internal DurationMetricCollector(HttpRun httpRun, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base (httpRun, logger, runtimeOperationIdProvider)
+        internal DurationMetricCollector(HttpIteration httpRun, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base (httpRun, logger, runtimeOperationIdProvider)
         {
-            _httpRun = httpRun;
-            _eventSource = ResponseMetricEventSource.GetInstance(_httpRun);
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(httpRun.Name, httpRun.LPSHttpRequestProfile.HttpMethod, httpRun.LPSHttpRequestProfile.URL, httpRun.LPSHttpRequestProfile.Httpversion);
+            _httpIteration = httpRun;
+            _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(httpRun.Name, httpRun.RequestProfile.HttpMethod, httpRun.RequestProfile.URL, httpRun.RequestProfile.HttpVersion);
             _histogram = new LongHistogram(1, 1000000, 3);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -70,7 +70,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private class LPSDurationMetricDimensionSetProtected : LPSDurationMetricDimensionSet
         {
             public LPSDurationMetricDimensionSetProtected(string name, string httpMethod, string url, string httpVersion) {
-                RunName = name;
+                IterationName = name;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -94,7 +94,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class LPSDurationMetricDimensionSet: IDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
-        public string RunName { get; protected set; }
+        public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }
         public string HttpVersion { get; protected set; }

@@ -10,9 +10,9 @@ namespace LPS.Infrastructure.Monitoring.EventSources
     [EventSource(Name = "lps.response.time")]
     internal class ResponseMetricEventSource : EventSource
     {
-        private static readonly ConcurrentDictionary<HttpRun, ResponseMetricEventSource> instances = new ConcurrentDictionary<HttpRun, ResponseMetricEventSource>();
+        private static readonly ConcurrentDictionary<HttpIteration, ResponseMetricEventSource> instances = new ConcurrentDictionary<HttpIteration, ResponseMetricEventSource>();
 
-        private HttpRun _lpshttpRun;
+        private HttpIteration _lpshttpRun;
         private EventCounter _responseTimeMetric;
         private IncrementingEventCounter _successCounter;
         private IncrementingEventCounter _clientErrorCounter;
@@ -20,48 +20,48 @@ namespace LPS.Infrastructure.Monitoring.EventSources
         private IncrementingEventCounter _redirectionCounter;
 
         // Private constructor to enforce use of GetInstance for instance creation
-        private ResponseMetricEventSource(HttpRun lpsHttpRun)
+        private ResponseMetricEventSource(HttpIteration lpsHttpRun)
         {
             _lpshttpRun = lpsHttpRun;
             InitializeEventCounters();
         }
 
         // Public static method to get or create an instance of LPSResponseMetricEventSource
-        public static ResponseMetricEventSource GetInstance(HttpRun lpsHttpRun)
+        public static ResponseMetricEventSource GetInstance(HttpIteration lpsHttpRun)
         {
             return instances.GetOrAdd(lpsHttpRun, (run) => new ResponseMetricEventSource(run));
         }
 
         private void InitializeEventCounters()
         {
-            if (_lpshttpRun != null && _lpshttpRun.LPSHttpRequestProfile == null && Uri.TryCreate(_lpshttpRun.LPSHttpRequestProfile.URL, UriKind.Absolute, out Uri uriResult))
+            if (_lpshttpRun != null && _lpshttpRun.RequestProfile == null && Uri.TryCreate(_lpshttpRun.RequestProfile.URL, UriKind.Absolute, out Uri uriResult))
             {
 
                 _responseTimeMetric = new EventCounter("response-time", this)
                 {
-                    DisplayName = $"{_lpshttpRun.LPSHttpRequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.response.time",
+                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.response.time",
                     DisplayUnits = "ms"
                 };
 
                 _successCounter = new IncrementingEventCounter("success-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.LPSHttpRequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.success.responses",
+                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.success.responses",
 
                 };
 
                 _redirectionCounter = new IncrementingEventCounter("redirection-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.LPSHttpRequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.redirection.responses",
+                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.redirection.responses",
                 };
 
                 _clientErrorCounter = new IncrementingEventCounter("client-error-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.LPSHttpRequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.client.error.responses",
+                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.client.error.responses",
                 };
 
                 _serverErrorCounter = new IncrementingEventCounter("server-error-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.LPSHttpRequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.server.error.responses"
+                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.server.error.responses"
                 };
             }
 

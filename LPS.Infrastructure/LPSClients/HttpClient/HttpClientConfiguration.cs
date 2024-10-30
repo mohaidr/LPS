@@ -12,10 +12,10 @@ namespace LPS.Infrastructure.LPSClients
 {
     public class HttpClientConfiguration : ILPSHttpClientConfiguration<HttpRequestProfile>
     {
-        private TimeSpan _pooledConnectionLifetime;
-        private TimeSpan _pooledConnectionIdleTimeout;
-        private int _maxConnectionsPerServer;
-        private TimeSpan _timeout;
+        private readonly TimeSpan _pooledConnectionLifetime;
+        private readonly TimeSpan _pooledConnectionIdleTimeout;
+        private readonly int _maxConnectionsPerServer;
+        private readonly TimeSpan _timeout;
 
         private HttpClientConfiguration()
         {
