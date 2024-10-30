@@ -5,7 +5,7 @@ using LPS.UI.Common.Extensions;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;
-using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.Build.Services;
 using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
@@ -41,7 +41,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootLpsCliCommand.AddCommand(_httpClientCommand);
         }
 
-        public void Execute(CancellationToken cancellationToken)
+        public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
 
             _httpClientCommand.SetHandler((updatedClientOptions) =>
@@ -71,7 +71,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 }
             }, new HttpClientBinder());
 
-            _rootLpsCliCommand.Invoke(_args);
+            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }

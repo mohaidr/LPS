@@ -5,7 +5,7 @@ using LPS.UI.Common.Extensions;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;
-using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.Build.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualBasic.FileIO;
 using System;
@@ -42,7 +42,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootLpsCliCommand.AddCommand(_loggerCommand);
         }
 
-        public void Execute(CancellationToken cancellationToken)
+        public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
 
             _loggerCommand.SetHandler((updateLoggerOptions) =>
@@ -77,7 +77,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 }
             }, new LoggerBinder());
 
-            _rootLpsCliCommand.Invoke(_args);
+            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }

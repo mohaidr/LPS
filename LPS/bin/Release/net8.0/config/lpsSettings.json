@@ -23,6 +23,12 @@
       "PooledConnectionLifeTimeInSeconds": 1500,
       "PooledConnectionIdleTimeoutInSeconds": 350,
       "MaxConnectionsPerServer": 3000
-    }
+    },
+	"LPSDashboardConfiguration":
+	{
+		"BuiltInDashboard": true,
+		"Port":8008,
+		"PullEvery": 5
+	}
   }
 }

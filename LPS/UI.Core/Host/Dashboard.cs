@@ -12,11 +12,10 @@ namespace LPS.UI.Core.Host
 {
     internal static class Dashboard
     {
-        public static void Start()
+        public static void Start(int port, string queryParams)
         {
-           OpenBrowser($"http://127.0.0.1:{GlobalSettings.Port}");
+           OpenBrowser($"http://127.0.0.1:{port}?{queryParams}");
         }
-
         private static void OpenBrowser(string url)
         {
             try

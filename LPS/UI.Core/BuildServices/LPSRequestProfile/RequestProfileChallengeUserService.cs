@@ -4,7 +4,7 @@ using Spectre.Console;
 using System;
 
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.Build.Services
 {
     internal class RequestProfileChallengeUserService : IChallengeUserService<HttpRequestProfile.SetupCommand, HttpRequestProfile>
     {
@@ -15,8 +15,8 @@ namespace LPS.UI.Core.UI.Build.Services
             _command = command;
             _validator = validator;
         }
-        public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
-        private bool _skipOptionalFields;
+        public bool SkipOptionalFields => _skipOptionalFields;
+        private readonly bool _skipOptionalFields;
 
         HttpRequestProfile.SetupCommand _command;
         public HttpRequestProfile.SetupCommand Command { get { return _command; } set { value = _command; } }
@@ -43,13 +43,13 @@ namespace LPS.UI.Core.UI.Build.Services
                     _command.URL = AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.Httpversion)))
+                if (!_validator.Validate(nameof(Command.HttpVersion)))
                 {
-                    _validator.PrintValidationErrors(nameof(_command.Httpversion));
-                    _command.Httpversion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
+                    _validator.PrintValidationErrors(nameof(_command.HttpVersion));
+                    _command.HttpVersion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.SupportH2C)) && Command.URL.StartsWith("http://") && Command.Httpversion.Equals("2.0"))
+                if (!_validator.Validate(nameof(Command.SupportH2C)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.SupportH2C));
                     Command.SupportH2C = AnsiConsole.Confirm("Would you like to [green]'Perform'[/] Http2 over cleartext?", false);
@@ -76,7 +76,7 @@ namespace LPS.UI.Core.UI.Build.Services
             _command.HttpHeaders = InputHeaderService.Challenge();
 
 
-            if (_command.HttpMethod.ToUpper() == "PUT" || _command.HttpMethod.ToUpper() == "POST" || _command.HttpMethod.ToUpper() == "PATCH")
+            if (_command.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _command.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _command.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
             {
                 AnsiConsole.WriteLine("Add payload to your http request.\n - Enter Path:[Path] to read the payload from a path file\n - URL:[URL] to read the payload from a URL \n - Or just add your payload inline");
                 _command.Payload = InputPayloadService.Challenge();
@@ -87,10 +87,9 @@ namespace LPS.UI.Core.UI.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.Httpversion = string.Empty;
+                _command.HttpVersion = string.Empty;
                 _command.DownloadHtmlEmbeddedResources = null;
                 _command.SaveResponse = null;
-                _command.SupportH2C = null;
             }
         }
     }

@@ -1,5 +1,5 @@
 ﻿using LPS.Domain;
-using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.Build.Services;
 using System;
 using System.Collections.Generic;
 using System.CommandLine.Binding;

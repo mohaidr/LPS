@@ -10,22 +10,16 @@ using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.Build.Services
 {
-    internal class TestPlanChallengeUserService : IChallengeUserService<TestPlan.SetupCommand, TestPlan>
+    internal class RoundChallengeUserService(bool skipOptionalFields, Round.SetupCommand command, IBaseValidator<Round.SetupCommand, Round> validator) : IChallengeUserService<Round.SetupCommand, Round>
     {
-        IBaseValidator<TestPlan.SetupCommand, TestPlan> _validator;
-        TestPlan.SetupCommand _command;
-        public TestPlan.SetupCommand Command { get { return _command; } set { value = _command; } }
-        public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
+        IBaseValidator<Round.SetupCommand, Round> _validator = validator;
+        Round.SetupCommand _command = command;
+        public Round.SetupCommand Command => _command;
+        public bool SkipOptionalFields  => _skipOptionalFields;
 
-        private bool _skipOptionalFields;
-        public TestPlanChallengeUserService(bool skipOptionalFields, TestPlan.SetupCommand command, IBaseValidator<TestPlan.SetupCommand, TestPlan> validator)
-        {
-            _skipOptionalFields = skipOptionalFields;
-            _command = command;
-            _validator = validator;
-        }
+        private bool _skipOptionalFields = skipOptionalFields;
 
         public void Challenge()
         {
@@ -33,13 +27,13 @@ namespace LPS.UI.Core.UI.Build.Services
             {
                 ResetOptionalFields();
             }
-            AnsiConsole.MarkupLine("[underline bold blue]Create a Test Plan:[/]");
+            AnsiConsole.MarkupLine("[underline bold blue]Create a Test Round:[/]");
             while (true)
             {
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.Name));
-                    _command.Name = AnsiConsole.Ask<string>("What's your [green]'Test Name'[/]?");
+                    _command.Name = AnsiConsole.Ask<string>("What's your [green]'Round Name'[/]?");
                     continue;
                 }
 
@@ -72,20 +66,20 @@ namespace LPS.UI.Core.UI.Build.Services
                 if (!_validator.Validate(nameof(Command.RunInParallel)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.RunInParallel));
-                    _command.RunInParallel = AnsiConsole.Confirm("Do you want to run all your http runs in [green]'Parallel'[/]?");
+                    _command.RunInParallel = AnsiConsole.Confirm("Do you want to run all your http iterations in [green]'Parallel'[/]?");
                     continue;
                 }
 
-                HttpRun.SetupCommand lpsRunCommand = new HttpRun.SetupCommand();
-                RunValidator validator = new RunValidator(lpsRunCommand);
-                RunChallengeUserService lpsRunUserService = new RunChallengeUserService(SkipOptionalFields, lpsRunCommand, validator);
-                lpsRunUserService.Challenge();
+                HttpIteration.SetupCommand iterationCommand = new HttpIteration.SetupCommand();
+                IterationValidator validator = new IterationValidator(iterationCommand);
+                IterationChallengeUserService iterationUserService = new(SkipOptionalFields, iterationCommand, validator);
+                iterationUserService.Challenge();
 
-                Command.LPSRuns.Add(lpsRunCommand);
+                Command.Iterations.Add(iterationCommand);
 
-                AnsiConsole.MarkupLine("[bold]Type [blue]add[/] to add a new http run or press [blue]enter[/] [/]");
+                AnsiConsole.MarkupLine("[bold]Type [blue]add[/] to add a new http iteration or press [blue]enter[/] [/]");
 
-                string action = Console.ReadLine().Trim().ToLower();
+                string? action = Console.ReadLine()?.Trim().ToLower();
                 if (action == "add")
                 {
                     continue;

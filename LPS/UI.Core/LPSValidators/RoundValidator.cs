@@ -8,10 +8,10 @@ using FluentValidation;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class TestPlanValidator : CommandBaseValidator<TestPlan.SetupCommand, TestPlan>
+    internal class RoundValidator : CommandBaseValidator<Round.SetupCommand, Round>
     {
-        TestPlan.SetupCommand _command;
-        public TestPlanValidator(TestPlan.SetupCommand command)
+        Round.SetupCommand _command;
+        public RoundValidator(Round.SetupCommand command)
         {
             _command = command;
 
@@ -28,8 +28,9 @@ namespace LPS.UI.Core.LPSValidators
             .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
 
             RuleFor(command => command.ArrivalDelay)
-            .NotNull().WithMessage("The 'Arrival Delay' must be a non-null value")
-            .GreaterThan(0).When(command=> command.NumberOfClients>1)
+            .NotNull().WithMessage("The 'Arrival Delay' must be greater than 0")
+            .GreaterThan(0)
+            .When(command=> command.NumberOfClients>1)
             .WithMessage("The 'Arrival Delay' must be greater than 0");
 
 
@@ -40,6 +41,6 @@ namespace LPS.UI.Core.LPSValidators
             .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
         }
 
-        public override TestPlan.SetupCommand Command { get { return _command; } }
+        public override Round.SetupCommand Command { get { return _command; } }
     }
 }

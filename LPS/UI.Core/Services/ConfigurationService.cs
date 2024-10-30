@@ -1,0 +1,79 @@
+﻿using System;
+using System.IO;
+using LPS.Domain;
+using LPS.Infrastructure.Common;
+
+namespace LPS.UI.Core.Services
+{
+    public static class ConfigurationService
+    {
+        public static Plan.SetupCommand FetchConfiguration(string configFile)
+        {
+            if (string.IsNullOrWhiteSpace(configFile))
+            {
+                throw new ArgumentException("Configuration file path cannot be null or empty.", nameof(configFile));
+            }
+
+            try
+            {
+                if (configFile.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    return SerializationHelper.Deserialize<Plan.SetupCommand>(File.ReadAllText(configFile));
+                }
+                else if (configFile.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || configFile.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
+                {
+                    return SerializationHelper.DeserializeFromYaml<Plan.SetupCommand>(File.ReadAllText(configFile));
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unsupported file format. Please use a .json or .yaml/.yml file.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching configuration: {ex.Message}");
+                return null;
+            }
+        }
+
+        public static void SaveConfiguration(string configFile, Plan.SetupCommand setupCommand)
+        {
+            if (string.IsNullOrWhiteSpace(configFile))
+            {
+                throw new ArgumentException("Configuration file path cannot be null or empty.", nameof(configFile));
+            }
+
+            if (setupCommand == null)
+            {
+                throw new ArgumentNullException(nameof(setupCommand), "SetupCommand cannot be null.");
+            }
+
+            try
+            {
+                // Ensure the directory exists
+                var directory = Path.GetDirectoryName(configFile);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                if (configFile.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                {
+                    File.WriteAllText(configFile, SerializationHelper.Serialize(setupCommand));
+                }
+                else if (configFile.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || configFile.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
+                {
+                    File.WriteAllText(configFile, SerializationHelper.SerializeToYaml(setupCommand));
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unsupported file format. Please use a .json or .yaml/.yml file.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error saving configuration: {ex.Message}");
+            }
+        }
+    }
+}

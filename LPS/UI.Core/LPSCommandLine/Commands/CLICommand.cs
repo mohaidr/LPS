@@ -15,6 +15,7 @@ using LPS.UI.Common.Extensions;
 using LPS.UI.Core.LPSValidators;
 using HtmlAgilityPack;
 using LPS.Domain.Domain.Common.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -22,14 +23,15 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
     {
         private readonly string[] _args;
         readonly ILogger _logger;
-        IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        IClientConfiguration<HttpRequestProfile> _config;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpRequestProfile> _config;
+        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         readonly Command _rootCliCommand;
         readonly IMetricsDataMonitor _lpsMonitoringEnroller;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
-       CancellationTokenSource _cts;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        readonly CancellationTokenSource _cts;
+        readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
         public CLICommand(
             Command rootCliCommand,
             ILogger logger,
@@ -38,8 +40,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             IClientConfiguration<HttpRequestProfile> config,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunExecutionCommandStatusMonitor,
+            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
             IMetricsDataMonitor lpsMonitoringEnroller,
+            IOptions<DashboardConfigurationOptions> dashboardConfig,
             CancellationTokenSource cts,
             string[] args)
         {
@@ -50,8 +53,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _httpClientManager = httpClientManager;
             _watchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+            _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
+            _dashboardConfig = dashboardConfig;
             _cts = cts;
             Setup();
         }
@@ -60,66 +64,66 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             CommandLineOptions.AddOptionsToCommand(_rootCliCommand, typeof(CommandLineOptions.LPSCommandOptions));
         }
 
-        public void Execute(CancellationToken cancellationToken)
+        public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _rootCliCommand.SetHandler(async (lpsTestPlan) =>
+            _rootCliCommand.SetHandler(async (round) =>
             {
-                ValidationResult planValidationResults, runValidationResulta, requestProfileValidationResults;
-                var planSetupCommand = new TestPlan.SetupCommand()
+                ValidationResult roundValidationResults, iterationValidationResults, requestProfileValidationResults;
+                var roundSetupCommand = new Round.SetupCommand()
                 {
-                    Name = lpsTestPlan.Name,
-                    NumberOfClients = lpsTestPlan.NumberOfClients,
-                    RunInParallel = lpsTestPlan.RunInParallel,
-                    ArrivalDelay = lpsTestPlan.ArrivalDelay,
-                    DelayClientCreationUntilIsNeeded = lpsTestPlan.DelayClientCreationUntilIsNeeded,
+                    Name = round.Name,
+                    NumberOfClients = round.NumberOfClients,
+                    RunInParallel = round.RunInParallel,
+                    ArrivalDelay = round.ArrivalDelay,
+                    DelayClientCreationUntilIsNeeded = round.DelayClientCreationUntilIsNeeded,
                 };
-                var httpRunSetupCommand = new HttpRun.SetupCommand()
+                var httpIterationSetupCommand = new HttpIteration.SetupCommand()
                 {
-                    Mode = lpsTestPlan.LPSRuns[0].Mode,
-                    RequestCount = lpsTestPlan.LPSRuns[0].RequestCount,
-                    MaximizeThroughput = lpsTestPlan.LPSRuns[0].MaximizeThroughput,
-                    BatchSize = lpsTestPlan.LPSRuns[0].BatchSize,
-                    Duration = lpsTestPlan.LPSRuns[0].Duration,
-                    CoolDownTime = lpsTestPlan.LPSRuns[0].CoolDownTime,
-                    Name = lpsTestPlan.LPSRuns[0].Name,
+                    Mode = round.Iterations[0].Mode,
+                    RequestCount = round.Iterations[0].RequestCount,
+                    MaximizeThroughput = round.Iterations[0].MaximizeThroughput,
+                    BatchSize = round.Iterations[0].BatchSize,
+                    Duration = round.Iterations[0].Duration,
+                    CoolDownTime = round.Iterations[0].CoolDownTime,
+                    Name = round.Iterations[0].Name,
                 };
                 var lpsRequestProfileSetupCommand = new HttpRequestProfile.SetupCommand()
                 {
-                    URL = lpsTestPlan.LPSRuns[0].LPSRequestProfile.URL,
-                    HttpMethod = lpsTestPlan.LPSRuns[0].LPSRequestProfile.HttpMethod,
-                    DownloadHtmlEmbeddedResources = lpsTestPlan.LPSRuns[0].LPSRequestProfile.DownloadHtmlEmbeddedResources,
-                    SaveResponse = lpsTestPlan.LPSRuns[0].LPSRequestProfile.SaveResponse,
-                    SupportH2C = lpsTestPlan.LPSRuns[0].LPSRequestProfile.SupportH2C,
-                    Payload = lpsTestPlan.LPSRuns[0].LPSRequestProfile.Payload,
-                    Httpversion = lpsTestPlan.LPSRuns[0].LPSRequestProfile.Httpversion,
-                    HttpHeaders = lpsTestPlan.LPSRuns[0].LPSRequestProfile.HttpHeaders,
+                    URL = round.Iterations[0].RequestProfile.URL,
+                    HttpMethod = round.Iterations[0].RequestProfile.HttpMethod,
+                    DownloadHtmlEmbeddedResources = round.Iterations[0].RequestProfile.DownloadHtmlEmbeddedResources,
+                    SaveResponse = round.Iterations[0].RequestProfile.SaveResponse,
+                    SupportH2C = round.Iterations[0].RequestProfile.SupportH2C,
+                    Payload = round.Iterations[0].RequestProfile.Payload,
+                    HttpVersion = round.Iterations[0].RequestProfile.HttpVersion,
+                    HttpHeaders = round.Iterations[0].RequestProfile.HttpHeaders,
                 };
-                var planValidator = new TestPlanValidator(planSetupCommand);
-                planValidationResults = planValidator.Validate();
-                var lpsRunValidator = new RunValidator(httpRunSetupCommand);
-                runValidationResulta = lpsRunValidator.Validate();
+                var roundValidator = new RoundValidator(roundSetupCommand);
+                roundValidationResults = roundValidator.Validate();
+                var iterationValidator = new IterationValidator(httpIterationSetupCommand);
+                iterationValidationResults = iterationValidator.Validate();
                 var lpsRequestProfileValidator = new RequestProfileValidator(lpsRequestProfileSetupCommand);
                 requestProfileValidationResults = lpsRequestProfileValidator.Validate();
 
-                if (planValidationResults.IsValid && runValidationResulta.IsValid && requestProfileValidationResults.IsValid)
+                if (roundValidationResults.IsValid && iterationValidationResults.IsValid && requestProfileValidationResults.IsValid)
                 {
-                    var plan = new TestPlan(planSetupCommand, _logger, _runtimeOperationIdProvider);
-                    var httpRun = new HttpRun(httpRunSetupCommand, _logger, _runtimeOperationIdProvider);
+                    var testRound = new Round(roundSetupCommand, _logger, _runtimeOperationIdProvider);
+                    var httpIteration = new HttpIteration(httpIterationSetupCommand, _logger, _runtimeOperationIdProvider);
                     var requestProfile = new HttpRequestProfile(lpsRequestProfileSetupCommand, _logger, _runtimeOperationIdProvider);
-                    httpRun.SetHttpRequestProfile(requestProfile);
-                    plan.LPSRuns.Add(httpRun);
-                    var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts);
-                    await manager.RunAsync(plan);
+                    httpIteration.SetHttpRequestProfile(requestProfile);
+                    testRound.AddIteration(httpIteration);
+                    var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller,_dashboardConfig, _cts);
+                   // await manager.RunAsync(testRound);
                 }
                 else
                 {
-                    planValidationResults.PrintValidationErrors();
-                    runValidationResulta.PrintValidationErrors();
+                    roundValidationResults.PrintValidationErrors();
+                    iterationValidationResults.PrintValidationErrors();
                     requestProfileValidationResults.PrintValidationErrors();
                 }
             },
             new CommandBinder());
-            _rootCliCommand.Invoke(_args);
+            await _rootCliCommand.InvokeAsync(_args);
         }
     }
 }

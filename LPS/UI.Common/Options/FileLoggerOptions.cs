@@ -9,7 +9,7 @@ namespace LPS.UI.Common.Options
 {
     public class FileLoggerOptions
     {
-        public string LogFilePath { get; set; }
+        public string? LogFilePath { get; set; }
         public LPSLoggingLevel? ConsoleLogingLevel { get; set; }
         public bool? EnableConsoleLogging { get; set; }
         public bool? DisableConsoleErrorLogging { get; set; }

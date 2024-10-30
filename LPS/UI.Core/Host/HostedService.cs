@@ -1,7 +1,7 @@
 ﻿using LPS.UI.Common;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.Build.Services;
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using System.IO;
@@ -12,6 +12,9 @@ using Spectre.Console;
 using LPS.UI.Core.LPSCommandLine;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Metrics;
+using Microsoft.Extensions.Options;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace LPS.UI.Core.Host
 {
@@ -23,8 +26,9 @@ namespace LPS.UI.Core.Host
         IWatchdog watchdog,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsDataMonitor metricDataMonitor,
-        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunExecutionCommandStatusMonitor,
-        AppSettingsWritableOptions appSettings, 
+        ICommandStatusMonitor<IAsyncCommand<HttpIteration>,
+        HttpIteration> httpIterationExecutionCommandStatusMonitor,
+        AppSettingsWritableOptions appSettings,
         CancellationTokenSource cts) : IHostedService
     {
         readonly ILogger _logger = logger;
@@ -34,7 +38,7 @@ namespace LPS.UI.Core.Host
         readonly IWatchdog _watchdog = watchdog;
         readonly AppSettingsWritableOptions _appSettings = appSettings;
         readonly IMetricsDataMonitor _metricDataMonitor = metricDataMonitor;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
         static bool _cancelRequested;
@@ -42,46 +46,55 @@ namespace LPS.UI.Core.Host
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this iteration", LPSLoggingLevel.Information);
 
             #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
             Console.CancelKeyPress += CancelKeyPressHandler;
             _ = WatchForCancellationAsync();
 
 
-            TestPlan.SetupCommand lpsTestPlanSetupCommand = new();
 
             if (_command_args != null && _command_args.Length > 0)
             {
-                var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, lpsTestPlanSetupCommand, _httpRunExecutionCommandStatusMonitor, _metricDataMonitor, _cts);
-                commandLineManager.Run(_cts.Token);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
+                  var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _cts);
+                 await commandLineManager.RunAsync(_cts.Token);
+                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
             }
             else
             {
-                var manualBuild = new ManualBuild(new TestPlanValidator(lpsTestPlanSetupCommand), _logger, _runtimeOperationIdProvider);
-                var lpsRun = manualBuild.Build(lpsTestPlanSetupCommand);
-                File.WriteAllText($"{lpsTestPlanSetupCommand.Name}.json", SerializationHelper.Serialize(lpsTestPlanSetupCommand));
+                Plan.SetupCommand planSetupCommand = new();
 
-
+                var manualBuild = new ManualBuild(new PlanValidator(planSetupCommand), _logger, _runtimeOperationIdProvider);
+                var plan = manualBuild.Build(planSetupCommand);
+                SavePlanToDisk(planSetupCommand);
                 bool runTest = AnsiConsole.Confirm("Would you like to run your test now?");
                 if (runTest)
                 {
-                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpRunExecutionCommandStatusMonitor, _metricDataMonitor, _cts);
-                    await lpsManager.RunAsync(lpsRun);
+                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _appSettings.DashboardConfigurationOptions, _cts);
+                    await lpsManager.RunAsync(plan);
                 }
 
-                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {lpsTestPlanSetupCommand.Name}[/] to execute the plan[/]");
+                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {planSetupCommand.Name}[/] to execute the Plan[/]");
             }
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             await _logger.FlushAsync();
         }
+        private void SavePlanToDisk(Plan.SetupCommand planSetupCommand)
+        {
+            File.WriteAllText($"{planSetupCommand.Name}.json", SerializationHelper.Serialize(planSetupCommand));
+
+            var yamlContent = SerializationHelper
+                .SerializeToYaml(planSetupCommand);
+            File.WriteAllText($"{planSetupCommand.Name}.yaml", yamlContent);
+
+        }
         public async Task StopAsync(CancellationToken cancellationToken)
         {
-
+            var exitAfter =  _appSettings.DashboardConfigurationOptions.Value.PullEvery.HasValue ? _appSettings.DashboardConfigurationOptions.Value.PullEvery.Value + 1 : 6;
             #pragma warning disable CS8602 // Dereference of a possibly null reference.
-            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "App Stopping in 5 Seconds", LPSLoggingLevel.Information, cancellationToken);
-            await Task.Delay(6000);
+            await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, $"App Stopping in {exitAfter} Seconds", LPSLoggingLevel.Information, cancellationToken);
+
+            await Task.Delay(TimeSpan.FromSeconds(exitAfter));
             await _logger?.FlushAsync();
             await _logger?.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;

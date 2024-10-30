@@ -12,11 +12,11 @@ using LPS.Domain.Domain.Common.Enums;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class RunValidator : CommandBaseValidator<HttpRun.SetupCommand, HttpRun>
+    internal class IterationValidator : CommandBaseValidator<HttpIteration.SetupCommand, HttpIteration>
     {
-        HttpRun.SetupCommand _command;
+        HttpIteration.SetupCommand _command;
 
-        public RunValidator(HttpRun.SetupCommand command)
+        public IterationValidator(HttpIteration.SetupCommand command)
         {
             _command = command;
 
@@ -78,6 +78,6 @@ namespace LPS.UI.Core.LPSValidators
             .When(command => command.Mode == IterationMode.DCB && command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
         }
 
-        public override HttpRun.SetupCommand Command { get { return _command; } }
+        public override HttpIteration.SetupCommand Command { get { return _command; } }
     }
 }

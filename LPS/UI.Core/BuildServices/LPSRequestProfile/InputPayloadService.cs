@@ -8,7 +8,7 @@ using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.Build.Services
 {
     internal class InputPayloadService
     {

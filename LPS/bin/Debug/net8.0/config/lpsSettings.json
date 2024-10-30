@@ -4,7 +4,7 @@
       "LogFilePath": "logs/lpslog.log",
       "ConsoleLogingLevel": 1,
       "EnableConsoleLogging": true,
-      "DisableConsoleErrorLogging":true,
+      "DisableConsoleErrorLogging": true,
       "DisableFileLogging": false,
       "LoggingLevel": 0
     },
@@ -25,6 +25,11 @@
       "PooledConnectionLifeTimeInSeconds": 1500,
       "PooledConnectionIdleTimeoutInSeconds": 350,
       "MaxConnectionsPerServer": 3000
+    },
+    "LPSDashboardConfiguration": {
+      "BuiltInDashboard": true,
+      "Port": 8009,
+      "PullEvery": 5
     }
   }
 }

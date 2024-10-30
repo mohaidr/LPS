@@ -9,6 +9,6 @@ namespace LPS.UI.Common
 {
     internal interface ICLICommand
     {
-        void Execute(CancellationToken cancellationToken);
+        Task ExecuteAsync(CancellationToken cancellationToken);
     }
 }

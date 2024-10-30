@@ -4,93 +4,113 @@ using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Monitoring;
 using LPS.UI.Common;
+using LPS.UI.Common.Options;
+using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.CommandLine;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using YamlDotNet.Serialization.NamingConventions;
+using YamlDotNet.Serialization;
+using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
+using LPS.UI.Core.Services;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
-    internal class RunCLICommand: ICLICommand
+    internal class RunCLICommand : ICLICommand
     {
-        Command _rootLpsCliCommand;
-        TestPlan.SetupCommand _planSetupCommand;
+        readonly Command _rootLpsCliCommand;
         private string[] _args;
-        ILogger _logger;
-        IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        IClientConfiguration<HttpRequestProfile> _config;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        IWatchdog _watchdog;
+        readonly ILogger _logger;
+        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpRequestProfile> _config;
+        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        readonly IWatchdog _watchdog;
         Command _runCommand;
-        IMetricsDataMonitor _lPSMonitoringEnroller;
-        ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> _httpRunExecutionCommandStatusMonitor;
-        CancellationTokenSource _cts;
-        #pragma warning disable CS8618
-        internal RunCLICommand(Command rootCLICommandLine,
-            TestPlan.SetupCommand planSetupCommand,
+        readonly IMetricsDataMonitor _lPSMonitoringEnroller;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
+        readonly CancellationTokenSource _cts;
+
+        internal RunCLICommand(
+            Command rootCLICommandLine,
             ILogger logger,
             IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
             IClientConfiguration<HttpRequestProfile> config,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IWatchdog watchdog,
-            ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun> httpRunExecutionCommandStatusMonitor,
+            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
             IMetricsDataMonitor lPSMonitoringEnroller,
+            IOptions<DashboardConfigurationOptions> dashboardConfig,
             CancellationTokenSource cts,
             string[] args)
         {
             _rootLpsCliCommand = rootCLICommandLine;
-            _planSetupCommand = planSetupCommand;
             _args = args;
             _logger = logger;
             _httpClientManager = httpClientManager;
             _config = config;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
-            _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+            _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
             _lPSMonitoringEnroller = lPSMonitoringEnroller;
+            _dashboardConfig = dashboardConfig;
             _cts = cts;
             Setup();
         }
 
         private void Setup()
         {
-
             _runCommand = new Command("run", "Run existing test");
-            CommandLineOptions.AddOptionsToCommand(_runCommand, typeof(CommandLineOptions.LPSRunCommandOptions));
+
+            // Add the positional argument directly to _runCommand
+            _runCommand.AddArgument(LPSRunCommandOptions.ConfigFileArgument);
+
             _rootLpsCliCommand.AddCommand(_runCommand);
         }
 
-        public void Execute(CancellationToken cancellationToken)
+        public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _runCommand.SetHandler(async (testName) =>
+            _runCommand.SetHandler(async (string configFile) =>
             {
                 try
                 {
-                    _planSetupCommand = SerializationHelper.Deserialize<TestPlan.SetupCommand>(File.ReadAllText($"{testName}.json"));
-                    var lpsPlan = new TestPlan(_planSetupCommand, _logger, _runtimeOperationIdProvider); // it should validate and throw if the command is not valid
-                    foreach (var runCommand in _planSetupCommand.LPSRuns)
-                    {
-                        var runEntity = new HttpRun(runCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
-                        var requestProfile = new HttpRequestProfile(runCommand.LPSRequestProfile, _logger, _runtimeOperationIdProvider);
-                        if (runEntity.IsValid && requestProfile.IsValid)
-                        {
-                            runEntity.SetHttpRequestProfile(requestProfile);
-                            lpsPlan.LPSRuns.Add(runEntity);
-                        }
+                    Plan.SetupCommand setupCommand = ConfigurationService.FetchConfiguration(configFile);
+                    var plan = new Plan(setupCommand, _logger, _runtimeOperationIdProvider);
 
+                    foreach (var roundCommand in setupCommand.Rounds)
+                    {
+                        var roundEntity = new Round(roundCommand, _logger, _runtimeOperationIdProvider);
+                        plan.AddRound(roundEntity);
+
+                        foreach (var iterationCommand in roundCommand.Iterations)
+                        {
+                            var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
+                            iterationEntity.SetHttpRequestProfile(new HttpRequestProfile(iterationCommand.RequestProfile, _logger, _runtimeOperationIdProvider));
+                            roundEntity.AddIteration(iterationEntity);
+                        }
                     }
-                    await new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider,_httpRunExecutionCommandStatusMonitor, _lPSMonitoringEnroller, _cts).RunAsync(lpsPlan);
+
+                    await new LPSManager(
+                        _logger,
+                        _httpClientManager,
+                        _config,
+                        _watchdog,
+                        _runtimeOperationIdProvider,
+                        _httpIterationExecutionCommandStatusMonitor,
+                        _lPSMonitoringEnroller,
+                        _dashboardConfig,
+                        _cts
+                    ).RunAsync(plan);
                 }
-                catch (Exception ex) 
+                catch (Exception ex)
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error);
                 }
-            }, CommandLineOptions.LPSRunCommandOptions.TestNameOption);
-            _rootLpsCliCommand.Invoke(_args);
+            }, LPSRunCommandOptions.ConfigFileArgument);
+
+            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }

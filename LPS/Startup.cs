@@ -34,27 +34,34 @@ namespace LPS
             var host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    // Set the content root to the directory containing the executable
-                    #pragma warning disable CS8602 // Dereference of a possibly null reference.
                     var contentRoot = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
                     ArgumentNullException.ThrowIfNull(contentRoot);
                     webBuilder.UseContentRoot(contentRoot);
-                    // Set the web root to the wwwroot folder within the content root
+
                     var webRoot = Path.Combine(contentRoot, "wwwroot");
                     webBuilder.UseWebRoot(webRoot);
 
-                    webBuilder.UseSetting("http_port", GlobalSettings.Port.ToString())
-                              .UseStartup<LPS.Dashboard.Startup>();
+                    // Load configuration to access DashboardConfigurationOptions for the Port setting
+                    var configuration = new ConfigurationBuilder()
+                        .AddJsonFile(AppConstants.AppSettingsFileLocation, optional: false, reloadOnChange: false)
+                        .Build();
 
-                    // Ensure static web assets are used correctly
-                    webBuilder.UseStaticWebAssets();
+                    var dashboardOptions = configuration
+                        .GetSection("LPSAppSettings:LPSDashboardConfiguration")
+                        .Get<DashboardConfigurationOptions>();
+
+                    var port = dashboardOptions?.Port ?? GlobalSettings.Port;
+
+                    webBuilder.UseSetting("http_port", port.ToString())
+                              .UseStartup<LPS.Dashboard.Startup>()
+                              .UseStaticWebAssets();
+
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
-                        serverOptions.ListenAnyIP(GlobalSettings.Port);
-                        serverOptions.AllowSynchronousIO = false; // Option to force async operations
+                        serverOptions.ListenAnyIP(port);
+                        serverOptions.AllowSynchronousIO = false;
                     })
-                    .UseShutdownTimeout(TimeSpan.FromSeconds(30)); // Set shutdown timeout if necessary
-
+                    .UseShutdownTimeout(TimeSpan.FromSeconds(30));
                 })
                 .ConfigureAppConfiguration((configBuilder) =>
                 {
@@ -69,16 +76,17 @@ namespace LPS
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddSingleton<IMonitoredRunRepository, MonitoredRunRepository>();
+                    services.AddSingleton<IMonitoredIterationRepository, MonitoredIterationRepository>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddSingleton<IMetricsQueryService, MetricsQueryService>();
-                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>, HttpRunCommandStatusMonitor<IAsyncCommand<HttpRun>, HttpRun>>();
+                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>, HttpIterationCommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>>();
                     services.AddSingleton<AppSettingsWritableOptions>();
                     services.AddSingleton<CancellationTokenSource>();
                     services.AddSingleton<IConsoleLogger, ConsoleLogger>();
                     services.AddSingleton<ILogFormatter, LogFormatter>();
                     services.AddSingleton<IClientManager<HttpRequestProfile, Domain.HttpResponse, IClientService<HttpRequestProfile, Domain.HttpResponse>>, HttpClientManager>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
+                    services.ConfigureWritable<DashboardConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSDashboardConfiguration"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<HttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration"), AppConstants.AppSettingsFileLocation);

@@ -6,7 +6,7 @@ using LPS.UI.Common.Extensions;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;
-using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.Build.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.VisualBasic.FileIO;
 using System;
@@ -43,7 +43,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootLpsCliCommand.AddCommand(_watchdogCommand);
         }
 
-        public void Execute(CancellationToken cancellationToken)
+        public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
 
             _watchdogCommand.SetHandler((updatedWatchdogOptions) =>
@@ -87,7 +87,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 }
             }, new WatchDogBinder());
 
-            _rootLpsCliCommand.Invoke(_args);
+            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }

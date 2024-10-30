@@ -6,7 +6,7 @@ using LPS.Infrastructure.LPSClients;
 using LPS.Infrastructure.Watchdog;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;
-using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.Build.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,10 +33,7 @@ namespace LPS.UI.Common.Extensions
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                if (lpsFileOptions == null)
-                {
-                    lpsFileOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration").Get<FileLoggerOptions>();
-                }
+                lpsFileOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration").Get<FileLoggerOptions>();
 
                 services.AddSingleton<ILogger>(serviceProvider =>
                 {
@@ -97,15 +94,11 @@ namespace LPS.UI.Common.Extensions
 
             return hostBuilder;
         }
-
         public static IHostBuilder ConfigureLPSHttpClient(this IHostBuilder hostBuilder, HttpClientOptions? lpsHttpClientOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                if (lpsHttpClientOptions == null)
-                {
-                    lpsHttpClientOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration").Get<HttpClientOptions>();
-                }
+                lpsHttpClientOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration").Get<HttpClientOptions>();
 
                 services.AddSingleton<IClientConfiguration<HttpRequestProfile>>(serviceProvider =>
                 {
@@ -121,7 +114,7 @@ namespace LPS.UI.Common.Extensions
                     }
                     else
                     {
-                        HttpClientValidator httpClientValidator = new HttpClientValidator();
+                        HttpClientValidator httpClientValidator = new();
                         var validationResults = httpClientValidator.Validate(lpsHttpClientOptions);
 
                         if (!validationResults.IsValid)
@@ -157,10 +150,7 @@ namespace LPS.UI.Common.Extensions
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                if (watchdogOptions == null)
-                {
-                    watchdogOptions = hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration").Get<WatchdogOptions>();
-                }
+                watchdogOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration").Get<WatchdogOptions>();
 
                 // Register ILogger, IMetricsQueryService, and IRuntimeOperationIdProvider as services to avoid building a new service provider
                 services.AddSingleton<IWatchdog>(serviceProvider =>
@@ -220,8 +210,6 @@ namespace LPS.UI.Common.Extensions
 
             return hostBuilder;
         }
-
-
 
     }
 }

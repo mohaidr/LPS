@@ -4,7 +4,7 @@ using System.Linq;
 using LPS.Infrastructure.Common;
 using Spectre.Console;
 
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.Build.Services
 {
     internal class InputHeaderService
     {

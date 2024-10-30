@@ -3,35 +3,30 @@ using LPS.Domain.Domain.Common.Enums;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
-namespace LPS.UI.Core.UI.Build.Services
+namespace LPS.UI.Core.Build.Services
 {
-    internal class RunChallengeUserService : IChallengeUserService<HttpRun.SetupCommand, HttpRun>
+    internal class IterationChallengeUserService(bool skipOptionalFields, HttpIteration.SetupCommand command, IBaseValidator<HttpIteration.SetupCommand, HttpIteration> validator) : IChallengeUserService<HttpIteration.SetupCommand, HttpIteration>
     {
-        IBaseValidator<HttpRun.SetupCommand, HttpRun> _validator;
-        HttpRun.SetupCommand _command;
-        private bool _skipOptionalFields;
-        public RunChallengeUserService(bool skipOptionalFields, HttpRun.SetupCommand command, IBaseValidator<HttpRun.SetupCommand, HttpRun> validator)
-        {
-            _skipOptionalFields = skipOptionalFields;
-            _command = command;
-            _validator = validator;
-        }
-        public bool SkipOptionalFields { get { return _skipOptionalFields; } set { value = _skipOptionalFields; } }
-        public HttpRun.SetupCommand Command { get { return _command; } set { value = _command; } }
+        IBaseValidator<HttpIteration.SetupCommand, HttpIteration> _validator = validator;
+        HttpIteration.SetupCommand _command = command;
+        private bool _skipOptionalFields = skipOptionalFields;
+
+        public bool SkipOptionalFields => _skipOptionalFields;
+        public HttpIteration.SetupCommand Command => _command;
         public void Challenge()
         {
             if (!_skipOptionalFields)
             {
                 ResetOptionalFields();
             }
-            AnsiConsole.MarkupLine("[underline bold blue]Add 'HTTP RUN' to your plan:[/]");
+            AnsiConsole.MarkupLine("[underline bold blue]Add 'HTTP Iteration' to your round:[/]");
             while (true)
             {
                 if (!_validator.Validate(nameof(Command.Name)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.Name));
 
-                    _command.Name = AnsiConsole.Ask<string>("What is the [green]'Name'[/] of your [green]'HTTP RUN'[/]?");
+                    _command.Name = AnsiConsole.Ask<string>("What is the [green]'Name'[/] of your [green]'HTTP Iteration'[/]?");
                     continue;
                 }
 
@@ -83,8 +78,8 @@ namespace LPS.UI.Core.UI.Build.Services
 
                 break;
             }
-            RequestProfileValidator validator = new RequestProfileValidator(_command.LPSRequestProfile);
-            RequestProfileChallengeUserService lpsRequestProfileUserService = new RequestProfileChallengeUserService(SkipOptionalFields, _command.LPSRequestProfile, validator);
+            RequestProfileValidator validator = new(_command.RequestProfile);
+            RequestProfileChallengeUserService lpsRequestProfileUserService = new(SkipOptionalFields, _command.RequestProfile, validator);
             lpsRequestProfileUserService.Challenge();
         }
 

@@ -1,5 +1,5 @@
 ﻿using LPS.Domain;
-using LPS.UI.Core.UI.Build.Services;
+using LPS.UI.Core.Build.Services;
 using System;
 using System.Collections.Generic;
 using System.CommandLine.Binding;
@@ -11,9 +11,9 @@ using LPS.Domain.Domain.Common.Enums;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
-    public class CommandBinder : BinderBase<TestPlan.SetupCommand>
+    public class CommandBinder : BinderBase<Round.SetupCommand>
     {
-        private Option<string> _httpRunNameOption;
+        private Option<string> _httpIterationNameOption;
         private Option<int?> _requestCountOption;
         private Option<bool> _maximizeThroughputOption;
         private Option<int?> _duration;
@@ -22,24 +22,24 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string> _httpMethodOption;
         private Option<bool> _downloadHtmlEmbeddedResourcesOption;
         private Option<bool> _saveResponseOption;
-        private Option<bool> _supportH2C;
+        private Option<bool?> _supportH2C;
         private Option<string> _httpversionOption;
         private Option<string> _urlOption;
         private Option<IList<string>> _headerOption;
         private Option<string> _payloadOption;
         Option<IterationMode> _iterationModeOption;
-        private Option<string> _testPlanNameOption;
+        private Option<string> _roundNameOption;
         private Option<int> _numberOfClientsOption;
-        private Option<int> _arrivalDelayOption;
+        private Option<int?> _arrivalDelayOption;
         private Option<bool> _delayClientCreationOption;
         private Option<bool> _runInParallerOption;
 
-        public CommandBinder(Option<string>? testPlanNameOption = null,
+        public CommandBinder(Option<string>? roundNameOption = null,
             Option<int>? numberOfClientsOption = null,
-            Option<int>? arrivalDelayOption = null,
+            Option<int?>? arrivalDelayOption = null,
             Option<bool>? delayClientCreationOption = null,
             Option<bool>? runInParallerOption = null,
-            Option<string>? httpRunNameOption = null,
+            Option<string>? httpIterationNameOption = null,
             Option<int?>? requestCountOption = null,
             Option<IterationMode>? iterationModeOption = null,
             Option<int?>? duratiion = null,
@@ -53,14 +53,14 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<string>? payloadOption = null,
             Option<bool>? downloadHtmlEmbeddedResourcesOption = null,
             Option<bool>? saveResponseOption = null,
-            Option<bool>? supportH2C = null)
+            Option<bool?>? supportH2C = null)
         {
-            _testPlanNameOption = testPlanNameOption ?? CommandLineOptions.LPSCommandOptions.TestNameOption;
+            _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.TestNameOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreation;
             _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCommandOptions.RunInParallel;
-            _httpRunNameOption = httpRunNameOption ?? CommandLineOptions.LPSCommandOptions.RunNameOption;
+            _httpIterationNameOption = httpIterationNameOption ?? CommandLineOptions.LPSCommandOptions.IterationNameOption;
             _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSCommandOptions.IterationModeOption;
             _duration = duratiion ?? CommandLineOptions.LPSCommandOptions.Duration;
             _batchSize = batchSizeOption ?? CommandLineOptions.LPSCommandOptions.BatchSize;
@@ -77,30 +77,30 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _supportH2C = supportH2C ?? CommandLineOptions.LPSCommandOptions.SupportH2C;
         }
 
-        protected override TestPlan.SetupCommand GetBoundValue(BindingContext bindingContext)
+        protected override Round.SetupCommand GetBoundValue(BindingContext bindingContext)
         {
-            return new TestPlan.SetupCommand
+            return new Round.SetupCommand
             {
-                Name = bindingContext.ParseResult.GetValueForOption(_testPlanNameOption),
+                Name = bindingContext.ParseResult.GetValueForOption(_roundNameOption),
                 NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
                 ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                 DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                 RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
-                LPSRuns = new List<HttpRun.SetupCommand>()
+                Iterations = new List<HttpIteration.SetupCommand>()
                 {
-                    new HttpRun.SetupCommand()
+                    new HttpIteration.SetupCommand()
                     {
-                        Name = bindingContext.ParseResult.GetValueForOption(_httpRunNameOption),
+                        Name = bindingContext.ParseResult.GetValueForOption(_httpIterationNameOption),
                         Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),
                         RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
                         MaximizeThroughput = bindingContext.ParseResult.GetValueForOption(_maximizeThroughputOption),
                         Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                         CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                         BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
-                        LPSRequestProfile = new HttpRequestProfile.SetupCommand()
+                        RequestProfile = new HttpRequestProfile.SetupCommand()
                         {
                             HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
-                            Httpversion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
+                            HttpVersion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
                             DownloadHtmlEmbeddedResources = bindingContext.ParseResult.GetValueForOption(_downloadHtmlEmbeddedResourcesOption),
                             SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
                             SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),

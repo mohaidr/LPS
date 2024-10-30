@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.CommandLine;
-using static LPS.Domain.HttpRun;
+using static LPS.Domain.HttpIteration;
 using LPS.Domain.Common.Interfaces;
 using System.Reflection;
 using LPS.Infrastructure.Watchdog;
@@ -57,7 +57,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
                 RunInParallel.AddAlias("-rip");
-                RunNameOption.AddAlias("-rn");
+                IterationNameOption.AddAlias("-rn");
                 RequestCountOption.AddAlias("-rc");
                 Duration.AddAlias("-d");
                 BatchSize.AddAlias("-bs");
@@ -79,7 +79,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
                 AddCaseInsensitiveAliases(RunInParallel, "--runinparallel");
-                AddCaseInsensitiveAliases(RunNameOption, "--runname");
+                AddCaseInsensitiveAliases(IterationNameOption, "--iterationname");
                 AddCaseInsensitiveAliases(RequestCountOption, "--requestcount");
                 AddCaseInsensitiveAliases(Duration, "--duration");
                 AddCaseInsensitiveAliases(BatchSize, "--batchsize");
@@ -97,20 +97,20 @@ namespace LPS.UI.Core.LPSCommandLine
             }
 
             public static Option<string> TestNameOption { get; } = new Option<string>(
-                "--testname", () => "Quick-Test-Plan", "Test name")
+                "--testname", () => "Quick-Test-Round", "Test name")
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
             };
 
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>(
-                "--numberofclients", () => 1, "Number of clients to execute the plan")
+                "--numberofclients", () => 1, "Number of clients to perform the test round")
             {
                 IsRequired = false
             };
 
-            public static Option<int> ArrivalDelayOption { get; } = new Option<int>(
-                "--arrivaldelay", () => 0, "Time in milliseconds to wait before a new client arrives")
+            public static Option<int?> ArrivalDelayOption { get; } = new Option<int?>(
+                "--arrivaldelay", () => null, "Time in milliseconds to wait before a new client arrives")
             {
                 IsRequired = false
             };
@@ -122,7 +122,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<bool> RunInParallel { get; } = new Option<bool>(
-                "--runinparallel", () => true, "Execute your runs in parallel")
+                "--runinparallel", () => true, "Execute your iterations in parallel")
             {
                 IsRequired = false
             };
@@ -146,8 +146,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 AllowMultipleArgumentsPerToken = true
             };
 
-            public static Option<string> RunNameOption { get; } = new Option<string>(
-                "--runname", () => "Quick-Http-Run", "Run name")
+            public static Option<string> IterationNameOption { get; } = new Option<string>(
+                "--iterationname", () => "Quick-Http-Iteration", "Iteration name")
             {
                 IsRequired = false
             };
@@ -205,8 +205,8 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false
             };
-            public static Option<bool> SupportH2C { get; } = new Option<bool>(
-                "--supportH2C", () => false, "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
+            public static Option<bool?> SupportH2C { get; } = new Option<bool?>(
+                "--supporth2c", () => false, "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
             {
                 IsRequired = false
             };
@@ -218,40 +218,87 @@ namespace LPS.UI.Core.LPSCommandLine
             };
         }
 
+        public static class LPSRunCommandOptions
+        {
+            static LPSRunCommandOptions()
+            {
+
+            }
+            public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
+                "config", // This makes it positional
+                "Test configuration file name"
+            )
+            {
+                Arity = ArgumentArity.ExactlyOne
+            };
+        }
+
         public static class LPSCreateCommandOptions
         {
             static LPSCreateCommandOptions()
             {
+
+            }
+            public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
+                "config", // This makes it positional
+                "Test configuration file name"
+            )
+            {
+                Arity = ArgumentArity.ExactlyOne
+            };
+
+
+            public static Option<string> PlanNameOption { get; } = new Option<string>(
+                "--name", "Plan name")
+            {
+                IsRequired = true,
+                Arity = ArgumentArity.ExactlyOne
+            };
+        }
+
+        public static class LPSRoundCommandOptions
+        {
+            static LPSRoundCommandOptions()
+            {
+
                 // Shortcut aliases
-                TestNameOption.AddAlias("-tn");
+                RoundNameOption.AddAlias("-n");
                 DelayClientCreation.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
                 RunInParallel.AddAlias("-rip");
 
                 // Add case-insensitive aliases
-                AddCaseInsensitiveAliases(TestNameOption, "--testname");
+                AddCaseInsensitiveAliases(RoundNameOption, "--name");
                 AddCaseInsensitiveAliases(DelayClientCreation, "--delayclientcreation");
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
                 AddCaseInsensitiveAliases(RunInParallel, "--runinparallel");
             }
+            public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
+                "config", // This makes it positional
+                "Test configuration file name"
+            )
+            {
+                Arity = ArgumentArity.ExactlyOne
+            };
 
-            public static Option<string> TestNameOption { get; } = new Option<string>(
-                "--testname", "Test name")
+
+            public static Option<string> RoundNameOption { get; } = new Option<string>(
+                "--name", "Round name")
             {
                 IsRequired = true,
                 Arity = ArgumentArity.ExactlyOne
             };
 
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>(
-                "--numberofclients", "Number of clients to execute the plan")
+                "--numberofclients", () => 1, "Number of clients to perform the test round")
             {
                 IsRequired = true
             };
 
             public static Option<int> ArrivalDelayOption { get; } = new Option<int>(
-                "--arrivaldelay", "Time in milliseconds to wait before a new client arrives")
+                "--arrivaldelay", () => 0, "Time in milliseconds to wait before a new client arrives")
             {
                 IsRequired = true
             };
@@ -262,20 +309,20 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
 
-            public static Option<bool> RunInParallel { get; } = new Option<bool>(
-                "--runinparallel", () => true, "Execute your runs in parallel")
+            public static Option<bool?> RunInParallel { get; } = new Option<bool?>(
+                "--runinparallel", () => null, "Execute your iterations in parallel")
             {
                 IsRequired = false
             };
         }
 
-        public static class LPSAddCommandOptions
+        public static class LPSIterationCommandOptions
         {
-            static LPSAddCommandOptions()
+            static LPSIterationCommandOptions()
             {
                 // Shortcut aliases
-                TestNameOption.AddAlias("-tn");
-                RunNameOption.AddAlias("-rn");
+                RoundName.AddAlias("-rn");
+                IterationNameOption.AddAlias("-n");
                 RequestCountOption.AddAlias("-rc");
                 Duration.AddAlias("-d");
                 BatchSize.AddAlias("-bs");
@@ -292,8 +339,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 SupportH2C.AddAlias("-h2c");
 
                 // Add case-insensitive aliases
-                AddCaseInsensitiveAliases(TestNameOption, "--testname");
-                AddCaseInsensitiveAliases(RunNameOption, "--runname");
+                AddCaseInsensitiveAliases(RoundName, "--roundName");
+                AddCaseInsensitiveAliases(IterationNameOption, "--name");
                 AddCaseInsensitiveAliases(RequestCountOption, "--requestcount");
                 AddCaseInsensitiveAliases(Duration, "--duration");
                 AddCaseInsensitiveAliases(BatchSize, "--batchsize");
@@ -310,15 +357,23 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(SupportH2C, "--supporth2c");
             }
 
-            public static Option<string> TestNameOption { get; } = new Option<string>(
-                "--testname", "Test name")
+            public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
+                "config", // This makes it positional
+                "Test configuration file name"
+            )
+            {
+                Arity = ArgumentArity.ExactlyOne
+            };
+
+            public static Option<string> RoundName { get; } = new Option<string>(
+                "--roundname", "Round name")
             {
                 IsRequired = true,
                 Arity = ArgumentArity.ExactlyOne
             };
 
-            public static Option<string> RunNameOption { get; } = new Option<string>(
-                "--runname", "Run name")
+            public static Option<string> IterationNameOption { get; } = new Option<string>(
+                "--name", "Iteration name")
             {
                 IsRequired = true
             };
@@ -326,7 +381,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>(
                 "--iterationmode", "Defines iteration mode")
             {
-                IsRequired = false
+                IsRequired = true
             };
 
             public static Option<int?> RequestCountOption { get; } = new Option<int?>(
@@ -389,7 +444,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
 
-            public static Option<bool> SupportH2C { get; } = new Option<bool>(
+            public static Option<bool?> SupportH2C { get; } = new Option<bool?>(
                 "--supporth2c", () => false, "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
             {
                 IsRequired = false
@@ -406,24 +461,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 "--payload", "Request payload")
             {
                 IsRequired = false
-            };
-        }
-
-        public static class LPSRunCommandOptions
-        {
-            static LPSRunCommandOptions()
-            {
-                TestNameOption.AddAlias("-tn");
-
-                // Add case-insensitive aliases
-                AddCaseInsensitiveAliases(TestNameOption, "--testname");
-            }
-
-            public static Option<string> TestNameOption { get; } = new Option<string>(
-                "--testname", "Test name")
-            {
-                IsRequired = true,
-                Arity = ArgumentArity.ExactlyOne
             };
         }
 
