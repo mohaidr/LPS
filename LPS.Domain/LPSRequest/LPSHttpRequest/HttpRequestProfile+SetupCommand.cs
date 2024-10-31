@@ -73,12 +73,10 @@ namespace LPS.Domain
                     ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
                 };
             }
-
         }
 
         protected void Setup(SetupCommand command)
         {
-
             //Set the inherited properties through the parent entity setup command
             var requestProfileSetUpCommand = new RequestProfile.SetupCommand() { Id = command.Id };
             base.Setup(requestProfileSetUpCommand);

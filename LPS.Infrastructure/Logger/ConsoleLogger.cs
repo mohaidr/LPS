@@ -21,7 +21,7 @@ namespace LPS.Infrastructure.Logger
             {
                 AnsiConsole.MarkupLine($"[blue]{logMessage}[/]");
             }
-            else if (level == LPSLoggingLevel.Warning)
+            else if (level == LPSLoggingLevel.Warning && !config.DisableConsoleErrorLogging)
             {
                 AnsiConsole.MarkupLine($"[yellow]{logMessage}[/]");
             }

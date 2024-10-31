@@ -15,6 +15,9 @@ using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using LPS.UI.Core.Services;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
+using LPS.UI.Core.LPSValidators;
+using FluentValidation.Results;
+using LPS.UI.Common.Extensions;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -77,25 +80,34 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             {
                 try
                 {
-                    Plan.SetupCommand setupCommand;
-
-                    if (File.Exists(configFile))
+                    Plan.SetupCommand setupCommand = new() { Name = name };
+                    ValidationResult results;
+                    var roundValidator = new PlanValidator(setupCommand);
+                    results = roundValidator.Validate();
+                    if (!results.IsValid)
                     {
-                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File exists, fetching configuration.", LPSLoggingLevel.Information);
-                        setupCommand = ConfigurationService.FetchConfiguration(configFile);
-                        setupCommand.Name = name;
+                        results.PrintValidationErrors();
                     }
                     else
                     {
-                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File does not exist, creating new setup command.", LPSLoggingLevel.Information);
+                        if (File.Exists(configFile))
+                        {
+                            _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File exists, fetching configuration.", LPSLoggingLevel.Information);
+                            setupCommand = ConfigurationService.FetchConfiguration(configFile);
+                            setupCommand.Name = name;
+                        }
+                        else
+                        {
+                            _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File does not exist, creating new setup command.", LPSLoggingLevel.Information);
 
-                        setupCommand = new Plan.SetupCommand { Name = name };
+                            setupCommand = new Plan.SetupCommand { Name = name };
+                        }
+
+                        ConfigurationService.SaveConfiguration(configFile, setupCommand);
+
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"Configuration file '{configFile}' updated with plan name '{name}'.", LPSLoggingLevel.Information);
+
                     }
-
-                    ConfigurationService.SaveConfiguration(configFile, setupCommand);
-
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"Configuration file '{configFile}' updated with plan name '{name}'.", LPSLoggingLevel.Information);
-
                 }
                 catch (Exception ex)
                 {

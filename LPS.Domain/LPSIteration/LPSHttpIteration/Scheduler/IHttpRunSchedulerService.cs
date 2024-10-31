@@ -9,6 +9,6 @@ namespace LPS.Domain.LPSRun.LPSHttpRun.Scheduler
 {
     public interface IHttpRunSchedulerService
     {
-        Task ScheduleHttpRunExecution(DateTime scheduledTime, HttpIteration httpRun, IClientService<HttpRequestProfile, HttpResponse> httpClient);
+        Task ScheduleHttpRunExecutionAsync(DateTime scheduledTime, HttpIteration httpRun, IClientService<HttpRequestProfile, HttpResponse> httpClient);
     }
 }

@@ -310,7 +310,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<bool?> RunInParallel { get; } = new Option<bool?>(
-                "--runinparallel", () => null, "Execute your iterations in parallel")
+                "--runinparallel", () => true, "Execute your iterations in parallel")
             {
                 IsRequired = false
             };

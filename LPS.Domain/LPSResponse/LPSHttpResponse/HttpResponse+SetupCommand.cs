@@ -51,6 +51,36 @@ namespace LPS.Domain
                 entity?.Setup(this);
             }
             public HttpRequestProfile.SetupCommand LPSHttpRequestProfile { get; set; }
+
+            public SetupCommand Clone()
+            {
+                return new SetupCommand
+                {
+                    Id = this.Id,
+                    ContentType = this.ContentType,
+                    LocationToResponse = this.LocationToResponse,
+                    StatusCode = this.StatusCode,
+                    StatusMessage = this.StatusMessage,
+                    ResponseTime = this.ResponseTime,
+                    IsSuccessStatusCode = this.IsSuccessStatusCode,
+                    IsValid = this.IsValid,
+                    LPSHttpRequestProfileId = this.LPSHttpRequestProfileId,
+
+                    // Deep copy of dictionaries
+                    ResponseContentHeaders = new Dictionary<string, string>(this.ResponseContentHeaders),
+                    ResponseHeaders = new Dictionary<string, string>(this.ResponseHeaders),
+
+                    // Deep copy of ValidationErrors dictionary and its inner lists
+                    ValidationErrors = this.ValidationErrors.ToDictionary(
+                        entry => entry.Key,
+                        entry => new List<string>(entry.Value)
+                    ),
+
+                    // Assuming LPSHttpRequestProfile has its own Clone method
+                    LPSHttpRequestProfile = this.LPSHttpRequestProfile?.Clone()
+                };
+            }
+
         }
 
         protected void Setup(SetupCommand command)

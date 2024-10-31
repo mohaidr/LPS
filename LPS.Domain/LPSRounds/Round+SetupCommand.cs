@@ -57,6 +57,7 @@ namespace LPS.Domain
                     IsValid = this.IsValid,
                     ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
                 };
+
             }
         }
 

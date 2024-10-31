@@ -87,6 +87,14 @@ namespace LPS.Domain
             {
                 _finalStatus = status;
             }
+
+            public void CancellIfScheduled()
+            {
+                if (_executionStatus == ExecutionStatus.Scheduled)
+                {
+                    _executionStatus = ExecutionStatus.Cancelled;
+                }
+            }
         }
 
         private async Task LogRequestDetails()

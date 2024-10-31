@@ -126,11 +126,11 @@ namespace LPS.Domain
                 await _watchdog.BalanceAsync(hostName, _cts.Token);
                 if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {
-                    awaitableTasks.Add(_httpRunSchedulerService.ScheduleHttpRunExecution(executionTime, (HttpIteration)httpIteration, httpClient));
+                    awaitableTasks.Add(_httpRunSchedulerService.ScheduleHttpRunExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient));
                 }
                 else
                 {
-                    await _httpRunSchedulerService.ScheduleHttpRunExecution(executionTime, (HttpIteration)httpIteration, httpClient);
+                    await _httpRunSchedulerService.ScheduleHttpRunExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient);
                 }
             }
             await Task.WhenAll(awaitableTasks);

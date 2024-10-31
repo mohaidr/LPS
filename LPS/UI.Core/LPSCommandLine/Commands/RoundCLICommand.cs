@@ -6,6 +6,7 @@ using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.Services;
 using System.CommandLine;
+using System.Xml.Linq;
 using ValidationResult = FluentValidation.Results.ValidationResult;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
@@ -37,12 +38,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _roundCommand.SetHandler((configFile, round) =>
             {
-                bool isValidRound;
                 ValidationResult results;
                 var roundValidator = new RoundValidator(round);
                 results = roundValidator.Validate();
-                isValidRound = results.IsValid;
-                if (!isValidRound)
+                if (!results.IsValid)
                 {
                     results.PrintValidationErrors();
                 }
@@ -52,7 +51,11 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var selectedRound = setupCommand.Rounds.FirstOrDefault(r => r.Name == round.Name);
                     if (selectedRound != null)
                     {
-                        selectedRound = round.Clone();
+                        selectedRound.Name = round.Name;
+                        selectedRound.NumberOfClients = round.NumberOfClients;
+                        selectedRound.ArrivalDelay = round.ArrivalDelay;
+                        selectedRound.DelayClientCreationUntilIsNeeded = round.DelayClientCreationUntilIsNeeded;
+                        selectedRound.RunInParallel = round.RunInParallel;
                     }
                     else
                     {
