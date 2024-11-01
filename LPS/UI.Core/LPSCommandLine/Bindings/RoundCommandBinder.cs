@@ -12,12 +12,14 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
     public class RoundCommandBinder(
         Option<string>? roundNameOption = null,
+        Option<int>? startupDelayOption = null,
         Option<int>? numberOfClientsOption = null,
         Option<int>? arrivalDelayOption = null,
         Option<bool>? delayClientCreationOption = null,
         Option<bool?>? runInParallerOption = null) : BinderBase<Round.SetupCommand>
     {
         private readonly Option<string> _roundNameOption = roundNameOption ?? CommandLineOptions.LPSRoundCommandOptions.RoundNameOption;
+        private readonly Option<int> _startupDelayOption = startupDelayOption ?? CommandLineOptions.LPSRoundCommandOptions.StartupDelayOption;
         private readonly Option<int> _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSRoundCommandOptions.NumberOfClientsOption;
         private readonly Option<int> _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSRoundCommandOptions.ArrivalDelayOption;
         private readonly Option<bool> _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSRoundCommandOptions.DelayClientCreation;
@@ -27,6 +29,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             new()
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_roundNameOption),
+                StartupDelay = bindingContext.ParseResult.GetValueForOption(_startupDelayOption),
                 NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
                 ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                 DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),

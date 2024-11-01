@@ -74,7 +74,7 @@ namespace LPS.UI.Core.Host
                     await lpsManager.RunAsync(plan);
                 }
 
-                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run -tn {planSetupCommand.Name}[/] to execute the Plan[/]");
+                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run <config>[/] to execute the Plan[/]");
             }
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             await _logger.FlushAsync();

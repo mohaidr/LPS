@@ -16,7 +16,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private Command _rootCliCommand;
         private string[] _args;
         private Command _roundCommand;
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         internal RoundCLICommand(Command rootLpsCliCommand, string[] args)
         {
             _rootCliCommand = rootLpsCliCommand;
@@ -52,6 +52,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     if (selectedRound != null)
                     {
                         selectedRound.Name = round.Name;
+                        selectedRound.StartupDelay = round.StartupDelay;
                         selectedRound.NumberOfClients = round.NumberOfClients;
                         selectedRound.ArrivalDelay = round.ArrivalDelay;
                         selectedRound.DelayClientCreationUntilIsNeeded = round.DelayClientCreationUntilIsNeeded;

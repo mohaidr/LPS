@@ -23,6 +23,10 @@ namespace LPS.UI.Core.LPSValidators
             .Length(1, 60)
             .WithMessage("The 'Name' should be between 1 and 60 characters");
 
+            RuleFor(command => command.StartupDelay)
+            .GreaterThanOrEqualTo(0)
+            .WithMessage("The 'StartUpDelay' must be greater than or equal to 0");
+
             RuleFor(command => command.NumberOfClients)
             .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")
             .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");

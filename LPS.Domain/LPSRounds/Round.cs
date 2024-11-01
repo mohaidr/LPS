@@ -38,6 +38,7 @@ namespace LPS.Domain
 
         public Guid Id { get; protected set; }
         public string Name { get; private set; }
+        public int StartupDelay { get; protected set; }
 
         public bool IsRedo { get; private set; }
         public bool? DelayClientCreationUntilIsNeeded { get; private set; }

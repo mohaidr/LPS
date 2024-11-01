@@ -53,7 +53,8 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 // Shortcut aliases
                 PlanNameOption.AddAlias("-n");
-                RoundNameOption.AddAlias("-rn");
+                RoundNameOption.AddAlias("-sd");
+                StartupDelayOption.AddAlias("-rn");
                 DelayClientCreation.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
@@ -77,6 +78,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
+                AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
                 AddCaseInsensitiveAliases(DelayClientCreation, "--delayclientcreation");
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
@@ -113,6 +115,11 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
 
+            public static Option<int> StartupDelayOption { get; } = new Option<int>(
+                "--startupdelay", () => 0, "Add startup delay to your round")
+            {
+                IsRequired = false
+            };
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>(
                 "--numberofclients", () => 1, "Number of clients to perform the test round")
             {
@@ -273,6 +280,7 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 // Shortcut aliases
                 RoundNameOption.AddAlias("-n");
+                StartupDelayOption.AddAlias("-sd");
                 DelayClientCreation.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
@@ -280,6 +288,7 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(RoundNameOption, "--name");
+                AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
                 AddCaseInsensitiveAliases(DelayClientCreation, "--delayclientcreation");
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
@@ -299,6 +308,13 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = true,
                 Arity = ArgumentArity.ExactlyOne
+            };
+
+
+            public static Option<int> StartupDelayOption { get; } = new Option<int>(
+                "--startupdelay", () => 0, "Add startup delay to your round")
+            {
+                IsRequired = false
             };
 
             public static Option<int> NumberOfClientsOption { get; } = new Option<int>(

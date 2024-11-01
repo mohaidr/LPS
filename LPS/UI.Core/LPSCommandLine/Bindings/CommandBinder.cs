@@ -15,6 +15,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
     {
         private Option<string> _nameOption;
         private Option<string> _roundNameOption;
+        private Option<int> _startupDelayOption;
         private Option<string> _httpIterationNameOption;
         private Option<int?> _requestCountOption;
         private Option<bool> _maximizeThroughputOption;
@@ -38,6 +39,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         public CommandBinder(
             Option<string>? nameOption = null,
             Option<string>? roundNameOption = null,
+            Option<int>? startupDelayOption = null,
             Option<int>? numberOfClientsOption = null,
             Option<int?>? arrivalDelayOption = null,
             Option<bool>? delayClientCreationOption = null,
@@ -60,6 +62,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         {
             _nameOption = nameOption ?? CommandLineOptions.LPSCommandOptions.PlanNameOption;
             _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.RoundNameOption;
+            _startupDelayOption = startupDelayOption?? CommandLineOptions.LPSCommandOptions.StartupDelayOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreation;
@@ -91,6 +94,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                     new Round.SetupCommand()
                     {
                         Name = bindingContext.ParseResult.GetValueForOption(_roundNameOption),
+                        StartupDelay = bindingContext.ParseResult.GetValueForOption(_startupDelayOption),
                         NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
                         ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                         DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),

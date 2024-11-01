@@ -89,13 +89,13 @@ namespace LPS.Domain
 
                 foreach (var round in Rounds)
                 {
-                    var roundExecCommand = new Round.ExecuteCommand(_logger, 
-                        _watchdog, 
-                        _runtimeOperationIdProvider, 
-                        _lpsClientManager, 
-                        _lpsClientConfig, 
-                        _httpRunExecutionCommandStatusMonitor, 
-                        _lpsMetricsDataMonitor, 
+                    var roundExecCommand = new Round.ExecuteCommand(_logger,
+                        _watchdog,
+                        _runtimeOperationIdProvider,
+                        _lpsClientManager,
+                        _lpsClientConfig,
+                        _httpRunExecutionCommandStatusMonitor,
+                        _lpsMetricsDataMonitor,
                         _cts);
                     await roundExecCommand.ExecuteAsync(round);
                 }

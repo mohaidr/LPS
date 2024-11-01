@@ -30,6 +30,8 @@ namespace LPS.Domain
             [YamlIgnore]
             public Guid? Id { get; set; }
             public string Name { get; set; }
+            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
+            public int StartupDelay { get; set; }
             public int? NumberOfClients { get; set; }
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public int? ArrivalDelay { get; set; }
@@ -49,6 +51,7 @@ namespace LPS.Domain
                 {
                     Id = this.Id,
                     Name = this.Name,
+                    StartupDelay = this.StartupDelay,
                     NumberOfClients = this.NumberOfClients,
                     ArrivalDelay = this.ArrivalDelay,
                     DelayClientCreationUntilIsNeeded = this.DelayClientCreationUntilIsNeeded,
@@ -88,6 +91,7 @@ namespace LPS.Domain
             if (command.IsValid)
             {
                 this.Name = command.Name;
+                this.StartupDelay = command.StartupDelay;
                 this.NumberOfClients= command.NumberOfClients.Value;
                 this.ArrivalDelay = command.ArrivalDelay;
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;

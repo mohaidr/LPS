@@ -37,6 +37,13 @@ namespace LPS.UI.Core.Build.Services
                     continue;
                 }
 
+                if (!_validator.Validate(nameof(Command.StartupDelay)))
+                {
+                    _validator.PrintValidationErrors(nameof(Command.StartupDelay));
+                    _command.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay'[/]? Enter 0 if not.");
+                    continue;
+                }
+
                 if (!_validator.Validate(nameof(Command.NumberOfClients)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.NumberOfClients));
@@ -94,6 +101,7 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
+                _command.StartupDelay = -1;
                 _command.DelayClientCreationUntilIsNeeded = null;
                 _command.RunInParallel = null;
             }

@@ -79,6 +79,10 @@ namespace LPS.Domain
         {
             if (this.IsValid && this.Iterations.Count > 0)
             {
+                if (this.StartupDelay > 0)
+                {
+                    await Task.Delay(TimeSpan.FromSeconds(this.StartupDelay), _cts.Token);
+                }
                 List<Task> awaitableTasks = new();
                 #region Loggin Round Details
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Details", LPSLoggingLevel.Verbose, _cts.Token));
