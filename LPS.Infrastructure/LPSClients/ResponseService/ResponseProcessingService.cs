@@ -42,7 +42,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             _metricsService = metricsService;
         }
 
-        readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
+        readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         public async Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage response,
             HttpRequestProfile lpsHttpRequestProfile,
@@ -116,7 +116,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     // Cache the content once fully read
                     if (memoryStream != null)
                     {
-                        content = System.Text.Encoding.UTF8.GetString(memoryStream.ToArray());
+                        content = Encoding.UTF8.GetString(memoryStream.ToArray());
                         await _memoryCacheService.SetItemAsync(cacheKey, content);
                     }
                     await _semaphoreSlim.WaitAsync(token);

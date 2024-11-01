@@ -89,7 +89,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             }
 
             // If there are no headers, add a basic "Host" header estimation (or any implicit headers)
-            if (!profile.HttpHeaders.Any())
+            if (profile.HttpHeaders.Count == 0 || !profile.HttpHeaders.Any(header=> header.Key.Equals("Host", StringComparison.OrdinalIgnoreCase)))
             {
                 size += Encoding.UTF8.GetByteCount("Host: ") + Encoding.UTF8.GetByteCount(new Uri(profile.URL).Host) + 2; // Assuming "Host" header is always present
             }
@@ -102,7 +102,6 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             {
                 size += Encoding.UTF8.GetByteCount(profile.Payload);
             }
-
             return size;
         }
 

@@ -11,8 +11,10 @@ using LPS.Domain.Domain.Common.Enums;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
-    public class CommandBinder : BinderBase<Round.SetupCommand>
+    public class CommandBinder : BinderBase<Plan.SetupCommand>
     {
+        private Option<string> _nameOption;
+        private Option<string> _roundNameOption;
         private Option<string> _httpIterationNameOption;
         private Option<int?> _requestCountOption;
         private Option<bool> _maximizeThroughputOption;
@@ -28,13 +30,14 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<IList<string>> _headerOption;
         private Option<string> _payloadOption;
         Option<IterationMode> _iterationModeOption;
-        private Option<string> _roundNameOption;
         private Option<int> _numberOfClientsOption;
         private Option<int?> _arrivalDelayOption;
         private Option<bool> _delayClientCreationOption;
         private Option<bool> _runInParallerOption;
 
-        public CommandBinder(Option<string>? roundNameOption = null,
+        public CommandBinder(
+            Option<string>? nameOption = null,
+            Option<string>? roundNameOption = null,
             Option<int>? numberOfClientsOption = null,
             Option<int?>? arrivalDelayOption = null,
             Option<bool>? delayClientCreationOption = null,
@@ -55,7 +58,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<bool>? saveResponseOption = null,
             Option<bool?>? supportH2C = null)
         {
-            _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.TestNameOption;
+            _nameOption = nameOption ?? CommandLineOptions.LPSCommandOptions.PlanNameOption;
+            _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.RoundNameOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreation;
@@ -77,38 +81,45 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _supportH2C = supportH2C ?? CommandLineOptions.LPSCommandOptions.SupportH2C;
         }
 
-        protected override Round.SetupCommand GetBoundValue(BindingContext bindingContext)
+        protected override Plan.SetupCommand GetBoundValue(BindingContext bindingContext)
         {
-            return new Round.SetupCommand
+            return new Plan.SetupCommand()
             {
-                Name = bindingContext.ParseResult.GetValueForOption(_roundNameOption),
-                NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
-                ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
-                DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
-                RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
-                Iterations = new List<HttpIteration.SetupCommand>()
+                Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
+                Rounds = new List<Round.SetupCommand>()
                 {
-                    new HttpIteration.SetupCommand()
+                    new Round.SetupCommand()
                     {
-                        Name = bindingContext.ParseResult.GetValueForOption(_httpIterationNameOption),
-                        Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),
-                        RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
-                        MaximizeThroughput = bindingContext.ParseResult.GetValueForOption(_maximizeThroughputOption),
-                        Duration = bindingContext.ParseResult.GetValueForOption(_duration),
-                        CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
-                        BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
-                        RequestProfile = new HttpRequestProfile.SetupCommand()
+                        Name = bindingContext.ParseResult.GetValueForOption(_roundNameOption),
+                        NumberOfClients = bindingContext.ParseResult.GetValueForOption(_numberOfClientsOption),
+                        ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
+                        DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
+                        RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
+                        Iterations = new List<HttpIteration.SetupCommand>()
                         {
-                            HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
-                            HttpVersion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
-                            DownloadHtmlEmbeddedResources = bindingContext.ParseResult.GetValueForOption(_downloadHtmlEmbeddedResourcesOption),
-                            SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
-                            SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),
-                            URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
-                            Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
-                            HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),
-                        },
-                    }
+                            new HttpIteration.SetupCommand()
+                            {
+                                Name = bindingContext.ParseResult.GetValueForOption(_httpIterationNameOption),
+                                Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),
+                                RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
+                                MaximizeThroughput = bindingContext.ParseResult.GetValueForOption(_maximizeThroughputOption),
+                                Duration = bindingContext.ParseResult.GetValueForOption(_duration),
+                                CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
+                                BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
+                                RequestProfile = new HttpRequestProfile.SetupCommand()
+                                {
+                                    HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
+                                    HttpVersion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),
+                                    DownloadHtmlEmbeddedResources = bindingContext.ParseResult.GetValueForOption(_downloadHtmlEmbeddedResourcesOption),
+                                    SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
+                                    SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),
+                                    URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
+                                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
+                                    HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),
+                                },
+                            }
+                        }   
+                    } 
                 }
             };
         }

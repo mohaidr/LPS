@@ -52,12 +52,13 @@ namespace LPS.UI.Core.LPSCommandLine
             static LPSCommandOptions()
             {
                 // Shortcut aliases
-                TestNameOption.AddAlias("-tn");
+                PlanNameOption.AddAlias("-n");
+                RoundNameOption.AddAlias("-rn");
                 DelayClientCreation.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
                 RunInParallel.AddAlias("-rip");
-                IterationNameOption.AddAlias("-rn");
+                IterationNameOption.AddAlias("-in");
                 RequestCountOption.AddAlias("-rc");
                 Duration.AddAlias("-d");
                 BatchSize.AddAlias("-bs");
@@ -74,7 +75,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 SupportH2C.AddAlias("-sh2c");
 
                 // Add case-insensitive aliases
-                AddCaseInsensitiveAliases(TestNameOption, "--testname");
+                AddCaseInsensitiveAliases(PlanNameOption, "--name");
+                AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
                 AddCaseInsensitiveAliases(DelayClientCreation, "--delayclientcreation");
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
@@ -96,8 +98,16 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(SupportH2C, "--supporth2c");
             }
 
-            public static Option<string> TestNameOption { get; } = new Option<string>(
-                "--testname", () => "Quick-Test-Round", "Test name")
+
+            public static Option<string> PlanNameOption { get; } = new Option<string>(
+                "--name", () => "Quick-Plan", "Plan name")
+            {
+                IsRequired = false,
+                Arity = ArgumentArity.ExactlyOne
+            };
+
+            public static Option<string> RoundNameOption { get; } = new Option<string>(
+                "--roundname", () => "Quick-Round", "Round name")
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
