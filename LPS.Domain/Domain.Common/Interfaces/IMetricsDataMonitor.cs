@@ -8,7 +8,7 @@ namespace LPS.Domain.Common.Interfaces
 {
     public interface IMetricsDataMonitor
     {
-        public bool TryRegister(HttpIteration lpsHttpRun);
+        public bool TryRegister(string roundName, HttpIteration lpsHttpRun);
         public void Monitor(HttpIteration lpsHttpRun, string executionId);
         public void Stop(HttpIteration lpsHttpRun, string executionId);
     }

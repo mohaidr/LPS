@@ -110,7 +110,7 @@ namespace LPS.Domain
                 foreach (var iteration in round.GetReadOnlyIterations())
                 {
                     if (iteration.Type == IterationType.Http)
-                        _lpsMetricsDataMonitor.TryRegister((HttpIteration)iteration);
+                        _lpsMetricsDataMonitor.TryRegister(round.Name, (HttpIteration)iteration);
                 }
             }
         }

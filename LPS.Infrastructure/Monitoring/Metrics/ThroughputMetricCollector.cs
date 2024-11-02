@@ -25,10 +25,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         readonly Stopwatch _throughputWatch;
         Timer _timer;
         private SpinLock _spinLock = new();
-        public ThroughputMetricCollector(HttpIteration httpIteration, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
+        public ThroughputMetricCollector(HttpIteration httpIteration, string roundName, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _httpIteration = httpIteration;
-            _dimensionSet = new ProtectedConnectionDimensionSet(_httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
+            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
             _eventSource = RequestEventSource.GetInstance(_httpIteration);
             _throughputWatch = new Stopwatch();
             _logger = logger;
@@ -164,9 +164,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             [JsonIgnore]
             public bool StopUpdate { get; set; }
-            public ProtectedConnectionDimensionSet(string name, string httpMethod, string url, string httpVersion)
+            public ProtectedConnectionDimensionSet(string roundName, string iterationName, string httpMethod, string url, string httpVersion)
             {
-                IterationName = name;
+                RoundName = roundName;
+                IterationName = iterationName;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -224,6 +225,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public double TimeElapsedInMilliseconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
+        public string RoundName { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }

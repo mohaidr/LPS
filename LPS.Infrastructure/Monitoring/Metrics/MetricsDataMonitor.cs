@@ -17,37 +17,47 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         private readonly IMonitoredIterationRepository _monitoredIterationsRepository = monitoredRunRepository ?? throw new ArgumentNullException(nameof(monitoredRunRepository));
 
-        public bool TryRegister(HttpIteration httpIteration)
+        public bool TryRegister(string roundName, HttpIteration httpIteration)
         {
-            if (_monitoredIterationsRepository.MonitoredIterations.ContainsKey(httpIteration))
+            try
             {
+                if (_monitoredIterationsRepository.MonitoredIterations.ContainsKey(httpIteration))
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"Iteration has already been registered. Below are the iteration details: \r\nRound:{roundName} \r\nIteration: {httpIteration.Name}", LPSLoggingLevel.Verbose);
+                    return false;
+                }
+
+                var metrics = CreateMetricCollectors(roundName, httpIteration);
+                var monitoredIteration = new MonitoredHttpIteration(httpIteration, metrics);
+
+                return _monitoredIterationsRepository.MonitoredIterations.TryAdd(httpIteration, monitoredIteration);
+            }
+            catch(Exception ex)
+            {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Failed to register http iteration. Below are the exception details: \r\nRound:{roundName} \r\nIteration: {httpIteration.Name} \r\nException:{ex.Message}", LPSLoggingLevel.Error);
                 return false;
             }
-
-            var metrics = CreateMetricCollectors(httpIteration);
-            var monitoredIteration = new MonitoredHttpIteration(httpIteration, metrics);
-
-            return _monitoredIterationsRepository.MonitoredIterations.TryAdd(httpIteration, monitoredIteration);
         }
 
-        private IReadOnlyDictionary<string, IMetricCollector> CreateMetricCollectors(HttpIteration httpIteration)
+        private IReadOnlyDictionary<string, IMetricCollector> CreateMetricCollectors(string roundName, HttpIteration httpIteration)
         {
             return new Dictionary<string, IMetricCollector>
             {
-                { $"{httpIteration.Id}-BreakDown", new ResponseCodeMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Id}-Duration", new DurationMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Id}-Throughput", new ThroughputMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Id}-DataTransmission", new DataTransmissionMetricCollector(httpIteration, _logger, _runtimeOperationIdProvider) }
+                { $"{httpIteration.Id}-BreakDown", new ResponseCodeMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Id}-Duration", new DurationMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Id}-Throughput", new ThroughputMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Id}-DataTransmission", new DataTransmissionMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) }
             };
         }
 
         public void Monitor(HttpIteration httpIteration, string executionId)
         {
-            var monitoredIteration = _monitoredIterationsRepository.MonitoredIterations.GetOrAdd(httpIteration, iteration =>
+           bool iterationRegistered = _monitoredIterationsRepository.MonitoredIterations.TryGetValue(httpIteration, out MonitoredHttpIteration monitoredIteration);
+            if (!iterationRegistered)
             {
-                var metrics = CreateMetricCollectors(iteration);
-                return new MonitoredHttpIteration(iteration, metrics);
-            });
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Monitoring can't start. iteration {httpIteration.Name} has not been registered yet.", LPSLoggingLevel.Error);
+                return;
+            }
 
             lock (monitoredIteration.ExecutionIds)
             {

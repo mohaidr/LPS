@@ -17,11 +17,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
         readonly ResponseMetricEventSource _eventSource;
 
-        internal ResponseCodeMetricCollector(HttpIteration httpIteration, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
+        internal ResponseCodeMetricCollector(HttpIteration httpIteration, string roundName, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _httpIteration = httpIteration;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new ProtectedResponseCodeDimensionSet(_httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
+            _dimensionSet = new ProtectedResponseCodeDimensionSet(roundName, _httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
@@ -64,9 +64,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class ProtectedResponseCodeDimensionSet : ResponseCodeDimensionSet
         {
-            public ProtectedResponseCodeDimensionSet(string name, string httpMethod, string url, string httpVersion)
+            public ProtectedResponseCodeDimensionSet(string roundName, string iterationName, string httpMethod, string url, string httpVersion)
             {
-                IterationName = name;
+                RoundName = roundName;
+                IterationName = iterationName;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -106,7 +107,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _responseSummaries = new ConcurrentBag<ResponseSummary>();
         }
-
+        public string RoundName { get; protected set; }
         public DateTime TimeStamp { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }

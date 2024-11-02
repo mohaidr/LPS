@@ -71,7 +71,6 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 return false;
             }
         }
-
         public async Task<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse lpsResponse, CancellationToken token)
         {
             try

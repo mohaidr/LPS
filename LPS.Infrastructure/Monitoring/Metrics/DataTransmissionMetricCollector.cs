@@ -11,6 +11,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class DataTransmissionMetricCollector : BaseMetricCollector, IDataTransmissionMetricCollector
     {
         private SpinLock _spinLock = new();
+        private readonly string _roundName;
         private double _totalDataSent = 0;
         private double _totalDataReceived = 0;
         private int _dataSentCount = 0;
@@ -19,11 +20,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private Timer _timer;
         readonly Stopwatch _dataTransmissionWatch;
 
-        internal DataTransmissionMetricCollector(HttpIteration httpIteration, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        internal DataTransmissionMetricCollector(HttpIteration httpIteration, string roundName, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             : base(httpIteration, logger, runtimeOperationIdProvider)
         {
+            _roundName = roundName;
             _httpIteration = httpIteration;
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(httpIteration.Name, httpIteration.RequestProfile.HttpMethod, httpIteration.RequestProfile.URL, httpIteration.RequestProfile.HttpVersion);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(_roundName, httpIteration.Name, httpIteration.RequestProfile.HttpMethod, httpIteration.RequestProfile.URL, httpIteration.RequestProfile.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _dataTransmissionWatch = new Stopwatch();
@@ -142,9 +144,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class LPSDurationMetricDimensionSetProtected : LPSDataTransmissionMetricDimensionSet
         {
-            public LPSDurationMetricDimensionSetProtected(string name, string httpMethod, string url, string httpVersion)
+            public LPSDurationMetricDimensionSetProtected(string roundName, string iterationName, string httpMethod, string url, string httpVersion)
             {
-                IterationName = name;
+                RoundName = roundName;
+                IterationName = iterationName;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -180,10 +183,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class LPSDataTransmissionMetricDimensionSet : IDimensionSet
     {
-        [JsonIgnore]
-        public bool StopUpdate { get; set; }
+
         public DateTime TimeStamp { get; protected set; }
         public double TimeElapsedInMilliseconds { get; protected set; }
+        public string RoundName { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }

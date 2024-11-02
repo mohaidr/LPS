@@ -26,11 +26,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly LPSDurationMetricDimensionSetProtected _dimensionSet;
         readonly LongHistogram _histogram;
         readonly ResponseMetricEventSource _eventSource;
-        internal DurationMetricCollector(HttpIteration httpRun, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base (httpRun, logger, runtimeOperationIdProvider)
+        internal DurationMetricCollector(HttpIteration httpIteration, string roundName, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base (httpIteration, logger, runtimeOperationIdProvider)
         {
-            _httpIteration = httpRun;
+            _httpIteration = httpIteration;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(httpRun.Name, httpRun.RequestProfile.HttpMethod, httpRun.RequestProfile.URL, httpRun.RequestProfile.HttpVersion);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(roundName, httpIteration.Name, httpIteration.RequestProfile.HttpMethod, httpIteration.RequestProfile.URL, httpIteration.RequestProfile.HttpVersion);
             _histogram = new LongHistogram(1, 1000000, 3);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -69,8 +69,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class LPSDurationMetricDimensionSetProtected : LPSDurationMetricDimensionSet
         {
-            public LPSDurationMetricDimensionSetProtected(string name, string httpMethod, string url, string httpVersion) {
-                IterationName = name;
+            public LPSDurationMetricDimensionSetProtected(string roundName, string iterationName, string httpMethod, string url, string httpVersion) {
+                RoundName = roundName;
+                IterationName = iterationName;
                 HttpMethod = httpMethod;
                 URL = url;
                 HttpVersion = httpVersion;
@@ -94,6 +95,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class LPSDurationMetricDimensionSet: IDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
+        public string RoundName { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }
