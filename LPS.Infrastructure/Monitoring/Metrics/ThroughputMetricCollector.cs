@@ -172,7 +172,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 HttpVersion = httpVersion;
             }
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int activeRequestsCount, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
+            public void Update(int activeRequestsCount, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInMilliSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
             {
                 if (!StopUpdate)
                 {
@@ -181,7 +181,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     this.ActiveRequestsCount = activeRequestsCount;
                     this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;
                     this.FailedRequestsCount = failedRequestsCount.Equals(default) ? this.FailedRequestsCount : failedRequestsCount;
-                    this.TimeElapsedInSeconds = timeElapsedInSeconds.Equals(default) ? this.TimeElapsedInSeconds : timeElapsedInSeconds;
+                    this.TimeElapsedInMilliseconds = timeElapsedInMilliSeconds.Equals(default) ? this.TimeElapsedInMilliseconds : timeElapsedInMilliSeconds;
                     this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
                     this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
                 }
@@ -221,6 +221,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class ThroughputDimensionSet : IDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
+        public double TimeElapsedInMilliseconds { get; protected set; }
+        public RequestsRate RequestsRate { get; protected set; }
+        public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }
@@ -229,8 +232,5 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public int ActiveRequestsCount { get; protected set; }
         public int SuccessfulRequestCount { get; protected set; }
         public int FailedRequestsCount { get; protected set; }
-        public double TimeElapsedInSeconds { get; protected set; }
-        public RequestsRate RequestsRate { get; protected set; }
-        public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
     }
 }
