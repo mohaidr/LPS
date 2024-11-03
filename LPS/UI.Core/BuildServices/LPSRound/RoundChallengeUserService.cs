@@ -30,9 +30,10 @@ namespace LPS.UI.Core.Build.Services
             AnsiConsole.MarkupLine("[underline bold blue]Create a Test Round:[/]");
             while (true)
             {
-                if (!_validator.Validate(nameof(Command.Name)))
+                if (!_validator.Validate(nameof(Command.Name)) || !_validator.Validate(nameof(Command.Iterations)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.Name));
+                    _validator.PrintValidationErrors(nameof(Command.Iterations));
                     _command.Name = AnsiConsole.Ask<string>("What's your [green]'Round Name'[/]?");
                     continue;
                 }

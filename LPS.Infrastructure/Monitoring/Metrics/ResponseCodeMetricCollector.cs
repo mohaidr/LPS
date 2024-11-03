@@ -21,7 +21,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpIteration = httpIteration;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new ProtectedResponseCodeDimensionSet(roundName, _httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
+            _dimensionSet = new ProtectedResponseCodeDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
@@ -64,8 +64,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class ProtectedResponseCodeDimensionSet : ResponseCodeDimensionSet
         {
-            public ProtectedResponseCodeDimensionSet(string roundName, string iterationName, string httpMethod, string url, string httpVersion)
+            public ProtectedResponseCodeDimensionSet(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
+                IterationId = iterationId;
                 RoundName = roundName;
                 IterationName = iterationName;
                 HttpMethod = httpMethod;
@@ -109,6 +110,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
         public string RoundName { get; protected set; }
         public DateTime TimeStamp { get; protected set; }
+        public Guid IterationId { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }

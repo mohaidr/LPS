@@ -30,6 +30,7 @@ namespace LPS.Controllers
         // MetricData class extended to hold Data Transmission metrics
         private class MetricData
         {
+            public Guid IterationId { get; set; }
             public string Endpoint { get; set; }
             public string ExecutionStatus { get; set; }
             public object ResponseBreakDownMetrics { get; set; }
@@ -88,20 +89,21 @@ namespace LPS.Controllers
                 foreach (var metric in metrics)
                 {
                     var dimensionSet = await ((IMetricCollector)metric).GetDimensionSetAsync();
-                    var endPointDetails = GetEndPointDetails(dimensionSet);
-                    if (endPointDetails == null)
+                    var iteraionId = GetIterationId(dimensionSet);
+                    if (iteraionId == null)
                         continue; // Skip metrics where endpoint details are not applicable or available
 
                     var statusList = _httpRunCommandStatusMonitor?.GetAllStatuses(((IMetricCollector)metric).HttpIteration);
                     string status = statusList != null ? DetermineOverallStatus(statusList) : ExecutionStatus.Unkown.ToString();
 
-                    var metricData = metricsList.FirstOrDefault(m => m.Endpoint == endPointDetails);
+                    var metricData = metricsList.FirstOrDefault(m => m.IterationId == iteraionId);
                     if (metricData == null)
                     {
                         metricData = new MetricData
                         {
                             ExecutionStatus = status,
-                            Endpoint = endPointDetails
+                            IterationId = iteraionId.Value,
+                            Endpoint = GetEndPointDetails(dimensionSet) ?? string.Empty
                         };
                         metricsList.Add(metricData);
                     }
@@ -129,6 +131,18 @@ namespace LPS.Controllers
             }
 
             // Define a local function to safely obtain endpoint details from a metric dimension set
+            Guid? GetIterationId(IDimensionSet dimensionSet)
+            {
+                return dimensionSet switch
+                {
+                    LPSDurationMetricDimensionSet durationSet => durationSet.IterationId,
+                    ResponseCodeDimensionSet responseSet => responseSet.IterationId,
+                    ThroughputDimensionSet connectionSet => connectionSet.IterationId,
+                    LPSDataTransmissionMetricDimensionSet dataTransmissionSet => dataTransmissionSet.IterationId,  // New case for DataTransmission
+                    _ => null // or a default string if suitable
+                };
+            }
+
             string? GetEndPointDetails(IDimensionSet dimensionSet)
             {
                 return dimensionSet switch

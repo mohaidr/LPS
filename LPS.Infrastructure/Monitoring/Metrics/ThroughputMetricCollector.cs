@@ -28,7 +28,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public ThroughputMetricCollector(HttpIteration httpIteration, string roundName, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _httpIteration = httpIteration;
-            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
+            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.RequestProfile.HttpMethod, _httpIteration.RequestProfile.URL, _httpIteration.RequestProfile.HttpVersion);
             _eventSource = RequestEventSource.GetInstance(_httpIteration);
             _throughputWatch = new Stopwatch();
             _logger = logger;
@@ -164,8 +164,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             [JsonIgnore]
             public bool StopUpdate { get; set; }
-            public ProtectedConnectionDimensionSet(string roundName, string iterationName, string httpMethod, string url, string httpVersion)
+            public ProtectedConnectionDimensionSet(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
+                IterationId = iterationId;
                 RoundName = roundName;
                 IterationName = iterationName;
                 HttpMethod = httpMethod;
@@ -226,6 +227,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
         public string RoundName { get; protected set; }
+        public Guid IterationId { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }

@@ -31,9 +31,10 @@ namespace LPS.UI.Core.Build.Services
             AnsiConsole.MarkupLine("[underline bold blue]Create a Plan:[/]");
             while (true)
             {
-                if (!_validator.Validate(nameof(Command.Name)))
+                if (!_validator.Validate(nameof(Command.Name)) || !_validator.Validate(nameof(Command.Rounds)))
                 {
                     _validator.PrintValidationErrors(nameof(Command.Name));
+                    _validator.PrintValidationErrors(nameof(Command.Rounds));
                     _command.Name = AnsiConsole.Ask<string>("What's your [green]'Plan Name'[/]?");
                     continue;
                 }

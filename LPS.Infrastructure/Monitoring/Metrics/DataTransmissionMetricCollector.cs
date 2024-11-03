@@ -25,11 +25,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _roundName = roundName;
             _httpIteration = httpIteration;
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(_roundName, httpIteration.Name, httpIteration.RequestProfile.HttpMethod, httpIteration.RequestProfile.URL, httpIteration.RequestProfile.HttpVersion);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(_roundName, httpIteration.Id, httpIteration.Name, httpIteration.RequestProfile.HttpMethod, httpIteration.RequestProfile.URL, httpIteration.RequestProfile.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _dataTransmissionWatch = new Stopwatch();
-
         }
 
         protected override IDimensionSet DimensionSet => _dimensionSet;
@@ -144,9 +143,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private class LPSDurationMetricDimensionSetProtected : LPSDataTransmissionMetricDimensionSet
         {
-            public LPSDurationMetricDimensionSetProtected(string roundName, string iterationName, string httpMethod, string url, string httpVersion)
+            public LPSDurationMetricDimensionSetProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
                 RoundName = roundName;
+                IterationId = iterationId;
                 IterationName = iterationName;
                 HttpMethod = httpMethod;
                 URL = url;
@@ -187,6 +187,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public DateTime TimeStamp { get; protected set; }
         public double TimeElapsedInMilliseconds { get; protected set; }
         public string RoundName { get; protected set; }
+        public Guid IterationId { get; protected set; }
         public string IterationName { get; protected set; }
         public string URL { get; protected set; }
         public string HttpMethod { get; protected set; }

@@ -22,6 +22,10 @@ namespace LPS.UI.Core.LPSValidators
             .WithMessage("The 'Name' does not accept special charachters")
             .Length(1, 60)
             .WithMessage("The 'Name' should be between 1 and 60 characters");
+             
+            RuleFor(command=> command.Iterations)
+            .Must(HaveUniqueRoundNames)
+            .WithMessage("The Iteration 'Name' must be unique.");
 
             RuleFor(command => command.StartupDelay)
             .GreaterThanOrEqualTo(0)
@@ -44,7 +48,14 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(command => command.RunInParallel)
             .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
         }
+        private bool HaveUniqueRoundNames(IList<HttpIteration.SetupCommand> iterations)
+        {
+            if (iterations == null) return true;
 
+            // Check for duplicate names in the provided rounds list
+            var iterationsNames = iterations.Select(iteration => iteration.Name).ToList();
+            return iterationsNames.Count == iterationsNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        }
         public override Round.SetupCommand Command { get { return _command; } }
     }
 }

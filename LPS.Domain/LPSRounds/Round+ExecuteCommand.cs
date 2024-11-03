@@ -83,6 +83,7 @@ namespace LPS.Domain
                 {
                     await Task.Delay(TimeSpan.FromSeconds(this.StartupDelay), _cts.Token);
                 }
+
                 List<Task> awaitableTasks = new();
                 #region Loggin Round Details
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Details", LPSLoggingLevel.Verbose, _cts.Token));

@@ -56,10 +56,10 @@ namespace LPS.UI.Core
                         var queryParams = $"refreshrate={_dashboardConfig.Value?.RefreshRate ?? 5}";
                         Host.Dashboard.Start(port, queryParams);
                     }
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
                     await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
                         .ExecuteAsync(plan);
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
                 }
             }
             finally 

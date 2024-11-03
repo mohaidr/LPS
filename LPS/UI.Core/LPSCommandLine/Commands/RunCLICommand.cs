@@ -95,14 +95,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                         {
                                             iterationEntity.SetHttpRequestProfile(requestProfile);
                                             roundEntity.AddIteration(iterationEntity);
-                                            plan.AddRound(roundEntity);
                                         }
                                     }
                                 }
+                                plan.AddRound(roundEntity);
                             }
                         }
                     }
-
                     if (plan.GetReadOnlyRounds().Any())
                     {
                         await new LPSManager(
