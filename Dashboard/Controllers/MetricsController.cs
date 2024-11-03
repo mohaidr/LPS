@@ -31,6 +31,7 @@ namespace LPS.Controllers
         private class MetricData
         {
             public Guid IterationId { get; set; }
+            public string RoundName { get; set; }
             public string Endpoint { get; set; }
             public string ExecutionStatus { get; set; }
             public object ResponseBreakDownMetrics { get; set; }
@@ -89,21 +90,19 @@ namespace LPS.Controllers
                 foreach (var metric in metrics)
                 {
                     var dimensionSet = await ((IMetricCollector)metric).GetDimensionSetAsync();
-                    var iteraionId = GetIterationId(dimensionSet);
-                    if (iteraionId == null)
-                        continue; // Skip metrics where endpoint details are not applicable or available
 
                     var statusList = _httpRunCommandStatusMonitor?.GetAllStatuses(((IMetricCollector)metric).HttpIteration);
                     string status = statusList != null ? DetermineOverallStatus(statusList) : ExecutionStatus.Unkown.ToString();
 
-                    var metricData = metricsList.FirstOrDefault(m => m.IterationId == iteraionId);
+                    var metricData = metricsList.FirstOrDefault(m => m.IterationId == ((IHttpDimensionSet)dimensionSet).IterationId);
                     if (metricData == null)
                     {
                         metricData = new MetricData
                         {
                             ExecutionStatus = status,
-                            IterationId = iteraionId.Value,
-                            Endpoint = GetEndPointDetails(dimensionSet) ?? string.Empty
+                            RoundName = ((IHttpDimensionSet)dimensionSet).RoundName,
+                            IterationId = ((IHttpDimensionSet)dimensionSet).IterationId,
+                            Endpoint = $"{((IHttpDimensionSet)dimensionSet).IterationName} {((IHttpDimensionSet)dimensionSet).URL} HTTP/{((IHttpDimensionSet)dimensionSet).HttpVersion}"
                         };
                         metricsList.Add(metricData);
                     }
@@ -130,30 +129,7 @@ namespace LPS.Controllers
                 }
             }
 
-            // Define a local function to safely obtain endpoint details from a metric dimension set
-            Guid? GetIterationId(IDimensionSet dimensionSet)
-            {
-                return dimensionSet switch
-                {
-                    LPSDurationMetricDimensionSet durationSet => durationSet.IterationId,
-                    ResponseCodeDimensionSet responseSet => responseSet.IterationId,
-                    ThroughputDimensionSet connectionSet => connectionSet.IterationId,
-                    LPSDataTransmissionMetricDimensionSet dataTransmissionSet => dataTransmissionSet.IterationId,  // New case for DataTransmission
-                    _ => null // or a default string if suitable
-                };
-            }
 
-            string? GetEndPointDetails(IDimensionSet dimensionSet)
-            {
-                return dimensionSet switch
-                {
-                    LPSDurationMetricDimensionSet durationSet => $"{durationSet.IterationName} {durationSet.HttpMethod} {durationSet.URL} HTTP/{durationSet.HttpVersion}",
-                    ResponseCodeDimensionSet responseSet => $"{responseSet.IterationName} {responseSet.HttpMethod} {responseSet.URL} HTTP/{responseSet.HttpVersion}",
-                    ThroughputDimensionSet connectionSet => $"{connectionSet.IterationName} {connectionSet.HttpMethod} {connectionSet.URL} HTTP/{connectionSet.HttpVersion}",
-                    LPSDataTransmissionMetricDimensionSet dataTransmissionSet => $"{dataTransmissionSet.IterationName} {dataTransmissionSet.HttpMethod} {dataTransmissionSet.URL} HTTP/{dataTransmissionSet.HttpVersion}",  // New case for DataTransmission
-                    _ => null // or a default string if suitable
-                };
-            }
         }
 
         private static string DetermineOverallStatus(List<ExecutionStatus> statuses)

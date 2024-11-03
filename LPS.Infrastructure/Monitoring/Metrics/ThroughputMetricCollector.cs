@@ -220,7 +220,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return $"RequestsRate: Every = {Every}, Value = {Value}";
         }
     }
-    public class ThroughputDimensionSet : IDimensionSet
+    public class ThroughputDimensionSet : IHttpDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
         public double TimeElapsedInMilliseconds { get; protected set; }

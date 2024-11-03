@@ -93,7 +93,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public class LPSDurationMetricDimensionSet: IDimensionSet
+    public class LPSDurationMetricDimensionSet: IHttpDimensionSet
     {
         public DateTime TimeStamp { get; protected set; }
         public string RoundName { get; protected set; }

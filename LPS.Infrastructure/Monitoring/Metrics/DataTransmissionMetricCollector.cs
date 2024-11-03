@@ -181,7 +181,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public class LPSDataTransmissionMetricDimensionSet : IDimensionSet
+    public class LPSDataTransmissionMetricDimensionSet : IHttpDimensionSet
     {
 
         public DateTime TimeStamp { get; protected set; }

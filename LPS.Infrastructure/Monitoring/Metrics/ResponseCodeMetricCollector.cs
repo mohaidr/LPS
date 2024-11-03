@@ -101,7 +101,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public string HttpStatusReason { get; private set; } = httpStatusReason;
         public int Count { get; set; } = count;
     }
-    public class ResponseCodeDimensionSet : IDimensionSet
+    public class ResponseCodeDimensionSet : IHttpDimensionSet
     {
 
         public ResponseCodeDimensionSet()
