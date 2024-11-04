@@ -222,15 +222,22 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     }
     public class ThroughputDimensionSet : IHttpDimensionSet
     {
+        [JsonIgnore]
         public DateTime TimeStamp { get; protected set; }
         public double TimeElapsedInMilliseconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
+        [JsonIgnore]
         public string RoundName { get; protected set; }
+        [JsonIgnore]
         public Guid IterationId { get; protected set; }
+        [JsonIgnore]
         public string IterationName { get; protected set; }
+        [JsonIgnore]
         public string URL { get; protected set; }
+        [JsonIgnore]
         public string HttpMethod { get; protected set; }
+        [JsonIgnore]
         public string HttpVersion { get; protected set; }
         public int RequestsCount { get; protected set; }
         public int ActiveRequestsCount { get; protected set; }

@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
+using HdrHistogram;
 
 namespace LPS.Controllers
 {
@@ -30,8 +31,13 @@ namespace LPS.Controllers
         // MetricData class extended to hold Data Transmission metrics
         private class MetricData
         {
-            public Guid IterationId { get; set; }
+            public DateTime TimeStamp { get; set; }
+            public string URL { get; set; }
+            public string HttpMethod { get; set; }
+            public string HttpVersion { get; set; }
             public string RoundName { get; set; }
+            public Guid IterationId { get; set; }
+            public string IterationName { get; set; }
             public string Endpoint { get; set; }
             public string ExecutionStatus { get; set; }
             public object ResponseBreakDownMetrics { get; set; }
@@ -100,8 +106,14 @@ namespace LPS.Controllers
                         metricData = new MetricData
                         {
                             ExecutionStatus = status,
+                            TimeStamp = ((IHttpDimensionSet)dimensionSet).TimeStamp,
                             RoundName = ((IHttpDimensionSet)dimensionSet).RoundName,
                             IterationId = ((IHttpDimensionSet)dimensionSet).IterationId,
+                            IterationName = ((IHttpDimensionSet)dimensionSet).IterationName,
+                            URL = ((IHttpDimensionSet)dimensionSet).URL,
+                            HttpMethod = ((IHttpDimensionSet)dimensionSet).HttpMethod,
+                            HttpVersion = ((IHttpDimensionSet)dimensionSet).HttpVersion,
+
                             Endpoint = $"{((IHttpDimensionSet)dimensionSet).IterationName} {((IHttpDimensionSet)dimensionSet).URL} HTTP/{((IHttpDimensionSet)dimensionSet).HttpVersion}"
                         };
                         metricsList.Add(metricData);
@@ -128,8 +140,6 @@ namespace LPS.Controllers
                     }
                 }
             }
-
-
         }
 
         private static string DetermineOverallStatus(List<ExecutionStatus> statuses)

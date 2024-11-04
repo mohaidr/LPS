@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json.Serialization;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
@@ -108,14 +109,20 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _responseSummaries = new ConcurrentBag<ResponseSummary>();
         }
+        [JsonIgnore]
         public string RoundName { get; protected set; }
+        [JsonIgnore]
         public DateTime TimeStamp { get; protected set; }
+        [JsonIgnore]
         public Guid IterationId { get; protected set; }
+        [JsonIgnore]
         public string IterationName { get; protected set; }
+        [JsonIgnore]
         public string URL { get; protected set; }
+        [JsonIgnore]
         public string HttpMethod { get; protected set; }
+        [JsonIgnore]
         public string HttpVersion { get; protected set; }
-
         protected ConcurrentBag<ResponseSummary> _responseSummaries { get; set; }
 
         public IList<ResponseSummary> ResponseSummary => _responseSummaries.ToList();

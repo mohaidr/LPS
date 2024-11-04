@@ -43,11 +43,11 @@ namespace LPS.Infrastructure.LPSClients
         public HttpClientService(IClientConfiguration<HttpRequestProfile> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsQueryService metricsQueryService,
+            ICacheService<string> memoryCacheService,
             IUrlSanitizationService urlSanitizationService = null,
             IMessageService messageService = null,
             IHttpHeadersService headersService = null,
             IMetricsService metricsService = null,
-            ICacheService<string> memoryCacheService = null,
             IResponseProcessingService responseProcessingService = null)
         {
             ArgumentNullException.ThrowIfNull(config, nameof(config));
@@ -57,10 +57,7 @@ namespace LPS.Infrastructure.LPSClients
             _memoryCacheService = memoryCacheService;
             _headersService = headersService ?? new HttpHeadersService();
             _metricsService = metricsService ?? new MetricsService(_logger, _runtimeOperationIdProvider, _metricsQueryService);
-            _memoryCacheService = memoryCacheService ?? new MemoryCacheService<string>(new MemoryCache(new MemoryCacheOptions
-            {
-                SizeLimit = 1024
-            }));
+            _memoryCacheService = memoryCacheService;
 
             _urlSanitizationService = urlSanitizationService ?? new UrlSanitizationService();
             _messageService = messageService ?? new MessageService(_headersService, _metricsService, _logger, _runtimeOperationIdProvider);

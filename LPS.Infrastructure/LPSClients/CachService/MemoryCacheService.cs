@@ -18,7 +18,7 @@ namespace LPS.Infrastructure.Caching
             return Task.FromResult(item);
         }
 
-        private SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         public async Task SetItemAsync(string key, T item, TimeSpan? duration = null)
         {

@@ -23,6 +23,8 @@ using LPS.UI.Core;
 using Dashboard.Common;
 using System.Reflection;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Caching;
+using Microsoft.Extensions.Caching.Memory;
 
 
 namespace LPS
@@ -84,6 +86,11 @@ namespace LPS
                     services.AddSingleton<CancellationTokenSource>();
                     services.AddSingleton<IConsoleLogger, ConsoleLogger>();
                     services.AddSingleton<ILogFormatter, LogFormatter>();
+                    services.AddSingleton<ICacheService<string>, MemoryCacheService<string>>();
+                    services.AddSingleton(new MemoryCache(new MemoryCacheOptions
+                    {
+                        SizeLimit = 1024
+                    }));
                     services.AddSingleton<IClientManager<HttpRequestProfile, Domain.HttpResponse, IClientService<HttpRequestProfile, Domain.HttpResponse>>, HttpClientManager>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                     services.ConfigureWritable<DashboardConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSDashboardConfiguration"), AppConstants.AppSettingsFileLocation);

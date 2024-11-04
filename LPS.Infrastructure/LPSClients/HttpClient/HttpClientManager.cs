@@ -1,7 +1,9 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
+using Microsoft.Extensions.Caching.Memory;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -16,8 +18,9 @@ using System.Threading.Tasks;
 namespace LPS.Infrastructure.LPSClients
 {
     //Refactor to queue manager if more queue functionalities are needed
-    public class HttpClientManager(ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IMetricsQueryService metricsQueryService) : IHttpClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>>
+    public class HttpClientManager(ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IMetricsQueryService metricsQueryService, ICacheService<string> memoryCache) : IHttpClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>>
     {
+        readonly ICacheService<string> _memoryCache = memoryCache;
         readonly ILogger _logger = logger;
         readonly Queue<IClientService<HttpRequestProfile, HttpResponse>> _clientsQueue = new Queue<IClientService<HttpRequestProfile, HttpResponse>>();
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -25,14 +28,14 @@ namespace LPS.Infrastructure.LPSClients
 
         public IClientService<HttpRequestProfile, HttpResponse> CreateInstance(IClientConfiguration<HttpRequestProfile> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _metricsQueryService);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _metricsQueryService, _memoryCache);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
         public void CreateAndQueueClient(IClientConfiguration<HttpRequestProfile> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _metricsQueryService);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _metricsQueryService, _memoryCache);
             _clientsQueue.Enqueue(client);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Verbose);
         }
@@ -64,7 +67,7 @@ namespace LPS.Infrastructure.LPSClients
             {
                 if (byPassQueueIfEmpty)
                 {
-                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _metricsQueryService);
+                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _metricsQueryService, _memoryCache);
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.Id} was created", LPSLoggingLevel.Information);
                     return client;
                 }

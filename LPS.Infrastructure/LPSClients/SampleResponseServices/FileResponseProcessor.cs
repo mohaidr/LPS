@@ -10,33 +10,25 @@ using System.Collections.Concurrent;
 
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
-    public class FileResponseProcessor : IResponseProcessor
+    public class FileResponseProcessor(
+        string url,
+        ICacheService<string> memoryCache,
+        ILogger logger,
+        IRuntimeOperationIdProvider runtimeOperationIdProvider,
+        IUrlSanitizationService urlSanitizationService) : IResponseProcessor
     {
-        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphoreDictionary = new ConcurrentDictionary<string, SemaphoreSlim>();
+        private static readonly ConcurrentDictionary<string, SemaphoreSlim> _semaphoreDictionary = new();
 
         private FileStream _fileStream;
-        private readonly ICacheService<string> _memoryCache;
-        private readonly ILogger _logger;
-        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly string _url;
+        private readonly ICacheService<string> _memoryCache = memoryCache;
+        private readonly ILogger _logger = logger;
+        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
+        private readonly string _url = url;
         private bool _disposed = false;
         private bool _isInitialized = false;
-        readonly IUrlSanitizationService _urlSanitizationService;
+        readonly IUrlSanitizationService _urlSanitizationService = urlSanitizationService;
         public string ResponseFilePath { get; private set; }
-
-        public FileResponseProcessor(
-            string url,
-            ICacheService<string> memoryCache,
-            ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IUrlSanitizationService urlSanitizationService)
-        {
-            _url = url;
-            _memoryCache = memoryCache;
-            _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _urlSanitizationService = urlSanitizationService;
-        }
+        readonly string _cacheKey = $"SampleResponse_{url}";
 
         /// <summary>
         /// Initializes the FileStream and updates the cache with no expiration.
@@ -44,15 +36,14 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         /// </summary>
         public async Task InitializeAsync(string fileExtension, CancellationToken token)
         {
-            string cacheKey = $"SampleResponse_{_url}";
-            var semaphore = _semaphoreDictionary.GetOrAdd(cacheKey, new SemaphoreSlim(1, 1));
+            var semaphore = _semaphoreDictionary.GetOrAdd(_cacheKey, new SemaphoreSlim(1, 1));
             bool lockAcquired = false;
             try
             {
                 await semaphore.WaitAsync(token);
                 lockAcquired = true;
 
-                if (_memoryCache.TryGetItem(cacheKey, out string responseFilePath))
+                if (_memoryCache.TryGetItem(_cacheKey, out string responseFilePath))
                 {
                     _isInitialized = false;
                     ResponseFilePath = responseFilePath;
@@ -64,7 +55,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                     _isInitialized = true;
 
                     // Sanitize the URL and prepare the file path
-                    string sanitizedUrl =_urlSanitizationService.Sanitize(_url);
+                    string sanitizedUrl = _urlSanitizationService.Sanitize(_url);
                     string directoryName = $"{sanitizedUrl}.{_runtimeOperationIdProvider.OperationId}.Resources";
                     Directory.CreateDirectory(directoryName);
                     string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
@@ -74,22 +65,20 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                     ResponseFilePath = filePath;
 
                     // Set cache with no expiration (using TimeSpan.MaxValue)
-                    await _memoryCache.SetItemAsync(cacheKey, filePath, TimeSpan.MaxValue);
+                    await _memoryCache.SetItemAsync(_cacheKey, filePath, TimeSpan.MaxValue);
                 }
             }
             catch (Exception ex)
             {
-                // Remove the semaphore entry and log the error
-                _semaphoreDictionary.TryRemove(cacheKey, out _);
-
                 await _logger.LogAsync(
                     _runtimeOperationIdProvider.OperationId,
                     $"Failed to initialize FileResponseProcessor for URL {_url}: {ex.Message}",
                     LPSLoggingLevel.Error,
                     token);
-                throw;
+
             }
-            finally {
+            finally
+            {
                 if (lockAcquired)
                 {
                     semaphore.Release();
@@ -100,13 +89,11 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         public async Task ProcessResponseChunkAsync(byte[] buffer, int offset, int count, CancellationToken token)
         {
             ObjectDisposedException.ThrowIf(_disposed, nameof(FileResponseProcessor));
-
             if (!_isInitialized)
             {
                 // No-op processor; do nothing
                 return;
             }
-
             try
             {
                 await _fileStream.WriteAsync(buffer.AsMemory(offset, count), token);
@@ -114,14 +101,12 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             catch (Exception ex)
             {
                 // On failure, remove cache entry and log the error
-                string cacheKey = $"SampleResponse_{_url}";
-                await _memoryCache.RemoveItemAsync(cacheKey);
+                await _memoryCache.RemoveItemAsync(_cacheKey);
                 await _logger.LogAsync(
                     _runtimeOperationIdProvider.OperationId,
                     $"Failed to write response chunk for URL {_url}: {ex.Message}",
                     LPSLoggingLevel.Error,
                     CancellationToken.None);
-                throw;
             }
         }
 
@@ -138,9 +123,8 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                         await _fileStream.FlushAsync();
                         await _fileStream.DisposeAsync();
 
-                        string cacheKey = $"SampleResponse_{_url}";
                         // Update cache entry with default cache duration
-                        await _memoryCache.SetItemAsync(cacheKey, _fileStream.Name);
+                        await _memoryCache.SetItemAsync(_cacheKey, _fileStream.Name);
                         await _logger.LogAsync(
                             _runtimeOperationIdProvider.OperationId,
                             $"Sample response saved for URL: {_url}",
@@ -154,13 +138,9 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                             $"Error during disposal of FileResponseProcessor for URL {_url}: {ex.Message}",
                             LPSLoggingLevel.Error,
                             CancellationToken.None);
-                        throw;
                     }
                     finally
                     {
-                        // Release the semaphore
-                        string  releaseCacheKey = $"SampleResponse_{_url}";
-                        _semaphoreDictionary.TryRemove(releaseCacheKey, out _);
                     }
                 }
             }
