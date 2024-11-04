@@ -47,11 +47,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _httpClientCommand.SetHandler((updatedClientOptions) =>
             {
                 var httpClientValidator = new HttpClientValidator();
-                HttpClientOptions clientOptions = new HttpClientOptions();
-                clientOptions.MaxConnectionsPerServer = updatedClientOptions.MaxConnectionsPerServer ?? _clientOptions.Value.MaxConnectionsPerServer;
-                clientOptions.PooledConnectionLifeTimeInSeconds = updatedClientOptions.PooledConnectionLifeTimeInSeconds ?? _clientOptions.Value.PooledConnectionLifeTimeInSeconds;
-                clientOptions.PooledConnectionIdleTimeoutInSeconds = updatedClientOptions.PooledConnectionIdleTimeoutInSeconds ?? _clientOptions.Value.PooledConnectionIdleTimeoutInSeconds;
-                clientOptions.ClientTimeoutInSeconds = updatedClientOptions.ClientTimeoutInSeconds ?? _clientOptions.Value.ClientTimeoutInSeconds;
+                HttpClientOptions clientOptions = new()
+                {
+                    MaxConnectionsPerServer = updatedClientOptions.MaxConnectionsPerServer ?? _clientOptions.Value.MaxConnectionsPerServer,
+                    PooledConnectionLifeTimeInSeconds = updatedClientOptions.PooledConnectionLifeTimeInSeconds ?? _clientOptions.Value.PooledConnectionLifeTimeInSeconds,
+                    PooledConnectionIdleTimeoutInSeconds = updatedClientOptions.PooledConnectionIdleTimeoutInSeconds ?? _clientOptions.Value.PooledConnectionIdleTimeoutInSeconds,
+                    ClientTimeoutInSeconds = updatedClientOptions.ClientTimeoutInSeconds ?? _clientOptions.Value.ClientTimeoutInSeconds
+                };
                 var validationResults = httpClientValidator.Validate(clientOptions);
 
                 if (!validationResults.IsValid)

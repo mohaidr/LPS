@@ -48,14 +48,16 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _loggerCommand.SetHandler((updateLoggerOptions) =>
             {
                 var loggerValidator = new FileLoggerValidator();
-                FileLoggerOptions fileLoggerOptions = new FileLoggerOptions();
-                // Combine the provided logger options by the command and what in the config section to validate the final object
-                fileLoggerOptions.LogFilePath = !string.IsNullOrWhiteSpace(updateLoggerOptions.LogFilePath) ? updateLoggerOptions.LogFilePath: _loggerOptions.Value.LogFilePath;
-                fileLoggerOptions.DisableFileLogging = updateLoggerOptions.DisableFileLogging?? _loggerOptions.Value.DisableFileLogging ;
-                fileLoggerOptions.LoggingLevel = updateLoggerOptions.LoggingLevel?? _loggerOptions.Value.LoggingLevel;
-                fileLoggerOptions.ConsoleLogingLevel = updateLoggerOptions.ConsoleLogingLevel ?? _loggerOptions.Value.ConsoleLogingLevel;
-                fileLoggerOptions.EnableConsoleLogging = updateLoggerOptions.EnableConsoleLogging?? _loggerOptions.Value.EnableConsoleLogging;
-                fileLoggerOptions.DisableConsoleErrorLogging = updateLoggerOptions.DisableConsoleErrorLogging ?? _loggerOptions.Value.DisableConsoleErrorLogging;
+                FileLoggerOptions fileLoggerOptions = new()
+                {
+                    // Combine the provided logger options by the command and what in the config section to validate the final object
+                    LogFilePath = !string.IsNullOrWhiteSpace(updateLoggerOptions.LogFilePath) ? updateLoggerOptions.LogFilePath : _loggerOptions.Value.LogFilePath,
+                    DisableFileLogging = updateLoggerOptions.DisableFileLogging ?? _loggerOptions.Value.DisableFileLogging,
+                    LoggingLevel = updateLoggerOptions.LoggingLevel ?? _loggerOptions.Value.LoggingLevel,
+                    ConsoleLogingLevel = updateLoggerOptions.ConsoleLogingLevel ?? _loggerOptions.Value.ConsoleLogingLevel,
+                    EnableConsoleLogging = updateLoggerOptions.EnableConsoleLogging ?? _loggerOptions.Value.EnableConsoleLogging,
+                    DisableConsoleErrorLogging = updateLoggerOptions.DisableConsoleErrorLogging ?? _loggerOptions.Value.DisableConsoleErrorLogging
+                };
                 var validationResults = loggerValidator.Validate(fileLoggerOptions);
 
                 if (!validationResults.IsValid)

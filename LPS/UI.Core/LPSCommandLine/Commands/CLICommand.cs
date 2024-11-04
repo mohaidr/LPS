@@ -17,6 +17,7 @@ using HtmlAgilityPack;
 using LPS.Domain.Domain.Common.Interfaces;
 using Microsoft.Extensions.Options;
 using FluentValidation;
+using LPS.UI.Core.Services;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -67,13 +68,12 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         public async Task ExecuteAsync(CancellationToken cancellationToken)
         {
-            _rootCliCommand.SetHandler(async (planCommand) =>
+            _rootCliCommand.SetHandler(async (planCommand, save) =>
             {
                 ValidationResult planValidationResults, roundValidationResults, iterationValidationResults, requestProfileValidationResults;
-                var planSetupCommand = new Plan.SetupCommand { Name = planCommand.Name };
+                var planSetupCommand = planCommand.Clone();
                 var roundSetupCommand = planCommand.Rounds[0].Clone();
                 var httpIterationSetupCommand = planCommand.Rounds[0].Iterations[0].Clone();
-                var lpsRequestProfileSetupCommand = planCommand.Rounds[0].Iterations[0].RequestProfile.Clone();
 
                 var planValidator = new PlanValidator(planSetupCommand);
                 planValidationResults = planValidator.Validate();
@@ -81,7 +81,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 roundValidationResults = roundValidator.Validate();
                 var iterationValidator = new IterationValidator(httpIterationSetupCommand);
                 iterationValidationResults = iterationValidator.Validate();
-                var lpsRequestProfileValidator = new RequestProfileValidator(lpsRequestProfileSetupCommand);
+                var lpsRequestProfileValidator = new RequestProfileValidator(httpIterationSetupCommand.RequestProfile);
                 requestProfileValidationResults = lpsRequestProfileValidator.Validate();
 
                 if (planValidationResults.IsValid && roundValidationResults.IsValid && iterationValidationResults.IsValid && requestProfileValidationResults.IsValid)
@@ -89,11 +89,16 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var plan = new Plan(planSetupCommand, _logger, _runtimeOperationIdProvider);
                     var testRound = new Round(roundSetupCommand, _logger, _runtimeOperationIdProvider);
                     var httpIteration = new HttpIteration(httpIterationSetupCommand, _logger, _runtimeOperationIdProvider);
-                    var requestProfile = new HttpRequestProfile(lpsRequestProfileSetupCommand, _logger, _runtimeOperationIdProvider);
+                    var requestProfile = new HttpRequestProfile(httpIterationSetupCommand.RequestProfile, _logger, _runtimeOperationIdProvider);
                     httpIteration.SetHttpRequestProfile(requestProfile);
                     testRound.AddIteration(httpIteration);
                     plan.AddRound(testRound);
                     var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _dashboardConfig, _cts);
+                    if (save)
+                    {
+                        ConfigurationService.SaveConfiguration($"{planSetupCommand.Name}.yaml", planSetupCommand);
+                        ConfigurationService.SaveConfiguration($"{planSetupCommand.Name}.json", planSetupCommand);
+                    }
                     await manager.RunAsync(plan);
                 }
                 else
@@ -103,7 +108,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     requestProfileValidationResults.PrintValidationErrors();
                 }
             },
-            new CommandBinder());
+            new CommandBinder(),
+            CommandLineOptions.LPSCommandOptions.SaveOption);
             await _rootCliCommand.InvokeAsync(_args);
         }
 

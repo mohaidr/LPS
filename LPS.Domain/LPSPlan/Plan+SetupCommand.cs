@@ -18,6 +18,7 @@ namespace LPS.Domain
             public SetupCommand()
             {
                 Rounds = [];
+                ValidationErrors = new Dictionary<string, List<string>>();
             }
             public string Name { get; set; }
             public IList<Round.SetupCommand> Rounds { get; set; }

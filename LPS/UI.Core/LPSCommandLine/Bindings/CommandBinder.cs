@@ -65,8 +65,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _startupDelayOption = startupDelayOption?? CommandLineOptions.LPSCommandOptions.StartupDelayOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
-            _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreation;
-            _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCommandOptions.RunInParallel;
+            _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreationOption;
+            _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCommandOptions.RunInParallelOption;
             _httpIterationNameOption = httpIterationNameOption ?? CommandLineOptions.LPSCommandOptions.IterationNameOption;
             _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSCommandOptions.IterationModeOption;
             _duration = duratiion ?? CommandLineOptions.LPSCommandOptions.Duration;
@@ -101,7 +101,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                         RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
                         Iterations = new List<HttpIteration.SetupCommand>()
                         {
-                            new HttpIteration.SetupCommand()
+                            new()
                             {
                                 Name = bindingContext.ParseResult.GetValueForOption(_httpIterationNameOption),
                                 Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),

@@ -49,18 +49,20 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _watchdogCommand.SetHandler((updatedWatchdogOptions) =>
             {
                 var watchdogValidator = new WatchdogValidator();
-                WatchdogOptions watchdoOptions = new WatchdogOptions();
-                //combine the configurations in the file with the provided ones by the command to validate the final object
-                watchdoOptions.MaxMemoryMB = updatedWatchdogOptions.MaxMemoryMB ?? _watchdogOptions.Value.MaxMemoryMB;
-                watchdoOptions.MaxCPUPercentage = updatedWatchdogOptions.MaxCPUPercentage ?? _watchdogOptions.Value.MaxCPUPercentage;
-                watchdoOptions.MaxConcurrentConnectionsCountPerHostName = updatedWatchdogOptions.MaxConcurrentConnectionsCountPerHostName ?? _watchdogOptions.Value.MaxConcurrentConnectionsCountPerHostName;
-                watchdoOptions.CoolDownMemoryMB = updatedWatchdogOptions.CoolDownMemoryMB ?? _watchdogOptions.Value.CoolDownMemoryMB;
-                watchdoOptions.CoolDownCPUPercentage = updatedWatchdogOptions.CoolDownCPUPercentage ?? _watchdogOptions.Value.CoolDownCPUPercentage;
-                watchdoOptions.CoolDownConcurrentConnectionsCountPerHostName = updatedWatchdogOptions.CoolDownConcurrentConnectionsCountPerHostName ?? _watchdogOptions.Value.CoolDownConcurrentConnectionsCountPerHostName;
-                watchdoOptions.CoolDownRetryTimeInSeconds = updatedWatchdogOptions.CoolDownRetryTimeInSeconds ?? _watchdogOptions.Value.CoolDownRetryTimeInSeconds;
-                watchdoOptions.SuspensionMode = updatedWatchdogOptions.SuspensionMode ?? _watchdogOptions.Value.SuspensionMode;
-                watchdoOptions.MaxCoolingPeriod = updatedWatchdogOptions.MaxCoolingPeriod ?? _watchdogOptions.Value.MaxCoolingPeriod;
-                watchdoOptions.ResumeCoolingAfter = updatedWatchdogOptions.ResumeCoolingAfter ?? _watchdogOptions.Value.ResumeCoolingAfter;
+                WatchdogOptions watchdoOptions = new()
+                {
+                    //combine the configurations in the file with the provided ones by the command to validate the final object
+                    MaxMemoryMB = updatedWatchdogOptions.MaxMemoryMB ?? _watchdogOptions.Value.MaxMemoryMB,
+                    MaxCPUPercentage = updatedWatchdogOptions.MaxCPUPercentage ?? _watchdogOptions.Value.MaxCPUPercentage,
+                    MaxConcurrentConnectionsCountPerHostName = updatedWatchdogOptions.MaxConcurrentConnectionsCountPerHostName ?? _watchdogOptions.Value.MaxConcurrentConnectionsCountPerHostName,
+                    CoolDownMemoryMB = updatedWatchdogOptions.CoolDownMemoryMB ?? _watchdogOptions.Value.CoolDownMemoryMB,
+                    CoolDownCPUPercentage = updatedWatchdogOptions.CoolDownCPUPercentage ?? _watchdogOptions.Value.CoolDownCPUPercentage,
+                    CoolDownConcurrentConnectionsCountPerHostName = updatedWatchdogOptions.CoolDownConcurrentConnectionsCountPerHostName ?? _watchdogOptions.Value.CoolDownConcurrentConnectionsCountPerHostName,
+                    CoolDownRetryTimeInSeconds = updatedWatchdogOptions.CoolDownRetryTimeInSeconds ?? _watchdogOptions.Value.CoolDownRetryTimeInSeconds,
+                    SuspensionMode = updatedWatchdogOptions.SuspensionMode ?? _watchdogOptions.Value.SuspensionMode,
+                    MaxCoolingPeriod = updatedWatchdogOptions.MaxCoolingPeriod ?? _watchdogOptions.Value.MaxCoolingPeriod,
+                    ResumeCoolingAfter = updatedWatchdogOptions.ResumeCoolingAfter ?? _watchdogOptions.Value.ResumeCoolingAfter
+                };
 
                 var validationResults = watchdogValidator.Validate(watchdoOptions);
                 if (!validationResults.IsValid)

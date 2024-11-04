@@ -55,10 +55,11 @@ namespace LPS.UI.Core.LPSCommandLine
                 PlanNameOption.AddAlias("-n");
                 RoundNameOption.AddAlias("-sd");
                 StartupDelayOption.AddAlias("-rn");
-                DelayClientCreation.AddAlias("-dcc");
+                DelayClientCreationOption.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
-                RunInParallel.AddAlias("-rip");
+                RunInParallelOption.AddAlias("-rip");
+                SaveOption.AddAlias("-s");
                 IterationNameOption.AddAlias("-in");
                 RequestCountOption.AddAlias("-rc");
                 Duration.AddAlias("-d");
@@ -79,10 +80,11 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
                 AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
-                AddCaseInsensitiveAliases(DelayClientCreation, "--delayclientcreation");
+                AddCaseInsensitiveAliases(DelayClientCreationOption, "--delayclientcreation");
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
-                AddCaseInsensitiveAliases(RunInParallel, "--runinparallel");
+                AddCaseInsensitiveAliases(RunInParallelOption, "--runinparallel");
+                AddCaseInsensitiveAliases(SaveOption, "--save");
                 AddCaseInsensitiveAliases(IterationNameOption, "--iterationname");
                 AddCaseInsensitiveAliases(RequestCountOption, "--requestcount");
                 AddCaseInsensitiveAliases(Duration, "--duration");
@@ -102,14 +104,14 @@ namespace LPS.UI.Core.LPSCommandLine
 
 
             public static Option<string> PlanNameOption { get; } = new Option<string>(
-                "--name", () => "Quick-Plan", "Plan name")
+                "--name", () => "Quick-Test-Plan", "Plan name")
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
             };
 
             public static Option<string> RoundNameOption { get; } = new Option<string>(
-                "--roundname", () => "Quick-Round", "Round name")
+                "--roundname", () => "Quick-Test-Round", "Round name")
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
@@ -132,14 +134,20 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
 
-            public static Option<bool> DelayClientCreation { get; } = new Option<bool>(
+            public static Option<bool> DelayClientCreationOption { get; } = new Option<bool>(
                 "--delayclientcreation", () => false, "Delay client creation until needed")
             {
                 IsRequired = false
             };
 
-            public static Option<bool> RunInParallel { get; } = new Option<bool>(
+            public static Option<bool> RunInParallelOption { get; } = new Option<bool>(
                 "--runinparallel", () => true, "Execute your iterations in parallel")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> SaveOption { get; } = new Option<bool>(
+                "--save", () => false, "Save the test as yaml/json file to disk")
             {
                 IsRequired = false
             };
