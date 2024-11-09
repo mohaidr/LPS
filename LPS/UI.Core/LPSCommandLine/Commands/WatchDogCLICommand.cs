@@ -19,15 +19,18 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
-    internal class WatchDogCLICommand : ICLICommand
+    internal class WatchDogCliCommand : ICliCommand
     {
         private Command _rootLpsCliCommand;
         private Command _watchdogCommand;
+        public Command Command => _watchdogCommand;
+
         private string[] _args;
         IWritableOptions<WatchdogOptions> _watchdogOptions;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public WatchDogCLICommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<WatchdogOptions> watchdogOptions, string[] args) 
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public WatchDogCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<WatchdogOptions> watchdogOptions, string[] args)
         {
             _rootLpsCliCommand = rootLpsCliCommand;
             _args = args;
@@ -43,7 +46,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootLpsCliCommand.AddCommand(_watchdogCommand);
         }
 
-        public async Task ExecuteAsync(CancellationToken cancellationToken)
+        public void SetHandler(CancellationToken cancellationToken)
         {
 
             _watchdogCommand.SetHandler((updatedWatchdogOptions) =>
@@ -88,8 +91,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     });
                 }
             }, new WatchDogBinder());
-
-            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }

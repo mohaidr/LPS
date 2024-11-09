@@ -18,15 +18,16 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
-    internal class LoggerCLICommand : ICLICommand
+    internal class LoggerCliCommand : ICliCommand
     {
         private Command _rootLpsCliCommand;
-        private Command _loggerCommand;
+        private Command _loggerCliCommand;
+        public Command Command => _loggerCliCommand;
         private string[] _args;
         IWritableOptions<FileLoggerOptions> _loggerOptions;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public LoggerCLICommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<FileLoggerOptions> loggerOptions, string[] args) 
+        public LoggerCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<FileLoggerOptions> loggerOptions, string[] args) 
         {
             _rootLpsCliCommand = rootLpsCliCommand;
             _args = args;
@@ -37,15 +38,15 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         }
         private void Setup()
         {
-            _loggerCommand = new Command("logger", "Configure the LPS logger");
-            CommandLineOptions.AddOptionsToCommand(_loggerCommand, typeof(CommandLineOptions.LPSLoggerCommandOptions));
-            _rootLpsCliCommand.AddCommand(_loggerCommand);
+            _loggerCliCommand = new Command("logger", "Configure the LPS logger");
+            CommandLineOptions.AddOptionsToCommand(_loggerCliCommand, typeof(CommandLineOptions.LPSLoggerCommandOptions));
+            _rootLpsCliCommand.AddCommand(_loggerCliCommand);
         }
 
-        public async Task ExecuteAsync(CancellationToken cancellationToken)
+        public void SetHandler(CancellationToken cancellationToken)
         {
 
-            _loggerCommand.SetHandler((updateLoggerOptions) =>
+            _loggerCliCommand.SetHandler((updateLoggerOptions) =>
             {
                 var loggerValidator = new FileLoggerValidator();
                 FileLoggerOptions fileLoggerOptions = new()
@@ -78,8 +79,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     });
                 }
             }, new LoggerBinder());
-
-            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }

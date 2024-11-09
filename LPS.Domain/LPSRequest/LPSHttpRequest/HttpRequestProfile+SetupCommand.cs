@@ -56,22 +56,20 @@ namespace LPS.Domain
                 entity?.Setup(this);
             }
 
-            public SetupCommand Clone()
+            public void Copy(SetupCommand targetCommand)
             {
-                return new SetupCommand
-                {
-                    Id = this.Id,
-                    URL = this.URL,
-                    HttpMethod = this.HttpMethod,
-                    HttpVersion = this.HttpVersion,
-                    HttpHeaders = new Dictionary<string, string>(this.HttpHeaders),
-                    Payload = this.Payload,
-                    DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources,
-                    SaveResponse = this.SaveResponse,
-                    SupportH2C = this.SupportH2C,
-                    IsValid = this.IsValid,
-                    ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
-                };
+                Console.ReadLine    ();
+                targetCommand.Id = this.Id;
+                targetCommand.URL = this.URL;
+                targetCommand.HttpMethod = this.HttpMethod;
+                targetCommand.HttpVersion = this.HttpVersion;
+                targetCommand.HttpHeaders = new Dictionary<string, string>(this.HttpHeaders);
+                targetCommand.Payload = this.Payload;
+                targetCommand.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
+                targetCommand.SaveResponse = this.SaveResponse;
+                targetCommand.SupportH2C = this.SupportH2C;
+                targetCommand.IsValid = this.IsValid;
+                targetCommand.ValidationErrors = this.ValidationErrors?.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
 

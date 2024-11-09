@@ -15,6 +15,7 @@ using LPS.Infrastructure.Monitoring.Metrics;
 using Microsoft.Extensions.Options;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.Host
 {
@@ -62,11 +63,11 @@ namespace LPS.UI.Core.Host
             }
             else
             {
-                Plan.SetupCommand planSetupCommand = new();
+                PlanDto planDto = new();
 
-                var manualBuild = new ManualBuild(new PlanValidator(planSetupCommand), _logger, _runtimeOperationIdProvider);
-                var plan = manualBuild.Build(planSetupCommand);
-                SavePlanToDisk(planSetupCommand);
+                var manualBuild = new ManualBuild(new PlanValidator(planDto), _logger, _runtimeOperationIdProvider);
+                var plan = manualBuild.Build(planDto);
+                SavePlanToDisk(planDto);
                 bool runTest = AnsiConsole.Confirm("Would you like to run your test now?");
                 if (runTest)
                 {

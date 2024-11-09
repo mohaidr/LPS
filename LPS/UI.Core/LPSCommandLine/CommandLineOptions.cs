@@ -350,13 +350,48 @@ namespace LPS.UI.Core.LPSCommandLine
             };
         }
 
+        public static class RefCommandOptions
+        {
+            static RefCommandOptions()
+            {
+                // Shortcut aliases
+                RoundNameOption.AddAlias("-rn");
+                IterationNameOption.AddAlias("-n");
+                // Add case-insensitive aliases
+                AddCaseInsensitiveAliases(RoundNameOption, "--roundName");
+                AddCaseInsensitiveAliases(IterationNameOption, "--name");
+            }
+
+            public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
+                "config", // This makes it positional
+                "Test configuration file name")
+            {
+                Arity = ArgumentArity.ExactlyOne
+            };
+
+            public static Option<string> RoundNameOption { get; } = new Option<string>(
+                "--roundname", "Round name")
+            {
+                IsRequired = true,
+                Arity = ArgumentArity.ExactlyOne
+            };
+
+            public static Option<string> IterationNameOption { get; } = new Option<string>(
+                "--name", "Iteration name")
+            {
+                IsRequired = true
+            };
+        }
+
+
         public static class LPSIterationCommandOptions
         {
             static LPSIterationCommandOptions()
             {
                 // Shortcut aliases
-                RoundName.AddAlias("-rn");
+                RoundNameOption.AddAlias("-rn");
                 IterationNameOption.AddAlias("-n");
+                GlobalOption.AddAlias("-g");
                 RequestCountOption.AddAlias("-rc");
                 Duration.AddAlias("-d");
                 BatchSize.AddAlias("-bs");
@@ -373,8 +408,9 @@ namespace LPS.UI.Core.LPSCommandLine
                 SupportH2C.AddAlias("-h2c");
 
                 // Add case-insensitive aliases
-                AddCaseInsensitiveAliases(RoundName, "--roundName");
+                AddCaseInsensitiveAliases(RoundNameOption, "--roundName");
                 AddCaseInsensitiveAliases(IterationNameOption, "--name");
+                AddCaseInsensitiveAliases(GlobalOption, "--global");
                 AddCaseInsensitiveAliases(RequestCountOption, "--requestcount");
                 AddCaseInsensitiveAliases(Duration, "--duration");
                 AddCaseInsensitiveAliases(BatchSize, "--batchsize");
@@ -399,7 +435,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
 
-            public static Option<string> RoundName { get; } = new Option<string>(
+            public static Option<string> RoundNameOption { get; } = new Option<string>(
                 "--roundname", "Round name")
             {
                 IsRequired = true,
@@ -493,6 +529,12 @@ namespace LPS.UI.Core.LPSCommandLine
 
             public static Option<string> PayloadOption { get; } = new Option<string>(
                 "--payload", "Request payload")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> GlobalOption { get; } = new Option<bool>(
+            "--global", () => false, "Save as a global iteration")
             {
                 IsRequired = false
             };

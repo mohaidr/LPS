@@ -7,7 +7,7 @@ namespace LPS.UI.Core.Services
 {
     public static class ConfigurationService
     {
-        public static Plan.SetupCommand FetchConfiguration(string configFile)
+        public static T? FetchConfiguration<T>(string configFile)
         {
             if (string.IsNullOrWhiteSpace(configFile))
             {
@@ -18,11 +18,11 @@ namespace LPS.UI.Core.Services
             {
                 if (configFile.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 {
-                    return SerializationHelper.Deserialize<Plan.SetupCommand>(File.ReadAllText(configFile));
+                    return SerializationHelper.Deserialize<T>(File.ReadAllText(configFile));
                 }
                 else if (configFile.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || configFile.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
                 {
-                    return SerializationHelper.DeserializeFromYaml<Plan.SetupCommand>(File.ReadAllText(configFile));
+                    return SerializationHelper.DeserializeFromYaml<T>(File.ReadAllText(configFile));
                 }
                 else
                 {
@@ -32,20 +32,20 @@ namespace LPS.UI.Core.Services
             catch (Exception ex)
             {
                 Console.WriteLine($"Error fetching configuration: {ex.Message}");
-                return null;
+                return default;
             }
         }
 
-        public static void SaveConfiguration(string configFile, Plan.SetupCommand setupCommand)
+        public static void SaveConfiguration<T>(string configFile, T @object)
         {
             if (string.IsNullOrWhiteSpace(configFile))
             {
                 throw new ArgumentException("Configuration file path cannot be null or empty.", nameof(configFile));
             }
 
-            if (setupCommand == null)
+            if (@object == null)
             {
-                throw new ArgumentNullException(nameof(setupCommand), "SetupCommand cannot be null.");
+                throw new ArgumentNullException(nameof(@object), "SetupCommand cannot be null.");
             }
 
             try
@@ -59,11 +59,11 @@ namespace LPS.UI.Core.Services
 
                 if (configFile.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
                 {
-                    File.WriteAllText(configFile, SerializationHelper.Serialize(setupCommand));
+                    File.WriteAllText(configFile, SerializationHelper.Serialize(@object));
                 }
                 else if (configFile.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || configFile.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
                 {
-                    File.WriteAllText(configFile, SerializationHelper.SerializeToYaml(setupCommand));
+                    File.WriteAllText(configFile, SerializationHelper.SerializeToYaml(@object));
                 }
                 else
                 {

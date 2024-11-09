@@ -43,10 +43,6 @@ namespace LPS.Domain
                 .Length(1, 60)
                 .WithMessage("The 'Name' should be between 1 and 60 characters");
 
-                RuleFor(command => command.Iterations)
-                .Must(HaveUniqueRoundNames)
-                .WithMessage("The Iteration 'Name' must be unique.");
-
                 RuleFor(command => command.StartupDelay)
                     .GreaterThanOrEqualTo(0)
                     .WithMessage("The 'StartUpDelay' must be greater than or equal to 0");
@@ -78,16 +74,6 @@ namespace LPS.Domain
                 _command.IsValid = base.Validate();
 
             }
-
-            private bool HaveUniqueRoundNames(IList<HttpIteration.SetupCommand> iterations)
-            {
-                if (iterations == null) return true;
-
-                // Check for duplicate names in the provided rounds list
-                var iterationsNames = iterations.Select(iteration => iteration.Name).ToList();
-                return iterationsNames.Count == iterationsNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
-            }
-
         }
     }
 }

@@ -41,10 +41,6 @@ namespace LPS.Domain
                     .WithMessage("The 'Name' does not accept special characters")
                     .Length(1, 60)
                     .WithMessage("The 'Name' should be between 1 and 60 characters");
-
-                RuleFor(command => command.Rounds)
-                    .Must(HaveUniqueRoundNames)
-                    .WithMessage("The Round 'Name' must be unique.");
                 #endregion
 
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
@@ -53,15 +49,6 @@ namespace LPS.Domain
                 }
 
                 _command.IsValid = base.Validate();
-            }
-
-            private bool HaveUniqueRoundNames(IList<Round.SetupCommand> rounds)
-            {
-                if (rounds == null) return true;
-
-                // Check for duplicate names in the provided rounds list
-                var roundNames = rounds.Select(round => round.Name).ToList();
-                return roundNames.Count == roundNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
             }
         }
     }

@@ -8,7 +8,7 @@ namespace LPS.UI.Common
 {
     internal interface IBaseValidator<TCommand, TEntity> where TCommand : IValidCommand<TEntity> where TEntity : IDomainEntity
     {
-        TCommand Command { get;}
+        TCommand Dto { get;}
         bool Validate (string ptoprtty);
         void ValidateAndThrow(string property);
         public void PrintValidationErrors(string property);

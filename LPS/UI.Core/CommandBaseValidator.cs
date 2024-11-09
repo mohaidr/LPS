@@ -17,7 +17,7 @@ namespace LPS.UI.Core
         where TCommand : IValidCommand<TEntity>
         where TEntity : IDomainEntity
     {
-        public abstract TCommand Command { get; }
+        public abstract TCommand Dto { get; }
 
         ValidationResult _validationResults;
 
@@ -30,17 +30,17 @@ namespace LPS.UI.Core
 
         public bool Validate(string property)
         {
-            _validationResults = Validate(Command);
-            Command.IsValid = _validationResults.IsValid;
-            Command.ValidationErrors = ValidationErrors.DeepClone(); // DeepClone to prevent any modification on the validation errors one assigned to Command.ValidationErrors
+            _validationResults = Validate(Dto);
+            Dto.IsValid = _validationResults.IsValid;
+            Dto.ValidationErrors = ValidationErrors.DeepClone(); // DeepClone to prevent any modification on the validation errors one assigned to Command.ValidationErrors
             return !_validationResults.Errors.Any(error => error.PropertyName == property);
         }
 
         public void ValidateAndThrow(string property)
         {
-            _validationResults = Validate(Command);
-            Command.IsValid = _validationResults.IsValid;
-            Command.ValidationErrors = ValidationErrors.DeepClone();
+            _validationResults = Validate(Dto);
+            Dto.IsValid = _validationResults.IsValid;
+            Dto.ValidationErrors = ValidationErrors.DeepClone();
             if (!_validationResults.Errors.Any(error => error.PropertyName == property))
             {
                 StringBuilder errorMessage = new StringBuilder("Validation failed. Details:\n");
@@ -58,7 +58,7 @@ namespace LPS.UI.Core
 
         public ValidationResult Validate()
         {
-            _validationResults = base.Validate(Command);
+            _validationResults = base.Validate(Dto);
             return _validationResults;
         }
     }

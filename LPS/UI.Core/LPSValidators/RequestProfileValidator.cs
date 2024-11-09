@@ -9,17 +9,18 @@ using FluentValidation.Results;
 using LPS.UI.Common;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class RequestProfileValidator : CommandBaseValidator<HttpRequestProfile.SetupCommand, HttpRequestProfile>
+    internal class RequestProfileValidator : CommandBaseValidator<HttpRequestProfileDto, HttpRequestProfile>
     {
 
-        readonly HttpRequestProfile.SetupCommand _command;
+        readonly HttpRequestProfileDto _requestProfileDto;
         readonly string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-        public RequestProfileValidator(HttpRequestProfile.SetupCommand command)
+        public RequestProfileValidator(HttpRequestProfileDto command)
         {
-            _command = command;
+            _requestProfileDto = command;
 
             RuleFor(command => command.HttpVersion)
                 .Must(version => version == "1.0" 
@@ -64,8 +65,8 @@ namespace LPS.UI.Core.LPSValidators
                 .When(command => 
                     !string.IsNullOrEmpty(command.URL) 
                     && command.URL.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                    && !string.IsNullOrEmpty(Command.HttpVersion)  
-                    && Command.HttpVersion.Equals("2.0"))
+                    && !string.IsNullOrEmpty(Dto.HttpVersion)  
+                    && Dto.HttpVersion.Equals("2.0"))
                 .WithMessage("'SupportH2C' must be (y) or (n)");
             
             // Enforce HTTP when SupportH2C is true
@@ -86,6 +87,6 @@ namespace LPS.UI.Core.LPSValidators
             });
         }
 
-        public override HttpRequestProfile.SetupCommand Command { get { return _command; } }
+        public override HttpRequestProfileDto Dto { get { return _requestProfileDto; } }
     }
 }

@@ -9,16 +9,17 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks.Dataflow;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class IterationValidator : CommandBaseValidator<HttpIteration.SetupCommand, HttpIteration>
+    internal class IterationValidator : CommandBaseValidator<HttpIterationDto, HttpIteration>
     {
-        HttpIteration.SetupCommand _command;
+        HttpIterationDto _iterationDto;
 
-        public IterationValidator(HttpIteration.SetupCommand command)
+        public IterationValidator(HttpIterationDto command)
         {
-            _command = command;
+            _iterationDto = command;
 
 
             RuleFor(command => command.Name)
@@ -78,6 +79,6 @@ namespace LPS.UI.Core.LPSValidators
             .When(command => command.Mode == IterationMode.DCB && command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
         }
 
-        public override HttpIteration.SetupCommand Command { get { return _command; } }
+        public override HttpIterationDto Dto { get { return _iterationDto; } }
     }
 }

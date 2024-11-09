@@ -5,15 +5,16 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FluentValidation;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class PlanValidator : CommandBaseValidator<Plan.SetupCommand, Plan>
+    internal class PlanValidator : CommandBaseValidator<PlanDto, Plan>
     {
-        Plan.SetupCommand _command;
-        public PlanValidator(Plan.SetupCommand command)
+        PlanDto _planDto;
+        public PlanValidator(PlanDto command)
         {
-            _command = command;
+            _planDto = command;
 
             RuleFor(command => command.Name)
             .NotNull().WithMessage("The 'Name' must be a non-null value")
@@ -27,7 +28,7 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(HaveUniqueRoundNames)
                 .WithMessage("The Round 'Name' must be unique.");
         }
-        private bool HaveUniqueRoundNames(IList<Round.SetupCommand> rounds)
+        private bool HaveUniqueRoundNames(IList<RoundDto> rounds)
         {
             if (rounds == null) return true;
 
@@ -35,6 +36,6 @@ namespace LPS.UI.Core.LPSValidators
             var roundNames = rounds.Select(round => round.Name).ToList();
             return roundNames.Count == roundNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
         }
-        public override Plan.SetupCommand Command { get { return _command; } }
+        public override PlanDto Dto { get { return _planDto; } }
     }
 }

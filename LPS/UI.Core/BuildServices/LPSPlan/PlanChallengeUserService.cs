@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using LPS.Domain;
+using LPS.DTOs;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
@@ -13,12 +14,12 @@ using Spectre.Console;
 namespace LPS.UI.Core.Build.Services
 {
     internal class PlanChallengeUserService(bool skipOptionalFields, 
-        Plan.SetupCommand command,
-        IBaseValidator<Plan.SetupCommand, Plan> validator) : IChallengeUserService<Plan.SetupCommand, Plan>
+        PlanDto command,
+        IBaseValidator<PlanDto, Plan> validator) : IChallengeUserService<PlanDto, Plan>
     {
-        IBaseValidator<Plan.SetupCommand, Plan> _validator = validator;
-        readonly Plan.SetupCommand _command = command;
-        public Plan.SetupCommand Command => _command;
+        IBaseValidator<PlanDto, Plan> _validator = validator;
+        readonly PlanDto _planDto = command;
+        public PlanDto Dto => _planDto;
         public bool SkipOptionalFields => _skipOptionalFields;
         private readonly bool _skipOptionalFields = skipOptionalFields;
 
@@ -31,20 +32,20 @@ namespace LPS.UI.Core.Build.Services
             AnsiConsole.MarkupLine("[underline bold blue]Create a Plan:[/]");
             while (true)
             {
-                if (!_validator.Validate(nameof(Command.Name)) || !_validator.Validate(nameof(Command.Rounds)))
+                if (!_validator.Validate(nameof(Dto.Name)) || !_validator.Validate(nameof(Dto.Rounds)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.Name));
-                    _validator.PrintValidationErrors(nameof(Command.Rounds));
-                    _command.Name = AnsiConsole.Ask<string>("What's your [green]'Plan Name'[/]?");
+                    _validator.PrintValidationErrors(nameof(Dto.Name));
+                    _validator.PrintValidationErrors(nameof(Dto.Rounds));
+                    _planDto.Name = AnsiConsole.Ask<string>("What's your [green]'Plan Name'[/]?");
                     continue;
                 }
 
-                Round.SetupCommand lpsRoundCommand = new();
-                RoundValidator validator = new(lpsRoundCommand);
-                RoundChallengeUserService lpsRoundUserService = new(SkipOptionalFields, lpsRoundCommand, validator);
+                RoundDto roundDto = new();
+                RoundValidator validator = new(roundDto);
+                RoundChallengeUserService lpsRoundUserService = new(SkipOptionalFields, roundDto, validator);
                 lpsRoundUserService.Challenge();
 
-                Command.Rounds.Add(lpsRoundCommand);
+                Dto.Rounds.Add(roundDto);
 
                 AnsiConsole.MarkupLine("[bold]Type [blue]add[/] to add a new http Round or press [blue]enter[/] [/]");
 
@@ -56,7 +57,7 @@ namespace LPS.UI.Core.Build.Services
                 break;
             }
 
-            _command.IsValid = true;
+            _planDto.IsValid = true;
         }
 
         public void ResetOptionalFields()

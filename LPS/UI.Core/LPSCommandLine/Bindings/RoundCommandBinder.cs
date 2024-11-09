@@ -7,6 +7,7 @@ using System.CommandLine;
 using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
@@ -16,7 +17,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         Option<int>? numberOfClientsOption = null,
         Option<int>? arrivalDelayOption = null,
         Option<bool>? delayClientCreationOption = null,
-        Option<bool?>? runInParallerOption = null) : BinderBase<Round.SetupCommand>
+        Option<bool?>? runInParallerOption = null) : BinderBase<RoundDto>
     {
         private readonly Option<string> _roundNameOption = roundNameOption ?? CommandLineOptions.LPSRoundCommandOptions.RoundNameOption;
         private readonly Option<int> _startupDelayOption = startupDelayOption ?? CommandLineOptions.LPSRoundCommandOptions.StartupDelayOption;
@@ -25,7 +26,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private readonly Option<bool> _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSRoundCommandOptions.DelayClientCreation;
         private readonly Option<bool?> _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSRoundCommandOptions.RunInParallel;
 
-        protected override Round.SetupCommand GetBoundValue(BindingContext bindingContext) =>
+        protected override RoundDto GetBoundValue(BindingContext bindingContext) =>
             new()
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_roundNameOption),

@@ -15,10 +15,12 @@ using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 using LPS.UI.Core.Services;
+using AutoMapper;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
-    internal class RunCLICommand : ICLICommand
+    internal class RunCliCommand : ICliCommand
     {
         readonly Command _rootLpsCliCommand;
         private string[] _args;
@@ -28,12 +30,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         Command _runCommand;
+        public Command Command => _runCommand;
         readonly IMetricsDataMonitor _lPSMonitoringEnroller;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
         readonly CancellationTokenSource _cts;
 
-        internal RunCLICommand(
+        internal RunCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
             IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
@@ -70,27 +73,27 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootLpsCliCommand.AddCommand(_runCommand);
         }
 
-        public async Task ExecuteAsync(CancellationToken cancellationToken)
+        public void SetHandler(CancellationToken cancellationToken)
         {
             _runCommand.SetHandler(async (string configFile) =>
             {
                 try
                 {
-                    Plan.SetupCommand setupCommand = ConfigurationService.FetchConfiguration(configFile);
-                    var plan = new Plan(setupCommand, _logger, _runtimeOperationIdProvider);
+                    var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                    var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider);
                     if (plan.IsValid)
                     {
-                        foreach (var roundCommand in setupCommand.Rounds)
+                        foreach (var roundDto in planDto.Rounds)
                         {
-                            var roundEntity = new Round(roundCommand, _logger, _runtimeOperationIdProvider);
+                            var roundEntity = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                             if (roundEntity.IsValid)
                             {
-                                foreach (var iterationCommand in roundCommand.Iterations)
+                                foreach (var iterationDto in roundDto.Iterations)
                                 {
-                                    var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
+                                    var iterationEntity = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
                                     if (iterationEntity.IsValid)
                                     {
-                                        var requestProfile = new HttpRequestProfile(iterationCommand.RequestProfile, _logger, _runtimeOperationIdProvider);
+                                        var requestProfile = new HttpRequestProfile(iterationDto.RequestProfile, _logger, _runtimeOperationIdProvider);
                                         if (requestProfile.IsValid)
                                         {
                                             iterationEntity.SetHttpRequestProfile(requestProfile);
@@ -98,9 +101,34 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                         }
                                     }
                                 }
+
+                                foreach (var referencedIteration in roundDto.ReferencedIterations)
+                                {
+                                    // Find the referenced iteration by name in the global iterations list
+                                    var globalIteration = planDto.Iterations.FirstOrDefault(i => i.Name == referencedIteration.Name);
+                                    if (globalIteration != null)
+                                    {
+                                        var referencedIterationEntity = new HttpIteration(globalIteration, _logger, _runtimeOperationIdProvider);
+                                        if (referencedIterationEntity.IsValid)
+                                        {
+                                            var requestProfile = new HttpRequestProfile(globalIteration.RequestProfile, _logger, _runtimeOperationIdProvider);
+                                            if (requestProfile.IsValid)
+                                            {
+                                                referencedIterationEntity.SetHttpRequestProfile(requestProfile);
+                                                roundEntity.AddIteration(referencedIterationEntity);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"Referenced iteration '{referencedIteration.Name}' not found.", LPSLoggingLevel.Warning);
+                                    }
+                                }
                                 plan.AddRound(roundEntity);
                             }
                         }
+                        
+                    
                     }
                     if (plan.GetReadOnlyRounds().Any())
                     {
@@ -122,8 +150,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     _logger.Log(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error);
                 }
             }, LPSRunCommandOptions.ConfigFileArgument);
-
-            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }

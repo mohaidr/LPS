@@ -5,15 +5,16 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FluentValidation;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class RoundValidator : CommandBaseValidator<Round.SetupCommand, Round>
+    internal class RoundValidator : CommandBaseValidator<RoundDto, Round>
     {
-        Round.SetupCommand _command;
-        public RoundValidator(Round.SetupCommand command)
+        RoundDto _roundDto;
+        public RoundValidator(RoundDto command)
         {
-            _command = command;
+            _roundDto = command;
 
             RuleFor(command => command.Name)
             .NotNull().WithMessage("The 'Name' must be a non-null value")
@@ -48,7 +49,7 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(command => command.RunInParallel)
             .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
         }
-        private bool HaveUniqueRoundNames(IList<HttpIteration.SetupCommand> iterations)
+        private bool HaveUniqueRoundNames(IList<HttpIterationDto> iterations)
         {
             if (iterations == null) return true;
 
@@ -56,6 +57,6 @@ namespace LPS.UI.Core.LPSValidators
             var iterationsNames = iterations.Select(iteration => iteration.Name).ToList();
             return iterationsNames.Count == iterationsNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
         }
-        public override Round.SetupCommand Command { get { return _command; } }
+        public override RoundDto Dto { get { return _roundDto; } }
     }
 }

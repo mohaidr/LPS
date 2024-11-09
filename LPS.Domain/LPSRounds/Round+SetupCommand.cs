@@ -12,11 +12,10 @@ namespace LPS.Domain
 
     public partial class Round
     {
-        public class SetupCommand: ICommand<Round>, IValidCommand<Round>
+        public class SetupCommand : ICommand<Round>, IValidCommand<Round>
         {
             public SetupCommand()
             {
-                Iterations = new List<HttpIteration.SetupCommand>();
                 DelayClientCreationUntilIsNeeded = false;
                 RunInParallel = false;
                 ValidationErrors = new Dictionary<string, List<string>>();
@@ -37,7 +36,7 @@ namespace LPS.Domain
             public int? ArrivalDelay { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
-            public IList<HttpIteration.SetupCommand> Iterations { get; set; }
+
             [JsonIgnore]
             [YamlIgnore]
             public bool IsValid { get; set; }
@@ -45,29 +44,24 @@ namespace LPS.Domain
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
 
-            public SetupCommand Clone()
+            public void Copy(SetupCommand targetCommand)
             {
-                return new SetupCommand
-                {
-                    Id = this.Id,
-                    Name = this.Name,
-                    StartupDelay = this.StartupDelay,
-                    NumberOfClients = this.NumberOfClients,
-                    ArrivalDelay = this.ArrivalDelay,
-                    DelayClientCreationUntilIsNeeded = this.DelayClientCreationUntilIsNeeded,
-                    RunInParallel = this.RunInParallel,
-                    Iterations = this.Iterations.Select(i => i.Clone()).ToList(), // Assuming HttpIteration.SetupCommand also has a Clone method
-                    IsValid = this.IsValid,
-                    ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
-                };
-
+                targetCommand.Id = this.Id;
+                targetCommand.Name = this.Name;
+                targetCommand.StartupDelay = this.StartupDelay;
+                targetCommand.NumberOfClients = this.NumberOfClients;
+                targetCommand.ArrivalDelay = this.ArrivalDelay;
+                targetCommand.DelayClientCreationUntilIsNeeded = this.DelayClientCreationUntilIsNeeded;
+                targetCommand.RunInParallel = this.RunInParallel;
+                targetCommand.IsValid = this.IsValid;
+                targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
 
         public void AddIteration(HttpIteration iteration)
-        { 
+        {
             if (iteration.IsValid)
-            { 
+            {
                 Iterations.Add(iteration);
             }
         }
@@ -92,7 +86,7 @@ namespace LPS.Domain
             {
                 this.Name = command.Name;
                 this.StartupDelay = command.StartupDelay;
-                this.NumberOfClients= command.NumberOfClients.Value;
+                this.NumberOfClients = command.NumberOfClients.Value;
                 this.ArrivalDelay = command.ArrivalDelay;
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
@@ -103,6 +97,6 @@ namespace LPS.Domain
                 this.IsValid = false;
                 validator.PrintValidationErrors();
             }
-        }  
+        }
     }
 }

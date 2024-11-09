@@ -2,13 +2,15 @@
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
+using System.CommandLine;
 using System.Text;
 using System.Threading;
 
 namespace LPS.UI.Common
 {
-    internal interface ICLICommand
+    internal interface ICliCommand
     {
-        Task ExecuteAsync(CancellationToken cancellationToken);
+        Command Command { get; }
+        void SetHandler(CancellationToken cancellationToken);
     }
 }

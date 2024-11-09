@@ -8,10 +8,11 @@ using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
-    public class CommandBinder : BinderBase<Plan.SetupCommand>
+    public class CommandBinder : BinderBase<PlanDto>
     {
         private Option<string> _nameOption;
         private Option<string> _roundNameOption;
@@ -84,14 +85,14 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _supportH2C = supportH2C ?? CommandLineOptions.LPSCommandOptions.SupportH2C;
         }
 
-        protected override Plan.SetupCommand GetBoundValue(BindingContext bindingContext)
+        protected override PlanDto GetBoundValue(BindingContext bindingContext)
         {
-            return new Plan.SetupCommand()
+            return new PlanDto()
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
-                Rounds = new List<Round.SetupCommand>()
+                Rounds = new List<RoundDto>()
                 {
-                    new Round.SetupCommand()
+                    new RoundDto()
                     {
                         Name = bindingContext.ParseResult.GetValueForOption(_roundNameOption),
                         StartupDelay = bindingContext.ParseResult.GetValueForOption(_startupDelayOption),
@@ -99,7 +100,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                         ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                         DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                         RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
-                        Iterations = new List<HttpIteration.SetupCommand>()
+                        Iterations = new List<HttpIterationDto>()
                         {
                             new()
                             {
@@ -110,7 +111,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                                 CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                                 BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
-                                RequestProfile = new HttpRequestProfile.SetupCommand()
+                                RequestProfile = new HttpRequestProfileDto()
                                 {
                                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
                                     HttpVersion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),

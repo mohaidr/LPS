@@ -24,7 +24,6 @@ namespace LPS.Domain
             public SetupCommand()
             {
                 MaximizeThroughput = false;
-                RequestProfile = new HttpRequestProfile.SetupCommand();
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
 
@@ -48,7 +47,6 @@ namespace LPS.Domain
             public int? BatchSize { get; set; }
             [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
             public int? CoolDownTime { get; set; }
-            public HttpRequestProfile.SetupCommand RequestProfile { get; set; } // only used to return data
 
             [JsonIgnore]
             [YamlIgnore]
@@ -58,22 +56,18 @@ namespace LPS.Domain
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
 
-            public SetupCommand Clone()
+            public void Copy(SetupCommand targetCommand)
             {
-                return new SetupCommand
-                {
-                    Id = this.Id,
-                    Name = this.Name,
-                    MaximizeThroughput = this.MaximizeThroughput,
-                    Mode = this.Mode,
-                    RequestCount = this.RequestCount,
-                    Duration = this.Duration,
-                    BatchSize = this.BatchSize,
-                    CoolDownTime = this.CoolDownTime,
-                    RequestProfile = this.RequestProfile?.Clone(), // Assuming HttpRequestProfile.SetupCommand also has a Clone method
-                    IsValid = this.IsValid,
-                    ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
-                };
+                targetCommand.Id = this.Id;
+                targetCommand.Name = this.Name;
+                targetCommand.MaximizeThroughput = this.MaximizeThroughput;
+                targetCommand.Mode = this.Mode;
+                targetCommand.RequestCount = this.RequestCount;
+                targetCommand.Duration = this.Duration;
+                targetCommand.BatchSize = this.BatchSize;
+                targetCommand.CoolDownTime = this.CoolDownTime;
+                targetCommand.IsValid = this.IsValid;
+                targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
 

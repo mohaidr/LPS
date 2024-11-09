@@ -18,48 +18,29 @@ using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 using LPS.UI.Core.LPSValidators;
 using FluentValidation.Results;
 using LPS.UI.Common.Extensions;
+using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
-    internal class CreateCLICommand : ICLICommand
+    internal class CreateCliCommand : ICliCommand
     {
         readonly Command _rootCliCommand;
-        private string[] _args;
+        private readonly string[] _args;
         readonly ILogger _logger;
-        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        readonly IClientConfiguration<HttpRequestProfile> _config;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        readonly IWatchdog _watchdog;
         Command _createCommand;
-        readonly IMetricsDataMonitor _lPSMonitoringEnroller;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
-        readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
-        readonly CancellationTokenSource _cts;
-
-        internal CreateCLICommand(
+        public Command Command => _createCommand;
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        internal CreateCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
-            IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
-            IClientConfiguration<HttpRequestProfile> config,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IWatchdog watchdog,
-            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
-            IMetricsDataMonitor lPSMonitoringEnroller,
-            IOptions<DashboardConfigurationOptions> dashboardConfig,
-            CancellationTokenSource cts,
             string[] args)
         {
             _rootCliCommand = rootCLICommandLine;
             _args = args;
             _logger = logger;
-            _httpClientManager = httpClientManager;
-            _config = config;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _watchdog = watchdog;
-            _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
-            _lPSMonitoringEnroller = lPSMonitoringEnroller;
-            _dashboardConfig = dashboardConfig;
-            _cts = cts;
             Setup();
         }
 
@@ -74,15 +55,15 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootCliCommand.AddCommand(_createCommand);
         }
 
-        public async Task ExecuteAsync(CancellationToken cancellationToken)
+        public void SetHandler(CancellationToken cancellationToken)
         {
             _createCommand.SetHandler((string configFile, string name) =>
             {
                 try
                 {
-                    Plan.SetupCommand setupCommand = new() { Name = name };
+                    PlanDto planDto = new() { Name = name };
                     ValidationResult results;
-                    var roundValidator = new PlanValidator(setupCommand);
+                    var roundValidator = new PlanValidator(planDto);
                     results = roundValidator.Validate();
                     if (!results.IsValid)
                     {
@@ -93,17 +74,17 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         if (File.Exists(configFile))
                         {
                             _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File exists, fetching configuration.", LPSLoggingLevel.Information);
-                            setupCommand = ConfigurationService.FetchConfiguration(configFile);
-                            setupCommand.Name = name;
+                            planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                            planDto.Name = name;
                         }
                         else
                         {
                             _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File does not exist, creating new setup command.", LPSLoggingLevel.Information);
 
-                            setupCommand = new Plan.SetupCommand { Name = name };
+                            planDto = new PlanDto { Name = name };
                         }
 
-                        ConfigurationService.SaveConfiguration(configFile, setupCommand);
+                        ConfigurationService.SaveConfiguration(configFile, planDto);
 
                         _logger.Log(_runtimeOperationIdProvider.OperationId, $"Configuration file '{configFile}' updated with plan name '{name}'.", LPSLoggingLevel.Information);
 
@@ -116,8 +97,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             },
             LPSCreateCommandOptions.ConfigFileArgument,
             LPSCreateCommandOptions.PlanNameOption);
-
-            await _rootCliCommand.InvokeAsync(_args);
         }
     }
 }

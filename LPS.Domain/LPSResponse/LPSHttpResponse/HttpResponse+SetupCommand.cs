@@ -52,33 +52,29 @@ namespace LPS.Domain
             }
             public HttpRequestProfile.SetupCommand LPSHttpRequestProfile { get; set; }
 
-            public SetupCommand Clone()
+            public void Copy(SetupCommand targetCommand)
             {
-                return new SetupCommand
-                {
-                    Id = this.Id,
-                    ContentType = this.ContentType,
-                    LocationToResponse = this.LocationToResponse,
-                    StatusCode = this.StatusCode,
-                    StatusMessage = this.StatusMessage,
-                    ResponseTime = this.ResponseTime,
-                    IsSuccessStatusCode = this.IsSuccessStatusCode,
-                    IsValid = this.IsValid,
-                    LPSHttpRequestProfileId = this.LPSHttpRequestProfileId,
+                targetCommand.Id = this.Id;
+                targetCommand.ContentType = this.ContentType;
+                targetCommand.LocationToResponse = this.LocationToResponse;
+                targetCommand.StatusCode = this.StatusCode;
+                targetCommand.StatusMessage = this.StatusMessage;
+                targetCommand.ResponseTime = this.ResponseTime;
+                targetCommand.IsSuccessStatusCode = this.IsSuccessStatusCode;
+                targetCommand.IsValid = this.IsValid;
+                targetCommand.LPSHttpRequestProfileId = this.LPSHttpRequestProfileId;
 
-                    // Deep copy of dictionaries
-                    ResponseContentHeaders = new Dictionary<string, string>(this.ResponseContentHeaders),
-                    ResponseHeaders = new Dictionary<string, string>(this.ResponseHeaders),
+                // Deep copy of dictionaries
+                targetCommand.ResponseContentHeaders = new Dictionary<string, string>(this.ResponseContentHeaders);
+                targetCommand.ResponseHeaders = new Dictionary<string, string>(this.ResponseHeaders);
 
-                    // Deep copy of ValidationErrors dictionary and its inner lists
-                    ValidationErrors = this.ValidationErrors.ToDictionary(
-                        entry => entry.Key,
-                        entry => new List<string>(entry.Value)
-                    ),
-
-                    // Assuming LPSHttpRequestProfile has its own Clone method
-                    LPSHttpRequestProfile = this.LPSHttpRequestProfile?.Clone()
-                };
+                // Deep copy of ValidationErrors dictionary and its inner lists
+                targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(
+                    entry => entry.Key,
+                    entry => new List<string>(entry.Value)
+                );
+                // Assuming LPSHttpRequestProfile has its own Clone method
+                this.LPSHttpRequestProfile?.Copy(targetCommand.LPSHttpRequestProfile);
             }
 
         }

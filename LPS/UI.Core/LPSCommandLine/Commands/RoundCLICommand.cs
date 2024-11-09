@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using LPS.DTOs;
 using LPS.Infrastructure.Common;
 using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
@@ -11,13 +12,14 @@ using ValidationResult = FluentValidation.Results.ValidationResult;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
-    internal class RoundCLICommand : ICLICommand
+    internal class RoundCliCommand : ICliCommand
     {
         private Command _rootCliCommand;
         private string[] _args;
         private Command _roundCommand;
+        public Command Command => _roundCommand;
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        internal RoundCLICommand(Command rootLpsCliCommand, string[] args)
+        internal RoundCliCommand(Command rootLpsCliCommand, string[] args)
         {
             _rootCliCommand = rootLpsCliCommand;
             _args = args;
@@ -34,7 +36,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootCliCommand.AddCommand(_roundCommand);
         }
 
-        public async Task ExecuteAsync(CancellationToken cancellationToken)
+        public void SetHandler(CancellationToken cancellationToken)
         {
             _roundCommand.SetHandler((configFile, round) =>
             {
@@ -47,8 +49,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 }
                 else
                 {
-                    Plan.SetupCommand setupCommand = ConfigurationService.FetchConfiguration(configFile);
-                    var selectedRound = setupCommand.Rounds.FirstOrDefault(r => r.Name == round.Name);
+                    PlanDto planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                    var selectedRound = planDto?.Rounds.FirstOrDefault(r => r.Name == round.Name);
                     if (selectedRound != null)
                     {
                         selectedRound.Name = round.Name;
@@ -60,14 +62,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     }
                     else
                     {
-                        setupCommand.Rounds.Add(round);
+                        planDto?.Rounds.Add(round);
                     }
-                    ConfigurationService.SaveConfiguration(configFile, setupCommand);
+                    ConfigurationService.SaveConfiguration(configFile, planDto);
                 }
             },
             CommandLineOptions.LPSRoundCommandOptions.ConfigFileArgument,
             new RoundCommandBinder());
-            await _rootCliCommand.InvokeAsync(_args);
         }
     }
 }

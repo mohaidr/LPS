@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using LPS.DTOs;
 using LPS.UI.Common;
 using Spectre.Console;
 using System;
@@ -6,20 +7,20 @@ using System;
 
 namespace LPS.UI.Core.Build.Services
 {
-    internal class RequestProfileChallengeUserService : IChallengeUserService<HttpRequestProfile.SetupCommand, HttpRequestProfile>
+    internal class RequestProfileChallengeUserService : IChallengeUserService<HttpRequestProfileDto, HttpRequestProfile>
     {
-        IBaseValidator<HttpRequestProfile.SetupCommand, HttpRequestProfile> _validator;
-        public RequestProfileChallengeUserService(bool skipOptionalFields, HttpRequestProfile.SetupCommand command, IBaseValidator<HttpRequestProfile.SetupCommand, HttpRequestProfile> validator)
+        IBaseValidator<HttpRequestProfileDto, HttpRequestProfile> _validator;
+        public RequestProfileChallengeUserService(bool skipOptionalFields, HttpRequestProfileDto command, IBaseValidator<HttpRequestProfileDto, HttpRequestProfile> validator)
         {
             _skipOptionalFields = skipOptionalFields;
-            _command = command;
+            _requestProfileDto = command;
             _validator = validator;
         }
         public bool SkipOptionalFields => _skipOptionalFields;
         private readonly bool _skipOptionalFields;
 
-        HttpRequestProfile.SetupCommand _command;
-        public HttpRequestProfile.SetupCommand Command { get { return _command; } set { value = _command; } }
+        HttpRequestProfileDto _requestProfileDto;
+        public HttpRequestProfileDto Dto { get { return _requestProfileDto; } set { value = _requestProfileDto; } }
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -30,42 +31,42 @@ namespace LPS.UI.Core.Build.Services
             while (true)
             {
 
-                if (!_validator.Validate(nameof(Command.HttpMethod)))
+                if (!_validator.Validate(nameof(Dto.HttpMethod)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.HttpMethod));
-                    _command.HttpMethod = AnsiConsole.Ask<string>("What is the [green]'Http Request Method'[/]?");
+                    _validator.PrintValidationErrors(nameof(Dto.HttpMethod));
+                    _requestProfileDto.HttpMethod = AnsiConsole.Ask<string>("What is the [green]'Http Request Method'[/]?");
                     continue;
                 }
 
-                if (!_validator.Validate(nameof(Command.URL)))
+                if (!_validator.Validate(nameof(Dto.URL)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.URL));
-                    _command.URL = AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
+                    _validator.PrintValidationErrors(nameof(Dto.URL));
+                    _requestProfileDto.URL = AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.HttpVersion)))
+                if (!_validator.Validate(nameof(Dto.HttpVersion)))
                 {
-                    _validator.PrintValidationErrors(nameof(_command.HttpVersion));
-                    _command.HttpVersion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
+                    _validator.PrintValidationErrors(nameof(_requestProfileDto.HttpVersion));
+                    _requestProfileDto.HttpVersion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.SupportH2C)))
+                if (!_validator.Validate(nameof(Dto.SupportH2C)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.SupportH2C));
-                    Command.SupportH2C = AnsiConsole.Confirm("Would you like to [green]'Perform'[/] Http2 over cleartext?", false);
+                    _validator.PrintValidationErrors(nameof(Dto.SupportH2C));
+                    Dto.SupportH2C = AnsiConsole.Confirm("Would you like to [green]'Perform'[/] Http2 over cleartext?", false);
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.SaveResponse)))
+                if (!_validator.Validate(nameof(Dto.SaveResponse)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.SaveResponse));
-                    Command.SaveResponse = AnsiConsole.Confirm("Would you like to [green]'Save'[/] the http responses?", false);
+                    _validator.PrintValidationErrors(nameof(Dto.SaveResponse));
+                    Dto.SaveResponse = AnsiConsole.Confirm("Would you like to [green]'Save'[/] the http responses?", false);
                     continue;
                 }
 
-                if (!_validator.Validate(nameof(Command.DownloadHtmlEmbeddedResources)))
+                if (!_validator.Validate(nameof(Dto.DownloadHtmlEmbeddedResources)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.DownloadHtmlEmbeddedResources));
-                    Command.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false);
+                    _validator.PrintValidationErrors(nameof(Dto.DownloadHtmlEmbeddedResources));
+                    Dto.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false);
                     continue;
                 }
 
@@ -73,13 +74,13 @@ namespace LPS.UI.Core.Build.Services
             }
 
             AnsiConsole.MarkupLine("Add request headers as [blue](HeaderName: HeaderValue)[/] each on a line. When finished, type C and press enter");
-            _command.HttpHeaders = InputHeaderService.Challenge();
+            _requestProfileDto.HttpHeaders = InputHeaderService.Challenge();
 
 
-            if (_command.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _command.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _command.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
+            if (_requestProfileDto.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _requestProfileDto.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _requestProfileDto.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
             {
                 AnsiConsole.WriteLine("Add payload to your http request.\n - Enter Path:[Path] to read the payload from a path file\n - URL:[URL] to read the payload from a URL \n - Or just add your payload inline");
-                _command.Payload = InputPayloadService.Challenge();
+                _requestProfileDto.Payload = InputPayloadService.Challenge();
             }
         }
 
@@ -87,9 +88,9 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.HttpVersion = string.Empty;
-                _command.DownloadHtmlEmbeddedResources = null;
-                _command.SaveResponse = null;
+                _requestProfileDto.HttpVersion = string.Empty;
+                _requestProfileDto.DownloadHtmlEmbeddedResources = null;
+                _requestProfileDto.SaveResponse = null;
             }
         }
     }

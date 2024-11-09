@@ -1,18 +1,19 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.DTOs;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
 namespace LPS.UI.Core.Build.Services
 {
-    internal class IterationChallengeUserService(bool skipOptionalFields, HttpIteration.SetupCommand command, IBaseValidator<HttpIteration.SetupCommand, HttpIteration> validator) : IChallengeUserService<HttpIteration.SetupCommand, HttpIteration>
+    internal class IterationChallengeUserService(bool skipOptionalFields, HttpIterationDto command, IBaseValidator<HttpIterationDto, HttpIteration> validator) : IChallengeUserService<HttpIterationDto, HttpIteration>
     {
-        IBaseValidator<HttpIteration.SetupCommand, HttpIteration> _validator = validator;
-        HttpIteration.SetupCommand _command = command;
+        IBaseValidator<HttpIterationDto, HttpIteration> _validator = validator;
+        HttpIterationDto _iterationDto = command;
         private bool _skipOptionalFields = skipOptionalFields;
 
         public bool SkipOptionalFields => _skipOptionalFields;
-        public HttpIteration.SetupCommand Command => _command;
+        public HttpIterationDto Dto => _iterationDto;
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -22,64 +23,64 @@ namespace LPS.UI.Core.Build.Services
             AnsiConsole.MarkupLine("[underline bold blue]Add 'HTTP Iteration' to your round:[/]");
             while (true)
             {
-                if (!_validator.Validate(nameof(Command.Name)))
+                if (!_validator.Validate(nameof(Dto.Name)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.Name));
+                    _validator.PrintValidationErrors(nameof(Dto.Name));
 
-                    _command.Name = AnsiConsole.Ask<string>("What is the [green]'Name'[/] of your [green]'HTTP Iteration'[/]?");
+                    _iterationDto.Name = AnsiConsole.Ask<string>("What is the [green]'Name'[/] of your [green]'HTTP Iteration'[/]?");
                     continue;
                 }
 
-                if (!_validator.Validate(nameof(Command.Mode)))
+                if (!_validator.Validate(nameof(Dto.Mode)))
                 {
 
                     AnsiConsole.MarkupLine("[blue]D[/] stands for duration. [blue]C[/] stands for Cool Down, [blue]R[/] stands for Request Count, [blue]B[/] stands for Batch Size");
-                    _validator.PrintValidationErrors(nameof(Command.Mode));
-                    _command.Mode = AnsiConsole.Ask<IterationMode>("At which [green]'Mode'[/] the 'HTTP RUN' should be executed?"); ;
+                    _validator.PrintValidationErrors(nameof(Dto.Mode));
+                    _iterationDto.Mode = AnsiConsole.Ask<IterationMode>("At which [green]'Mode'[/] the 'HTTP RUN' should be executed?"); ;
                     continue;
                 }
 
 
-                if (!_validator.Validate(nameof(Command.Duration)))
+                if (!_validator.Validate(nameof(Dto.Duration)))
                 {
 
-                    _validator.PrintValidationErrors(nameof(Command.Duration));
-                    _command.Duration = AnsiConsole.Ask<int>("What is the [green]'Duration' (in seconds)[/] for which each client can send requests to your endpoint?");
+                    _validator.PrintValidationErrors(nameof(Dto.Duration));
+                    _iterationDto.Duration = AnsiConsole.Ask<int>("What is the [green]'Duration' (in seconds)[/] for which each client can send requests to your endpoint?");
                     continue;
                 }
 
 
-                if (!_validator.Validate(nameof(Command.RequestCount)))
+                if (!_validator.Validate(nameof(Dto.RequestCount)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.RequestCount));
-                    _command.RequestCount = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client is supposed to send?");
+                    _validator.PrintValidationErrors(nameof(Dto.RequestCount));
+                    _iterationDto.RequestCount = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client is supposed to send?");
                     continue;
                 }
 
-                if (!_validator.Validate(nameof(Command.BatchSize)))
+                if (!_validator.Validate(nameof(Dto.BatchSize)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.BatchSize));
-                    _command.BatchSize = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client has to send in a [green]'Batch'[/]?");
+                    _validator.PrintValidationErrors(nameof(Dto.BatchSize));
+                    _iterationDto.BatchSize = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client has to send in a [green]'Batch'[/]?");
                     continue;
                 }
-                if (!_validator.Validate(nameof(Command.CoolDownTime)))
+                if (!_validator.Validate(nameof(Dto.CoolDownTime)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.CoolDownTime));
-                    _command.CoolDownTime = AnsiConsole.Ask<int>("For how [green]'Long' (in Milliseconds)[/] the client should pause before running the next batch?");
+                    _validator.PrintValidationErrors(nameof(Dto.CoolDownTime));
+                    _iterationDto.CoolDownTime = AnsiConsole.Ask<int>("For how [green]'Long' (in Milliseconds)[/] the client should pause before running the next batch?");
                     continue;
                 }
 
-                if (!_validator.Validate(nameof(Command.MaximizeThroughput)))
+                if (!_validator.Validate(nameof(Dto.MaximizeThroughput)))
                 {
-                    _validator.PrintValidationErrors(nameof(Command.MaximizeThroughput));
-                    _command.MaximizeThroughput = AnsiConsole.Confirm("Do you want to maximize the [green]throughput[/]? Maximizing the throughput will result in [yellow]higher CPU and Memory usage[/]!", false);
+                    _validator.PrintValidationErrors(nameof(Dto.MaximizeThroughput));
+                    _iterationDto.MaximizeThroughput = AnsiConsole.Confirm("Do you want to maximize the [green]throughput[/]? Maximizing the throughput will result in [yellow]higher CPU and Memory usage[/]!", false);
                     continue;
                 }
 
                 break;
             }
-            RequestProfileValidator validator = new(_command.RequestProfile);
-            RequestProfileChallengeUserService lpsRequestProfileUserService = new(SkipOptionalFields, _command.RequestProfile, validator);
+            RequestProfileValidator validator = new(_iterationDto.RequestProfile);
+            RequestProfileChallengeUserService lpsRequestProfileUserService = new(SkipOptionalFields, _iterationDto.RequestProfile, validator);
             lpsRequestProfileUserService.Challenge();
         }
 
@@ -87,7 +88,7 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _command.MaximizeThroughput = null;
+                _iterationDto.MaximizeThroughput = null;
             }
         }
     }

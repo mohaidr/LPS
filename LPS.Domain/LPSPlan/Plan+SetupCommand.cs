@@ -17,11 +17,10 @@ namespace LPS.Domain
         {
             public SetupCommand()
             {
-                Rounds = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
+
             public string Name { get; set; }
-            public IList<Round.SetupCommand> Rounds { get; set; }
 
             [JsonIgnore]
             [YamlIgnore]
@@ -39,16 +38,12 @@ namespace LPS.Domain
                 entity?.Setup(this);
             }
 
-            public SetupCommand Clone()
+            public void Copy(SetupCommand targetCommand)
             {
-                return new SetupCommand
-                {
-                    Id = this.Id,
-                    Name = this.Name,
-                    Rounds = this.Rounds.Select(r => r.Clone()).ToList(), // Assuming Round.SetupCommand also has a Clone method
-                    IsValid = this.IsValid,
-                    ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
-                };
+                targetCommand.Id = this.Id;
+                targetCommand.Name = this.Name;
+                targetCommand.IsValid = this.IsValid;
+                targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
         public void AddRound(Round round)

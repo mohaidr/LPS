@@ -17,15 +17,17 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
-    internal class HttpClientCLICommand : ICLICommand
+    internal class HttpClientCliCommand : ICliCommand
     {
         private Command _rootLpsCliCommand;
         private Command _httpClientCommand;
+        public Command Command => _httpClientCommand;
         private string[] _args;
         IWritableOptions<HttpClientOptions> _clientOptions;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public HttpClientCLICommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<HttpClientOptions> clientOptions, string[] args) 
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public HttpClientCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<HttpClientOptions> clientOptions, string[] args)
         {
             _rootLpsCliCommand = rootLpsCliCommand;
             _args = args;
@@ -41,7 +43,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootLpsCliCommand.AddCommand(_httpClientCommand);
         }
 
-        public async Task ExecuteAsync(CancellationToken cancellationToken)
+        public void SetHandler(CancellationToken cancellationToken)
         {
 
             _httpClientCommand.SetHandler((updatedClientOptions) =>
@@ -72,8 +74,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     });
                 }
             }, new HttpClientBinder());
-
-            await _rootLpsCliCommand.InvokeAsync(_args);
         }
     }
 }
