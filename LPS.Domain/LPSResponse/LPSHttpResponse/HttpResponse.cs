@@ -31,6 +31,7 @@ namespace LPS.Domain
 
         public HttpResponse(HttpResponse.SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            ArgumentNullException.ThrowIfNull(command);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);

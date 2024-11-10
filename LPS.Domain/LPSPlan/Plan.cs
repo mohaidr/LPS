@@ -30,6 +30,7 @@ namespace LPS.Domain
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            ArgumentNullException.ThrowIfNull(command);
             Rounds = new List<Round>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;

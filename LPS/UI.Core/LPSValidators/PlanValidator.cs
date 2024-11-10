@@ -27,6 +27,9 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(command => command.Rounds)
                 .Must(HaveUniqueRoundNames)
                 .WithMessage("The Round 'Name' must be unique.");
+            RuleFor(command => command.Iterations)
+               .Must(HaveUniqueIterationNames)
+               .WithMessage("The Round 'Name' must be unique.");
         }
         private bool HaveUniqueRoundNames(IList<RoundDto> rounds)
         {
@@ -35,6 +38,15 @@ namespace LPS.UI.Core.LPSValidators
             // Check for duplicate names in the provided rounds list
             var roundNames = rounds.Select(round => round.Name).ToList();
             return roundNames.Count == roundNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
+        }
+
+        private bool HaveUniqueIterationNames(IList<HttpIterationDto> iterations)
+        {
+            if (iterations == null) return true;
+
+            // Check for duplicate names in the provided rounds list
+            var iterationsNames = iterations.Select(iteration => iteration.Name).ToList();
+            return iterationsNames.Count == iterationsNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
         }
         public override PlanDto Dto { get { return _planDto; } }
     }

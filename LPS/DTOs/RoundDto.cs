@@ -1,17 +1,27 @@
 ﻿using LPS.Domain;
+using LPS.Infrastructure.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
+using YamlDotNet.Serialization;
 
 namespace LPS.DTOs
 {
     public class RoundDto : Round.SetupCommand
     {
+        public RoundDto() 
+        {
+            Iterations = [];
+            ReferencedIterations = [];
+        }
+        public override string Name { get; set; }
         public List<HttpIterationDto> Iterations { get; set; } // Inline iterations
+        [JsonPropertyName("ref")]
+        [YamlMember(Alias = "ref")]
         public List<ReferenceIterationDto> ReferencedIterations { get; set; } // Referenced iterations
-
         public void DeepCopy(out RoundDto targetDto)
         {
             targetDto = new RoundDto();
@@ -31,7 +41,7 @@ namespace LPS.DTOs
             targetDto.ReferencedIterations = ReferencedIterations?.Select(iteration =>
             {
                 var copiedIteration = new ReferenceIterationDto();
-                iteration.Copy(out copiedIteration);
+                iteration.DeepCopy(out copiedIteration);
                 return copiedIteration;
             }).ToList();
         }

@@ -32,6 +32,7 @@ namespace LPS.Domain
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            ArgumentNullException.ThrowIfNull(command);
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;

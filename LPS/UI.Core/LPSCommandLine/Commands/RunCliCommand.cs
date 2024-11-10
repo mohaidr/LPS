@@ -15,7 +15,6 @@ using YamlDotNet.Serialization.NamingConventions;
 using YamlDotNet.Serialization;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 using LPS.UI.Core.Services;
-using AutoMapper;
 using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
@@ -147,7 +146,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 }
                 catch (Exception ex)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
             }, LPSRunCommandOptions.ConfigFileArgument);
         }

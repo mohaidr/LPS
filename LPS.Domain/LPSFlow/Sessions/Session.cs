@@ -21,6 +21,7 @@ namespace LPS.Domain.LPSFlow
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            ArgumentNullException.ThrowIfNull(command);
             Id = Guid.NewGuid();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;

@@ -32,6 +32,7 @@ namespace LPS.Domain
         public Iteration(SetupCommand command, ILogger logger, 
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            ArgumentNullException.ThrowIfNull(command);
             Id = Guid.NewGuid();
             _logger = logger;            
             _runtimeOperationIdProvider = runtimeOperationIdProvider;

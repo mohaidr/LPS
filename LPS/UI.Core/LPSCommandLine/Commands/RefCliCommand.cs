@@ -47,26 +47,39 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _refCommand.SetHandler((configFile, roundName, iterationName) =>
             {
-                var plandto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
-                var globalIteration = plandto?.Iterations.FirstOrDefault(iteration => iteration.Name.Equals(iterationName, StringComparison.OrdinalIgnoreCase));
-                if (globalIteration != null)
+                try
                 {
-                    var round = plandto?.Rounds.FirstOrDefault(r => r.Name.Equals(roundName, StringComparison.OrdinalIgnoreCase));
-                    bool? iterationExists = round?.Iterations.Any(iteration => iteration.Name.Equals(iterationName, StringComparison.OrdinalIgnoreCase));
-                    if (iterationExists.HasValue && !iterationExists.Value)
+                    var plandto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                    var globalIteration = plandto?.Iterations.FirstOrDefault(iteration => iteration.Name.Equals(iterationName, StringComparison.OrdinalIgnoreCase));
+                    if (globalIteration != null)
                     {
-                        var iterationValidator = new IterationValidator(globalIteration);
-                        if (iterationValidator.Validate(nameof(globalIteration.Name)))
+                        var round = plandto?.Rounds.FirstOrDefault(r => r.Name.Equals(roundName, StringComparison.OrdinalIgnoreCase));
+                        if (round !=null)
                         {
-                            round?.ReferencedIterations.Add(new ReferenceIterationDto() { Name = globalIteration.Name });
+                            var iterationValidator = new IterationValidator(globalIteration);
+                            if (iterationValidator.Validate(nameof(globalIteration.Name)))
+                            {
+                                round?.ReferencedIterations.Add(new ReferenceIterationDto() { Name = globalIteration.Name });
+                            }
+                            else
+                            {
+                                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Invalid Iteration name {globalIteration.Name}", LPSLoggingLevel.Error);
+                                iterationValidator.PrintValidationErrors(nameof(globalIteration.Name));
+                            }
                         }
                         else {
-                            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Invalid Iteration name {globalIteration.Name}", LPSLoggingLevel.Error);
-                            iterationValidator.PrintValidationErrors(nameof(globalIteration.Name));
+                            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Round '{roundName}' does not exist", LPSLoggingLevel.Error);
                         }
                     }
+                    else {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"Global iteration '{iterationName}' does not exist", LPSLoggingLevel.Error);
+                    }
+                    ConfigurationService.SaveConfiguration(configFile, plandto);
                 }
-                ConfigurationService.SaveConfiguration(configFile, plandto);
+                catch(Exception ex) {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
+
+                }
             },
             CommandLineOptions.RefCommandOptions.ConfigFileArgument,
             CommandLineOptions.RefCommandOptions.RoundNameOption,

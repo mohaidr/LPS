@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
 using LPS.DTOs;
 using LPS.Infrastructure.Common;
 using LPS.UI.Common;
@@ -15,20 +16,23 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
     internal class RoundCliCommand : ICliCommand
     {
         private Command _rootCliCommand;
-        private string[] _args;
         private Command _roundCommand;
         public Command Command => _roundCommand;
+        ILogger _logger;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        internal RoundCliCommand(Command rootLpsCliCommand, string[] args)
+        internal RoundCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _rootCliCommand = rootLpsCliCommand;
-            _args = args;
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
             Setup();
         }
 
         private void Setup()
         {
-            _roundCommand = new Command("round", "Create a new test")  
+            _roundCommand = new Command("round", "Create a new test")
             {
                 CommandLineOptions.LPSRoundCommandOptions.ConfigFileArgument // Add ConfigFileArgument here
             };
@@ -40,31 +44,38 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _roundCommand.SetHandler((configFile, round) =>
             {
-                ValidationResult results;
-                var roundValidator = new RoundValidator(round);
-                results = roundValidator.Validate();
-                if (!results.IsValid)
+                try
                 {
-                    results.PrintValidationErrors();
-                }
-                else
-                {
-                    PlanDto planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
-                    var selectedRound = planDto?.Rounds.FirstOrDefault(r => r.Name == round.Name);
-                    if (selectedRound != null)
+                    ValidationResult results;
+                    var roundValidator = new RoundValidator(round);
+                    results = roundValidator.Validate();
+                    if (!results.IsValid)
                     {
-                        selectedRound.Name = round.Name;
-                        selectedRound.StartupDelay = round.StartupDelay;
-                        selectedRound.NumberOfClients = round.NumberOfClients;
-                        selectedRound.ArrivalDelay = round.ArrivalDelay;
-                        selectedRound.DelayClientCreationUntilIsNeeded = round.DelayClientCreationUntilIsNeeded;
-                        selectedRound.RunInParallel = round.RunInParallel;
+                        results.PrintValidationErrors();
                     }
                     else
                     {
-                        planDto?.Rounds.Add(round);
+                        PlanDto planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile) ?? new PlanDto() { Name = "Default" };
+                        var selectedRound = planDto?.Rounds.FirstOrDefault(r => r.Name == round.Name);
+                        if (selectedRound != null)
+                        {
+                            selectedRound.Name = round.Name;
+                            selectedRound.StartupDelay = round.StartupDelay;
+                            selectedRound.NumberOfClients = round.NumberOfClients;
+                            selectedRound.ArrivalDelay = round.ArrivalDelay;
+                            selectedRound.DelayClientCreationUntilIsNeeded = round.DelayClientCreationUntilIsNeeded;
+                            selectedRound.RunInParallel = round.RunInParallel;
+                        }
+                        else
+                        {
+                            planDto?.Rounds.Add(round);
+                        }
+                        ConfigurationService.SaveConfiguration(configFile, planDto);
                     }
-                    ConfigurationService.SaveConfiguration(configFile, planDto);
+                }
+                catch (Exception ex)
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
             },
             CommandLineOptions.LPSRoundCommandOptions.ConfigFileArgument,

@@ -438,7 +438,7 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<string> RoundNameOption { get; } = new Option<string>(
                 "--roundname", "Round name")
             {
-                IsRequired = true,
+                IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
             };
 

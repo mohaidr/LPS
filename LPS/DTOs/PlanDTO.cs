@@ -3,15 +3,21 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace LPS.DTOs
 {
     public class PlanDto : Plan.SetupCommand
     {
-        public IList<HttpIterationDto> Iterations { get; set; }
+        public PlanDto()
+        {
+            Iterations = [];
+            Rounds = [];
+        }
+        public override string Name { get; set; }
         public IList<RoundDto> Rounds { get; set; }
-
+        public IList<HttpIterationDto> Iterations { get; set; }
         public void DeepCopy(out PlanDto targetDto)
         {
             targetDto = new PlanDto();

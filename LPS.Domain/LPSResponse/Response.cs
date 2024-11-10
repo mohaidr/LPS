@@ -23,6 +23,7 @@ namespace LPS.Domain
 
         public Response(Response.SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            ArgumentNullException.ThrowIfNull(command);
             Id = Guid.NewGuid();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;

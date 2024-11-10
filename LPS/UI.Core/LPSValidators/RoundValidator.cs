@@ -25,7 +25,7 @@ namespace LPS.UI.Core.LPSValidators
             .WithMessage("The 'Name' should be between 1 and 60 characters");
              
             RuleFor(command=> command.Iterations)
-            .Must(HaveUniqueRoundNames)
+            .Must(HaveUniqueIterationNames)
             .WithMessage("The Iteration 'Name' must be unique.");
 
             RuleFor(command => command.StartupDelay)
@@ -49,7 +49,7 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(command => command.RunInParallel)
             .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
         }
-        private bool HaveUniqueRoundNames(IList<HttpIterationDto> iterations)
+        private bool HaveUniqueIterationNames(IList<HttpIterationDto> iterations)
         {
             if (iterations == null) return true;
 

@@ -63,6 +63,7 @@ namespace LPS.UI.Core.Services
                 }
                 else if (configFile.EndsWith(".yaml", StringComparison.OrdinalIgnoreCase) || configFile.EndsWith(".yml", StringComparison.OrdinalIgnoreCase))
                 {
+
                     File.WriteAllText(configFile, SerializationHelper.SerializeToYaml(@object));
                 }
                 else

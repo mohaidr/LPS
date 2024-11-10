@@ -9,7 +9,7 @@ namespace LPS.DTOs
 {
     public class HttpRequestProfileDto : HttpRequestProfile.SetupCommand
     {
-        public void Copy(out HttpRequestProfileDto targetDto)
+        public void DeepCopy(out HttpRequestProfileDto targetDto)
         {
             targetDto = new HttpRequestProfileDto();
             // Call base.Clone() and cast it to HttpRequestProfileDto

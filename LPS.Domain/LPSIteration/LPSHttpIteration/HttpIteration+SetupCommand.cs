@@ -36,16 +36,12 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public Guid? Id { get; set; }
-            public string Name { get; set; }
+            public virtual string Name { get; set; }
             public bool? MaximizeThroughput { get; set; }
             public IterationMode? Mode { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
             public int? RequestCount { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
             public int? Duration { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
             public int? BatchSize { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
             public int? CoolDownTime { get; set; }
 
             [JsonIgnore]

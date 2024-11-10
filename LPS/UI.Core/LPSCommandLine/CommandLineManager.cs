@@ -70,7 +70,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _rootCliCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
             _lpsCliCommand = new LpsCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _cts, _command_args);
             _lpsCreateCliCommand = new CreateCliCommand(_rootCliCommand, _logger,  _runtimeOperationIdProvider, _command_args);
-            _lpsRoundCliCommand = new RoundCliCommand(_rootCliCommand, _command_args);
+            _lpsRoundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
             _lpsIterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
             _lpsRunCliCommand = new RunCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog,_httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _cts, _command_args);
             _lpsLoggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions, _command_args);
@@ -85,7 +85,6 @@ namespace LPS.UI.Core.LPSCommandLine
             switch (joinedCommand.ToLowerInvariant())
             {
                 case string cmd when cmd.StartsWith("create"):
-                    Console.WriteLine(joinedCommand);
                     _lpsCreateCliCommand.SetHandler(cancellationToken);
                     break;
                 case string cmd when cmd.StartsWith("round"):

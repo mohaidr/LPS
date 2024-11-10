@@ -30,7 +30,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         Command _createCommand;
         public Command Command => _createCommand;
-        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         internal CreateCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
@@ -74,13 +74,12 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         if (File.Exists(configFile))
                         {
                             _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File exists, fetching configuration.", LPSLoggingLevel.Information);
-                            planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                            planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile) ?? new PlanDto() { Name = name };
                             planDto.Name = name;
                         }
                         else
                         {
                             _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File does not exist, creating new setup command.", LPSLoggingLevel.Information);
-
                             planDto = new PlanDto { Name = name };
                         }
 
@@ -92,7 +91,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 }
                 catch (Exception ex)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
             },
             LPSCreateCommandOptions.ConfigFileArgument,

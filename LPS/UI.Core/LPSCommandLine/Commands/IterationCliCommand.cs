@@ -60,33 +60,32 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         // Determine where to add the iteration based on the global and roundName options
                         if (isGlobal || isRoundNameEmpty)
                         {
-                            var existingGlobalIteration = planDto.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
+                            var existingGlobalIteration = planDto?.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
                             if (existingGlobalIteration != null)
                             {
-                                planDto.Iterations.Remove(existingGlobalIteration);
+                                planDto?.Iterations.Remove(existingGlobalIteration);
                             }
                             // Add iteration to global iterations
-                            planDto.Iterations.Add(iteration);
+                            planDto?.Iterations.Add(iteration);
                         }
 
                         if (!isRoundNameEmpty)
                         {
-                            var round = planDto.Rounds.FirstOrDefault(r => r.Name == roundName);
-
+                            var round = planDto?.Rounds.FirstOrDefault(r => r.Name == roundName);
                             if (round != null)
                             {
-                                var existingRoundIteration = round.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
-                                if (existingRoundIteration != null)
-                                {
-                                    round.Iterations.Remove(existingRoundIteration);
-                                }
                                 if (isGlobal)
                                 {
                                     // Add as a global iteration but also create a setup command in the round with the same name
-                                    round.Iterations.Add(new HttpIterationDto { Name = iteration.Name });
+                                    round.ReferencedIterations.Add(new ReferenceIterationDto { Name = iteration.Name });
                                 }
                                 else
                                 {
+                                    var existingRoundIteration = round.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
+                                    if (existingRoundIteration != null)
+                                    {
+                                        round.Iterations.Remove(existingRoundIteration);
+                                    }
                                     // Add iteration as a local iteration within the round
                                     round.Iterations.Add(iteration);
                                 }
@@ -96,12 +95,11 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                 throw new ArgumentException($"Invalid Round Name {roundName}");
                             }
                         }
-
                         ConfigurationService.SaveConfiguration(configFile, planDto);
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine(ex.Message);
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                     }
                 }
                 else

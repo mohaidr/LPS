@@ -20,7 +20,7 @@ namespace LPS.Domain
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
 
-            public string Name { get; set; }
+            public virtual string Name { get; set; }
 
             [JsonIgnore]
             [YamlIgnore]
