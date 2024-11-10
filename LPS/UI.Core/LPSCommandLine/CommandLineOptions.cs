@@ -53,8 +53,8 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 // Shortcut aliases
                 PlanNameOption.AddAlias("-n");
-                RoundNameOption.AddAlias("-sd");
-                StartupDelayOption.AddAlias("-rn");
+                RoundNameOption.AddAlias("-rn");
+                StartupDelayOption.AddAlias("-sd");
                 DelayClientCreationOption.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
@@ -247,8 +247,15 @@ namespace LPS.UI.Core.LPSCommandLine
         {
             static LPSRunCommandOptions()
             {
-
+                RoundNameOption.AddAlias("-rn");
+                AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
             }
+            public static Option<IList<string>> RoundNameOption { get; } = new Option<IList<string>>(
+            "--roundname", "Round name")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
             public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
                 "config", // This makes it positional
                 "Test configuration file name"

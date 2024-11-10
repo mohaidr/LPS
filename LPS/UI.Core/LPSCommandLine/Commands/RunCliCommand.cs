@@ -66,6 +66,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _runCommand = new Command("run", "Run existing test");
 
+            CommandLineOptions.AddOptionsToCommand(_runCommand, typeof(CommandLineOptions.LPSRunCommandOptions));
             // Add the positional argument directly to _runCommand
             _runCommand.AddArgument(LPSRunCommandOptions.ConfigFileArgument);
 
@@ -74,7 +75,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         public void SetHandler(CancellationToken cancellationToken)
         {
-            _runCommand.SetHandler(async (string configFile) =>
+            _runCommand.SetHandler(async (string configFile, IList<string> roundNames) =>
             {
                 try
                 {
@@ -82,7 +83,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider);
                     if (plan.IsValid)
                     {
-                        foreach (var roundDto in planDto.Rounds)
+                        foreach (var roundDto in planDto.Rounds.Where(round=> roundNames.Count == 0 || roundNames.Contains(round.Name)))
                         {
                             var roundEntity = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                             if (roundEntity.IsValid)
@@ -148,7 +149,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
-            }, LPSRunCommandOptions.ConfigFileArgument);
+            }, LPSRunCommandOptions.ConfigFileArgument, 
+            LPSRunCommandOptions.RoundNameOption);
         }
     }
 }
