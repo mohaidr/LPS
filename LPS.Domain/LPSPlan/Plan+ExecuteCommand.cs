@@ -99,7 +99,6 @@ namespace LPS.Domain
                         _cts);
                     await roundExecCommand.ExecuteAsync(round);
                 }
-
             }
         }
 
@@ -110,7 +109,9 @@ namespace LPS.Domain
                 foreach (var iteration in round.GetReadOnlyIterations())
                 {
                     if (iteration.Type == IterationType.Http)
+                    {
                         _lpsMetricsDataMonitor.TryRegister(round.Name, (HttpIteration)iteration);
+                    }
                 }
             }
         }
