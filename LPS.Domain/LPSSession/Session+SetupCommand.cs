@@ -1,11 +1,17 @@
-﻿using LPS.Domain.Common.Interfaces;
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
+using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
+using LPS.Domain.Common.Interfaces;
 
-namespace LPS.Domain.LPSFlow
+namespace LPS.Domain
 {
     public partial class Session
     {
@@ -22,16 +28,15 @@ namespace LPS.Domain.LPSFlow
 
             public void Execute(Session entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
+                ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
         }
 
+
         protected virtual void Setup(SetupCommand command)
         {
+
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
 
             if (command.IsValid)
@@ -44,5 +49,6 @@ namespace LPS.Domain.LPSFlow
                 validator.PrintValidationErrors();
             }
         }
+
     }
 }

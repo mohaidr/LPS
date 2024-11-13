@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients
 {
-    public class HttpClientConfiguration : ILPSHttpClientConfiguration<HttpRequestProfile>
+    public class HttpClientConfiguration : ILPSHttpClientConfiguration<HttpSession>
     {
         private readonly TimeSpan _pooledConnectionLifetime;
         private readonly TimeSpan _pooledConnectionIdleTimeout;

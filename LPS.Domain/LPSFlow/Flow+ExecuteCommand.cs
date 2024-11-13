@@ -13,13 +13,13 @@ namespace LPS.Domain.LPSFlow
 {
     public partial class Flow
     {
-        private IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
+        private IClientService<HttpSession, HttpResponse> _httpClientService;
         public class ExecuteCommand : IAsyncCommand<Flow>
         {
             private ExecutionStatus _executionStatus;
 
             public ExecutionStatus Status => _executionStatus;
-            IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
+            IClientService<HttpSession, HttpResponse> _httpClientService;
             ILogger _logger;
             IWatchdog _watchdog;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
@@ -29,7 +29,7 @@ namespace LPS.Domain.LPSFlow
             {
 
             }
-            public ExecuteCommand(IClientService<HttpRequestProfile,
+            public ExecuteCommand(IClientService<HttpSession,
                 HttpResponse> httpClientService,
                 Round.ExecuteCommand roundExecCommand,
                 ILogger logger,
@@ -59,9 +59,6 @@ namespace LPS.Domain.LPSFlow
         async public Task ExecuteAsync(ExecuteCommand command)
         {
 
-           // HttpRequestProfile.ExecuteCommand lpsRequestProfileExecCommand = new HttpRequestProfile.ExecuteCommand(this._httpClientService, command, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
-
-           //await lpsRequestProfileExecCommand.ExecuteAsync(LPSHttpRequestProfile);
         }
     }
 }

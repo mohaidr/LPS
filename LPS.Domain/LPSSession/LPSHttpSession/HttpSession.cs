@@ -8,18 +8,19 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.LPSFlow.LPSHandlers;
 
 namespace LPS.Domain
 {
 
-    public partial class HttpRequestProfile :RequestProfile, IBusinessEntity, ICloneable
+    public partial class HttpSession :Session, IBusinessEntity, ICloneable
     {
 
-        private IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
-        private HttpRequestProfile()
+        private IClientService<HttpSession, HttpResponse> _httpClientService;
+        private HttpSession()
         {
         }
-        private HttpRequestProfile(ILogger logger,
+        private HttpSession(ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
@@ -27,8 +28,8 @@ namespace LPS.Domain
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
-        public HttpRequestProfile(
-            HttpRequestProfile.SetupCommand command, 
+        public HttpSession(
+            HttpSession.SetupCommand command, 
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
@@ -56,5 +57,11 @@ namespace LPS.Domain
         public bool? SupportH2C { get; protected set; }
 
         public bool SaveResponse { get; protected set; }
+
+        public CapturHandler Captur { get; set; }
+        public StopAfterHandler StopAfter { get; set; }
+        public StopIfHandler StopAIf { get; set; }
+        public ReadHandler Read { get; set; }
+        public PauseHandler Pause { get; set; }
     }
 }

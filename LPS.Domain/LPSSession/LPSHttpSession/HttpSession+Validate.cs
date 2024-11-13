@@ -15,16 +15,16 @@ using LPS.Domain.Domain.Common.Validation;
 namespace LPS.Domain
 {
 
-    public partial class HttpRequestProfile
+    public partial class HttpSession
     {
-        public new class Validator : CommandBaseValidator<HttpRequestProfile, HttpRequestProfile.SetupCommand>
+        public new class Validator : CommandBaseValidator<HttpSession, HttpSession.SetupCommand>
         {
             ILogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            HttpRequestProfile _entity;
-            HttpRequestProfile.SetupCommand _command;
+            HttpSession _entity;
+            HttpSession.SetupCommand _command;
             private string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-            public Validator(HttpRequestProfile entity, HttpRequestProfile.SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public Validator(HttpSession entity, HttpSession.SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -111,7 +111,7 @@ namespace LPS.Domain
             }
 
             public override SetupCommand Command => _command;
-            public override HttpRequestProfile Entity => _entity;
+            public override HttpSession Entity => _entity;
         }
     }
 }

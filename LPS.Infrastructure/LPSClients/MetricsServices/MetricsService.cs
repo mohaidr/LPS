@@ -24,7 +24,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
         private async Task QueryMetricsAsync(Guid requestId)
         {
             _metrics.TryAdd(requestId.ToString(), 
-                await _metricsQueryService.GetAsync(metric => metric.HttpIteration.RequestProfile.Id == requestId));
+                await _metricsQueryService.GetAsync(metric => metric.HttpIteration.Session.Id == requestId));
         }
         private async Task<IEnumerable<IMetricCollector>> GetThrouputMetricsAsync(Guid requestId)
         {

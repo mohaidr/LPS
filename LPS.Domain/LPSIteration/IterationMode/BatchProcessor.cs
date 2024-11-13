@@ -8,19 +8,19 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSRun.IterationMode
 {
-    internal class BatchProcessor: IBatchProcessor<HttpRequestProfile.ExecuteCommand, HttpRequestProfile>
+    internal class BatchProcessor: IBatchProcessor<HttpSession.ExecuteCommand, HttpSession>
     {
-        readonly HttpRequestProfile _requestProfile;
+        readonly HttpSession _session;
         readonly IWatchdog _watchdog;
         readonly string _hostName;
-        public BatchProcessor(HttpRequestProfile requestProfile,
+        public BatchProcessor(HttpSession session,
             IWatchdog watchdog ) 
         {
-            _requestProfile = requestProfile;
+            _session = session;
             _watchdog = watchdog;
-            _hostName = new Uri(_requestProfile.URL).Host;
+            _hostName = new Uri(_session.URL).Host;
         }
-        public async Task<int> SendBatchAsync(HttpRequestProfile.ExecuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token)
+        public async Task<int> SendBatchAsync(HttpSession.ExecuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token)
         {
             try
             {
@@ -29,7 +29,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 for (int b = 0; b < batchSize && batchCondition(); b++)
                 {
                     await _watchdog.BalanceAsync(_hostName, token);
-                    awaitableTasks.Add(command.ExecuteAsync(_requestProfile));
+                    awaitableTasks.Add(command.ExecuteAsync(_session));
                     _numberOfSentRequests++;
                 }
                 await Task.WhenAll(awaitableTasks);

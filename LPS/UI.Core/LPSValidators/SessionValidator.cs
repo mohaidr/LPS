@@ -13,14 +13,14 @@ using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class RequestProfileValidator : CommandBaseValidator<HttpRequestProfileDto, HttpRequestProfile>
+    internal class SessionValidator : CommandBaseValidator<HttpSessionDto, HttpSession>
     {
 
-        readonly HttpRequestProfileDto _requestProfileDto;
+        readonly HttpSessionDto _sessionDto;
         readonly string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-        public RequestProfileValidator(HttpRequestProfileDto command)
+        public SessionValidator(HttpSessionDto command)
         {
-            _requestProfileDto = command;
+            _sessionDto = command;
 
             RuleFor(command => command.HttpVersion)
                 .Must(version => version == "1.0" 
@@ -87,6 +87,6 @@ namespace LPS.UI.Core.LPSValidators
             });
         }
 
-        public override HttpRequestProfileDto Dto { get { return _requestProfileDto; } }
+        public override HttpSessionDto Dto { get { return _sessionDto; } }
     }
 }

@@ -23,7 +23,7 @@ namespace LPS.Domain
             Type = IterationType.Http;
         }
 
-        private IClientService<HttpRequestProfile, HttpResponse> _httpClientService;
+        private IClientService<HttpSession, HttpResponse> _httpClientService;
         private HttpIteration(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
@@ -72,17 +72,14 @@ namespace LPS.Domain
             }
         }
 
+        public HttpSession Session { get; protected set; }
 
-        public HttpRequestProfile RequestProfile { get; protected set; }
-
-        public void SetHttpRequestProfile(HttpRequestProfile lPSHttpRequestProfile)
+        public void SetHttpSession(HttpSession httpSession)
         {
             string httpIterationName = this.Name ?? string.Empty;
-            RequestProfile = lPSHttpRequestProfile != null && lPSHttpRequestProfile.IsValid ? lPSHttpRequestProfile : throw new InvalidLPSEntityException($"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpRequestProfile)} is either null or invalid.");
+            Session = httpSession != null && httpSession.IsValid ? httpSession : throw new InvalidLPSEntityException($"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpSession)} is either null or invalid.");
         }
 
-        //TODO: To be implemented
-        public Flow Flow { get; protected set; }
         public int? RequestCount { get; private set; }
 
         public int? Duration { get; private set; }

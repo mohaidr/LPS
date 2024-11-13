@@ -24,7 +24,7 @@ using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.LPSClients
 {
-    public class HttpClientService : IClientService<HttpRequestProfile, HttpResponse>
+    public class HttpClientService : IClientService<HttpSession, HttpResponse>
     {
         readonly HttpClient httpClient;
         readonly ILogger _logger;
@@ -40,7 +40,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly IMetricsQueryService _metricsQueryService;
         readonly IUrlSanitizationService _urlSanitizationService;
         readonly object _lock = new();
-        public HttpClientService(IClientConfiguration<HttpRequestProfile> config,
+        public HttpClientService(IClientConfiguration<HttpSession> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsQueryService metricsQueryService,
             ICacheService<string> memoryCacheService,
@@ -64,9 +64,9 @@ namespace LPS.Infrastructure.LPSClients
             _responseProcessingService = responseProcessingService ?? new ResponseProcessingService(_memoryCacheService, _logger, _runtimeOperationIdProvider, _urlSanitizationService, _metricsService);
             SocketsHttpHandler socketsHandler = new()
             {
-                PooledConnectionLifetime = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).PooledConnectionLifetime,
-                PooledConnectionIdleTimeout = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).PooledConnectionIdleTimeout,
-                MaxConnectionsPerServer = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).MaxConnectionsPerServer,
+                PooledConnectionLifetime = ((ILPSHttpClientConfiguration<HttpSession>)config).PooledConnectionLifetime,
+                PooledConnectionIdleTimeout = ((ILPSHttpClientConfiguration<HttpSession>)config).PooledConnectionIdleTimeout,
+                MaxConnectionsPerServer = ((ILPSHttpClientConfiguration<HttpSession>)config).MaxConnectionsPerServer,
                 UseCookies = true,
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 5,
@@ -74,7 +74,7 @@ namespace LPS.Infrastructure.LPSClients
             };
             httpClient = new HttpClient(socketsHandler)
             {
-                Timeout = ((ILPSHttpClientConfiguration<HttpRequestProfile>)config).Timeout
+                Timeout = ((ILPSHttpClientConfiguration<HttpSession>)config).Timeout
             };
             lock (_lock)
             {
@@ -82,39 +82,39 @@ namespace LPS.Infrastructure.LPSClients
             }
             GuidId = Guid.NewGuid().ToString();
         }
-        public async Task<HttpResponse> SendAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token = default)
+        public async Task<HttpResponse> SendAsync(HttpSession session, CancellationToken token = default)
         {
-            int sequenceNumber = lpsHttpRequestProfile.LastSequenceId;
+            int sequenceNumber = session.LastSequenceId;
             HttpResponse lpsHttpResponse;
             Stopwatch stopWatch = new();
             try
             {
-                var httpRequestMessage = await _messageService.BuildAsync(lpsHttpRequestProfile, token);
-                await _metricsService.TryIncreaseConnectionsCountAsync(lpsHttpRequestProfile.Id, token);
+                var httpRequestMessage = await _messageService.BuildAsync(session, token);
+                await _metricsService.TryIncreaseConnectionsCountAsync(session.Id, token);
                 stopWatch.Start();
                 var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token);
                 stopWatch.Stop();
-                var (command, streamTime) = (await _responseProcessingService.ProcessResponseAsync(response, lpsHttpRequestProfile, token));
+                var (command, streamTime) = (await _responseProcessingService.ProcessResponseAsync(response, session, token));
                 HttpResponse.SetupCommand responseCommand = command;
                 //This will only run if save response is set to true
                 stopWatch.Start();
-                await TryDownloadHtmlResourcesAsync(responseCommand, lpsHttpRequestProfile, httpClient, token);
+                await TryDownloadHtmlResourcesAsync(responseCommand, session, httpClient, token);
                 stopWatch.Stop();
                 responseCommand.ResponseTime = stopWatch.Elapsed + streamTime; // set the response time after the complete payload is read.
 
                 lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
-                lpsHttpResponse.SetHttpRequestProfile(lpsHttpRequestProfile);
+                lpsHttpResponse.SetHttpSession(session);
 
-                await _metricsService.TryUpdateResponseMetricsAsync(lpsHttpRequestProfile.Id, lpsHttpResponse, token);
+                await _metricsService.TryUpdateResponseMetricsAsync(session.Id, lpsHttpResponse, token);
 
-                await _metricsService.TryDecreaseConnectionsCountAsync(lpsHttpRequestProfile.Id, response.IsSuccessStatusCode, token);
+                await _metricsService.TryDecreaseConnectionsCountAsync(session.Id, response.IsSuccessStatusCode, token);
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.HttpVersion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbose, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {session.HttpMethod} {session.URL} Http/{session.HttpVersion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbose, token);
 
             }
             catch (Exception ex)
             {
-                await _metricsService.TryDecreaseConnectionsCountAsync(lpsHttpRequestProfile.Id, false, token);
+                await _metricsService.TryDecreaseConnectionsCountAsync(session.Id, false, token);
 
                 HttpResponse.SetupCommand lpsResponseCommand = new HttpResponse.SetupCommand
                 {
@@ -122,40 +122,40 @@ namespace LPS.Infrastructure.LPSClients
                     StatusMessage = ex?.InnerException?.Message ?? ex?.Message,
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
-                    LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
+                    HttpSessionId = session.Id,
                     ResponseTime = stopWatch.Elapsed,
                 };
 
                 lpsHttpResponse = new HttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
-                lpsHttpResponse.SetHttpRequestProfile(lpsHttpRequestProfile);
-                await _metricsService.TryUpdateResponseMetricsAsync(lpsHttpRequestProfile.Id, lpsHttpResponse, token);
+                lpsHttpResponse.SetHttpSession(session);
+                await _metricsService.TryUpdateResponseMetricsAsync(session.Id, lpsHttpResponse, token);
 
 
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer")))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.HttpVersion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, token);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {sequenceNumber} {session.HttpMethod} {session.URL} Http/{session.HttpVersion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, token);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {sequenceNumber} {lpsHttpRequestProfile.HttpMethod} {lpsHttpRequestProfile.URL} Http/{lpsHttpRequestProfile.HttpVersion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {sequenceNumber} {session.HttpMethod} {session.URL} Http/{session.HttpVersion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
                 throw;
             }
 
             return lpsHttpResponse;
         }
 
-        private async Task<bool> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpRequestProfile lpsHttpRequestProfile, HttpClient client, CancellationToken token = default)
+        private async Task<bool> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpSession httpSession, HttpClient client, CancellationToken token = default)
         {
-            if (!lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
+            if (!httpSession.DownloadHtmlEmbeddedResources)
             {
                 return false;
             }
 
             try
             {
-                if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && lpsHttpRequestProfile.Id == responseCommand.LPSHttpRequestProfileId)
+                if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && httpSession.Id == responseCommand.HttpSessionId)
                 {
                     var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, client, _memoryCacheService);
-                    await htmlResourceDownloader.DownloadResourcesAsync(lpsHttpRequestProfile.URL, lpsHttpRequestProfile.Id, token);
+                    await htmlResourceDownloader.DownloadResourcesAsync(httpSession.URL, httpSession.Id, token);
                 }
                 return true;
             }

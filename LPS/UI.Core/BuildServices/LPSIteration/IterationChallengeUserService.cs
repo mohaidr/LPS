@@ -79,9 +79,9 @@ namespace LPS.UI.Core.Build.Services
 
                 break;
             }
-            RequestProfileValidator validator = new(_iterationDto.RequestProfile);
-            RequestProfileChallengeUserService lpsRequestProfileUserService = new(SkipOptionalFields, _iterationDto.RequestProfile, validator);
-            lpsRequestProfileUserService.Challenge();
+            SessionValidator validator = new(_iterationDto.Session);
+            SessionChallengeUserService sessionChallengeUserService = new(SkipOptionalFields, _iterationDto.Session, validator);
+            sessionChallengeUserService.Challenge();
         }
 
         public void ResetOptionalFields()

@@ -16,9 +16,9 @@ using YamlDotNet.Serialization;
 namespace LPS.Domain
 {
 
-    public partial class HttpRequestProfile
+    public partial class HttpSession
     {
-        new public class SetupCommand : ICommand<HttpRequestProfile>, IValidCommand<HttpRequestProfile>
+        new public class SetupCommand : ICommand<HttpSession>, IValidCommand<HttpSession>
         {
             public SetupCommand()
             {
@@ -50,7 +50,7 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
-            public void Execute(HttpRequestProfile entity)
+            public void Execute(HttpSession entity)
             {
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
@@ -76,10 +76,10 @@ namespace LPS.Domain
         protected void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setup command
-            var requestProfileSetUpCommand = new RequestProfile.SetupCommand() { Id = command.Id };
-            base.Setup(requestProfileSetUpCommand);
+            var sessionSetUpCommand = new Session.SetupCommand() { Id = command.Id };
+            base.Setup(sessionSetUpCommand);
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && requestProfileSetUpCommand.IsValid)
+            if (command.IsValid && sessionSetUpCommand.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
@@ -108,7 +108,7 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            HttpRequestProfile clone = new HttpRequestProfile(_logger, _runtimeOperationIdProvider);
+            HttpSession clone = new HttpSession(_logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 clone.Id = this.Id;

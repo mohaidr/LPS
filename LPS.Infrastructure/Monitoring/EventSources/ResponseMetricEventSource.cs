@@ -34,34 +34,34 @@ namespace LPS.Infrastructure.Monitoring.EventSources
 
         private void InitializeEventCounters()
         {
-            if (_lpshttpRun != null && _lpshttpRun.RequestProfile == null && Uri.TryCreate(_lpshttpRun.RequestProfile.URL, UriKind.Absolute, out Uri uriResult))
+            if (_lpshttpRun != null && _lpshttpRun.Session == null && Uri.TryCreate(_lpshttpRun.Session.URL, UriKind.Absolute, out Uri uriResult))
             {
 
                 _responseTimeMetric = new EventCounter("response-time", this)
                 {
-                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.response.time",
+                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.response.time",
                     DisplayUnits = "ms"
                 };
 
                 _successCounter = new IncrementingEventCounter("success-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.success.responses",
+                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.success.responses",
 
                 };
 
                 _redirectionCounter = new IncrementingEventCounter("redirection-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.redirection.responses",
+                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.redirection.responses",
                 };
 
                 _clientErrorCounter = new IncrementingEventCounter("client-error-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.client.error.responses",
+                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.client.error.responses",
                 };
 
                 _serverErrorCounter = new IncrementingEventCounter("server-error-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.RequestProfile.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.server.error.responses"
+                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.server.error.responses"
                 };
             }
 

@@ -26,8 +26,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
     {
         private readonly string[] _args;
         readonly ILogger _logger;
-        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        readonly IClientConfiguration<HttpRequestProfile> _config;
+        readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpSession> _config;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         readonly Command _rootCliCommand;
@@ -39,9 +39,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         public LpsCliCommand(
             Command rootCliCommand,
             ILogger logger,
-            IClientManager<HttpRequestProfile, HttpResponse,
-            IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
-            IClientConfiguration<HttpRequestProfile> config,
+            IClientManager<HttpSession, HttpResponse,
+            IClientService<HttpSession, HttpResponse>> httpClientManager,
+            IClientConfiguration<HttpSession> config,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
@@ -74,7 +74,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             {
                 try
                 {
-                    ValidationResult planValidationResults, roundValidationResults, iterationValidationResults, requestProfileValidationResults;
+                    ValidationResult planValidationResults, roundValidationResults, iterationValidationResults, sessionValidationResults;
                     planDto.DeepCopy(out PlanDto planDtoCopy);
                     var roundDto = planDto.Rounds[0];
                     var iterationDto = planDto.Rounds[0].Iterations[0];
@@ -84,16 +84,16 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     roundValidationResults = roundValidator.Validate();
                     var iterationValidator = new IterationValidator(planDto.Rounds[0].Iterations[0]);
                     iterationValidationResults = iterationValidator.Validate();
-                    var lpsRequestProfileValidator = new RequestProfileValidator(iterationDto.RequestProfile);
-                    requestProfileValidationResults = lpsRequestProfileValidator.Validate();
+                    var sessionValidator = new SessionValidator(iterationDto.Session);
+                    sessionValidationResults = sessionValidator.Validate();
 
-                    if (planValidationResults.IsValid && roundValidationResults.IsValid && iterationValidationResults.IsValid && requestProfileValidationResults.IsValid)
+                    if (planValidationResults.IsValid && roundValidationResults.IsValid && iterationValidationResults.IsValid && sessionValidationResults.IsValid)
                     {
                         var plan = new Plan(planDtoCopy, _logger, _runtimeOperationIdProvider);
                         var testRound = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                         var httpIteration = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
-                        var requestProfile = new HttpRequestProfile(iterationDto.RequestProfile, _logger, _runtimeOperationIdProvider);
-                        httpIteration.SetHttpRequestProfile(requestProfile);
+                        var session = new HttpSession(iterationDto.Session, _logger, _runtimeOperationIdProvider);
+                        httpIteration.SetHttpSession(session);
                         testRound.AddIteration(httpIteration);
                         plan.AddRound(testRound);
                         var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _dashboardConfig, _cts);
@@ -108,7 +108,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     {
                         roundValidationResults.PrintValidationErrors();
                         iterationValidationResults.PrintValidationErrors();
-                        requestProfileValidationResults.PrintValidationErrors();
+                        sessionValidationResults.PrintValidationErrors();
                     }
                 }
                 catch (Exception ex)

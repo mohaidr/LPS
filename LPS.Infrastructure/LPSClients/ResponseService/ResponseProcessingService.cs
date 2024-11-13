@@ -45,7 +45,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         public async Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage response,
-            HttpRequestProfile lpsHttpRequestProfile,
+            HttpSession httpSession,
             CancellationToken token)
         {
             Stopwatch streamStopwatch = Stopwatch.StartNew();
@@ -61,7 +61,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
 
                 // Calculate the headers size (both response and content headers)
                 long responseSize = CalculateHeadersSize(response);
-                string cacheKey = $"HtmlContent_{lpsHttpRequestProfile.Id}";
+                string cacheKey = $"HtmlContent_{httpSession.Id}";
                 string content = await _memoryCacheService.GetItemAsync(cacheKey);
 
                 using Stream contentStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
@@ -76,14 +76,14 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                 try
                 {
                     // Initialize memoryStream if caching is needed
-                    if (content == null && mimeType == MimeType.TextHtml && lpsHttpRequestProfile.DownloadHtmlEmbeddedResources)
+                    if (content == null && mimeType == MimeType.TextHtml && httpSession.DownloadHtmlEmbeddedResources)
                     {
                         memoryStream = new MemoryStream();
                     }
 
                     // Get the response processor
                     IResponseProcessor responseProcessor = await _responseProcessorFactory.CreateResponseProcessorAsync(
-                        lpsHttpRequestProfile.URL, mimeType, lpsHttpRequestProfile.SaveResponse, token);
+                        httpSession.URL, mimeType, httpSession.SaveResponse, token);
 
                     await using (responseProcessor.ConfigureAwait(false))
                     {
@@ -127,7 +127,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     if(isSemaphoreAcquired) 
                         _semaphoreSlim.Release();
                     _bufferPool.Return(buffer);
-                    await _metricsService.TryUpdateDataReceivedAsync(lpsHttpRequestProfile.Id, responseSize, token);
+                    await _metricsService.TryUpdateDataReceivedAsync(httpSession.Id, responseSize, token);
                     if (memoryStream != null)
                     {
                         await memoryStream.DisposeAsync();
@@ -143,7 +143,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ContentType = mimeType,
-                    LPSHttpRequestProfileId = lpsHttpRequestProfile.Id,
+                    HttpSessionId = httpSession.Id,
                 }, streamStopwatch.Elapsed);
             }
             catch (Exception ex)

@@ -39,7 +39,7 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public bool IsValid { get; set; }
-            public Guid LPSHttpRequestProfileId { get; set; }
+            public Guid HttpSessionId { get; set; }
             [JsonIgnore]
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
@@ -50,7 +50,7 @@ namespace LPS.Domain
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
-            public HttpRequestProfile.SetupCommand LPSHttpRequestProfile { get; set; }
+            public HttpSession.SetupCommand HttpSession { get; set; }
 
             public void Copy(SetupCommand targetCommand)
             {
@@ -62,7 +62,7 @@ namespace LPS.Domain
                 targetCommand.ResponseTime = this.ResponseTime;
                 targetCommand.IsSuccessStatusCode = this.IsSuccessStatusCode;
                 targetCommand.IsValid = this.IsValid;
-                targetCommand.LPSHttpRequestProfileId = this.LPSHttpRequestProfileId;
+                targetCommand.HttpSessionId = this.HttpSessionId;
 
                 // Deep copy of dictionaries
                 targetCommand.ResponseContentHeaders = new Dictionary<string, string>(this.ResponseContentHeaders);
@@ -73,8 +73,8 @@ namespace LPS.Domain
                     entry => entry.Key,
                     entry => new List<string>(entry.Value)
                 );
-                // Assuming LPSHttpRequestProfile has its own Clone method
-                this.LPSHttpRequestProfile?.Copy(targetCommand.LPSHttpRequestProfile);
+                // Assuming HttpSession has its own Clone method
+                this.HttpSession?.Copy(targetCommand.HttpSession);
             }
 
         }

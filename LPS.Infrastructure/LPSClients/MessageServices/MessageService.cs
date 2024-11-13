@@ -30,18 +30,18 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             SizeLimit = 1024
         }));
 
-        public async Task<HttpRequestMessage> BuildAsync(HttpRequestProfile lpsHttpRequestProfile, CancellationToken token = default)
+        public async Task<HttpRequestMessage> BuildAsync(HttpSession httpSession, CancellationToken token = default)
         {
             var httpRequestMessage = new HttpRequestMessage
             {
-                RequestUri = new Uri(lpsHttpRequestProfile.URL),
-                Method = new HttpMethod(lpsHttpRequestProfile.HttpMethod)
+                RequestUri = new Uri(httpSession.URL),
+                Method = new HttpMethod(httpSession.HttpMethod)
             };
 
-            bool supportsContent = lpsHttpRequestProfile.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) || lpsHttpRequestProfile.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase) || lpsHttpRequestProfile.HttpMethod.ToLower() == "patch";
-            httpRequestMessage.Version = GetHttpVersion(lpsHttpRequestProfile.HttpVersion);
+            bool supportsContent = httpSession.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) || httpSession.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase) || httpSession.HttpMethod.ToLower() == "patch";
+            httpRequestMessage.Version = GetHttpVersion(httpSession.HttpVersion);
 
-            if (lpsHttpRequestProfile.SupportH2C.HasValue && lpsHttpRequestProfile.SupportH2C.Value)
+            if (httpSession.SupportH2C.HasValue && httpSession.SupportH2C.Value)
             {
                 if (httpRequestMessage.Version != HttpVersion.Version20)
                 {
@@ -51,31 +51,31 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                 httpRequestMessage.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
             }
 
-            httpRequestMessage.Content = supportsContent ? new StringContent(lpsHttpRequestProfile.Payload ?? string.Empty) : null;
+            httpRequestMessage.Content = supportsContent ? new StringContent(httpSession.Payload ?? string.Empty) : null;
 
             // Apply headers to the request
-            _headersService.ApplyHeaders(httpRequestMessage, lpsHttpRequestProfile.HttpHeaders);
+            _headersService.ApplyHeaders(httpRequestMessage, httpSession.HttpHeaders);
 
             // Cache key to identify the request profile
-            string cacheKey = lpsHttpRequestProfile.Id.ToString();
+            string cacheKey = httpSession.Id.ToString();
 
             // Check if the message size is cached
             if (!_memoryCacheService.TryGetItem(cacheKey, out long messageSize))
             {
                 // If not cached, calculate the message size based on the profile
-                messageSize = CalculateMessageSize(lpsHttpRequestProfile);
+                messageSize = CalculateMessageSize(httpSession);
 
                 // Cache the calculated size
                 await _memoryCacheService.SetItemAsync(cacheKey, messageSize);
             }
 
             // Update the DataSent metric using MetricsService
-            await _metricsService.TryUpdateDataSentAsync(lpsHttpRequestProfile.Id, messageSize, token);
+            await _metricsService.TryUpdateDataSentAsync(httpSession.Id, messageSize, token);
 
             return httpRequestMessage;
         }
 
-        private static long CalculateMessageSize(HttpRequestProfile profile)
+        private static long CalculateMessageSize(HttpSession profile)
         {
             long size = 0;
 

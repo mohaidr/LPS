@@ -20,8 +20,8 @@ namespace LPS.UI.Core.LPSCommandLine
     {
         private string[] _command_args;
         ILogger _logger;
-        IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        IClientConfiguration<HttpRequestProfile> _config;
+        IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _httpClientManager;
+        IClientConfiguration<HttpSession> _config;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         IWatchdog _watchdog;
         Command _rootCliCommand;
@@ -42,9 +42,9 @@ namespace LPS.UI.Core.LPSCommandLine
         public CommandLineManager(
             string[] command_args,
             ILogger logger,
-            IClientManager<HttpRequestProfile, HttpResponse,
-            IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
-            IClientConfiguration<HttpRequestProfile> config,
+            IClientManager<HttpSession, HttpResponse,
+            IClientService<HttpSession, HttpResponse>> httpClientManager,
+            IClientConfiguration<HttpSession> config,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             AppSettingsWritableOptions appSettings,

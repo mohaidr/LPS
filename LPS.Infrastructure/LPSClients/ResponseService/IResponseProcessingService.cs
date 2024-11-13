@@ -13,7 +13,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
     {
         Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage response,
-            HttpRequestProfile lpsHttpRequestProfile,
+            HttpSession httpSession,
             CancellationToken token);
     }
 }

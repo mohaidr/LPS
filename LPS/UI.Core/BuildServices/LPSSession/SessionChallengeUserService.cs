@@ -7,20 +7,20 @@ using System;
 
 namespace LPS.UI.Core.Build.Services
 {
-    internal class RequestProfileChallengeUserService : IChallengeUserService<HttpRequestProfileDto, HttpRequestProfile>
+    internal class SessionChallengeUserService : IChallengeUserService<HttpSessionDto, HttpSession>
     {
-        IBaseValidator<HttpRequestProfileDto, HttpRequestProfile> _validator;
-        public RequestProfileChallengeUserService(bool skipOptionalFields, HttpRequestProfileDto command, IBaseValidator<HttpRequestProfileDto, HttpRequestProfile> validator)
+        IBaseValidator<HttpSessionDto, HttpSession> _validator;
+        public SessionChallengeUserService(bool skipOptionalFields, HttpSessionDto command, IBaseValidator<HttpSessionDto, HttpSession> validator)
         {
             _skipOptionalFields = skipOptionalFields;
-            _requestProfileDto = command;
+            _sessionDto = command;
             _validator = validator;
         }
         public bool SkipOptionalFields => _skipOptionalFields;
         private readonly bool _skipOptionalFields;
 
-        HttpRequestProfileDto _requestProfileDto;
-        public HttpRequestProfileDto Dto { get { return _requestProfileDto; } set { value = _requestProfileDto; } }
+        HttpSessionDto _sessionDto;
+        public HttpSessionDto Dto { get { return _sessionDto; } set { value = _sessionDto; } }
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -34,20 +34,20 @@ namespace LPS.UI.Core.Build.Services
                 if (!_validator.Validate(nameof(Dto.HttpMethod)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.HttpMethod));
-                    _requestProfileDto.HttpMethod = AnsiConsole.Ask<string>("What is the [green]'Http Request Method'[/]?");
+                    _sessionDto.HttpMethod = AnsiConsole.Ask<string>("What is the [green]'Http Request Method'[/]?");
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Dto.URL)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.URL));
-                    _requestProfileDto.URL = AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
+                    _sessionDto.URL = AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
                     continue;
                 }
                 if (!_validator.Validate(nameof(Dto.HttpVersion)))
                 {
-                    _validator.PrintValidationErrors(nameof(_requestProfileDto.HttpVersion));
-                    _requestProfileDto.HttpVersion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
+                    _validator.PrintValidationErrors(nameof(_sessionDto.HttpVersion));
+                    _sessionDto.HttpVersion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
                     continue;
                 }
                 if (!_validator.Validate(nameof(Dto.SupportH2C)))
@@ -74,13 +74,13 @@ namespace LPS.UI.Core.Build.Services
             }
 
             AnsiConsole.MarkupLine("Add request headers as [blue](HeaderName: HeaderValue)[/] each on a line. When finished, type C and press enter");
-            _requestProfileDto.HttpHeaders = InputHeaderService.Challenge();
+            _sessionDto.HttpHeaders = InputHeaderService.Challenge();
 
 
-            if (_requestProfileDto.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _requestProfileDto.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _requestProfileDto.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
+            if (_sessionDto.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _sessionDto.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _sessionDto.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
             {
                 AnsiConsole.WriteLine("Add payload to your http request.\n - Enter Path:[Path] to read the payload from a path file\n - URL:[URL] to read the payload from a URL \n - Or just add your payload inline");
-                _requestProfileDto.Payload = InputPayloadService.Challenge();
+                _sessionDto.Payload = InputPayloadService.Challenge();
             }
         }
 
@@ -88,9 +88,9 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _requestProfileDto.HttpVersion = string.Empty;
-                _requestProfileDto.DownloadHtmlEmbeddedResources = null;
-                _requestProfileDto.SaveResponse = null;
+                _sessionDto.HttpVersion = string.Empty;
+                _sessionDto.DownloadHtmlEmbeddedResources = null;
+                _sessionDto.SaveResponse = null;
             }
         }
     }

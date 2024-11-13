@@ -9,16 +9,16 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class DMode : IIterationModeService
     {
-        private HttpRequestProfile.ExecuteCommand _command;
+        private HttpSession.ExecuteCommand _command;
         private int _duration;
         private IWatchdog _watchdog;
         private readonly string _hostName;
-        private HttpRequestProfile _requestProfile;
+        private HttpSession _session;
 
-        private DMode(HttpRequestProfile requestProfile)
+        private DMode(HttpSession session)
         {
-            _requestProfile = requestProfile;
-            _hostName = new Uri(_requestProfile.URL).Host;
+            _session = session;
+            _hostName = new Uri(_session.URL).Host;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -30,7 +30,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested)
                 {
                     await _watchdog.BalanceAsync(_hostName, cancellationToken);
-                    await _command.ExecuteAsync(_requestProfile);
+                    await _command.ExecuteAsync(_session);
                     numberOfSentRequests++;
                 }
                 stopwatch.Stop();
@@ -44,12 +44,12 @@ namespace LPS.Domain.LPSRun.IterationMode
 
         public class Builder : IBuilder<DMode>
         {
-            private HttpRequestProfile.ExecuteCommand _command;
+            private HttpSession.ExecuteCommand _command;
             private int _duration;
             private IWatchdog _watchdog;
-            private HttpRequestProfile _requestProfile;
+            private HttpSession _session;
 
-            public Builder SetCommand(HttpRequestProfile.ExecuteCommand command)
+            public Builder SetCommand(HttpSession.ExecuteCommand command)
             {
                 _command = command;
                 return this;
@@ -67,23 +67,23 @@ namespace LPS.Domain.LPSRun.IterationMode
                 return this;
             }
 
-            public Builder SetRequestProfile(HttpRequestProfile requestProfile)
+            public Builder SetSession(HttpSession session)
             {
-                _requestProfile = requestProfile;
+                _session = session;
                 return this;
             }
 
             public DMode Build()
             {
-                if (_requestProfile == null)
-                    throw new InvalidOperationException("RequestProfile must be provided.");
+                if (_session == null)
+                    throw new InvalidOperationException("Session must be provided.");
 
-                var dMode = new DMode(_requestProfile)
+                var dMode = new DMode(_session)
                 {
                     _command = _command,
                     _duration = _duration,
                     _watchdog = _watchdog,
-                    _requestProfile = _requestProfile
+                    _session = _session
                 };
                 return dMode;
             }

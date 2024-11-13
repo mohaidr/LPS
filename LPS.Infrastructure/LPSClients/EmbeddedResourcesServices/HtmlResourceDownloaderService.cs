@@ -41,15 +41,15 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
 
         public async Task DownloadResourcesAsync(
             string baseUrl,
-            Guid requestProfileId,
+            Guid sessionId,
             CancellationToken cancellationToken)
         {
             try
             {
-                await _logger.LogAsync(_operationIdProvider.OperationId, $"Starting resource download for {requestProfileId}", LPSLoggingLevel.Verbose, cancellationToken);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Starting resource download for {sessionId}", LPSLoggingLevel.Verbose, cancellationToken);
 
                 // Cache key for the resource URLs
-                string resourceUrlsCacheKey = $"ResourceUrls_{requestProfileId}";
+                string resourceUrlsCacheKey = $"ResourceUrls_{sessionId}";
 
                 // Try to get the cached resource URLs from IHtmlCacheService
                 string cachedResourceUrls = await _memoryCacheService.GetItemAsync(resourceUrlsCacheKey);
@@ -64,7 +64,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                 else
                 {
                     // Retrieve HTML content if resource URLs are not cached
-                    string htmlCacheKey = $"HtmlContent_{requestProfileId}";
+                    string htmlCacheKey = $"HtmlContent_{sessionId}";
                     string htmlContent = await _memoryCacheService.GetItemAsync(htmlCacheKey);
                     if (string.IsNullOrEmpty(htmlContent))
                     {
@@ -136,7 +136,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                     await Task.WhenAll(downloadTasks);
                 }
 
-                await _logger.LogAsync(_operationIdProvider.OperationId, $"Completed resource download for {requestProfileId}", LPSLoggingLevel.Verbose, cancellationToken);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Completed resource download for {sessionId}", LPSLoggingLevel.Verbose, cancellationToken);
             }
             catch (Exception ex)
             {

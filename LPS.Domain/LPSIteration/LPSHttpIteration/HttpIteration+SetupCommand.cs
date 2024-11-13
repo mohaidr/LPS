@@ -99,7 +99,7 @@ namespace LPS.Domain
                 clone.Name = this.Name;
                 clone.RequestCount = this.RequestCount;
                 clone.Mode = this.Mode;
-                clone.RequestProfile = (HttpRequestProfile)this.RequestProfile.Clone();
+                clone.Session = (HttpSession)this.Session.Clone();
                 clone.Duration = this.Duration;
                 clone.CoolDownTime = this.CoolDownTime; ;
                 clone.BatchSize = this.BatchSize;

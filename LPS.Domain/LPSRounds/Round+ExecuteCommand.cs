@@ -25,8 +25,8 @@ namespace LPS.Domain
             readonly ILogger _logger;
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _lpsClientManager;
-            readonly IClientConfiguration<HttpRequestProfile> _lpsClientConfig;
+            readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _lpsClientManager;
+            readonly IClientConfiguration<HttpSession> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpRunExecutionCommandStatusMonitor;
             readonly CancellationTokenSource _cts;
@@ -36,8 +36,8 @@ namespace LPS.Domain
             public ExecuteCommand(ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
-                IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> lpsClientManager,
-                IClientConfiguration<HttpRequestProfile> lpsClientConfig,
+                IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> lpsClientManager,
+                IClientConfiguration<HttpSession> lpsClientConfig,
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpRunExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 CancellationTokenSource cts)
@@ -102,7 +102,7 @@ namespace LPS.Domain
 
                 for (int i = 0; i < this.NumberOfClients && !_cts.Token.IsCancellationRequested; i++)
                 {
-                    IClientService<HttpRequestProfile, HttpResponse> httpClient;
+                    IClientService<HttpSession, HttpResponse> httpClient;
                     if (!this.DelayClientCreationUntilIsNeeded.Value)
                     {
                         httpClient = _lpsClientManager.DequeueClient();
@@ -118,7 +118,7 @@ namespace LPS.Domain
             }
         }
 
-        async Task SchedualHttpRunsForExecution(IClientService<HttpRequestProfile, HttpResponse> httpClient, DateTime executionTime)
+        async Task SchedualHttpRunsForExecution(IClientService<HttpSession, HttpResponse> httpClient, DateTime executionTime)
         {
             List<Task> awaitableTasks = [];
             foreach (var httpIteration in this.Iterations.Where(iteration=> iteration.Type == IterationType.Http))
@@ -127,7 +127,7 @@ namespace LPS.Domain
                 {
                     continue;
                 }
-                string hostName = new Uri(((HttpIteration)httpIteration).RequestProfile.URL).Host;
+                string hostName = new Uri(((HttpIteration)httpIteration).Session.URL).Host;
                 await _watchdog.BalanceAsync(hostName, _cts.Token);
                 if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {

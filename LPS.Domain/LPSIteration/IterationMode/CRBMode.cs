@@ -10,12 +10,12 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class CRBMode : IIterationModeService
     {
-        private HttpRequestProfile.ExecuteCommand _command;
+        private HttpSession.ExecuteCommand _command;
         private int _requestCount;
         private int _coolDownTime;
         private int _batchSize;
         private bool _maximizeThroughput;
-        private IBatchProcessor<HttpRequestProfile.ExecuteCommand, HttpRequestProfile> _batchProcessor;
+        private IBatchProcessor<HttpSession.ExecuteCommand, HttpSession> _batchProcessor;
 
         private CRBMode() { }
 
@@ -64,14 +64,14 @@ namespace LPS.Domain.LPSRun.IterationMode
 
         public class Builder : IBuilder<CRBMode>
         {
-            private HttpRequestProfile.ExecuteCommand _command;
+            private HttpSession.ExecuteCommand _command;
             private int _requestCount;
             private int _coolDownTime;
             private int _batchSize;
             private bool _maximizeThroughput;
-            private IBatchProcessor<HttpRequestProfile.ExecuteCommand, HttpRequestProfile> _batchProcessor;
+            private IBatchProcessor<HttpSession.ExecuteCommand, HttpSession> _batchProcessor;
 
-            public Builder SetCommand(HttpRequestProfile.ExecuteCommand command)
+            public Builder SetCommand(HttpSession.ExecuteCommand command)
             {
                 _command = command;
                 return this;
@@ -101,7 +101,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 return this;
             }
 
-            public Builder SetBatchProcessor(IBatchProcessor<HttpRequestProfile.ExecuteCommand, HttpRequestProfile> batchProcessor)
+            public Builder SetBatchProcessor(IBatchProcessor<HttpSession.ExecuteCommand, HttpSession> batchProcessor)
             {
                 _batchProcessor = batchProcessor;
                 return this;

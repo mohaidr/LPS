@@ -15,8 +15,8 @@ namespace LPS.UI.Core
     internal class LPSManager
     {
         readonly ILogger _logger;
-        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        readonly IClientConfiguration<HttpRequestProfile> _config;
+        readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpSession> _config;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         readonly IMetricsDataMonitor _lpsMonitoringEnroller;
@@ -24,8 +24,8 @@ namespace LPS.UI.Core
         readonly CancellationTokenSource _cts;
         IOptions<DashboardConfigurationOptions> _dashboardConfig;
         internal LPSManager(ILogger logger,
-                IClientManager<HttpRequestProfile, HttpResponse,IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
-                IClientConfiguration<HttpRequestProfile> config,
+                IClientManager<HttpSession, HttpResponse,IClientService<HttpSession, HttpResponse>> httpClientManager,
+                IClientConfiguration<HttpSession> config,
                 IWatchdog wtahcdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,

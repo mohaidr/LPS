@@ -24,8 +24,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         readonly Command _rootLpsCliCommand;
         private string[] _args;
         readonly ILogger _logger;
-        readonly IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _httpClientManager;
-        readonly IClientConfiguration<HttpRequestProfile> _config;
+        readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpSession> _config;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         Command _runCommand;
@@ -38,8 +38,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         internal RunCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
-            IClientManager<HttpRequestProfile, HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> httpClientManager,
-            IClientConfiguration<HttpRequestProfile> config,
+            IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> httpClientManager,
+            IClientConfiguration<HttpSession> config,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IWatchdog watchdog,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
@@ -93,10 +93,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                     var iterationEntity = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
                                     if (iterationEntity.IsValid)
                                     {
-                                        var requestProfile = new HttpRequestProfile(iterationDto.RequestProfile, _logger, _runtimeOperationIdProvider);
-                                        if (requestProfile.IsValid)
+                                        var session = new HttpSession(iterationDto.Session, _logger, _runtimeOperationIdProvider);
+                                        if (session.IsValid)
                                         {
-                                            iterationEntity.SetHttpRequestProfile(requestProfile);
+                                            iterationEntity.SetHttpSession(session);
                                             roundEntity.AddIteration(iterationEntity);
                                         }
                                     }
@@ -111,10 +111,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                         var referencedIterationEntity = new HttpIteration(globalIteration, _logger, _runtimeOperationIdProvider);
                                         if (referencedIterationEntity.IsValid)
                                         {
-                                            var requestProfile = new HttpRequestProfile(globalIteration.RequestProfile, _logger, _runtimeOperationIdProvider);
-                                            if (requestProfile.IsValid)
+                                            var session = new HttpSession(globalIteration.Session, _logger, _runtimeOperationIdProvider);
+                                            if (session.IsValid)
                                             {
-                                                referencedIterationEntity.SetHttpRequestProfile(requestProfile);
+                                                referencedIterationEntity.SetHttpSession(session);
                                                 roundEntity.AddIteration(referencedIterationEntity);
                                             }
                                         }

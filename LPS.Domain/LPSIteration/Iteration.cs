@@ -42,7 +42,6 @@ namespace LPS.Domain
         public Guid Id { get; protected set; }
         public string Name { get; protected set; }
         public bool IsValid { get; protected set; }
-
         public IterationType Type { get; protected set; }
     }
 }

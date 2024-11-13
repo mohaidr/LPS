@@ -18,8 +18,8 @@ namespace LPS.Domain
             Iterations = new List<Iteration>();
         }
 
-        IClientManager<HttpRequestProfile,HttpResponse, IClientService<HttpRequestProfile, HttpResponse>> _lpsClientManager;
-        IClientConfiguration<HttpRequestProfile> _lpsClientConfig;
+        IClientManager<HttpSession,HttpResponse, IClientService<HttpSession, HttpResponse>> _lpsClientManager;
+        IClientConfiguration<HttpSession> _lpsClientConfig;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         IWatchdog _watchdog;
         IMetricsDataMonitor _lpsMetricsDataMonitor;

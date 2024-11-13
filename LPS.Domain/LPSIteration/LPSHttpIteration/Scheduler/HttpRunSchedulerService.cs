@@ -32,7 +32,7 @@ namespace LPS.Domain.LPSRun.LPSHttpRun.Scheduler
             _logger = logger;
         }
 
-        public async Task ScheduleHttpRunExecutionAsync(DateTime scheduledTime, HttpIteration httpRun, IClientService<HttpRequestProfile, HttpResponse> httpClient)
+        public async Task ScheduleHttpRunExecutionAsync(DateTime scheduledTime, HttpIteration httpRun, IClientService<HttpSession, HttpResponse> httpClient)
         {                
             HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _cts);
             try

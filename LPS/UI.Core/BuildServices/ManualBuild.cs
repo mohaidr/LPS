@@ -41,7 +41,7 @@ namespace LPS.UI.Core.Build.Services
                 foreach (var iterationCommand in roundCommand.Iterations)
                 {
                     var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
-                    iterationEntity.SetHttpRequestProfile(new HttpRequestProfile(iterationCommand.RequestProfile, _logger, _runtimeOperationIdProvider));
+                    iterationEntity.SetHttpSession(new HttpSession(iterationCommand.Session, _logger, _runtimeOperationIdProvider));
                     roundEntity.AddIteration(iterationEntity);
                 }
             }
