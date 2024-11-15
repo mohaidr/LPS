@@ -23,7 +23,7 @@ namespace LPS.Domain
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         IWatchdog _watchdog;
         IMetricsDataMonitor _lpsMetricsDataMonitor;
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpRunExecutionCommandStatusMonitor;
+        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         CancellationTokenSource _cts;
         public Round(SetupCommand command, 
             ILogger logger,
@@ -40,12 +40,9 @@ namespace LPS.Domain
         public Guid Id { get; protected set; }
         public string Name { get; private set; }
         public int StartupDelay { get; protected set; }
-
         public bool IsRedo { get; private set; }
         public bool? DelayClientCreationUntilIsNeeded { get; private set; }
         public bool? RunInParallel { get; private set; }
-        //ToDo: Implement CleanUp Cookies
-        public bool SameClientForEachTeastCase { get; private set; } = true;
         public bool IsValid { get; private set; }
         public int NumberOfClients { get; private set; }
         public int? ArrivalDelay { get; private set; }

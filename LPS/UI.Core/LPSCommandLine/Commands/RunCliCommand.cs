@@ -83,7 +83,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider);
                     if (plan.IsValid)
                     {
-                        foreach (var roundDto in planDto.Rounds.Where(round=> roundNames.Count == 0 || roundNames.Contains(round.Name)))
+                        foreach (var roundDto in planDto.Rounds.Where(round => roundNames.Count == 0 || roundNames.Contains(round.Name)))
                         {
                             var roundEntity = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                             if (roundEntity.IsValid)
@@ -93,6 +93,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                     var iterationEntity = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
                                     if (iterationEntity.IsValid)
                                     {
+                                        if (iterationDto.Session?.URL !=null && roundDto?.BaseUrl != null && !iterationDto.Session.URL.StartsWith("http://") && !iterationDto.Session.URL.StartsWith("https://"))
+                                        {
+                                            iterationDto.Session.URL = $"{roundDto.BaseUrl}{iterationDto.Session.URL}";
+                                        }
                                         var session = new HttpSession(iterationDto.Session, _logger, _runtimeOperationIdProvider);
                                         if (session.IsValid)
                                         {
@@ -127,8 +131,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                 plan.AddRound(roundEntity);
                             }
                         }
-                        
-                    
                     }
                     if (plan.GetReadOnlyRounds().Any())
                     {
@@ -149,7 +151,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
-            }, LPSRunCommandOptions.ConfigFileArgument, 
+            }, LPSRunCommandOptions.ConfigFileArgument,
             LPSRunCommandOptions.RoundNameOption);
         }
     }

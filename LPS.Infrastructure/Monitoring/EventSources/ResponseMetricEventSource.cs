@@ -12,7 +12,7 @@ namespace LPS.Infrastructure.Monitoring.EventSources
     {
         private static readonly ConcurrentDictionary<HttpIteration, ResponseMetricEventSource> instances = new ConcurrentDictionary<HttpIteration, ResponseMetricEventSource>();
 
-        private HttpIteration _lpshttpRun;
+        private HttpIteration _lpshttpIteration;
         private EventCounter _responseTimeMetric;
         private IncrementingEventCounter _successCounter;
         private IncrementingEventCounter _clientErrorCounter;
@@ -20,48 +20,48 @@ namespace LPS.Infrastructure.Monitoring.EventSources
         private IncrementingEventCounter _redirectionCounter;
 
         // Private constructor to enforce use of GetInstance for instance creation
-        private ResponseMetricEventSource(HttpIteration lpsHttpRun)
+        private ResponseMetricEventSource(HttpIteration lpsHttpIteration)
         {
-            _lpshttpRun = lpsHttpRun;
+            _lpshttpIteration = lpsHttpIteration;
             InitializeEventCounters();
         }
 
         // Public static method to get or create an instance of LPSResponseMetricEventSource
-        public static ResponseMetricEventSource GetInstance(HttpIteration lpsHttpRun)
+        public static ResponseMetricEventSource GetInstance(HttpIteration lpsHttpIteration)
         {
-            return instances.GetOrAdd(lpsHttpRun, (run) => new ResponseMetricEventSource(run));
+            return instances.GetOrAdd(lpsHttpIteration, (iteration) => new ResponseMetricEventSource(iteration));
         }
 
         private void InitializeEventCounters()
         {
-            if (_lpshttpRun != null && _lpshttpRun.Session == null && Uri.TryCreate(_lpshttpRun.Session.URL, UriKind.Absolute, out Uri uriResult))
+            if (_lpshttpIteration != null && _lpshttpIteration.Session == null && Uri.TryCreate(_lpshttpIteration.Session.URL, UriKind.Absolute, out Uri uriResult))
             {
 
                 _responseTimeMetric = new EventCounter("response-time", this)
                 {
-                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.response.time",
+                    DisplayName = $"{_lpshttpIteration.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.response.time",
                     DisplayUnits = "ms"
                 };
 
                 _successCounter = new IncrementingEventCounter("success-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.success.responses",
+                    DisplayName = $"{_lpshttpIteration.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.success.responses",
 
                 };
 
                 _redirectionCounter = new IncrementingEventCounter("redirection-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.redirection.responses",
+                    DisplayName = $"{_lpshttpIteration.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.redirection.responses",
                 };
 
                 _clientErrorCounter = new IncrementingEventCounter("client-error-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.client.error.responses",
+                    DisplayName = $"{_lpshttpIteration.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.client.error.responses",
                 };
 
                 _serverErrorCounter = new IncrementingEventCounter("server-error-responses", this)
                 {
-                    DisplayName = $"{_lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.server.error.responses"
+                    DisplayName = $"{_lpshttpIteration.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.server.error.responses"
                 };
             }
 

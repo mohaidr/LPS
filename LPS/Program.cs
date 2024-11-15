@@ -4,12 +4,12 @@ using System.Threading;
 using Spectre.Console;
 using LPS.UI.Core.Host;
 using Microsoft.Extensions.DependencyInjection;
+using LPS.UI.Core.LPSValidators;
 
 namespace LPS
 {
     class Program
     {
-        private static bool _cancelRequested = false;
         static async Task Main(string[] args)
         {
             AnsiConsole.Write(new FigletText("Load -- Perform {} Stress ^ ").Centered().Color(Color.Green));

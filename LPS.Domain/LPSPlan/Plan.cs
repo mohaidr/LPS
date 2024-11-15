@@ -24,7 +24,7 @@ namespace LPS.Domain
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         IWatchdog _watchdog;
         IMetricsDataMonitor _lpsMetricsDataMonitor;
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpRunExecutionCommandStatusMonitor;
+        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         CancellationTokenSource _cts;
         public Plan(SetupCommand command,
             ILogger logger,

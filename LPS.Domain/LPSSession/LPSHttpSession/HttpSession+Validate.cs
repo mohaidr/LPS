@@ -53,17 +53,12 @@ namespace LPS.Domain
                         && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
                     })
                     .WithMessage("The 'URL' must be a valid URL according to RFC 3986")
-                    .Must((command, url) =>
-                        !command.SupportH2C.HasValue 
-                        || !command.SupportH2C.Value 
-                        || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                    .WithMessage("H2C only works with the HTTP schema")
                     .Must((command, url) => // either h2c is not enabled or the url must start with http
                         string.IsNullOrEmpty(url)
                         || !command.SupportH2C.HasValue
                         || !command.SupportH2C.Value
                         || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                    .WithMessage("H2C only works with the HTTP schema"); ;
+                    .WithMessage("H2C only works with the HTTP schema");
                 
                 RuleFor(command => command.SaveResponse)
                     .NotNull()

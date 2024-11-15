@@ -52,7 +52,7 @@ namespace LPS.Domain
             {
                 if (entity == null)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPSHttpRun Entity Must Have a Value", LPSLoggingLevel.Error);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, "LPSHttpIteration Entity Must Have a Value", LPSLoggingLevel.Error);
                     throw new ArgumentNullException(nameof(entity));
                 }
 

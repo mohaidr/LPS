@@ -11,10 +11,12 @@ namespace LPS.UI.Core.LPSValidators
 {
     internal class RoundValidator : CommandBaseValidator<RoundDto, Round>
     {
-        RoundDto _roundDto;
-        public RoundValidator(RoundDto command)
+        readonly RoundDto _roundDto;
+        public RoundValidator(RoundDto roundDto)
         {
-            _roundDto = command;
+            ArgumentNullException.ThrowIfNull(roundDto);
+
+            _roundDto = roundDto;
 
             RuleFor(command => command.Name)
             .NotNull().WithMessage("The 'Name' must be a non-null value")

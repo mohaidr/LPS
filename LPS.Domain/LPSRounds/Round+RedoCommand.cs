@@ -32,7 +32,7 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 this.IsRedo = true;
-                await this.ExecuteAsync(new ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _lpsClientManager, _lpsClientConfig, _httpRunExecutionCommandStatusMonitor, _lpsMetricsDataMonitor, _cts));
+                await this.ExecuteAsync(new ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _lpsClientManager, _lpsClientConfig, _httpIterationExecutionCommandStatusMonitor, _lpsMetricsDataMonitor, _cts));
             }
         }
     }

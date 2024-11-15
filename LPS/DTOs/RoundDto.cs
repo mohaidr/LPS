@@ -18,6 +18,8 @@ namespace LPS.DTOs
             ReferencedIterations = [];
         }
         public override string Name { get; set; }
+        public string BaseUrl { get; set; }
+
         public List<HttpIterationDto> Iterations { get; set; } // Inline iterations
         [JsonPropertyName("ref")]
         [YamlMember(Alias = "ref")]
@@ -27,7 +29,7 @@ namespace LPS.DTOs
             targetDto = new RoundDto();
             // Call base.Clone() and cast it to RoundDto
             base.Copy(targetDto);
-
+            targetDto.BaseUrl = BaseUrl;
             // Clone Iterations list if it's not null
             #pragma warning disable CS8601 // Possible null reference assignment.
             targetDto.Iterations = Iterations?.Select(iteration =>

@@ -10,6 +10,7 @@ using LPS.UI.Common;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 using LPS.DTOs;
+using System.CommandLine;
 
 namespace LPS.UI.Core.LPSValidators
 {
@@ -18,9 +19,10 @@ namespace LPS.UI.Core.LPSValidators
 
         readonly HttpSessionDto _sessionDto;
         readonly string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-        public SessionValidator(HttpSessionDto command)
+        public SessionValidator(HttpSessionDto sessionDto)
         {
-            _sessionDto = command;
+            ArgumentNullException.ThrowIfNull(sessionDto);
+            _sessionDto = sessionDto;
 
             RuleFor(command => command.HttpVersion)
                 .Must(version => version == "1.0" 

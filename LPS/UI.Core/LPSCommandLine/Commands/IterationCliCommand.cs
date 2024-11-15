@@ -48,14 +48,22 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _iterationCommand.SetHandler((configFile, roundName, iteration, isGlobal) =>
             {
-                var iterationValidator = new IterationValidator(iteration);
+                var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                iteration.DeepCopy(out HttpIterationDto ItrationDtoCopy);
+                var iterationValidator = new IterationValidator(ItrationDtoCopy);
                 ValidationResult results = iterationValidator.Validate();
+                var roundDto = planDto?.Rounds.FirstOrDefault(r => r.Name == roundName);
+                if (ItrationDtoCopy.Session?.URL != null &&  roundDto?.BaseUrl != null && !ItrationDtoCopy.Session.URL.StartsWith("http://") && !ItrationDtoCopy.Session.URL.StartsWith("https://"))
+                {
+                    ItrationDtoCopy.Session.URL = $"{roundDto.BaseUrl}{ItrationDtoCopy.Session.URL}";
+                }
+                var sessionValidator = new SessionValidator(ItrationDtoCopy.Session);
+                var sessionValidationResults = sessionValidator.Validate();
 
-                if (results.IsValid)
+                if (results.IsValid && sessionValidationResults.IsValid)
                 {
                     try
                     {
-                        var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
                         bool isRoundNameEmpty = string.IsNullOrEmpty(roundName);
                         // Determine where to add the iteration based on the global and roundName options
                         if (isGlobal || isRoundNameEmpty)
@@ -71,23 +79,22 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
                         if (!isRoundNameEmpty)
                         {
-                            var round = planDto?.Rounds.FirstOrDefault(r => r.Name == roundName);
-                            if (round != null)
+                            if (roundDto != null)
                             {
                                 if (isGlobal)
                                 {
                                     // Add as a global iteration but also create a setup command in the round with the same name
-                                    round.ReferencedIterations.Add(new ReferenceIterationDto { Name = iteration.Name });
+                                    roundDto.ReferencedIterations.Add(new ReferenceIterationDto { Name = iteration.Name });
                                 }
                                 else
                                 {
-                                    var existingRoundIteration = round.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
+                                    var existingRoundIteration = roundDto.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
                                     if (existingRoundIteration != null)
                                     {
-                                        round.Iterations.Remove(existingRoundIteration);
+                                        roundDto.Iterations.Remove(existingRoundIteration);
                                     }
                                     // Add iteration as a local iteration within the round
-                                    round.Iterations.Add(iteration);
+                                    roundDto.Iterations.Add(iteration);
                                 }
                             }
                             else

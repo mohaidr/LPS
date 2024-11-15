@@ -15,11 +15,11 @@ namespace LPS.UI.Core.LPSValidators
 {
     internal class IterationValidator : CommandBaseValidator<HttpIterationDto, HttpIteration>
     {
-        HttpIterationDto _iterationDto;
-
-        public IterationValidator(HttpIterationDto command)
+        readonly HttpIterationDto _iterationDto;
+        public IterationValidator(HttpIterationDto iterationDto)
         {
-            _iterationDto = command;
+            ArgumentNullException.ThrowIfNull(iterationDto);
+            _iterationDto = iterationDto;
 
 
             RuleFor(command => command.Name)

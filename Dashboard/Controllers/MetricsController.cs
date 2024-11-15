@@ -19,13 +19,13 @@ namespace LPS.Controllers
     [Route("api/[controller]")]
     public class MetricsController(
         Domain.Common.Interfaces.ILogger logger,
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpRunCommandStatusMonitor,
+        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationCommandStatusMonitor,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsQueryService metricsQueryService) : ControllerBase
     {
         readonly Domain.Common.Interfaces.ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider? _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>? _httpRunCommandStatusMonitor = httpRunCommandStatusMonitor;
+        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>? _httpIterationCommandStatusMonitor = httpIterationCommandStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
 
         // MetricData class extended to hold Data Transmission metrics
@@ -97,7 +97,7 @@ namespace LPS.Controllers
                 {
                     var dimensionSet = await ((IMetricCollector)metric).GetDimensionSetAsync();
 
-                    var statusList = _httpRunCommandStatusMonitor?.GetAllStatuses(((IMetricCollector)metric).HttpIteration);
+                    var statusList = _httpIterationCommandStatusMonitor?.GetAllStatuses(((IMetricCollector)metric).HttpIteration);
                     string status = statusList != null ? DetermineOverallStatus(statusList) : ExecutionStatus.Unkown.ToString();
 
                     var metricData = metricsList.FirstOrDefault(m => m.IterationId == ((IHttpDimensionSet)dimensionSet).IterationId);

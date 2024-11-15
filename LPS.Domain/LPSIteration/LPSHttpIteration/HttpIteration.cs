@@ -45,10 +45,8 @@ namespace LPS.Domain
             this.Setup(command);
         }
 
-
         private int _numberOfSuccessfulCalls;
         private int _numberOfFailedCalls;
-
         public int NumberOfSuccessfulCalls
         {
             get => _numberOfSuccessfulCalls;
@@ -71,26 +69,19 @@ namespace LPS.Domain
                 }
             }
         }
-
-        public HttpSession Session { get; protected set; }
-
         public void SetHttpSession(HttpSession httpSession)
         {
             string httpIterationName = this.Name ?? string.Empty;
             Session = httpSession != null && httpSession.IsValid ? httpSession : throw new InvalidLPSEntityException($"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpSession)} is either null or invalid.");
         }
-
         public int? RequestCount { get; private set; }
-
         public int? Duration { get; private set; }
-
         public int? BatchSize { get; private set; }
-
         public int? CoolDownTime { get; private set; }
-
         public IterationMode? Mode { get; private set; }
         public bool MaximizeThroughput { get; private set; }
-
         public ExecutionStatus Status { get; private set; }
+        public HttpSession Session { get; protected set; }
+
     }
 }

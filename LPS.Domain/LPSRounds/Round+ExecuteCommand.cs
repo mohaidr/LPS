@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
-using LPS.Domain.LPSRun.LPSHttpRun.Scheduler;
+using LPS.Domain.LPSRun.LPSHttpIteration.Scheduler;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 
@@ -19,7 +19,7 @@ namespace LPS.Domain
 
     public partial class Round
     {
-        IHttpRunSchedulerService _httpRunSchedulerService;
+        IHttpIterationSchedulerService _httpIterationSchedulerService;
         public class ExecuteCommand : IAsyncCommand<Round>
         {
             readonly ILogger _logger;
@@ -28,7 +28,7 @@ namespace LPS.Domain
             readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _lpsClientManager;
             readonly IClientConfiguration<HttpSession> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
-            readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpRunExecutionCommandStatusMonitor;
+            readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
             readonly CancellationTokenSource _cts;
             protected ExecuteCommand()
             {
@@ -38,7 +38,7 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpSession> lpsClientConfig,
-                ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpRunExecutionCommandStatusMonitor,
+                ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 CancellationTokenSource cts)
             {
@@ -47,7 +47,7 @@ namespace LPS.Domain
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsClientManager = lpsClientManager;
                 _lpsClientConfig = lpsClientConfig;
-                _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+                _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _cts = cts;
             }
@@ -66,9 +66,9 @@ namespace LPS.Domain
                 entity._lpsClientConfig = this._lpsClientConfig;
                 entity._lpsClientManager = this._lpsClientManager;
                 entity._lpsMetricsDataMonitor = this._lpsMetricsDataMonitor;
-                entity._httpRunExecutionCommandStatusMonitor = this._httpRunExecutionCommandStatusMonitor;
+                entity._httpIterationExecutionCommandStatusMonitor = this._httpIterationExecutionCommandStatusMonitor;
                 entity._cts = this._cts;
-                entity._httpRunSchedulerService = new HttpRunSchedulerService(_logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _httpRunExecutionCommandStatusMonitor, _cts);
+                entity._httpIterationSchedulerService = new HttpIterationSchedulerService(_logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _httpIterationExecutionCommandStatusMonitor, _cts);
                 await entity.ExecuteAsync(this);
             }
 
@@ -112,13 +112,13 @@ namespace LPS.Domain
                         httpClient = _lpsClientManager.CreateInstance(_lpsClientConfig);
                     }
                     int delayTime = i * (this.ArrivalDelay?? 0);
-                    awaitableTasks.Add(SchedualHttpRunsForExecution(httpClient, DateTime.Now.AddMilliseconds(delayTime)));
+                    awaitableTasks.Add(SchedualHttpIterationForExecution(httpClient, DateTime.Now.AddMilliseconds(delayTime)));
                 }
                 await Task.WhenAll([..awaitableTasks]);
             }
         }
 
-        async Task SchedualHttpRunsForExecution(IClientService<HttpSession, HttpResponse> httpClient, DateTime executionTime)
+        async Task SchedualHttpIterationForExecution(IClientService<HttpSession, HttpResponse> httpClient, DateTime executionTime)
         {
             List<Task> awaitableTasks = [];
             foreach (var httpIteration in this.Iterations.Where(iteration=> iteration.Type == IterationType.Http))
@@ -131,11 +131,11 @@ namespace LPS.Domain
                 await _watchdog.BalanceAsync(hostName, _cts.Token);
                 if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {
-                    awaitableTasks.Add(_httpRunSchedulerService.ScheduleHttpRunExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient));
+                    awaitableTasks.Add(_httpIterationSchedulerService.ScheduleHttpIterationExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient));
                 }
                 else
                 {
-                    await _httpRunSchedulerService.ScheduleHttpRunExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient);
+                    await _httpIterationSchedulerService.ScheduleHttpIterationExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient);
                 }
             }
             await Task.WhenAll(awaitableTasks);

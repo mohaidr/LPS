@@ -11,10 +11,11 @@ namespace LPS.UI.Core.LPSValidators
 {
     internal class PlanValidator : CommandBaseValidator<PlanDto, Plan>
     {
-        PlanDto _planDto;
-        public PlanValidator(PlanDto command)
+        readonly PlanDto _planDto;
+        public PlanValidator(PlanDto planDto)
         {
-            _planDto = command;
+            ArgumentNullException.ThrowIfNull(planDto);
+            _planDto = planDto;
 
             RuleFor(command => command.Name)
             .NotNull().WithMessage("The 'Name' must be a non-null value")

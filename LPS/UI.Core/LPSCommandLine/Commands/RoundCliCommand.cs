@@ -60,6 +60,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         if (selectedRound != null)
                         {
                             selectedRound.Name = round.Name;
+                            selectedRound.BaseUrl = round.BaseUrl;
                             selectedRound.StartupDelay = round.StartupDelay;
                             selectedRound.NumberOfClients = round.NumberOfClients;
                             selectedRound.ArrivalDelay = round.ArrivalDelay;

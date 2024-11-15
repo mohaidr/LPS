@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
-using LPS.Domain.LPSRun.LPSHttpRun.Scheduler;
+using LPS.Domain.LPSRun.LPSHttpIteration.Scheduler;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 
@@ -19,7 +19,6 @@ namespace LPS.Domain
 
     public partial class Plan
     {
-        IHttpRunSchedulerService _httpRunSchedulerService;
         public class ExecuteCommand : IAsyncCommand<Plan>
         {
             readonly ILogger _logger;
@@ -28,7 +27,7 @@ namespace LPS.Domain
             readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _lpsClientManager;
             readonly IClientConfiguration<HttpSession> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
-            readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpRunExecutionCommandStatusMonitor;
+            readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
             readonly CancellationTokenSource _cts;
             protected ExecuteCommand()
             {
@@ -38,7 +37,7 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpSession> lpsClientConfig,
-                ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpRunExecutionCommandStatusMonitor,
+                ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 CancellationTokenSource cts)
             {
@@ -47,7 +46,7 @@ namespace LPS.Domain
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsClientManager = lpsClientManager;
                 _lpsClientConfig = lpsClientConfig;
-                _httpRunExecutionCommandStatusMonitor = httpRunExecutionCommandStatusMonitor;
+                _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _cts = cts;
             }
@@ -66,9 +65,8 @@ namespace LPS.Domain
                 entity._lpsClientConfig = this._lpsClientConfig;
                 entity._lpsClientManager = this._lpsClientManager;
                 entity._lpsMetricsDataMonitor = this._lpsMetricsDataMonitor;
-                entity._httpRunExecutionCommandStatusMonitor = this._httpRunExecutionCommandStatusMonitor;
+                entity._httpIterationExecutionCommandStatusMonitor = this._httpIterationExecutionCommandStatusMonitor;
                 entity._cts = this._cts;
-                entity._httpRunSchedulerService = new HttpRunSchedulerService(_logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _httpRunExecutionCommandStatusMonitor, _cts);
                 await entity.ExecuteAsync(this);
             }
 
@@ -79,7 +77,7 @@ namespace LPS.Domain
         {
             if (this.IsValid && this.Rounds.Count > 0)
             {
-                RegisterHttpRunsForMonitor(); // Optionally pre-register HTTP runs for monitoring to include them in the dashboard immediately, even with empty execution lists, rather than waiting for each run to start.
+                RegisterHttpIterationForMonitor(); // Optionally pre-register HTTP runs for monitoring to include them in the dashboard immediately, even with empty execution lists, rather than waiting for each run to start.
 
                 List<Task> awaitableTasks = new();
                 #region Loggin Round Details
@@ -94,7 +92,7 @@ namespace LPS.Domain
                         _runtimeOperationIdProvider,
                         _lpsClientManager,
                         _lpsClientConfig,
-                        _httpRunExecutionCommandStatusMonitor,
+                        _httpIterationExecutionCommandStatusMonitor,
                         _lpsMetricsDataMonitor,
                         _cts);
                     await roundExecCommand.ExecuteAsync(round);
@@ -102,7 +100,7 @@ namespace LPS.Domain
             }
         }
 
-        private void RegisterHttpRunsForMonitor()
+        private void RegisterHttpIterationForMonitor()
         {
             foreach (var round in Rounds)
             {

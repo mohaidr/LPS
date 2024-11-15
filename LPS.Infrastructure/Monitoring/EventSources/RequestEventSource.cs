@@ -17,13 +17,13 @@ namespace LPS.Infrastructure.Monitoring.EventSources
 
         private IncrementingEventCounter requestIncrementCounter;
 
-        private RequestEventSource(HttpIteration lpshttpRun)
+        private RequestEventSource(HttpIteration lpshttpIteration)
         {
-            if (lpshttpRun != null && lpshttpRun.Session != null &&  Uri.TryCreate(lpshttpRun.Session.URL, UriKind.Absolute, out Uri uriResult))
+            if (lpshttpIteration != null && lpshttpIteration.Session != null &&  Uri.TryCreate(lpshttpIteration.Session.URL, UriKind.Absolute, out Uri uriResult))
             {
                 this.requestIncrementCounter = new IncrementingEventCounter("requestsPerSecond", this)
                 {
-                    DisplayName = $"{lpshttpRun.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.requests.per.second",
+                    DisplayName = $"{lpshttpIteration.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.requests.per.second",
                     DisplayRateTimeScale = TimeSpan.FromSeconds(1) // This sets the rate to per second
                 };
             }
@@ -33,9 +33,9 @@ namespace LPS.Infrastructure.Monitoring.EventSources
             }
         }
 
-        public static RequestEventSource GetInstance(HttpIteration lpsHttpRun)
+        public static RequestEventSource GetInstance(HttpIteration lpsHttpIteration)
         {
-            return instances.GetOrAdd(lpsHttpRun, (run) => new RequestEventSource(run));
+            return instances.GetOrAdd(lpsHttpIteration, (run) => new RequestEventSource(run));
         }
 
         public void AddRequest()
