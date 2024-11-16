@@ -58,7 +58,6 @@ namespace LPS.Domain
 
             public void Copy(SetupCommand targetCommand)
             {
-                Console.ReadLine    ();
                 targetCommand.Id = this.Id;
                 targetCommand.URL = this.URL;
                 targetCommand.HttpMethod = this.HttpMethod;

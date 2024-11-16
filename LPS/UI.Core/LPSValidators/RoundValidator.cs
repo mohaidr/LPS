@@ -18,37 +18,47 @@ namespace LPS.UI.Core.LPSValidators
 
             _roundDto = roundDto;
 
-            RuleFor(command => command.Name)
+            RuleFor(dto => dto.Name)
             .NotNull().WithMessage("The 'Name' must be a non-null value")
             .NotEmpty().WithMessage("The 'Name' must not be empty")
             .Matches("^[a-zA-Z0-9 _.-]+$")
             .WithMessage("The 'Name' does not accept special charachters")
             .Length(1, 60)
             .WithMessage("The 'Name' should be between 1 and 60 characters");
-             
-            RuleFor(command=> command.Iterations)
+
+            RuleFor(dto => dto.BaseUrl)
+            .Must(url =>
+            {
+                return Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+            })
+            .When(dto=> !string.IsNullOrEmpty(dto.BaseUrl))
+            .WithMessage("The 'BaseUrl' must be a valid URL according to RFC 3986");
+
+
+            RuleFor(dto=> dto.Iterations)
             .Must(HaveUniqueIterationNames)
             .WithMessage("The Iteration 'Name' must be unique.");
 
-            RuleFor(command => command.StartupDelay)
+            RuleFor(dto => dto.StartupDelay)
             .GreaterThanOrEqualTo(0)
             .WithMessage("The 'StartUpDelay' must be greater than or equal to 0");
 
-            RuleFor(command => command.NumberOfClients)
+            RuleFor(dto => dto.NumberOfClients)
             .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")
             .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
 
-            RuleFor(command => command.ArrivalDelay)
+            RuleFor(dto => dto.ArrivalDelay)
             .NotNull().WithMessage("The 'Arrival Delay' must be greater than 0")
             .GreaterThan(0)
-            .When(command=> command.NumberOfClients>1)
+            .When(dto=> dto.NumberOfClients>1)
             .WithMessage("The 'Arrival Delay' must be greater than 0");
 
 
-            RuleFor(command => command.DelayClientCreationUntilIsNeeded)
+            RuleFor(dto => dto.DelayClientCreationUntilIsNeeded)
             .NotNull().WithMessage("'Delay Client Creation Until Is Needed' must be (y) or (n)");
 
-            RuleFor(command => command.RunInParallel)
+            RuleFor(dto => dto.RunInParallel)
             .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
         }
         private bool HaveUniqueIterationNames(IList<HttpIterationDto> iterations)

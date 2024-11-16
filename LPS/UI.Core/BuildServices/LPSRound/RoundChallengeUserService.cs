@@ -15,12 +15,11 @@ namespace LPS.UI.Core.Build.Services
 {
     internal class RoundChallengeUserService(bool skipOptionalFields, RoundDto command, IBaseValidator<RoundDto, Round> validator) : IChallengeUserService<RoundDto, Round>
     {
-        IBaseValidator<RoundDto, Round> _validator = validator;
-        RoundDto _roundDto = command;
+        readonly IBaseValidator<RoundDto, Round> _validator = validator;
+        readonly RoundDto _roundDto = command;
         public RoundDto Dto => _roundDto;
         public bool SkipOptionalFields  => _skipOptionalFields;
-
-        private bool _skipOptionalFields = skipOptionalFields;
+        private readonly bool _skipOptionalFields = skipOptionalFields;
 
         public void Challenge()
         {
@@ -38,6 +37,15 @@ namespace LPS.UI.Core.Build.Services
                     _roundDto.Name = AnsiConsole.Ask<string>("What's your [green]'Round Name'[/]?");
                     continue;
                 }
+
+                if (!_validator.Validate(nameof(Dto.BaseUrl))  && !Dto.BaseUrl.Equals("skip", StringComparison.Ordinal))
+                {
+                    _validator.PrintValidationErrors(nameof(Dto.BaseUrl));
+                    var input = AnsiConsole.Ask<string>("Enter a valid BaseUrl Or type skip?");
+                    _roundDto.BaseUrl = input.Equals("skip", StringComparison.Ordinal) ? string.Empty: input;
+                    continue;
+                }
+
 
                 if (!_validator.Validate(nameof(Dto.StartupDelay)))
                 {
@@ -79,9 +87,9 @@ namespace LPS.UI.Core.Build.Services
                     continue;
                 }
 
-                HttpIterationDto iterationCommand = new HttpIterationDto();
-                IterationValidator validator = new IterationValidator(iterationCommand);
-                IterationChallengeUserService iterationUserService = new(SkipOptionalFields, iterationCommand, validator);
+                HttpIterationDto iterationCommand = new();
+                IterationValidator validator = new(iterationCommand);
+                IterationChallengeUserService iterationUserService = new(SkipOptionalFields, iterationCommand, _roundDto.BaseUrl, validator);
                 iterationUserService.Challenge();
 
                 Dto.Iterations.Add(iterationCommand);
@@ -95,7 +103,6 @@ namespace LPS.UI.Core.Build.Services
                 }
                 break;
             }
-
             _roundDto.IsValid = true;
         }
 
@@ -106,6 +113,7 @@ namespace LPS.UI.Core.Build.Services
                 _roundDto.StartupDelay = -1;
                 _roundDto.DelayClientCreationUntilIsNeeded = null;
                 _roundDto.RunInParallel = null;
+                _roundDto.BaseUrl = "https://";
             }
         }
     }

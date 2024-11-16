@@ -52,8 +52,11 @@ namespace LPS.UI.Core
             }
         }
         public void PrintValidationErrors(string property)
-        {           
-            AnsiConsole.MarkupLine(string.Concat("[Orange3]- ", Markup.Escape(string.Join("\n- ", ValidationErrors[property])), "[/]"));
+        {
+            if (ValidationErrors.Keys.Contains(property))
+            {
+                AnsiConsole.MarkupLine(string.Concat("[Orange3]- ", Markup.Escape(string.Join("\n- ", ValidationErrors[property])), "[/]"));
+            }
         }
 
         public ValidationResult Validate()

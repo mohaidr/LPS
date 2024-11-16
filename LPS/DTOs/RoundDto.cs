@@ -16,6 +16,7 @@ namespace LPS.DTOs
         {
             Iterations = [];
             ReferencedIterations = [];
+            BaseUrl = string.Empty;
         }
         public override string Name { get; set; }
         public string BaseUrl { get; set; }

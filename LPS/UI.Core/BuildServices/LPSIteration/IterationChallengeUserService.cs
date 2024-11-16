@@ -6,12 +6,12 @@ using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
 namespace LPS.UI.Core.Build.Services
 {
-    internal class IterationChallengeUserService(bool skipOptionalFields, HttpIterationDto command, IBaseValidator<HttpIterationDto, HttpIteration> validator) : IChallengeUserService<HttpIterationDto, HttpIteration>
+    internal class IterationChallengeUserService(bool skipOptionalFields, HttpIterationDto command, string baseUrl, IBaseValidator<HttpIterationDto, HttpIteration> validator) : IChallengeUserService<HttpIterationDto, HttpIteration>
     {
         IBaseValidator<HttpIterationDto, HttpIteration> _validator = validator;
-        HttpIterationDto _iterationDto = command;
-        private bool _skipOptionalFields = skipOptionalFields;
-
+        readonly HttpIterationDto _iterationDto = command;
+        private readonly bool _skipOptionalFields = skipOptionalFields;
+        private string _baseUrl= baseUrl;
         public bool SkipOptionalFields => _skipOptionalFields;
         public HttpIterationDto Dto => _iterationDto;
         public void Challenge()
@@ -80,7 +80,7 @@ namespace LPS.UI.Core.Build.Services
                 break;
             }
             SessionValidator validator = new(_iterationDto.Session);
-            SessionChallengeUserService sessionChallengeUserService = new(SkipOptionalFields, _iterationDto.Session, validator);
+            SessionChallengeUserService sessionChallengeUserService = new(SkipOptionalFields, _iterationDto.Session, _baseUrl, validator);
             sessionChallengeUserService.Challenge();
         }
 

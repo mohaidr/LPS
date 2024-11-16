@@ -29,10 +29,8 @@ namespace LPS.Domain
             [YamlIgnore]
             public Guid? Id { get; set; }
             public virtual string Name { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public int StartupDelay { get; set; }
             public int? NumberOfClients { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public int? ArrivalDelay { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }

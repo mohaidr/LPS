@@ -7,20 +7,14 @@ using System;
 
 namespace LPS.UI.Core.Build.Services
 {
-    internal class SessionChallengeUserService : IChallengeUserService<HttpSessionDto, HttpSession>
+    internal class SessionChallengeUserService(bool skipOptionalFields, HttpSessionDto command, string baseUrl, IBaseValidator<HttpSessionDto, HttpSession> validator) : IChallengeUserService<HttpSessionDto, HttpSession>
     {
-        IBaseValidator<HttpSessionDto, HttpSession> _validator;
-        public SessionChallengeUserService(bool skipOptionalFields, HttpSessionDto command, IBaseValidator<HttpSessionDto, HttpSession> validator)
-        {
-            _skipOptionalFields = skipOptionalFields;
-            _sessionDto = command;
-            _validator = validator;
-        }
+        readonly IBaseValidator<HttpSessionDto, HttpSession> _validator = validator;
         public bool SkipOptionalFields => _skipOptionalFields;
-        private readonly bool _skipOptionalFields;
-
-        HttpSessionDto _sessionDto;
-        public HttpSessionDto Dto { get { return _sessionDto; } set { value = _sessionDto; } }
+        private readonly bool _skipOptionalFields = skipOptionalFields;
+        private readonly string _baseUrl= baseUrl;
+        readonly HttpSessionDto _sessionDto = command;
+        public HttpSessionDto Dto => _sessionDto;
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -41,7 +35,12 @@ namespace LPS.UI.Core.Build.Services
                 if (!_validator.Validate(nameof(Dto.URL)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.URL));
-                    _sessionDto.URL = AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
+                    string inpute= AnsiConsole.Ask<string>("What is the [green]'Http Request URL'[/]?");
+                    if (!string.IsNullOrEmpty(_baseUrl) && !inpute.StartsWith("http://") && !inpute.StartsWith("https://"))
+                    {
+                        inpute = $"{_baseUrl}{inpute}";
+                    }
+                    _sessionDto.URL = inpute;
                     continue;
                 }
                 if (!_validator.Validate(nameof(Dto.HttpVersion)))

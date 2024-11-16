@@ -80,13 +80,14 @@ namespace LPS.UI.Core.Host
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             await _logger.FlushAsync();
         }
-        private void SavePlanToDisk(Plan.SetupCommand planSetupCommand)
+        private static void SavePlanToDisk(PlanDto planDto)
         {
-            File.WriteAllText($"{planSetupCommand.Name}.json", SerializationHelper.Serialize(planSetupCommand));
+            var jsonContent = SerializationHelper.Serialize(planDto);
+            File.WriteAllText($"{planDto.Name}.json", jsonContent);
 
             var yamlContent = SerializationHelper
-                .SerializeToYaml(planSetupCommand);
-            File.WriteAllText($"{planSetupCommand.Name}.yaml", yamlContent);
+                .SerializeToYaml(planDto);
+            File.WriteAllText($"{planDto.Name}.yaml", yamlContent);
 
         }
         public async Task StopAsync(CancellationToken cancellationToken)

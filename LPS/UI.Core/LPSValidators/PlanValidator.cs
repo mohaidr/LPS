@@ -17,7 +17,7 @@ namespace LPS.UI.Core.LPSValidators
             ArgumentNullException.ThrowIfNull(planDto);
             _planDto = planDto;
 
-            RuleFor(command => command.Name)
+            RuleFor(dto => dto.Name)
             .NotNull().WithMessage("The 'Name' must be a non-null value")
             .NotEmpty().WithMessage("The 'Name' must not be empty")
             .Matches("^[a-zA-Z0-9 _.-]+$")
@@ -25,10 +25,10 @@ namespace LPS.UI.Core.LPSValidators
             .Length(1, 60)
             .WithMessage("The 'Name' should be between 1 and 60 characters");
 
-            RuleFor(command => command.Rounds)
+            RuleFor(dto => dto.Rounds)
                 .Must(HaveUniqueRoundNames)
                 .WithMessage("The Round 'Name' must be unique.");
-            RuleFor(command => command.Iterations)
+            RuleFor(dto => dto.Iterations)
                .Must(HaveUniqueIterationNames)
                .WithMessage("The Round 'Name' must be unique.");
         }

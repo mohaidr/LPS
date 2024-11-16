@@ -22,7 +22,7 @@ namespace LPS.UI.Core.LPSValidators
             _iterationDto = iterationDto;
 
 
-            RuleFor(command => command.Name)
+            RuleFor(dto => dto.Name)
             .NotNull().WithMessage("The 'Name' must be a non-null value")
             .NotEmpty().WithMessage("The 'Name' must not be empty")
             .Matches("^[a-zA-Z0-9 _.-]+$")
@@ -30,53 +30,53 @@ namespace LPS.UI.Core.LPSValidators
             .Length(1, 60)
             .WithMessage("The 'Name' should be between 1 and 60 characters");
 
-            RuleFor(command => command.Mode)
+            RuleFor(dto => dto.Mode)
             .NotNull()
             .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)"); 
 
-            RuleFor(command => command.MaximizeThroughput)
+            RuleFor(dto => dto.MaximizeThroughput)
             .NotNull()
             .WithMessage("The 'MaximizeThroughput' property must be a non-null value");
 
-            RuleFor(command => command.RequestCount)
+            RuleFor(dto => dto.RequestCount)
             .NotNull().WithMessage("The 'Request Count' must be a non-null value and greater than 0")
             .GreaterThan(0).WithMessage("The 'Request Count' must be greater than 0")
-            .When(command => command.Mode == IterationMode.CRB || command.Mode == IterationMode.R)
+            .When(dto => dto.Mode == IterationMode.CRB || dto.Mode == IterationMode.R)
             .Null()
-            .When(command => command.Mode != IterationMode.CRB && command.Mode != IterationMode.R, ApplyConditionTo.CurrentValidator)
-            .GreaterThan(command => command.BatchSize)
+            .When(dto => dto.Mode != IterationMode.CRB && dto.Mode != IterationMode.R, ApplyConditionTo.CurrentValidator)
+            .GreaterThan(dto => dto.BatchSize)
             .WithMessage("The 'Request Count' Must Be Greater Than The BatchSize")
-            .When(command => command.Mode == IterationMode.CRB && command.BatchSize.HasValue, ApplyConditionTo.CurrentValidator);
+            .When(dto => dto.Mode == IterationMode.CRB && dto.BatchSize.HasValue, ApplyConditionTo.CurrentValidator);
 
-            RuleFor(command => command.Duration)
+            RuleFor(dto => dto.Duration)
             .NotNull().WithMessage("The 'Duration' must be a non-null value and greater than 0")
             .GreaterThan(0).WithMessage("The 'Duration' must be greater than 0")
-            .When(command => command.Mode == IterationMode.D || command.Mode == IterationMode.DCB)
+            .When(dto => dto.Mode == IterationMode.D || dto.Mode == IterationMode.DCB)
             .Null()
-            .When(command => command.Mode != IterationMode.D && command.Mode != IterationMode.DCB, ApplyConditionTo.CurrentValidator)
-            .GreaterThan(command => command.CoolDownTime/1000)
+            .When(dto => dto.Mode != IterationMode.D && dto.Mode != IterationMode.DCB, ApplyConditionTo.CurrentValidator)
+            .GreaterThan(dto => dto.CoolDownTime/1000)
              .WithMessage("The 'Duration*1000' Must Be Greater Than The Cool Down Time")
-            .When(command => command.Mode == IterationMode.DCB && command.CoolDownTime.HasValue, ApplyConditionTo.CurrentValidator);
+            .When(dto => dto.Mode == IterationMode.DCB && dto.CoolDownTime.HasValue, ApplyConditionTo.CurrentValidator);
 
-            RuleFor(command => command.BatchSize)
+            RuleFor(dto => dto.BatchSize)
             .NotNull().WithMessage("The 'Batch Size' must be a non-null value and greater than 0")
             .GreaterThan(0).WithMessage("The 'Batch Size' must be greater than 0")
-            .When(command => command.Mode == IterationMode.DCB || command.Mode == IterationMode.CRB || command.Mode == IterationMode.CB)
+            .When(dto => dto.Mode == IterationMode.DCB || dto.Mode == IterationMode.CRB || dto.Mode == IterationMode.CB)
             .Null()
-            .When(command => command.Mode != IterationMode.DCB && command.Mode != IterationMode.CRB && command.Mode != IterationMode.CB, ApplyConditionTo.CurrentValidator)
-            .LessThan(command => command.RequestCount)
+            .When(dto => dto.Mode != IterationMode.DCB && dto.Mode != IterationMode.CRB && dto.Mode != IterationMode.CB, ApplyConditionTo.CurrentValidator)
+            .LessThan(dto => dto.RequestCount)
             .WithMessage("The 'Batch Size' Must Be Less Than The Request Count")
-            .When(command => command.Mode == IterationMode.CRB && command.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);
+            .When(dto => dto.Mode == IterationMode.CRB && dto.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);
 
-            RuleFor(command => command.CoolDownTime)
+            RuleFor(dto => dto.CoolDownTime)
             .NotNull().WithMessage("The 'Cool Down Time' must be a non-null value and greater than 0")
             .GreaterThan(0).WithMessage("The 'Cool Down Time' must be greater than 0")
-            .When(command => command.Mode == IterationMode.DCB || command.Mode == IterationMode.CRB || command.Mode == IterationMode.CB)
+            .When(dto => dto.Mode == IterationMode.DCB || dto.Mode == IterationMode.CRB || dto.Mode == IterationMode.CB)
             .Null()
-            .When(command => command.Mode != IterationMode.DCB && command.Mode != IterationMode.CRB && command.Mode != IterationMode.CB, ApplyConditionTo.CurrentValidator)
-            .LessThan(command => command.Duration*1000)
+            .When(dto => dto.Mode != IterationMode.DCB && dto.Mode != IterationMode.CRB && dto.Mode != IterationMode.CB, ApplyConditionTo.CurrentValidator)
+            .LessThan(dto => dto.Duration*1000)
             .WithMessage("The 'CoolDownTime/1000' Must Be Less Than The Duration")
-            .When(command => command.Mode == IterationMode.DCB && command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
+            .When(dto => dto.Mode == IterationMode.DCB && dto.Duration.HasValue, ApplyConditionTo.CurrentValidator);
         }
 
         public override HttpIterationDto Dto { get { return _iterationDto; } }

@@ -295,6 +295,7 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 // Shortcut aliases
                 RoundNameOption.AddAlias("-n");
+                BaseUrlOption.AddAlias("-burl");
                 StartupDelayOption.AddAlias("-sd");
                 DelayClientCreation.AddAlias("-dcc");
                 NumberOfClientsOption.AddAlias("-nc");
@@ -303,6 +304,7 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(RoundNameOption, "--name");
+                AddCaseInsensitiveAliases(BaseUrlOption, "--baseurl");
                 AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
                 AddCaseInsensitiveAliases(DelayClientCreation, "--delayclientcreation");
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
@@ -322,6 +324,13 @@ namespace LPS.UI.Core.LPSCommandLine
                 "--name", "Round name")
             {
                 IsRequired = true,
+                Arity = ArgumentArity.ExactlyOne
+            };
+
+            public static Option<string> BaseUrlOption { get; } = new Option<string>(
+            "--baseUrl", "Base URL of the target endpoint")
+            {
+                IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
             };
 
