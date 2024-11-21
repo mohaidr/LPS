@@ -22,8 +22,8 @@ namespace LPS.UI.Core.Host
     internal class HostedService(
         dynamic command_args,
         ILogger logger,
-        IClientConfiguration<HttpSession> config,
-        IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> httpClientManager,
+        IClientConfiguration<HttpRequest> config,
+        IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
         IWatchdog watchdog,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsDataMonitor metricDataMonitor,
@@ -33,8 +33,8 @@ namespace LPS.UI.Core.Host
         CancellationTokenSource cts) : IHostedService
     {
         readonly ILogger _logger = logger;
-        readonly IClientConfiguration<HttpSession> _config = config;
-        readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _httpClientManager = httpClientManager;
+        readonly IClientConfiguration<HttpRequest> _config = config;
+        readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager = httpClientManager;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly IWatchdog _watchdog = watchdog;
         readonly AppSettingsWritableOptions _appSettings = appSettings;

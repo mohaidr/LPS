@@ -8,16 +8,16 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class RMode : IIterationModeService
     {
-        private HttpSession.ExecuteCommand _command;
+        private HttpRequest.ExecuteCommand _command;
         private int _requestCount;
         private IWatchdog _watchdog;
         private readonly string _hostName;
-        private HttpSession _session;
+        private HttpRequest _request;
 
-        private RMode(HttpSession session)
+        private RMode(HttpRequest request)
         {
-            _session = session;
-            _hostName = new Uri(_session.URL).Host;
+            _request = request;
+            _hostName = new Uri(_request.URL).Host;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -28,7 +28,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 for (int i = 0; i < _requestCount && !cancellationToken.IsCancellationRequested; i++)
                 {
                     await _watchdog.BalanceAsync(_hostName, cancellationToken);
-                    await _command.ExecuteAsync(_session);
+                    await _command.ExecuteAsync(_request);
                     numberOfSentRequests++;
                 }
                 return numberOfSentRequests;
@@ -40,12 +40,12 @@ namespace LPS.Domain.LPSRun.IterationMode
         }
         public class Builder : IBuilder<RMode>
         {
-            private HttpSession.ExecuteCommand _command;
+            private HttpRequest.ExecuteCommand _command;
             private int _requestCount;
             private IWatchdog _watchdog;
-            private HttpSession _session;
+            private HttpRequest _request;
 
-            public Builder SetCommand(HttpSession.ExecuteCommand command)
+            public Builder SetCommand(HttpRequest.ExecuteCommand command)
             {
                 _command = command;
                 return this;
@@ -63,24 +63,24 @@ namespace LPS.Domain.LPSRun.IterationMode
                 return this;
             }
 
-            public Builder SetSession(HttpSession session)
+            public Builder SetRequest(HttpRequest request)
             {
-                _session = session;
+                _request = request;
                 return this;
             }
 
             public RMode Build()
             {
                 // Validate required fields
-                if (_session == null)
-                    throw new InvalidOperationException("Session must be provided.");
+                if (_request == null)
+                    throw new InvalidOperationException("Request must be provided.");
 
-                var rMode = new RMode(_session)
+                var rMode = new RMode(_request)
                 {
                     _command = _command,
                     _requestCount = _requestCount,
                     _watchdog = _watchdog,
-                    _session = _session
+                    _request = _request
                 };
                 return rMode;
             }

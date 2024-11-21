@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-    public partial class StopAfterHandler : IFlowHandler
+    public partial class StopAfterHandler : ISessionHandler
     {
         public class Validator : CommandBaseValidator<StopAfterHandler, StopAfterHandler.SetupCommand>
         {
@@ -33,7 +33,6 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 // No validation rules so far
                 #endregion
 
-                _command.IsValid = base.Validate();
             }
 
             public override SetupCommand Command => _command;

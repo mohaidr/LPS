@@ -13,13 +13,13 @@ namespace LPS.Domain.LPSFlow
 {
     public partial class Flow
     {
-        private IClientService<HttpSession, HttpResponse> _httpClientService;
+        private IClientService<HttpRequest, HttpResponse> _httpClientService;
         public class ExecuteCommand : IAsyncCommand<Flow>
         {
             private ExecutionStatus _executionStatus;
 
             public ExecutionStatus Status => _executionStatus;
-            IClientService<HttpSession, HttpResponse> _httpClientService;
+            IClientService<HttpRequest, HttpResponse> _httpClientService;
             ILogger _logger;
             IWatchdog _watchdog;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
@@ -29,7 +29,7 @@ namespace LPS.Domain.LPSFlow
             {
 
             }
-            public ExecuteCommand(IClientService<HttpSession,
+            public ExecuteCommand(IClientService<HttpRequest,
                 HttpResponse> httpClientService,
                 Round.ExecuteCommand roundExecCommand,
                 ILogger logger,

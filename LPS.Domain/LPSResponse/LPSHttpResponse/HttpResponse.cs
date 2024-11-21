@@ -47,11 +47,11 @@ namespace LPS.Domain
         //TODO:
         //- The design will change when we have a repository and DB where validation will be added to make sure that this value does not change once assigned
         //- Assign this through the setupcommand where the command will have the ID so we can fetch the entity from the DB and assign it to prevent creating orphan entities
-        public HttpSession HttpSession { get; private set; }
+        public HttpRequest HttpRequest { get; private set; }
 
-        public void SetHttpSession(HttpSession httpSession)
+        public void SetHttpRequest(HttpRequest httpRequest)
         {
-            HttpSession = httpSession != null && httpSession.IsValid ? httpSession : throw new InvalidLPSEntityException($"The referenced LPS Entity of type {typeof(HttpSession)} is either null or invalid.");
+            HttpRequest = httpRequest != null && httpRequest.IsValid ? httpRequest : throw new InvalidLPSEntityException($"The referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.");
         }
         public TimeSpan ResponseTime { get; private set; }
     }

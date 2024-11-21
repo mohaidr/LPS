@@ -25,6 +25,16 @@ using System.Reflection;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Caching;
 using Microsoft.Extensions.Caching.Memory;
+using LPS.Infrastructure.LPSClients.HeaderServices;
+using LPS.Infrastructure.LPSClients.MetricsServices;
+using LPS.Infrastructure.LPSClients.Metrics;
+using LPS.Infrastructure.LPSClients.URLServices;
+using LPS.Infrastructure.LPSClients.MessageServices;
+using LPS.Infrastructure.LPSClients.ResponseService;
+using LPS.Infrastructure.LPSClients.SampleResponseServices;
+using LPS.Infrastructure.LPSClients.GlobalVariableManager;
+using LPS.Infrastructure.LPSClients.PlaceHolderService;
+using LPS.Infrastructure.LPSClients.SessionManager;
 
 
 namespace LPS
@@ -87,12 +97,22 @@ namespace LPS
                     services.AddSingleton<IConsoleLogger, ConsoleLogger>();
                     services.AddSingleton<ILogFormatter, LogFormatter>();
                     services.AddSingleton<ICacheService<string>, MemoryCacheService<string>>();
+                    services.AddSingleton<ICacheService<long>, MemoryCacheService<long>>();
                     services.AddSingleton(new MemoryCache(new MemoryCacheOptions
                     {
                         SizeLimit = 1024
                     }));
-                    services.AddSingleton<IClientManager<HttpSession, Domain.HttpResponse, IClientService<HttpSession, Domain.HttpResponse>>, HttpClientManager>();
+                    services.AddSingleton<IClientManager<Domain.HttpRequest, Domain.HttpResponse, IClientService<Domain.HttpRequest, Domain.HttpResponse>>, HttpClientManager>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
+                    services.AddSingleton<IHttpHeadersService, HttpHeadersService>();
+                    services.AddSingleton<IMetricsService, MetricsService>();
+                    services.AddSingleton<IUrlSanitizationService, UrlSanitizationService>();
+                    services.AddSingleton<IMessageService, MessageService>();
+                    services.AddSingleton<IResponseProcessingService, ResponseProcessingService>();
+                    services.AddSingleton<IResponseProcessorFactory, ResponseProcessorFactory>();
+                    services.AddSingleton<IPlaceholderResolverService, PlaceholderResolverService>();
+                    services.AddSingleton<ISessionManager, SessionManager>();
+                    services.AddSingleton<IVariableManager, VariableManager>();
                     services.ConfigureWritable<DashboardConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSDashboardConfiguration"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration"), AppConstants.AppSettingsFileLocation);

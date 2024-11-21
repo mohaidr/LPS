@@ -11,7 +11,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
     {
         Task DownloadResourcesAsync(
             string baseUrl,
-            Guid sessionId,
+            Guid requestId,
             CancellationToken cancellationToken);
     }
 }

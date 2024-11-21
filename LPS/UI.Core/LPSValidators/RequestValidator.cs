@@ -14,15 +14,15 @@ using System.CommandLine;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class SessionValidator : CommandBaseValidator<HttpSessionDto, HttpSession>
+    internal class RequestValidator : CommandBaseValidator<HttpRequestDto, Domain.HttpRequest>
     {
 
-        readonly HttpSessionDto _sessionDto;
+        readonly HttpRequestDto _requestDto;
         readonly string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-        public SessionValidator(HttpSessionDto sessionDto)
+        public RequestValidator(HttpRequestDto requestDto)
         {
-            ArgumentNullException.ThrowIfNull(sessionDto);
-            _sessionDto = sessionDto;
+            ArgumentNullException.ThrowIfNull(requestDto);
+            _requestDto = requestDto;
 
             RuleFor(dto => dto.HttpVersion)
                 .Must(version => version == "1.0" 
@@ -89,6 +89,6 @@ namespace LPS.UI.Core.LPSValidators
             });
         }
 
-        public override HttpSessionDto Dto { get { return _sessionDto; } }
+        public override HttpRequestDto Dto { get { return _requestDto; } }
     }
 }

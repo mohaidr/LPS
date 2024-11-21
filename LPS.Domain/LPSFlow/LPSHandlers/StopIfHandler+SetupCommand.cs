@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-    public partial class StopIfHandler : IFlowHandler
+    public partial class StopIfHandler : ISessionHandler
     {
         public class SetupCommand : ICommand<StopIfHandler>, IValidCommand<StopIfHandler>
         {
@@ -33,10 +33,11 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
 
         protected virtual void Setup(SetupCommand command)
         {
+            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-
-            if (command.IsValid)
+            if (validator.Validate())
             {
+
                 this.IsValid = true;
             }
             else

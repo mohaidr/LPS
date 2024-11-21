@@ -111,7 +111,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                                 CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                                 BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
-                                Session = new HttpSessionDto()
+                                HttpRequest = new HttpRequestDto()
                                 {
                                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
                                     HttpVersion = bindingContext.ParseResult.GetValueForOption(_httpversionOption),

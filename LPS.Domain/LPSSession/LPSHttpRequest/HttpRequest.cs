@@ -13,14 +13,14 @@ using LPS.Domain.LPSFlow.LPSHandlers;
 namespace LPS.Domain
 {
 
-    public partial class HttpSession :Session, IBusinessEntity, ICloneable
+    public partial class HttpRequest :Request, IBusinessEntity, ICloneable
     {
 
-        private IClientService<HttpSession, HttpResponse> _httpClientService;
-        private HttpSession()
+        private IClientService<HttpRequest, HttpResponse> _httpClientService;
+        private HttpRequest()
         {
         }
-        private HttpSession(ILogger logger,
+        private HttpRequest(ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             HttpHeaders = new Dictionary<string, string>();
@@ -28,8 +28,8 @@ namespace LPS.Domain
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
-        public HttpSession(
-            HttpSession.SetupCommand command, 
+        public HttpRequest(
+            HttpRequest.SetupCommand command, 
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
@@ -58,10 +58,7 @@ namespace LPS.Domain
 
         public bool SaveResponse { get; protected set; }
 
-        public CapturHandler Captur { get; set; }
-        public StopAfterHandler StopAfter { get; set; }
-        public StopIfHandler StopAIf { get; set; }
+        public CapturHandler Capture { get; set; }
         public ReadHandler Read { get; set; }
-        public PauseHandler Pause { get; set; }
     }
 }

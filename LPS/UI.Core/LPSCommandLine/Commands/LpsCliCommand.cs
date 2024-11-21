@@ -26,8 +26,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
     {
         private readonly string[] _args;
         readonly ILogger _logger;
-        readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _httpClientManager;
-        readonly IClientConfiguration<HttpSession> _config;
+        readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpRequest> _config;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         readonly Command _rootCliCommand;
@@ -39,9 +39,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         public LpsCliCommand(
             Command rootCliCommand,
             ILogger logger,
-            IClientManager<HttpSession, HttpResponse,
-            IClientService<HttpSession, HttpResponse>> httpClientManager,
-            IClientConfiguration<HttpSession> config,
+            IClientManager<HttpRequest, HttpResponse,
+            IClientService<HttpRequest, HttpResponse>> httpClientManager,
+            IClientConfiguration<HttpRequest> config,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
@@ -74,7 +74,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             {
                 try
                 {
-                    ValidationResult planValidationResults, roundValidationResults, iterationValidationResults, sessionValidationResults;
+                    ValidationResult planValidationResults, roundValidationResults, iterationValidationResults, requestValidationResults;
                     planDto.DeepCopy(out PlanDto planDtoCopy);
                     var roundDto = planDto.Rounds[0];
                     var iterationDto = planDto.Rounds[0].Iterations[0];
@@ -84,16 +84,16 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     roundValidationResults = roundValidator.Validate();
                     var iterationValidator = new IterationValidator(planDto.Rounds[0].Iterations[0]);
                     iterationValidationResults = iterationValidator.Validate();
-                    var sessionValidator = new SessionValidator(iterationDto.Session);
-                    sessionValidationResults = sessionValidator.Validate();
+                    var requestValidator = new RequestValidator(iterationDto.HttpRequest);
+                    requestValidationResults = requestValidator.Validate();
 
-                    if (planValidationResults.IsValid && roundValidationResults.IsValid && iterationValidationResults.IsValid && sessionValidationResults.IsValid)
+                    if (planValidationResults.IsValid && roundValidationResults.IsValid && iterationValidationResults.IsValid && requestValidationResults.IsValid)
                     {
                         var plan = new Plan(planDtoCopy, _logger, _runtimeOperationIdProvider);
                         var testRound = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                         var httpIteration = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
-                        var session = new HttpSession(iterationDto.Session, _logger, _runtimeOperationIdProvider);
-                        httpIteration.SetHttpSession(session);
+                        var request = new HttpRequest(iterationDto.HttpRequest, _logger, _runtimeOperationIdProvider);
+                        httpIteration.SetHttpRequest(request);
                         testRound.AddIteration(httpIteration);
                         plan.AddRound(testRound);
                         var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _dashboardConfig, _cts);
@@ -108,7 +108,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     {
                         roundValidationResults.PrintValidationErrors();
                         iterationValidationResults.PrintValidationErrors();
-                        sessionValidationResults.PrintValidationErrors();
+                        requestValidationResults.PrintValidationErrors();
                     }
                 }
                 catch (Exception ex)

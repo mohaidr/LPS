@@ -13,9 +13,9 @@ using LPS.Domain.Common.Interfaces;
 
 namespace LPS.Domain
 {
-    public partial class Session
+    public partial class Request
     {
-        public class SetupCommand : ICommand<Session>, IValidCommand<Session>
+        public class SetupCommand : ICommand<Request>, IValidCommand<Request>
         {
             public SetupCommand()
             {
@@ -26,7 +26,7 @@ namespace LPS.Domain
             public bool IsValid { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
 
-            public void Execute(Session entity)
+            public void Execute(Request entity)
             {
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
@@ -36,11 +36,11 @@ namespace LPS.Domain
 
         protected virtual void Setup(SetupCommand command)
         {
-
+            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-
-            if (command.IsValid)
+            if (validator.Validate())
             {
+
                 this.IsValid = true;
             }
             else

@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-    public partial class PauseHandler : IFlowHandler
+    public partial class PauseHandler : ISessionHandler
     {
         public class Validator : CommandBaseValidator<PauseHandler, PauseHandler.SetupCommand>
         {
@@ -32,8 +32,6 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 #region Validation Rules
                 // No validation rules so far
                 #endregion
-
-                _command.IsValid = base.Validate();
             }
 
             public override SetupCommand Command => _command;

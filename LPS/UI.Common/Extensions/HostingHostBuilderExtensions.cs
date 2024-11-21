@@ -100,7 +100,7 @@ namespace LPS.UI.Common.Extensions
             {
                 lpsHttpClientOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration").Get<HttpClientOptions>();
 
-                services.AddSingleton<IClientConfiguration<HttpSession>>(serviceProvider =>
+                services.AddSingleton<IClientConfiguration<HttpRequest>>(serviceProvider =>
                 {
                     var fileLogger = serviceProvider.GetRequiredService<ILogger>();
                     HttpClientConfiguration lpsHttpClientConfiguration;

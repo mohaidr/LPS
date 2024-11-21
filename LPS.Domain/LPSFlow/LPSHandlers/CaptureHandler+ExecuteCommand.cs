@@ -10,7 +10,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-        public partial class CapturHandler : IFlowHandler
+        public partial class CapturHandler : ISessionHandler
     {
         public class ExecuteCommand : IAsyncCommand<CapturHandler>
         {

@@ -12,18 +12,18 @@ using LPS.Domain.Common.Interfaces;
 namespace LPS.Domain
 {
     //This should be a Non-Entity Superclass
-    public partial class Session : IDomainEntity, IValidEntity, IRequestEntity
+    public partial class Request : IDomainEntity, IValidEntity, IRequestEntity
     {
         protected ILogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected IWatchdog _watchdog;
         protected CancellationTokenSource _cts;
-        protected Session()
+        protected Request()
         {
             Id = Guid.NewGuid();
         }
 
-        public Session(Session.SetupCommand command, ILogger logger,
+        public Request(Request.SetupCommand command, ILogger logger,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {

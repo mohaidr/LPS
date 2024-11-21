@@ -69,9 +69,11 @@ namespace LPS.Domain
 
         private void Setup(SetupCommand command)
         {
+            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid)
+            if (validator.Validate())
             {
+
                 this.Name = command.Name;
                 this.IsValid = true;
             }

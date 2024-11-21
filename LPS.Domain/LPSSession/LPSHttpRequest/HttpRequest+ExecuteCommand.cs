@@ -15,17 +15,17 @@ using LPS.Domain.Domain.Common.Interfaces;
 namespace LPS.Domain
 {
 
-    public partial class HttpSession
+    public partial class HttpRequest
     {
         readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-        public class ExecuteCommand(IClientService<HttpSession,
+        public class ExecuteCommand(IClientService<HttpRequest,
                 HttpResponse> httpClientService,
             ILogger logger,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            CancellationTokenSource cts) : IAsyncCommand<HttpSession>, IStateSubject
+            CancellationTokenSource cts) : IAsyncCommand<HttpRequest>, IStateSubject
         {
-            private IClientService<HttpSession, HttpResponse> _httpClientService { get; set; } = httpClientService;
+            private IClientService<HttpRequest, HttpResponse> _httpClientService { get; set; } = httpClientService;
             readonly ILogger _logger = logger;
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -38,13 +38,13 @@ namespace LPS.Domain
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
             //and need to clean it up and use clear contracts as any change in the logic here will break
             //the system 
-            async public Task ExecuteAsync(HttpSession entity)
+            async public Task ExecuteAsync(HttpRequest entity)
             {
                 try
                 {
                     if (entity == null)
                     {
-                        _logger.Log(_runtimeOperationIdProvider.OperationId, "HttpSession Entity Must Have a Value", LPSLoggingLevel.Error);
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, "HttpRequest Entity Must Have a Value", LPSLoggingLevel.Error);
                         throw new ArgumentNullException(nameof(entity));
                     }
                     entity._httpClientService = this._httpClientService;
@@ -124,9 +124,9 @@ namespace LPS.Domain
                     }
                     await _semaphoreSlim.WaitAsync(_cts.Token);
                     int sequenceNumber = ++this.LastSequenceId;
-                    ((HttpSession)clonedEntity).LastSequenceId = sequenceNumber;
+                    ((HttpRequest)clonedEntity).LastSequenceId = sequenceNumber;
                     _semaphoreSlim.Release();
-                    var response = await _httpClientService.SendAsync((HttpSession)clonedEntity, _cts.Token);
+                    var response = await _httpClientService.SendAsync((HttpRequest)clonedEntity, _cts.Token);
                     if (response.IsSuccessStatusCode)
                         this.HasFailed = false; // HasFailed is not valid property here, think of this as an entity you just fetch from DB to execute, so this has to change
                     else

@@ -12,6 +12,8 @@ using LPS.Infrastructure.LPSClients.MetricsServices;
 using System.Net;
 using Microsoft.Extensions.Caching.Memory;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.PlaceHolderService;
+using System.Security.Cryptography.X509Certificates;
 
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
@@ -19,29 +21,27 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                                 IMetricsService metricsService,
                                 ILogger logger,
                                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
-                                ICacheService<long> memoryCacheService = null) : IMessageService
+                                ICacheService<long> memoryCacheService,
+                                IPlaceholderResolverService placeHolderResolver) : IMessageService
     {
         readonly ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly IHttpHeadersService _headersService = headersService;
         readonly IMetricsService _metricsService = metricsService;
-        readonly ICacheService<long> _memoryCacheService = memoryCacheService ?? new MemoryCacheService<long>(new MemoryCache(new MemoryCacheOptions
-        {
-            SizeLimit = 1024
-        }));
-
-        public async Task<HttpRequestMessage> BuildAsync(HttpSession httpSession, CancellationToken token = default)
+        readonly ICacheService<long> _memoryCacheService = memoryCacheService;
+        readonly IPlaceholderResolverService _placeHolderResolver= placeHolderResolver;
+        public async Task<HttpRequestMessage> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default)
         {
             var httpRequestMessage = new HttpRequestMessage
             {
-                RequestUri = new Uri(httpSession.URL),
-                Method = new HttpMethod(httpSession.HttpMethod)
+                RequestUri = new Uri(httpRequest.URL),
+                Method = new HttpMethod(httpRequest.HttpMethod)
             };
 
-            bool supportsContent = httpSession.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) || httpSession.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase) || httpSession.HttpMethod.ToLower() == "patch";
-            httpRequestMessage.Version = GetHttpVersion(httpSession.HttpVersion);
+            bool supportsContent = httpRequest.HttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase) || httpRequest.HttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase) || httpRequest.HttpMethod.ToLower() == "patch";
+            httpRequestMessage.Version = GetHttpVersion(httpRequest.HttpVersion);
 
-            if (httpSession.SupportH2C.HasValue && httpSession.SupportH2C.Value)
+            if (httpRequest.SupportH2C.HasValue && httpRequest.SupportH2C.Value)
             {
                 if (httpRequestMessage.Version != HttpVersion.Version20)
                 {
@@ -50,32 +50,33 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                 }
                 httpRequestMessage.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
             }
+            var resolvedContent = _placeHolderResolver.ResolvePlaceholders(httpRequest.Payload, sessionId);
 
-            httpRequestMessage.Content = supportsContent ? new StringContent(httpSession.Payload ?? string.Empty) : null;
+            httpRequestMessage.Content = supportsContent ? new StringContent(resolvedContent) : null;
 
             // Apply headers to the request
-            _headersService.ApplyHeaders(httpRequestMessage, httpSession.HttpHeaders);
+            _headersService.ApplyHeaders(httpRequestMessage, sessionId, httpRequest.HttpHeaders);
 
             // Cache key to identify the request profile
-            string cacheKey = httpSession.Id.ToString();
+            string cacheKey = httpRequest.Id.ToString();
 
             // Check if the message size is cached
             if (!_memoryCacheService.TryGetItem(cacheKey, out long messageSize))
             {
                 // If not cached, calculate the message size based on the profile
-                messageSize = CalculateMessageSize(httpSession);
+                messageSize = CalculateMessageSize(httpRequest);
 
                 // Cache the calculated size
                 await _memoryCacheService.SetItemAsync(cacheKey, messageSize);
             }
 
             // Update the DataSent metric using MetricsService
-            await _metricsService.TryUpdateDataSentAsync(httpSession.Id, messageSize, token);
+            await _metricsService.TryUpdateDataSentAsync(httpRequest.Id, messageSize, token);
 
             return httpRequestMessage;
         }
 
-        private static long CalculateMessageSize(HttpSession profile)
+        private static long CalculateMessageSize(HttpRequest profile)
         {
             long size = 0;
 
@@ -115,7 +116,5 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                 _ => HttpVersion.Version20,
             };
         }
-
-
     }
 }

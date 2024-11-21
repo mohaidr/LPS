@@ -34,8 +34,8 @@ namespace LPS.Domain
 
                 #region Validation Rules
                 RuleFor(command => command.LocationToResponse)
-                //TODO: This below is commented for now as you need to fetch the HttpSession from the DB and that is not implemented yet
-                //.NotEmpty().When(command=> _entity.HttpSession.SaveResponse)
+                //TODO: This below is commented for now as you need to fetch the HttpRequest from the DB and that is not implemented yet
+                //.NotEmpty().When(command=> _entity.HttpRequest.SaveResponse)
                 // .WithMessage("'Location To Response' must not be empty.")
                 .Must(BeAValidPath).WithMessage("'Location To Response' Path contains illegal characters or does not exist.");
                 #endregion
@@ -44,8 +44,6 @@ namespace LPS.Domain
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Http Response: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
-
-                _command.IsValid = base.Validate();
             }
 
 

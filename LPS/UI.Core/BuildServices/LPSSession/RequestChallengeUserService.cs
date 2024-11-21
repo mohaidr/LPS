@@ -7,14 +7,14 @@ using System;
 
 namespace LPS.UI.Core.Build.Services
 {
-    internal class SessionChallengeUserService(bool skipOptionalFields, HttpSessionDto command, string baseUrl, IBaseValidator<HttpSessionDto, HttpSession> validator) : IChallengeUserService<HttpSessionDto, HttpSession>
+    internal class RequestChallengeUserService(bool skipOptionalFields, HttpRequestDto command, string baseUrl, IBaseValidator<HttpRequestDto, HttpRequest> validator) : IChallengeUserService<HttpRequestDto, HttpRequest>
     {
-        readonly IBaseValidator<HttpSessionDto, HttpSession> _validator = validator;
+        readonly IBaseValidator<HttpRequestDto, HttpRequest> _validator = validator;
         public bool SkipOptionalFields => _skipOptionalFields;
         private readonly bool _skipOptionalFields = skipOptionalFields;
         private readonly string _baseUrl= baseUrl;
-        readonly HttpSessionDto _sessionDto = command;
-        public HttpSessionDto Dto => _sessionDto;
+        readonly HttpRequestDto _requestDto = command;
+        public HttpRequestDto Dto => _requestDto;
         public void Challenge()
         {
             if (!_skipOptionalFields)
@@ -28,7 +28,7 @@ namespace LPS.UI.Core.Build.Services
                 if (!_validator.Validate(nameof(Dto.HttpMethod)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.HttpMethod));
-                    _sessionDto.HttpMethod = AnsiConsole.Ask<string>("What is the [green]'Http Request Method'[/]?");
+                    _requestDto.HttpMethod = AnsiConsole.Ask<string>("What is the [green]'Http Request Method'[/]?");
                     continue;
                 }
 
@@ -40,13 +40,13 @@ namespace LPS.UI.Core.Build.Services
                     {
                         inpute = $"{_baseUrl}{inpute}";
                     }
-                    _sessionDto.URL = inpute;
+                    _requestDto.URL = inpute;
                     continue;
                 }
                 if (!_validator.Validate(nameof(Dto.HttpVersion)))
                 {
-                    _validator.PrintValidationErrors(nameof(_sessionDto.HttpVersion));
-                    _sessionDto.HttpVersion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
+                    _validator.PrintValidationErrors(nameof(_requestDto.HttpVersion));
+                    _requestDto.HttpVersion = AnsiConsole.Ask<string>("Which [green]'Http Version'[/] to use?"); ;
                     continue;
                 }
                 if (!_validator.Validate(nameof(Dto.SupportH2C)))
@@ -73,13 +73,13 @@ namespace LPS.UI.Core.Build.Services
             }
 
             AnsiConsole.MarkupLine("Add request headers as [blue](HeaderName: HeaderValue)[/] each on a line. When finished, type C and press enter");
-            _sessionDto.HttpHeaders = InputHeaderService.Challenge();
+            _requestDto.HttpHeaders = InputHeaderService.Challenge();
 
 
-            if (_sessionDto.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _sessionDto.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _sessionDto.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
+            if (_requestDto.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _requestDto.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _requestDto.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
             {
                 AnsiConsole.WriteLine("Add payload to your http request.\n - Enter Path:[Path] to read the payload from a path file\n - URL:[URL] to read the payload from a URL \n - Or just add your payload inline");
-                _sessionDto.Payload = InputPayloadService.Challenge();
+                _requestDto.Payload = InputPayloadService.Challenge();
             }
         }
 
@@ -87,9 +87,9 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _sessionDto.HttpVersion = string.Empty;
-                _sessionDto.DownloadHtmlEmbeddedResources = null;
-                _sessionDto.SaveResponse = null;
+                _requestDto.HttpVersion = string.Empty;
+                _requestDto.DownloadHtmlEmbeddedResources = null;
+                _requestDto.SaveResponse = null;
             }
         }
     }

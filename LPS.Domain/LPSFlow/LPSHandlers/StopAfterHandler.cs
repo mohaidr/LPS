@@ -11,7 +11,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
 {
     public partial class StopAfterHandler : IFlowHandler
     {
-        HandlerType IFlowHandler.HandlerType => HandlerType.StopeAfter;
+        public HandlerType HandlerType => HandlerType.StopIf;
         protected ILogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected IWatchdog _watchdog;

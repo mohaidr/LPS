@@ -1,4 +1,5 @@
-﻿using LPS.Domain.Common.Interfaces;
+﻿using FluentValidation;
+using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Validation;
 using System;
@@ -9,8 +10,8 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-        public partial class CapturHandler : IFlowHandler
-        {
+    public partial class CapturHandler : ISessionHandler
+    {
         public class Validator : CommandBaseValidator<CapturHandler, CapturHandler.SetupCommand>
         {
             ILogger _logger;
@@ -30,10 +31,18 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 }
 
                 #region Validation Rules
-                // No validation rules so far
+                RuleFor(command => command.Variable)
+                    .NotNull()
+                    .NotEmpty();
+                RuleFor(command => command.As)
+                    .Must(@as =>
+                    {
+                        return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase) 
+                        || @as.Equals("XML", StringComparison.OrdinalIgnoreCase) 
+                        || @as.Equals("Regex", StringComparison.OrdinalIgnoreCase) 
+                        || string.IsNullOrEmpty(@as);
+                    });
                 #endregion
-
-                _command.IsValid = base.Validate();
             }
 
             public override SetupCommand Command => _command;

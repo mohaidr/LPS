@@ -53,14 +53,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 var iterationValidator = new IterationValidator(ItrationDtoCopy);
                 ValidationResult results = iterationValidator.Validate();
                 var roundDto = planDto?.Rounds.FirstOrDefault(r => r.Name == roundName);
-                if (ItrationDtoCopy.Session?.URL != null &&  roundDto?.BaseUrl != null && !ItrationDtoCopy.Session.URL.StartsWith("http://") && !ItrationDtoCopy.Session.URL.StartsWith("https://"))
+                if (ItrationDtoCopy.HttpRequest?.URL != null &&  roundDto?.BaseUrl != null && !ItrationDtoCopy.HttpRequest.URL.StartsWith("http://") && !ItrationDtoCopy.HttpRequest.URL.StartsWith("https://"))
                 {
-                    ItrationDtoCopy.Session.URL = $"{roundDto.BaseUrl}{ItrationDtoCopy.Session.URL}";
+                    ItrationDtoCopy.HttpRequest.URL = $"{roundDto.BaseUrl}{ItrationDtoCopy.HttpRequest.URL}";
                 }
-                var sessionValidator = new SessionValidator(ItrationDtoCopy.Session);
-                var sessionValidationResults = sessionValidator.Validate();
+                var requestValidator = new RequestValidator(ItrationDtoCopy.HttpRequest);
+                var requestValidationResults = requestValidator.Validate();
 
-                if (results.IsValid && sessionValidationResults.IsValid)
+                if (results.IsValid && requestValidationResults.IsValid)
                 {
                     try
                     {

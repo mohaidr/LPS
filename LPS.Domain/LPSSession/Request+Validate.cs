@@ -14,15 +14,15 @@ using LPS.Domain.Domain.Common.Validation;
 namespace LPS.Domain
 {
 
-    public partial class Session
+    public partial class Request
     {
-        public class Validator: CommandBaseValidator<Session, Session.SetupCommand>
+        public class Validator: CommandBaseValidator<Request, Request.SetupCommand>
         {
             ILogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            Session _entity;
-            Session.SetupCommand _command;
-            public Validator(Session entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            Request _entity;
+            Request.SetupCommand _command;
+            public Validator(Request entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
 
                 _logger = logger;
@@ -38,14 +38,11 @@ namespace LPS.Domain
                     // No validation rules so far
                 #endregion
 
-                _command.IsValid = base.Validate();
-
-
             }
 
             public override SetupCommand Command => _command;
 
-            public override Session Entity => _entity;
+            public override Request Entity => _entity;
 
             
         }

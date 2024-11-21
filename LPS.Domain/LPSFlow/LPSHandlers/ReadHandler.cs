@@ -9,9 +9,9 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-    public partial class ReadHandler : IFlowHandler
+    public partial class ReadHandler : ISessionHandler
     {
-        HandlerType IFlowHandler.HandlerType => HandlerType.Read;
+        public HandlerType HandlerType => HandlerType.StopIf;
         protected ILogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected IWatchdog _watchdog;

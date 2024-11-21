@@ -9,6 +9,6 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
 {
     public interface IHttpHeadersService
     {
-        void ApplyHeaders(HttpRequestMessage message, Dictionary<string, string> HttpHeaders);
+        void ApplyHeaders(HttpRequestMessage message, string sessionId, Dictionary<string, string> HttpHeaders);
     }
 }

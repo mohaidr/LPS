@@ -3,7 +3,6 @@ using System.Collections.Generic;
 
 namespace LPS.Domain.Common
 {
-
     public enum MimeType
     {
         ImageJpeg,
@@ -17,61 +16,64 @@ namespace LPS.Domain.Common
         ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation,
         ApplicationXml,
         TextXml,
+        RawXml, // New enum value for raw XML formats
         TextJavascript,
         ApplicationJavascript,
         ApplicationXJavascript,
         TextCss,
         TextHtml,
         ApplicationJson,
-        Unknown, // New enum value for unknown content types
+        Unknown, // Enum value for unknown content types
                  // Add more MIME types as needed
     }
 
     public static class MimeTypeExtensions
     {
         private static readonly Dictionary<MimeType, string> MimeTypeToExtension = new Dictionary<MimeType, string>
-    {
-        { MimeType.ImageJpeg, ".jpg" },
-        { MimeType.ImagePng, ".png" },
-        { MimeType.ApplicationPdf, ".pdf" },
-        { MimeType.TextPlain, ".txt" },
-        { MimeType.ApplicationMsWord, ".doc" },
-        { MimeType.ApplicationVndMsExcel, ".xls" },
-        { MimeType.ApplicationVndOpenXmlFormatsOfficedocumentSpreadsheetmlSheet, ".xlsx" },
-        { MimeType.ApplicationVndMsPowerpoint, ".ppt" },
-        { MimeType.ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation, ".pptx" },
-        { MimeType.ApplicationXml, ".xml" },
-        { MimeType.TextXml, ".xml" },
-        { MimeType.TextJavascript, ".js" },
-        { MimeType.ApplicationJavascript, ".js" },
-        { MimeType.ApplicationXJavascript, ".js" },
-        { MimeType.TextCss, ".css" },
-        { MimeType.TextHtml, ".html" },
-        { MimeType.ApplicationJson, ".json" },
-        // Add more mappings as needed
-    };
+        {
+            { MimeType.ImageJpeg, ".jpg" },
+            { MimeType.ImagePng, ".png" },
+            { MimeType.ApplicationPdf, ".pdf" },
+            { MimeType.TextPlain, ".txt" },
+            { MimeType.ApplicationMsWord, ".doc" },
+            { MimeType.ApplicationVndMsExcel, ".xls" },
+            { MimeType.ApplicationVndOpenXmlFormatsOfficedocumentSpreadsheetmlSheet, ".xlsx" },
+            { MimeType.ApplicationVndMsPowerpoint, ".ppt" },
+            { MimeType.ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation, ".pptx" },
+            { MimeType.ApplicationXml, ".xml" },
+            { MimeType.TextXml, ".xml" },
+            { MimeType.RawXml, ".xml" }, // Added mapping for RawXml
+            { MimeType.TextJavascript, ".js" },
+            { MimeType.ApplicationJavascript, ".js" },
+            { MimeType.ApplicationXJavascript, ".js" },
+            { MimeType.TextCss, ".css" },
+            { MimeType.TextHtml, ".html" },
+            { MimeType.ApplicationJson, ".json" },
+            // Add more mappings as needed
+        };
 
         private static readonly Dictionary<string, MimeType> ContentTypeToMimeType = new Dictionary<string, MimeType>
-    {
-        { "image/jpeg", MimeType.ImageJpeg },
-        { "image/png", MimeType.ImagePng },
-        { "application/pdf", MimeType.ApplicationPdf },
-        { "text/plain", MimeType.TextPlain },
-        { "application/msword", MimeType.ApplicationMsWord },
-        { "application/vnd.ms-excel", MimeType.ApplicationVndMsExcel },
-        { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", MimeType.ApplicationVndOpenXmlFormatsOfficedocumentSpreadsheetmlSheet },
-        { "application/vnd.ms-powerpoint", MimeType.ApplicationVndMsPowerpoint },
-        { "application/vnd.openxmlformats-officedocument.presentationml.presentation", MimeType.ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation },
-        { "application/xml", MimeType.ApplicationXml },
-        { "text/xml", MimeType.TextXml },
-        { "text/javascript", MimeType.TextJavascript },
-        { "application/javascript", MimeType.ApplicationJavascript },
-        { "application/x-javascript", MimeType.ApplicationXJavascript },
-        { "text/css", MimeType.TextCss },
-        { "text/html", MimeType.TextHtml },
-        { "application/json", MimeType.ApplicationJson },
-        // Add more mappings as needed
-    };
+        {
+            { "image/jpeg", MimeType.ImageJpeg },
+            { "image/png", MimeType.ImagePng },
+            { "application/pdf", MimeType.ApplicationPdf },
+            { "text/plain", MimeType.TextPlain },
+            { "application/msword", MimeType.ApplicationMsWord },
+            { "application/vnd.ms-excel", MimeType.ApplicationVndMsExcel },
+            { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", MimeType.ApplicationVndOpenXmlFormatsOfficedocumentSpreadsheetmlSheet },
+            { "application/vnd.ms-powerpoint", MimeType.ApplicationVndMsPowerpoint },
+            { "application/vnd.openxmlformats-officedocument.presentationml.presentation", MimeType.ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation },
+            { "application/xml", MimeType.ApplicationXml },
+            { "text/xml", MimeType.TextXml },
+            { "application/raw+xml", MimeType.RawXml }, // Added mapping for raw XML
+            { "text/javascript", MimeType.TextJavascript },
+            { "application/javascript", MimeType.ApplicationJavascript },
+            { "application/x-javascript", MimeType.ApplicationXJavascript },
+            { "text/css", MimeType.TextCss },
+            { "text/html", MimeType.TextHtml },
+            { "application/json", MimeType.ApplicationJson },
+            // Add more mappings as needed
+        };
 
         public static string ToFileExtension(this MimeType mimeType)
         {

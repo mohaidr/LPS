@@ -39,7 +39,7 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public bool IsValid { get; set; }
-            public Guid HttpSessionId { get; set; }
+            public Guid HttpRequestId { get; set; }
             [JsonIgnore]
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
@@ -50,7 +50,7 @@ namespace LPS.Domain
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
-            public HttpSession.SetupCommand HttpSession { get; set; }
+            public HttpRequest.SetupCommand HttpRequest { get; set; }
 
             public void Copy(SetupCommand targetCommand)
             {
@@ -62,7 +62,7 @@ namespace LPS.Domain
                 targetCommand.ResponseTime = this.ResponseTime;
                 targetCommand.IsSuccessStatusCode = this.IsSuccessStatusCode;
                 targetCommand.IsValid = this.IsValid;
-                targetCommand.HttpSessionId = this.HttpSessionId;
+                targetCommand.HttpRequestId = this.HttpRequestId;
 
                 // Deep copy of dictionaries
                 targetCommand.ResponseContentHeaders = new Dictionary<string, string>(this.ResponseContentHeaders);
@@ -73,8 +73,8 @@ namespace LPS.Domain
                     entry => entry.Key,
                     entry => new List<string>(entry.Value)
                 );
-                // Assuming HttpSession has its own Clone method
-                this.HttpSession?.Copy(targetCommand.HttpSession);
+                // Assuming HttpRequest has its own Clone method
+                this.HttpRequest?.Copy(targetCommand.HttpRequest);
             }
 
         }
@@ -84,8 +84,9 @@ namespace LPS.Domain
             //Set the inherited properties through the parent entity setup command
             var lPSResponseSetUpCommand = new Response.SetupCommand() { Id = command.Id };
             base.Setup(lPSResponseSetUpCommand);
+            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && lPSResponseSetUpCommand.IsValid)
+            if (validator.Validate() && base.IsValid)
             {
                 this.LocationToResponse = command.LocationToResponse;
                 this.StatusCode = command.StatusCode;

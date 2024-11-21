@@ -9,15 +9,17 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-    public partial class CapturHandler : IFlowHandler
+    public partial class CapturHandler : ISessionHandler
     {
         protected ILogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected IWatchdog _watchdog;
         protected CancellationTokenSource _cts;
         public Guid Id { get; protected set; }
+        public string As { get; protected set; }
+        public string Variable { get; protected set; }
 
-        HandlerType IFlowHandler.HandlerType => HandlerType.Capture;
+        public HandlerType HandlerType => HandlerType.StopIf;
         public bool IsValid
         {
             get; protected set;

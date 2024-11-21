@@ -8,19 +8,19 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSRun.IterationMode
 {
-    internal class BatchProcessor: IBatchProcessor<HttpSession.ExecuteCommand, HttpSession>
+    internal class BatchProcessor: IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest>
     {
-        readonly HttpSession _session;
+        readonly HttpRequest _request;
         readonly IWatchdog _watchdog;
         readonly string _hostName;
-        public BatchProcessor(HttpSession session,
+        public BatchProcessor(HttpRequest request,
             IWatchdog watchdog ) 
         {
-            _session = session;
+            _request = request;
             _watchdog = watchdog;
-            _hostName = new Uri(_session.URL).Host;
+            _hostName = new Uri(_request.URL).Host;
         }
-        public async Task<int> SendBatchAsync(HttpSession.ExecuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token)
+        public async Task<int> SendBatchAsync(HttpRequest.ExecuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token)
         {
             try
             {
@@ -29,7 +29,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 for (int b = 0; b < batchSize && batchCondition(); b++)
                 {
                     await _watchdog.BalanceAsync(_hostName, token);
-                    awaitableTasks.Add(command.ExecuteAsync(_session));
+                    awaitableTasks.Add(command.ExecuteAsync(_request));
                     _numberOfSentRequests++;
                 }
                 await Task.WhenAll(awaitableTasks);

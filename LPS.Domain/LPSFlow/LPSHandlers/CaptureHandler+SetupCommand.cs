@@ -8,15 +8,16 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-        public partial class CapturHandler : IFlowHandler
+        public partial class CapturHandler : ISessionHandler
         {
         public class SetupCommand : ICommand<CapturHandler>, IValidCommand<CapturHandler>
         {
             public SetupCommand()
             {
                 ValidationErrors = new Dictionary<string, List<string>>();
-
             }
+            public string Variable { get; set; }
+            public string As { get; set; }
             public Guid? Id { get; set; }
             public bool IsValid { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
@@ -33,10 +34,12 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
 
         protected virtual void Setup(SetupCommand command)
         {
+            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-
-            if (command.IsValid)
+            if (validator.Validate())
             {
+                this.Variable = command.Variable;
+                this.As = command.As;
                 this.IsValid = true;
             }
             else

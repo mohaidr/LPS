@@ -7,18 +7,9 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Domain.Common.Interfaces
 {
-    public enum HandlerType 
-    { 
-        Capture,
-        StopeAfter,
-        StopIf,
-        Pause,
-        Read,  
-    }
-    public interface IFlowHandler: IDomainEntity, IBusinessEntity, IValidEntity
+    internal interface IFlowHandler : IDomainEntity, IBusinessEntity, IValidEntity
     {
-       public HandlerType HandlerType { get;}
+        public HandlerType HandlerType { get; }
+
     }
-
-
 }

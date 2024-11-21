@@ -19,8 +19,8 @@ namespace LPS.Domain
             Rounds = new List<Round>();
         }
 
-        IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _lpsClientManager;
-        IClientConfiguration<HttpSession> _lpsClientConfig;
+        IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
+        IClientConfiguration<HttpRequest> _lpsClientConfig;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         IWatchdog _watchdog;
         IMetricsDataMonitor _lpsMetricsDataMonitor;

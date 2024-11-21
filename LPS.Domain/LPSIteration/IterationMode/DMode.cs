@@ -9,16 +9,16 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class DMode : IIterationModeService
     {
-        private HttpSession.ExecuteCommand _command;
+        private HttpRequest.ExecuteCommand _command;
         private int _duration;
         private IWatchdog _watchdog;
         private readonly string _hostName;
-        private HttpSession _session;
+        private HttpRequest _request;
 
-        private DMode(HttpSession session)
+        private DMode(HttpRequest request)
         {
-            _session = session;
-            _hostName = new Uri(_session.URL).Host;
+            _request = request;
+            _hostName = new Uri(_request.URL).Host;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -30,7 +30,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested)
                 {
                     await _watchdog.BalanceAsync(_hostName, cancellationToken);
-                    await _command.ExecuteAsync(_session);
+                    await _command.ExecuteAsync(_request);
                     numberOfSentRequests++;
                 }
                 stopwatch.Stop();
@@ -44,12 +44,12 @@ namespace LPS.Domain.LPSRun.IterationMode
 
         public class Builder : IBuilder<DMode>
         {
-            private HttpSession.ExecuteCommand _command;
+            private HttpRequest.ExecuteCommand _command;
             private int _duration;
             private IWatchdog _watchdog;
-            private HttpSession _session;
+            private HttpRequest _request;
 
-            public Builder SetCommand(HttpSession.ExecuteCommand command)
+            public Builder SetCommand(HttpRequest.ExecuteCommand command)
             {
                 _command = command;
                 return this;
@@ -67,23 +67,23 @@ namespace LPS.Domain.LPSRun.IterationMode
                 return this;
             }
 
-            public Builder SetSession(HttpSession session)
+            public Builder SetRequest(HttpRequest request)
             {
-                _session = session;
+                _request = request;
                 return this;
             }
 
             public DMode Build()
             {
-                if (_session == null)
-                    throw new InvalidOperationException("Session must be provided.");
+                if (_request == null)
+                    throw new InvalidOperationException("Request must be provided.");
 
-                var dMode = new DMode(_session)
+                var dMode = new DMode(_request)
                 {
                     _command = _command,
                     _duration = _duration,
                     _watchdog = _watchdog,
-                    _session = _session
+                    _request = _request
                 };
                 return dMode;
             }

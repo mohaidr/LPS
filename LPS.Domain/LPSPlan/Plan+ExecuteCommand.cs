@@ -24,8 +24,8 @@ namespace LPS.Domain
             readonly ILogger _logger;
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _lpsClientManager;
-            readonly IClientConfiguration<HttpSession> _lpsClientConfig;
+            readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
+            readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
             readonly CancellationTokenSource _cts;
@@ -35,8 +35,8 @@ namespace LPS.Domain
             public ExecuteCommand(ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
-                IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> lpsClientManager,
-                IClientConfiguration<HttpSession> lpsClientConfig,
+                IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
+                IClientConfiguration<HttpRequest> lpsClientConfig,
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 CancellationTokenSource cts)

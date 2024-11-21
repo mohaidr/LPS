@@ -33,6 +33,6 @@ namespace LPS.Domain.LPSFlow
 
         public bool IsValid { get; protected set; }
 
-        public ICollection<Session> Sessions { get; protected set; }
+        public ICollection<Request> Requests { get; protected set; }
     }
 }

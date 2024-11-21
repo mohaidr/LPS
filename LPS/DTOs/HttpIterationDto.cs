@@ -8,20 +8,20 @@ namespace LPS.DTOs
     public class HttpIterationDto : HttpIteration.SetupCommand
     {
         public HttpIterationDto() {
-            Session = new();
+            HttpRequest = new();
         }
         public override string Name{get; set;}
-        public HttpSessionDto Session { get; set; }
+        public HttpRequestDto HttpRequest { get; set; }
 
         public void DeepCopy(out HttpIterationDto targetDto)
         {
             targetDto = new HttpIterationDto();
             // Call base.Clone() and cast it to HttpIterationDto
             base.Copy(targetDto);
-            HttpSessionDto SessionDto = new();
-            // Clone Session if it's not null
-            Session?.DeepCopy(out SessionDto);
-            targetDto.Session = SessionDto;
+            HttpRequestDto RequestDto = new();
+            // Clone Request if it's not null
+            HttpRequest?.DeepCopy(out RequestDto);
+            targetDto.HttpRequest = RequestDto;
         }
     }
 

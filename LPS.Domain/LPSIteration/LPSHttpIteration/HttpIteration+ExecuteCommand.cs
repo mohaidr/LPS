@@ -16,7 +16,7 @@ namespace LPS.Domain
     {
         public class ExecuteCommand : IAsyncCommand<HttpIteration>, IStateObserver
         {
-            readonly IClientService<HttpSession, HttpResponse> _httpClientService;
+            readonly IClientService<HttpRequest, HttpResponse> _httpClientService;
             readonly ILogger _logger;
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
@@ -29,7 +29,7 @@ namespace LPS.Domain
             }
 
             public ExecuteCommand(
-                IClientService<HttpSession, HttpResponse> httpClientService,
+                IClientService<HttpRequest, HttpResponse> httpClientService,
                 ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -108,17 +108,17 @@ namespace LPS.Domain
             logEntry.AppendLine($"Duration: {this.Duration}");
             logEntry.AppendLine($"Batch Size: {this.BatchSize}");
             logEntry.AppendLine($"Cool Down Time: {this.CoolDownTime}");
-            logEntry.AppendLine($"Http Method: {this.Session.HttpMethod.ToUpper()}");
-            logEntry.AppendLine($"Http Version: {this.Session.HttpVersion}");
-            logEntry.AppendLine($"URL: {this.Session.URL}");
+            logEntry.AppendLine($"Http Method: {this.HttpRequest.HttpMethod.ToUpper()}");
+            logEntry.AppendLine($"Http Version: {this.HttpRequest.HttpVersion}");
+            logEntry.AppendLine($"URL: {this.HttpRequest.URL}");
 
-            if (!string.IsNullOrEmpty(this.Session.Payload) &&
-                (this.Session.HttpMethod.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
-                 this.Session.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
-                 this.Session.HttpMethod.Equals("PATCH", StringComparison.OrdinalIgnoreCase)))
+            if (!string.IsNullOrEmpty(this.HttpRequest.Payload) &&
+                (this.HttpRequest.HttpMethod.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
+                 this.HttpRequest.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
+                 this.HttpRequest.HttpMethod.Equals("PATCH", StringComparison.OrdinalIgnoreCase)))
             {
                 logEntry.AppendLine("...Begin Request Body...");
-                logEntry.AppendLine(this.Session.Payload);
+                logEntry.AppendLine(this.HttpRequest.Payload);
                 logEntry.AppendLine("...End Request Body...");
             }
             else
@@ -126,10 +126,10 @@ namespace LPS.Domain
                 logEntry.AppendLine("...Empty Payload...");
             }
 
-            if (this.Session.HttpHeaders != null && this.Session.HttpHeaders.Count > 0)
+            if (this.HttpRequest.HttpHeaders != null && this.HttpRequest.HttpHeaders.Count > 0)
             {
                 logEntry.AppendLine("...Begin Request Headers...");
-                foreach (var header in this.Session.HttpHeaders)
+                foreach (var header in this.HttpRequest.HttpHeaders)
                 {
                     logEntry.AppendLine($"{header.Key}: {header.Value}");
                 }
@@ -151,7 +151,7 @@ namespace LPS.Domain
             {
                 return;
             }
-            var profileCommand = new HttpSession.ExecuteCommand(_httpClientService, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
+            var profileCommand = new HttpRequest.ExecuteCommand(_httpClientService, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
             profileCommand.RegisterObserver(command);
             try
             {
@@ -160,11 +160,11 @@ namespace LPS.Domain
 
                 IIterationModeService iterationModeService;
                 // Create a batch processor if needed
-                IBatchProcessor<HttpSession.ExecuteCommand, HttpSession> batchProcessor;
+                IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor;
                 switch (this.Mode)
                 {
                     case IterationMode.DCB:
-                        batchProcessor = new BatchProcessor(Session, _watchdog);
+                        batchProcessor = new BatchProcessor(HttpRequest, _watchdog);
                         iterationModeService = new DCBMode.Builder()
                             .SetCommand(profileCommand)
                             .SetDuration(this.Duration.Value)
@@ -176,7 +176,7 @@ namespace LPS.Domain
                         break;
 
                     case IterationMode.CRB:
-                        batchProcessor = new BatchProcessor(Session, _watchdog);
+                        batchProcessor = new BatchProcessor(HttpRequest, _watchdog);
                         iterationModeService = new CRBMode.Builder()
                             .SetCommand(profileCommand)
                             .SetRequestCount(this.RequestCount.Value)
@@ -188,7 +188,7 @@ namespace LPS.Domain
                         break;
 
                     case IterationMode.CB:
-                        batchProcessor = new BatchProcessor(Session, _watchdog);
+                        batchProcessor = new BatchProcessor(HttpRequest, _watchdog);
                         iterationModeService = new CBMode.Builder()
                             .SetCommand(profileCommand)
                             .SetCoolDownTime(this.CoolDownTime.Value)
@@ -203,7 +203,7 @@ namespace LPS.Domain
                             .SetCommand(profileCommand)
                             .SetRequestCount(this.RequestCount.Value)
                             .SetWatchdog(_watchdog)
-                            .SetSession(Session)
+                            .SetRequest(HttpRequest)
                             .Build();
                         break;
 
@@ -212,7 +212,7 @@ namespace LPS.Domain
                             .SetCommand(profileCommand)
                             .SetDuration(this.Duration.Value)
                             .SetWatchdog(_watchdog)
-                            .SetSession(Session)
+                            .SetRequest(HttpRequest)
                             .Build();
                         break;
 
@@ -226,7 +226,7 @@ namespace LPS.Domain
                     _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {_numberOfSentRequests} request(s) to {this.Session.URL}", LPSLoggingLevel.Verbose, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.URL}", LPSLoggingLevel.Verbose, _cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
 
             }

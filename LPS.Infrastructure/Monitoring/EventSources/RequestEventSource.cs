@@ -19,11 +19,11 @@ namespace LPS.Infrastructure.Monitoring.EventSources
 
         private RequestEventSource(HttpIteration lpshttpIteration)
         {
-            if (lpshttpIteration != null && lpshttpIteration.Session != null &&  Uri.TryCreate(lpshttpIteration.Session.URL, UriKind.Absolute, out Uri uriResult))
+            if (lpshttpIteration != null && lpshttpIteration.HttpRequest != null &&  Uri.TryCreate(lpshttpIteration.HttpRequest.URL, UriKind.Absolute, out Uri uriResult))
             {
                 this.requestIncrementCounter = new IncrementingEventCounter("requestsPerSecond", this)
                 {
-                    DisplayName = $"{lpshttpIteration.Session.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.requests.per.second",
+                    DisplayName = $"{lpshttpIteration.HttpRequest.HttpMethod}.{uriResult.Scheme}.{uriResult.Host}.requests.per.second",
                     DisplayRateTimeScale = TimeSpan.FromSeconds(1) // This sets the rate to per second
                 };
             }

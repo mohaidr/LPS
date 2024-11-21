@@ -28,7 +28,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public ThroughputMetricCollector(HttpIteration httpIteration, string roundName, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _httpIteration = httpIteration;
-            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.Session.HttpMethod, _httpIteration.Session.URL, _httpIteration.Session.HttpVersion);
+            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.URL, _httpIteration.HttpRequest.HttpVersion);
             _eventSource = RequestEventSource.GetInstance(_httpIteration);
             _throughputWatch = new Stopwatch();
             _logger = logger;

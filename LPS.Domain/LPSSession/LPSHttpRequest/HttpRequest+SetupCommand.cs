@@ -16,9 +16,9 @@ using YamlDotNet.Serialization;
 namespace LPS.Domain
 {
 
-    public partial class HttpSession
+    public partial class HttpRequest
     {
-        new public class SetupCommand : ICommand<HttpSession>, IValidCommand<HttpSession>
+        new public class SetupCommand : ICommand<HttpRequest>, IValidCommand<HttpRequest>
         {
             public SetupCommand()
             {
@@ -50,7 +50,7 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
-            public void Execute(HttpSession entity)
+            public void Execute(HttpRequest entity)
             {
                 ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
@@ -75,17 +75,18 @@ namespace LPS.Domain
         protected void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setup command
-            var sessionSetUpCommand = new Session.SetupCommand() { Id = command.Id };
-            base.Setup(sessionSetUpCommand);
+            var requestSetUpCommand = new Request.SetupCommand() { Id = command.Id };
+            base.Setup(requestSetUpCommand);
+            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && sessionSetUpCommand.IsValid)
+            if (validator.Validate() && base.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
                 this.URL = command.URL;
                 this.Payload = command.Payload;
                 this.HttpHeaders = [];
-                this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.HasValue? command.DownloadHtmlEmbeddedResources.Value: false;
+                this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.HasValue ? command.DownloadHtmlEmbeddedResources.Value : false;
                 this.SaveResponse = command.SaveResponse.Value;
                 this.SupportH2C = command.SupportH2C;
                 if (command.HttpHeaders != null)
@@ -107,7 +108,7 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            HttpSession clone = new HttpSession(_logger, _runtimeOperationIdProvider);
+            HttpRequest clone = new HttpRequest(_logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 clone.Id = this.Id;

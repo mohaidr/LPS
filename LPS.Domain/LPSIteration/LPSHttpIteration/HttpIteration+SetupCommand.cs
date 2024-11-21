@@ -73,7 +73,7 @@ namespace LPS.Domain
             var IterationSetUpCommand = new Iteration.SetupCommand() { Id = command.Id, Name = command.Name }; // if there are fields has to be set, then pass them here.
             base.Setup(IterationSetUpCommand);
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (command.IsValid && IterationSetUpCommand.IsValid)
+            if (validator.Validate() && base.IsValid)
             {
                 this.RequestCount = command.RequestCount;
                 this.MaximizeThroughput = command.MaximizeThroughput.Value;
@@ -99,7 +99,7 @@ namespace LPS.Domain
                 clone.Name = this.Name;
                 clone.RequestCount = this.RequestCount;
                 clone.Mode = this.Mode;
-                clone.Session = (HttpSession)this.Session.Clone();
+                clone.HttpRequest = (HttpRequest)this.HttpRequest.Clone();
                 clone.Duration = this.Duration;
                 clone.CoolDownTime = this.CoolDownTime; ;
                 clone.BatchSize = this.BatchSize;

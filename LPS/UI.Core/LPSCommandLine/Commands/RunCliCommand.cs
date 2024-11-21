@@ -24,8 +24,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         readonly Command _rootLpsCliCommand;
         private string[] _args;
         readonly ILogger _logger;
-        readonly IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> _httpClientManager;
-        readonly IClientConfiguration<HttpSession> _config;
+        readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
+        readonly IClientConfiguration<HttpRequest> _config;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         Command _runCommand;
@@ -38,8 +38,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         internal RunCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
-            IClientManager<HttpSession, HttpResponse, IClientService<HttpSession, HttpResponse>> httpClientManager,
-            IClientConfiguration<HttpSession> config,
+            IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
+            IClientConfiguration<HttpRequest> config,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IWatchdog watchdog,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
@@ -93,14 +93,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                     var iterationEntity = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
                                     if (iterationEntity.IsValid)
                                     {
-                                        if (iterationDto.Session?.URL !=null && roundDto?.BaseUrl != null && !iterationDto.Session.URL.StartsWith("http://") && !iterationDto.Session.URL.StartsWith("https://"))
+                                        if (iterationDto.HttpRequest?.URL !=null && roundDto?.BaseUrl != null && !iterationDto.HttpRequest.URL.StartsWith("http://") && !iterationDto.HttpRequest.URL.StartsWith("https://"))
                                         {
-                                            iterationDto.Session.URL = $"{roundDto.BaseUrl}{iterationDto.Session.URL}";
+                                            iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
                                         }
-                                        var session = new HttpSession(iterationDto.Session, _logger, _runtimeOperationIdProvider);
-                                        if (session.IsValid)
+                                        var request = new HttpRequest(iterationDto.HttpRequest, _logger, _runtimeOperationIdProvider);
+                                        if (request.IsValid)
                                         {
-                                            iterationEntity.SetHttpSession(session);
+                                            iterationEntity.SetHttpRequest(request);
                                             roundEntity.AddIteration(iterationEntity);
                                         }
                                     }
@@ -115,10 +115,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                         var referencedIterationEntity = new HttpIteration(globalIteration, _logger, _runtimeOperationIdProvider);
                                         if (referencedIterationEntity.IsValid)
                                         {
-                                            var session = new HttpSession(globalIteration.Session, _logger, _runtimeOperationIdProvider);
-                                            if (session.IsValid)
+                                            var request = new HttpRequest(globalIteration.HttpRequest, _logger, _runtimeOperationIdProvider);
+                                            if (request.IsValid)
                                             {
-                                                referencedIterationEntity.SetHttpSession(session);
+                                                referencedIterationEntity.SetHttpRequest(request);
                                                 roundEntity.AddIteration(referencedIterationEntity);
                                             }
                                         }

@@ -15,16 +15,16 @@ using LPS.Domain.Domain.Common.Validation;
 namespace LPS.Domain
 {
 
-    public partial class HttpSession
+    public partial class HttpRequest
     {
-        public new class Validator : CommandBaseValidator<HttpSession, HttpSession.SetupCommand>
+        public new class Validator : CommandBaseValidator<HttpRequest, HttpRequest.SetupCommand>
         {
             ILogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            HttpSession _entity;
-            HttpSession.SetupCommand _command;
+            HttpRequest _entity;
+            HttpRequest.SetupCommand _command;
             private string[] _httpMethods = { "GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "CONNECT", "OPTIONS", "TRACE" };
-            public Validator(HttpSession entity, HttpSession.SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public Validator(HttpRequest entity, HttpRequest.SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -102,11 +102,10 @@ namespace LPS.Domain
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Request Profile: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
 
-                _command.IsValid = base.Validate();
             }
 
             public override SetupCommand Command => _command;
-            public override HttpSession Entity => _entity;
+            public override HttpRequest Entity => _entity;
         }
     }
 }

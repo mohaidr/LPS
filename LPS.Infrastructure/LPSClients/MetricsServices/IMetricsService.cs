@@ -12,11 +12,11 @@ namespace LPS.Infrastructure.LPSClients.MetricsServices
 {
     public interface IMetricsService
     {
-        Task<bool> TryIncreaseConnectionsCountAsync(Guid sessionId, CancellationToken token);
-        Task<bool> TryDecreaseConnectionsCountAsync(Guid sessionId, bool isSuccessful, CancellationToken token);
-        Task<bool> TryUpdateResponseMetricsAsync(Guid sessionId, HttpResponse response, CancellationToken token);
-        Task<bool> TryUpdateDataSentAsync(Guid sessionId, double dataSize, CancellationToken token);
-        Task<bool> TryUpdateDataReceivedAsync(Guid sessionId, double dataSize, CancellationToken token);
+        Task<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token);
+        Task<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token);
+        Task<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse response, CancellationToken token);
+        Task<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, CancellationToken token);
+        Task<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, CancellationToken token);
 
 
     }

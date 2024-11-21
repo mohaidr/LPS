@@ -1,14 +1,22 @@
 ﻿using LPS.Infrastructure.LPSClients.HeaderServices;
+using LPS.Infrastructure.LPSClients.PlaceHolderService;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using YamlDotNet.Core.Tokens;
 namespace LPS.Infrastructure.LPSClients.HeaderServices
 {
     public class HttpHeadersService : IHttpHeadersService
     {
-        public void ApplyHeaders(HttpRequestMessage httpRequestMessage, Dictionary<string, string> HttpHeaders)
+        IPlaceholderResolverService _placeHolderResolver;
+        public HttpHeadersService(IPlaceholderResolverService placeHolderResolver)
+        {
+            _placeHolderResolver = placeHolderResolver;
+        }
+        public void ApplyHeaders(HttpRequestMessage httpRequestMessage, string sessionId, Dictionary<string, string> HttpHeaders)
         {
             bool supportContentHeaders = httpRequestMessage?.Method != null &&
                                          (string.Equals(httpRequestMessage.Method.Method, "POST", StringComparison.OrdinalIgnoreCase) ||
@@ -16,27 +24,29 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                                           string.Equals(httpRequestMessage.Method.Method, "PATCH", StringComparison.OrdinalIgnoreCase));
             foreach (var header in HttpHeaders)
             {
+                var resolvedValue = _placeHolderResolver.ResolvePlaceholders(header.Value, sessionId);
+
                 if (supportContentHeaders)
                 {
                     var contentHeaders = httpRequestMessage.Content.Headers;
 
-                    if (contentHeaders.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
+                    if (contentHeaders.GetType().GetProperties().Any(property => property.Name.Equals(header.Key.Replace("-", ""), StringComparison.CurrentCultureIgnoreCase)))
                     {
-                        SetContentHeader(httpRequestMessage, header.Key, header.Value);
+                        SetContentHeader(httpRequestMessage, header.Key, resolvedValue);
                         continue;
                     }
                 }
 
-                if (!new StringContent("").Headers.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
+                if (!new StringContent("").Headers.GetType().GetProperties().Any(property => property.Name.Equals(header.Key.Replace("-", ""), StringComparison.CurrentCultureIgnoreCase)))
                 {
                     var requestHeader = httpRequestMessage.Headers;
-                    if (requestHeader.GetType().GetProperties().Any(property => property.Name.ToLower() == header.Key.ToLower().Replace("-", "")))
+                    if (requestHeader.GetType().GetProperties().Any(property => property.Name.Equals(header.Key.Replace("-", ""), StringComparison.CurrentCultureIgnoreCase)))
                     {
-                        SetRequestHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
+                        SetRequestHeader(httpRequestMessage, header.Key.Trim(), resolvedValue.Trim());
                     }
                     else
                     {
-                        SetUserHeader(httpRequestMessage, header.Key.Trim(), header.Value.Trim());
+                        SetUserHeader(httpRequestMessage, header.Key.Trim(), resolvedValue.Trim());
                     }
                 }
             }
