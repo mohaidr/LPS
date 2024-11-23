@@ -226,8 +226,8 @@ namespace LPS.Domain
                     _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.URL}", LPSLoggingLevel.Verbose, _cts.Token);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.Id} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.SessionId} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.URL}", LPSLoggingLevel.Verbose, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.SessionId} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
 
             }
             catch (OperationCanceledException) when (_cts.IsCancellationRequested)

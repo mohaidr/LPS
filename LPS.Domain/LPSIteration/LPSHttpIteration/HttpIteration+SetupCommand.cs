@@ -11,6 +11,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Exceptions;
+using LPS.Domain.LPSFlow.LPSHandlers;
 using YamlDotNet.Serialization;
 
 namespace LPS.Domain
@@ -66,14 +68,19 @@ namespace LPS.Domain
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
-
+        public void SetHttpRequest(HttpRequest httpRequest)
+        {
+            string httpIterationName = this.Name ?? string.Empty;
+            _logger.Log(_runtimeOperationIdProvider.OperationId, $"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.", LPSLoggingLevel.Error);
+            HttpRequest = httpRequest != null && httpRequest.IsValid ? httpRequest : throw new InvalidLPSEntityException($"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.");
+        }
         private void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setupcommand
             var IterationSetUpCommand = new Iteration.SetupCommand() { Id = command.Id, Name = command.Name }; // if there are fields has to be set, then pass them here.
             base.Setup(IterationSetUpCommand);
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (validator.Validate() && base.IsValid)
+            if (command.IsValid && IterationSetUpCommand.IsValid)
             {
                 this.RequestCount = command.RequestCount;
                 this.MaximizeThroughput = command.MaximizeThroughput.Value;

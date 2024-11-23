@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly HttpClient httpClient;
         readonly ILogger _logger;
         private static int _clientNumber;
-        public string Id { get; private set; }
+        public string SessionId { get; private set; }
         public string GuidId { get; private set; }
         readonly ICacheService<string> _memoryCacheService;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
@@ -75,28 +75,29 @@ namespace LPS.Infrastructure.LPSClients
             };
             lock (_lock)
             {
-                Id = _clientNumber++.ToString();
+                SessionId = _clientNumber++.ToString();
             }
             GuidId = Guid.NewGuid().ToString();
         }
 
         public async Task<HttpResponse> SendAsync(HttpRequest request, CancellationToken token = default)
         {
+            
             int sequenceNumber = request.LastSequenceId;
             HttpResponse lpsHttpResponse;
             Stopwatch stopWatch = new();
             try
-            {                
-                var httpRequestMessage = await _messageService.BuildAsync(request, this.Id, token);
+            {
+                var httpRequestMessage = await _messageService.BuildAsync(request, this.SessionId, token);
                 await _metricsService.TryIncreaseConnectionsCountAsync(request.Id, token);
                 stopWatch.Start();
-                var response = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token);
+                var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token);
                 stopWatch.Stop();
-                string contentType = response?.Content?.Headers?.ContentType?.MediaType;
+                string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
                 MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
                 bool captureResponse = request.Capture != null && request.Capture.IsValid;
                 bool cacheResponse = (mimeType == MimeType.TextHtml && request.DownloadHtmlEmbeddedResources) || captureResponse;
-                var (command, streamTime) = (await _responseProcessingService.ProcessResponseAsync(response, request, cacheResponse, token));
+                var (command, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, request, cacheResponse, token));
                 HttpResponse.SetupCommand responseCommand = command;
                 //This will only run if save response is set to true
                 if (captureResponse)
@@ -113,7 +114,8 @@ namespace LPS.Infrastructure.LPSClients
                     var format = mimeType == MimeType.Unknown ? @as : mimeType.ToString();
                     if (rawContent != null && !string.IsNullOrEmpty(format))
                     {
-                        _sessionManager.AddResponse(this.Id, request.Capture.Variable, new CapturedResponse(rawContent, format));
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
+                        _sessionManager.AddResponse(this.SessionId, request.Capture.Variable, new CapturedResponse(rawContent, format));
                     }
                     else {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is unknown or the content is empty.", LPSLoggingLevel.Warning, token);
@@ -129,9 +131,9 @@ namespace LPS.Infrastructure.LPSClients
 
                 await _metricsService.TryUpdateResponseMetricsAsync(request.Id, lpsHttpResponse, token);
 
-                await _metricsService.TryDecreaseConnectionsCountAsync(request.Id, response.IsSuccessStatusCode, token);
+                await _metricsService.TryDecreaseConnectionsCountAsync(request.Id, responseMessage.IsSuccessStatusCode, token);
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {Id} - Request # {sequenceNumber} {request.HttpMethod} {request.URL} Http/{request.HttpVersion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)response.StatusCode} Reason: {response.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {response.Headers}{response.Content.Headers}", LPSLoggingLevel.Verbose, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {request.HttpMethod} {request.URL} Http/{request.HttpVersion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {responseMessage.Headers}{responseMessage.Content.Headers}", LPSLoggingLevel.Verbose, token);
             }
             catch (Exception ex)
             {
@@ -154,10 +156,10 @@ namespace LPS.Infrastructure.LPSClients
 
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer")))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {Id} - Request # {sequenceNumber} {request.HttpMethod} {request.URL} Http/{request.HttpVersion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, token);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {SessionId} - Request # {sequenceNumber} {request.HttpMethod} {request.URL} Http/{request.HttpVersion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, token);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {Id} - Request # {sequenceNumber} {request.HttpMethod} {request.URL} Http/{request.HttpVersion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {SessionId} - Request # {sequenceNumber} {request.HttpMethod} {request.URL} Http/{request.HttpVersion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
                 throw;
             }
 

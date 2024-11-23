@@ -16,6 +16,7 @@ using YamlDotNet.Serialization;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 using LPS.UI.Core.Services;
 using LPS.DTOs;
+using LPS.Domain.LPSFlow.LPSHandlers;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -100,6 +101,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                         var request = new HttpRequest(iterationDto.HttpRequest, _logger, _runtimeOperationIdProvider);
                                         if (request.IsValid)
                                         {
+                                            if (iterationDto?.HttpRequest?.Capture != null)
+                                            {
+                                                var capture = new CaptureHandler(iterationDto.HttpRequest.Capture, _logger, _runtimeOperationIdProvider);
+                                                if (capture.IsValid)
+                                                {
+                                                    request.SetCapture(capture);
+                                                }
+                                            }
                                             iterationEntity.SetHttpRequest(request);
                                             roundEntity.AddIteration(iterationEntity);
                                         }
@@ -118,6 +127,12 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                             var request = new HttpRequest(globalIteration.HttpRequest, _logger, _runtimeOperationIdProvider);
                                             if (request.IsValid)
                                             {
+                                                if (globalIteration?.HttpRequest?.Capture != null)
+                                                {
+                                                    var capture = new CaptureHandler(globalIteration.HttpRequest.Capture, _logger, _runtimeOperationIdProvider);
+                                                    if (capture.IsValid)
+                                                        request.SetCapture(capture);
+                                                }
                                                 referencedIterationEntity.SetHttpRequest(request);
                                                 roundEntity.AddIteration(referencedIterationEntity);
                                             }
@@ -145,6 +160,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             _dashboardConfig,
                             _cts
                         ).RunAsync(plan);
+                    }
+                    else {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, "No rounds to execute", LPSLoggingLevel.Information);
                     }
                 }
                 catch (Exception ex)

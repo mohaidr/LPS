@@ -10,16 +10,16 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-    public partial class CapturHandler : ISessionHandler
+    public partial class CaptureHandler : ISessionHandler
     {
-        public class Validator : CommandBaseValidator<CapturHandler, CapturHandler.SetupCommand>
+        public class Validator : CommandBaseValidator<CaptureHandler, CaptureHandler.SetupCommand>
         {
             ILogger _logger;
             IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            CapturHandler _entity;
+            CaptureHandler _entity;
             SetupCommand _command;
 
-            public Validator(CapturHandler entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public Validator(CaptureHandler entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -37,16 +37,18 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 RuleFor(command => command.As)
                     .Must(@as =>
                     {
-                        return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase) 
+                        @as ??= string.Empty;
+                        return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
                         || @as.Equals("XML", StringComparison.OrdinalIgnoreCase) 
                         || @as.Equals("Regex", StringComparison.OrdinalIgnoreCase) 
                         || string.IsNullOrEmpty(@as);
                     });
                 #endregion
+                _command.IsValid = base.Validate();
             }
 
             public override SetupCommand Command => _command;
-            public override CapturHandler Entity => _entity;
+            public override CaptureHandler Entity => _entity;
 
 
         }

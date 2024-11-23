@@ -8,12 +8,13 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-        public partial class CapturHandler : ISessionHandler
+        public partial class CaptureHandler : ISessionHandler
         {
-        public class SetupCommand : ICommand<CapturHandler>, IValidCommand<CapturHandler>
+        public class SetupCommand : ICommand<CaptureHandler>, IValidCommand<CaptureHandler>
         {
             public SetupCommand()
             {
+                As = string.Empty;
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             public string Variable { get; set; }
@@ -22,21 +23,31 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             public bool IsValid { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
 
-            public void Execute(CapturHandler entity)
+            public void Execute(CaptureHandler entity)
             {
-                if (entity == null)
-                {
-                    throw new ArgumentNullException(nameof(entity));
-                }
+                ArgumentNullException.ThrowIfNull(entity);
                 entity?.Setup(this);
             }
         }
 
+        public object Clone()
+        {
+            CaptureHandler clone = new(_logger, _runtimeOperationIdProvider);
+            if (this.IsValid)
+            {
+                clone.Id = this.Id;
+                clone.Variable = this.Variable;
+                clone.As = this.As;
+                clone.IsValid = true;
+            }
+            return clone;
+        }
+
         protected virtual void Setup(SetupCommand command)
         {
-            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
+            //TODO: DeepCopy and then send the copy item instead of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (validator.Validate())
+            if (command.IsValid)
             {
                 this.Variable = command.Variable;
                 this.As = command.As;

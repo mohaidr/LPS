@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -14,15 +15,15 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
     {
         private readonly ConcurrentDictionary<string, IClientSession> _sessions = new();
 
-        public void AddResponse(string clientId, string variableName, ICapturedResponse capturedResponse)
+        public void AddResponse(string sessionId, string variableName, ICapturedResponse capturedResponse)
         {
-            var session = _sessions.GetOrAdd(clientId, _ => new ClientSession(clientId));
+            var session = _sessions.GetOrAdd(sessionId, _ => new ClientSession(sessionId));
             session.AddResponse(variableName, capturedResponse);
         }
 
-        public ICapturedResponse? GetResponse(string clientId, string variableName)
+        public ICapturedResponse? GetResponse(string sessionId, string variableName)
         {
-            return _sessions.TryGetValue(clientId, out var session) ? session.GetResponse(variableName) : null;
+            return _sessions.TryGetValue(sessionId, out var session) ? session.GetResponse(variableName) : null;
         }
 
         public void CleanupSession(string clientId)

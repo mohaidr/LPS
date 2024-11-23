@@ -39,31 +39,31 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
        private readonly ISessionManager _sessionManager = sessionManager;
         readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         public async Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
-            HttpResponseMessage response,
+            HttpResponseMessage responseMessage,
             HttpRequest httpRequest,
             bool cacheResponse,
             CancellationToken token)
         {
             Stopwatch streamStopwatch = Stopwatch.StartNew();
-            string contentType = response?.Content?.Headers?.ContentType?.MediaType;
+            string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
             MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
 
             try
             {
                 string locationToResponse = string.Empty;
-                if (response.Content == null)
+                if (responseMessage.Content == null)
                 {
                     throw new InvalidOperationException("Response content is null.");
                 }
 
-                if (!(response.StatusCode == HttpStatusCode.NotModified || response.StatusCode == HttpStatusCode.NoContent))
+                if (!(responseMessage.StatusCode == HttpStatusCode.NotModified || responseMessage.StatusCode == HttpStatusCode.NoContent))
                 {
                     // Calculate the headers size (both response and content headers)
-                    long responseSize = CalculateHeadersSize(response);
+                    long responseSize = CalculateHeadersSize(responseMessage);
                     string cacheKey = $"Content_{httpRequest.Id}";
                     string content = await _memoryCacheService.GetItemAsync(cacheKey);
 
-                    using Stream contentStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+                    using Stream contentStream = await responseMessage.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
                     using var timeoutCts = new CancellationTokenSource();
                     using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token);
                     timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
@@ -137,12 +137,12 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
 
                 return (new HttpResponse.SetupCommand
                 {
-                    StatusCode = response.StatusCode,
-                    StatusMessage = response.ReasonPhrase,
+                    StatusCode = responseMessage.StatusCode,
+                    StatusMessage = responseMessage.ReasonPhrase,
                     LocationToResponse = locationToResponse,
-                    IsSuccessStatusCode = response.IsSuccessStatusCode,
-                    ResponseContentHeaders = response.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
-                    ResponseHeaders = response.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                    IsSuccessStatusCode = responseMessage.IsSuccessStatusCode,
+                    ResponseContentHeaders = responseMessage.Content?.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
+                    ResponseHeaders = responseMessage.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ContentType = mimeType,
                     HttpRequestId = httpRequest.Id,
                 }, streamStopwatch.Elapsed);

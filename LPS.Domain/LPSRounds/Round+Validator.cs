@@ -70,6 +70,9 @@ namespace LPS.Domain
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "Round: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
+
+                _command.IsValid = base.Validate();
+
             }
         }
     }

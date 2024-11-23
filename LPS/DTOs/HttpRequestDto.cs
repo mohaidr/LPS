@@ -9,9 +9,9 @@ namespace LPS.DTOs
 {
     public class HttpRequestDto : HttpRequest.SetupCommand
     {
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         public HttpRequestDto()
-        { 
-            Capture = new CaptureDTO();
+        {             
         }
         public CaptureDTO Capture { get; set; }
         public void DeepCopy(out HttpRequestDto targetDto)

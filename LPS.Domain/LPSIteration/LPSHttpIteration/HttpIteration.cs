@@ -69,11 +69,7 @@ namespace LPS.Domain
                 }
             }
         }
-        public void SetHttpRequest(HttpRequest httpRequest)
-        {
-            string httpIterationName = this.Name ?? string.Empty;
-            HttpRequest = httpRequest != null && httpRequest.IsValid ? httpRequest : throw new InvalidLPSEntityException($"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.");
-        }
+
         public int? RequestCount { get; private set; }
         public int? Duration { get; private set; }
         public int? BatchSize { get; private set; }

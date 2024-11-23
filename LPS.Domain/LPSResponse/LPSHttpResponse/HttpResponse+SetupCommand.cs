@@ -12,6 +12,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Exceptions;
 using YamlDotNet.Serialization;
 
 namespace LPS.Domain
@@ -79,19 +80,29 @@ namespace LPS.Domain
 
         }
 
+        public void SetHttpRequest(HttpRequest httpRequest)
+        {
+
+            if (httpRequest != null && httpRequest.IsValid) { HttpRequest = httpRequest; }
+            else
+            {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"The referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.", LPSLoggingLevel.Error);
+                throw new InvalidLPSEntityException($"The referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.");
+            }
+        }
         protected void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setup command
             var lPSResponseSetUpCommand = new Response.SetupCommand() { Id = command.Id };
             base.Setup(lPSResponseSetUpCommand);
-            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
+            //TODO: DeepCopy and then send the copy item instead of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (validator.Validate() && base.IsValid)
+            if (command.IsValid && lPSResponseSetUpCommand.IsValid)
             {
                 this.LocationToResponse = command.LocationToResponse;
                 this.StatusCode = command.StatusCode;
-                this.ContentType= command.ContentType;
-                this.IsSuccessStatusCode= command.IsSuccessStatusCode;
+                this.ContentType = command.ContentType;
+                this.IsSuccessStatusCode = command.IsSuccessStatusCode;
                 this.ResponseHeaders = new Dictionary<string, string>();
                 this.ResponseContentHeaders = new Dictionary<string, string>();
                 this.StatusMessage = command.StatusMessage;

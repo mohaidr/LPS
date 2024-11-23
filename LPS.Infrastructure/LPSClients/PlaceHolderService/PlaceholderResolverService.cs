@@ -41,28 +41,37 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             return resolvedInput;
         }
 
-        private string PerformResolution(string input, string identifier)
+        private string PerformResolution(string input, string sessionId)
         {
             var matches = PathRegex().Matches(input);
             foreach (Match match in matches.Cast<Match>())
             {
                 var variableName = match.Groups[1].Value; // Variable, e.g., "VariableName"
-                var propertyPath = match.Groups[2].Value; // Path or regex, e.g., "item.item.subitem" or "/item/item/subitem"
+                var propertyPath = match.Groups[2].Success ? match.Groups[2].Value : null; // Path if provided
 
-                var response = _sessionManager.GetResponse(identifier, variableName);
+                var response = _sessionManager.GetResponse(sessionId, variableName);
                 if (response == null)
                 {
                     throw new InvalidOperationException($"Variable '{variableName}' not found in session.");
                 }
 
-                string resolvedValue = response.Format switch
+                string resolvedValue;
+                if (propertyPath == null)
                 {
-                    var format when format == MimeType.ApplicationJson.ToString() => response.ExtractJsonValue(propertyPath),
-                    var format when format == MimeType.TextXml.ToString() ||
-                                   format == MimeType.ApplicationXml.ToString() ||
-                                   format == MimeType.RawXml.ToString() => response.ExtractXmlValue(propertyPath),
-                    _ => response.ExtractRegexMatch(propertyPath),
-                };
+                    // If no property path is provided, return the raw response
+                    resolvedValue = response.RawResponse;
+                }
+                else
+                {
+                    resolvedValue = response.Format switch
+                    {
+                        var format when format == MimeType.ApplicationJson.ToString() => response.ExtractJsonValue(propertyPath),
+                        var format when format == MimeType.TextXml.ToString() ||
+                                       format == MimeType.ApplicationXml.ToString() ||
+                                       format == MimeType.RawXml.ToString() => response.ExtractXmlValue(propertyPath),
+                        _ => response.ExtractRegexMatch(propertyPath),
+                    };
+                }
 
                 input = input.Replace(match.Value, resolvedValue);
             }
@@ -73,7 +82,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             return input;
         }
 
-        [GeneratedRegex(@"(?<!\$)\$(\w+)\.([^\s]+)")]
+        [GeneratedRegex(@"(?<!\$)\$(\w+)(?:\.([^\s]+))?")]
         private static partial Regex PathRegex();
     }
 }

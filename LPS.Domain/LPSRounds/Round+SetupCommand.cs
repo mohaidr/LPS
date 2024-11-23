@@ -1,4 +1,6 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Exceptions;
+using LPS.Domain.LPSFlow.LPSHandlers;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -58,9 +60,16 @@ namespace LPS.Domain
 
         public void AddIteration(HttpIteration iteration)
         {
-            if (iteration.IsValid)
+            string roundName = this.Name ?? string.Empty;
+
+            if (iteration != null && iteration.IsValid)
             {
                 Iterations.Add(iteration);
+            }
+            else {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"In the Round '{roundName}', the referenced LPS Entity of type {typeof(HttpIteration)} is either null or invalid.", LPSLoggingLevel.Error);
+
+                throw new InvalidLPSEntityException($"In the Round '{roundName}', the referenced LPS Entity of type {typeof(HttpIteration)} is either null or invalid.");
             }
         }
 
@@ -79,9 +88,9 @@ namespace LPS.Domain
 
         private void Setup(SetupCommand command)
         {
-            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
+            //TODO: DeepCopy and then send the copy item instead of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (validator.Validate())
+            if (command.IsValid)
             {
 
                 this.Name = command.Name;

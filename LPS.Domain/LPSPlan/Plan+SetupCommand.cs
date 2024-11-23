@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json.Serialization;
 using System.Threading;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Domain.Domain.Common.Interfaces;
 using YamlDotNet.Serialization;
 
@@ -48,9 +49,14 @@ namespace LPS.Domain
         }
         public void AddRound(Round round)
         {
-            if (round.IsValid)
-            { 
+            if (round != null && round.IsValid)
+            {
                 Rounds.Add(round);
+            }
+            else
+            {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"The referenced LPS Entity of type {typeof(Round)} is either null or invalid.", LPSLoggingLevel.Error);
+                throw new InvalidLPSEntityException($"The referenced LPS Entity of type {typeof(Round)} is either null or invalid.");
             }
         }
 
@@ -69,9 +75,9 @@ namespace LPS.Domain
 
         private void Setup(SetupCommand command)
         {
-            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
+            //TODO: DeepCopy and then send the copy item instead of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (validator.Validate())
+            if (command.IsValid)
             {
 
                 this.Name = command.Name;

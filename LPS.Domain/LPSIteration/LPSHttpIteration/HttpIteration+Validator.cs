@@ -97,6 +97,7 @@ namespace LPS.Domain
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Http Run: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
+                command.IsValid = base.Validate();  
             }
         }
     }

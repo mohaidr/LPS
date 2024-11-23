@@ -38,6 +38,9 @@ namespace LPS.Domain
                     // No validation rules so far
                 #endregion
 
+                _command.IsValid = base.Validate();
+
+
             }
 
             public override SetupCommand Command => _command;

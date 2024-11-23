@@ -32,6 +32,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 #region Validation Rules
                 // No validation rules so far
                 #endregion
+                _command.IsValid = base.Validate();
 
             }
 

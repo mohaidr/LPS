@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-        public partial class CapturHandler : ISessionHandler
+        public partial class CaptureHandler : ISessionHandler
     {
-        public class ExecuteCommand : IAsyncCommand<CapturHandler>
+        public class ExecuteCommand : IAsyncCommand<CaptureHandler>
         {
             private ExecutionStatus _executionStatus;
 
@@ -39,7 +39,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
                 _cts = cts;
             }
-            public async Task ExecuteAsync(CapturHandler entity)
+            public async Task ExecuteAsync(CaptureHandler entity)
             {
                 if (entity == null)
                 {

@@ -41,7 +41,7 @@ namespace LPS.Infrastructure.LPSClients
         public IClientService<HttpRequest, HttpResponse> CreateInstance(IClientConfiguration<HttpRequest> config)
         {
             var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService);
-            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created", LPSLoggingLevel.Verbose);
+            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
@@ -49,7 +49,7 @@ namespace LPS.Infrastructure.LPSClients
         {
             var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService);
             _clientsQueue.Enqueue(client);
-            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been created and queued", LPSLoggingLevel.Verbose);
+            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created and queued", LPSLoggingLevel.Verbose);
         }
 
         public IClientService<HttpRequest, HttpResponse> DequeueClient()
@@ -57,7 +57,7 @@ namespace LPS.Infrastructure.LPSClients
             if (_clientsQueue.Count > 0)
             {
                 var client = _clientsQueue.Dequeue();
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} has been dequeued", LPSLoggingLevel.Verbose);
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been dequeued", LPSLoggingLevel.Verbose);
                 return client;
             }
             else
@@ -72,7 +72,7 @@ namespace LPS.Infrastructure.LPSClients
             if (_clientsQueue.Count > 0)
             {
                 var client = _clientsQueue.Dequeue();
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.Id} was dequeued", LPSLoggingLevel.Information);
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} was dequeued", LPSLoggingLevel.Information);
                 return client;
             }
             else
@@ -80,7 +80,7 @@ namespace LPS.Infrastructure.LPSClients
                 if (byPassQueueIfEmpty)
                 {
                     var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService);
-                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.Id} was created", LPSLoggingLevel.Information);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.SessionId} was created", LPSLoggingLevel.Information);
                     return client;
                 }
                 else

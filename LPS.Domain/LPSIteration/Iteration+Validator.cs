@@ -30,6 +30,7 @@ namespace LPS.Domain
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Run: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
+                _command.IsValid = true;
             }
 
             public override SetupCommand Command => _command;

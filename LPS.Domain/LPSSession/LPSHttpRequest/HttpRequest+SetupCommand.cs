@@ -11,6 +11,8 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Exceptions;
+using LPS.Domain.LPSFlow.LPSHandlers;
 using YamlDotNet.Serialization;
 
 namespace LPS.Domain
@@ -72,14 +74,27 @@ namespace LPS.Domain
             }
         }
 
+        public void SetCapture(CaptureHandler capture) 
+        {
+            if (capture != null && capture.IsValid)
+            {
+                this.Capture = capture;
+            }
+            else
+            {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"The referenced LPS Entity of type {typeof(CaptureHandler)} is either null or invalid.", LPSLoggingLevel.Error);
+                throw new InvalidLPSEntityException($"The referenced LPS Entity of type {typeof(CaptureHandler)} is either null or invalid.");
+            }
+        }
+
         protected void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setup command
             var requestSetUpCommand = new Request.SetupCommand() { Id = command.Id };
             base.Setup(requestSetUpCommand);
-            //TODO: DeepCopy and then send the copy item insteamd of the original command for further protection 
+            //TODO: DeepCopy and then send the copy item instead of the original command for further protection 
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
-            if (validator.Validate() && base.IsValid)
+            if (command.IsValid && requestSetUpCommand.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
@@ -108,7 +123,7 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            HttpRequest clone = new HttpRequest(_logger, _runtimeOperationIdProvider);
+            HttpRequest clone = new(_logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 clone.Id = this.Id;
@@ -119,6 +134,7 @@ namespace LPS.Domain
                 clone.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
                 clone.SaveResponse = this.SaveResponse;
                 clone.SupportH2C = this.SupportH2C;
+                clone.Capture =  (CaptureHandler)this.Capture?.Clone();
                 clone.HttpHeaders = [];
                 if (this.HttpHeaders != null)
                 {

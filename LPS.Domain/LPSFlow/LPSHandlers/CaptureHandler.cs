@@ -9,11 +9,10 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
-    public partial class CapturHandler : ISessionHandler
+    public partial class CaptureHandler : ISessionHandler
     {
         protected ILogger _logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        protected IWatchdog _watchdog;
         protected CancellationTokenSource _cts;
         public Guid Id { get; protected set; }
         public string As { get; protected set; }
@@ -25,15 +24,20 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             get; protected set;
         }
 
-        public CapturHandler(SetupCommand command, ILogger logger,
-            IWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        private CaptureHandler(ILogger logger,
+        IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        {
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+        }
+
+        public CaptureHandler(SetupCommand command, ILogger logger,
+        IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             ArgumentNullException.ThrowIfNull(command);
             Id = Guid.NewGuid();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _watchdog = watchdog;
             this.Setup(command);
         }
 
