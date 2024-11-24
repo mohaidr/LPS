@@ -4,18 +4,23 @@ using LPS.Infrastructure.Caching;
 using System;
 using System.Text.RegularExpressions;
 using System.Linq;
+using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 
 namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 {
     public partial class PlaceholderResolverService : IPlaceholderResolverService
     {
         private readonly ISessionManager _sessionManager;
+        private readonly IVariableManager _variableManager;
         private readonly ICacheService<string> _memoryCacheService;
 
-        public PlaceholderResolverService(ISessionManager sessionManager, ICacheService<string> memoryCacheService)
+        public PlaceholderResolverService(ISessionManager sessionManager, 
+            ICacheService<string> memoryCacheService,
+            IVariableManager variableManager)
         {
             _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
             _memoryCacheService = memoryCacheService ?? throw new ArgumentNullException(nameof(memoryCacheService));
+            _variableManager = variableManager ?? throw new ArgumentNullException(nameof(variableManager));
         }
 
         public string ResolvePlaceholders(string input, string idntifier)
@@ -49,7 +54,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 var variableName = match.Groups[1].Value; // Variable, e.g., "VariableName"
                 var propertyPath = match.Groups[2].Success ? match.Groups[2].Value : null; // Path if provided
 
-                var response = _sessionManager.GetResponse(sessionId, variableName);
+                var response = _sessionManager.GetResponse(sessionId, variableName)?? _variableManager.GetVariable(variableName);
                 if (response == null)
                 {
                     throw new InvalidOperationException($"Variable '{variableName}' not found in session.");
@@ -59,17 +64,17 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 if (propertyPath == null)
                 {
                     // If no property path is provided, return the raw response
-                    resolvedValue = response.RawResponse;
+                    resolvedValue = response.ExtractTextValue();
                 }
                 else
                 {
                     resolvedValue = response.Format switch
                     {
-                        var format when format == MimeType.ApplicationJson.ToString() => response.ExtractJsonValue(propertyPath),
-                        var format when format == MimeType.TextXml.ToString() ||
-                                       format == MimeType.ApplicationXml.ToString() ||
-                                       format == MimeType.RawXml.ToString() => response.ExtractXmlValue(propertyPath),
-                        _ => response.ExtractRegexMatch(propertyPath),
+                        var format when format == MimeType.ApplicationJson => response.ExtractJsonValue(propertyPath),
+                        var format when format == MimeType.TextXml ||
+                                       format == MimeType.ApplicationXml||
+                                       format == MimeType.RawXml => response.ExtractXmlValue(propertyPath),
+                        _ => response.ExtractTextValue(),
                     };
                 }
 

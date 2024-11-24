@@ -17,6 +17,9 @@ using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 using LPS.UI.Core.Services;
 using LPS.DTOs;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Infrastructure.LPSClients.GlobalVariableManager;
+using LPS.Infrastructure.LPSClients.SessionManager;
+using LPS.Domain.Common;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -27,6 +30,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         readonly ILogger _logger;
         readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
         readonly IClientConfiguration<HttpRequest> _config;
+        readonly IVariableManager _variableManager;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IWatchdog _watchdog;
         Command _runCommand;
@@ -36,6 +40,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
         readonly CancellationTokenSource _cts;
 
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         internal RunCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
@@ -46,6 +51,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
             IMetricsDataMonitor lPSMonitoringEnroller,
             IOptions<DashboardConfigurationOptions> dashboardConfig,
+            IVariableManager variableManager,
             CancellationTokenSource cts,
             string[] args)
         {
@@ -60,6 +66,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _lPSMonitoringEnroller = lPSMonitoringEnroller;
             _dashboardConfig = dashboardConfig;
             _cts = cts;
+            _variableManager = variableManager;
             Setup();
         }
 
@@ -84,6 +91,21 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider);
                     if (plan.IsValid)
                     {
+                        if (planDto?.Variables != null)
+                        {
+                            foreach (var variable in planDto.Variables)
+                            {
+                                MimeType @as = variable.As switch
+                                {
+                                    string s when s.Equals("JSON", StringComparison.OrdinalIgnoreCase) => MimeType.ApplicationJson,
+                                    string s when s.Equals("XML", StringComparison.OrdinalIgnoreCase) => MimeType.TextXml,
+                                    string s when s.Equals("Text", StringComparison.OrdinalIgnoreCase) => MimeType.TextPlain,
+                                    _ => MimeType.Unknown
+                                };
+                                _variableManager.AddVariable(variable.Name, new VariableHolder(variable.Value, @as, variable.Regex));
+                            }
+                        }
+
                         foreach (var roundDto in planDto.Rounds.Where(round => roundNames.Count == 0 || roundNames.Contains(round.Name)))
                         {
                             var roundEntity = new Round(roundDto, _logger, _runtimeOperationIdProvider);

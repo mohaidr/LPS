@@ -34,17 +34,37 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 RuleFor(command => command.Variable)
                     .NotNull()
                     .NotEmpty();
+                RuleFor(command => command.MakeGlobal)
+                    .NotNull();
                 RuleFor(command => command.As)
                     .Must(@as =>
                     {
                         @as ??= string.Empty;
                         return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
                         || @as.Equals("XML", StringComparison.OrdinalIgnoreCase) 
-                        || @as.Equals("Regex", StringComparison.OrdinalIgnoreCase) 
+                        || @as.Equals("Text", StringComparison.OrdinalIgnoreCase) 
                         || string.IsNullOrEmpty(@as);
                     });
+                RuleFor(command => command.Regex)
+                .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))
+                .WithMessage("Input must be either empty or a valid .NET regular expression.");
+
                 #endregion
                 _command.IsValid = base.Validate();
+            }
+
+            private bool IsValidRegex(string pattern)
+            {
+                try
+                {
+                    // If the Regex object can be created without exceptions, the pattern is valid
+                    _ = new System.Text.RegularExpressions.Regex(pattern);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
             }
 
             public override SetupCommand Command => _command;

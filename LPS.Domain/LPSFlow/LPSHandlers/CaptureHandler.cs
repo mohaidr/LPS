@@ -16,6 +16,8 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         protected CancellationTokenSource _cts;
         public Guid Id { get; protected set; }
         public string As { get; protected set; }
+        public bool MakeGlobal { get; protected set; }
+        public string Regex { get; protected set; }
         public string Variable { get; protected set; }
 
         public HandlerType HandlerType => HandlerType.StopIf;

@@ -11,8 +11,8 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 {
     public interface ISessionManager
     {
-        public void AddResponse(string sessionId, string variableName, ICapturedResponse response);
-        public ICapturedResponse? GetResponse(string sessionId, string variableName);
+        public void AddResponse(string sessionId, string variableName, IVariableHolder response);
+        public IVariableHolder? GetResponse(string sessionId, string variableName);
         public void CleanupSession(string sessionId);
     }
 }

@@ -15,13 +15,13 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
     {
         private readonly ConcurrentDictionary<string, IClientSession> _sessions = new();
 
-        public void AddResponse(string sessionId, string variableName, ICapturedResponse capturedResponse)
+        public void AddResponse(string sessionId, string variableName, IVariableHolder capturedResponse)
         {
             var session = _sessions.GetOrAdd(sessionId, _ => new ClientSession(sessionId));
             session.AddResponse(variableName, capturedResponse);
         }
 
-        public ICapturedResponse? GetResponse(string sessionId, string variableName)
+        public IVariableHolder? GetResponse(string sessionId, string variableName)
         {
             return _sessions.TryGetValue(sessionId, out var session) ? session.GetResponse(variableName) : null;
         }

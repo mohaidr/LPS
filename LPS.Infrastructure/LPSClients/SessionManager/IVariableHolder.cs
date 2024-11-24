@@ -1,4 +1,5 @@
-﻿using System;
+﻿using LPS.Domain.Common;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,12 +7,13 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SessionManager
 {
-    public interface ICapturedResponse
+    public interface IVariableHolder
     {
         public string RawResponse { get;}
-        public string Format { get; }
+        public MimeType Format { get; }
+        public string Pattern { get; }
         public string ExtractJsonValue(string pattern);
-        public string ExtractRegexMatch(string pattern);
         public string ExtractXmlValue(string xpath);
+        public string ExtractTextValue();
     }
 }

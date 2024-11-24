@@ -17,6 +17,7 @@ namespace LPS.DTOs
         }
         public override string Name { get; set; }
         public IList<RoundDto> Rounds { get; set; }
+        public IList<VariableDto> Variables { get; set; }
         public IList<HttpIterationDto> Iterations { get; set; }
         public void DeepCopy(out PlanDto targetDto)
         {
@@ -41,5 +42,18 @@ namespace LPS.DTOs
                 return copiedRound;
             }).ToList();
         }
+    }
+
+    public class VariableDto
+    {
+        public VariableDto()
+        {
+            As = "Text";
+            Regex = string.Empty;
+        }
+        public string Name { get; set; }
+        public string Value { get; set; }
+        public string As { get; set; }
+        public string Regex { get; set; }
     }
 }

@@ -9,7 +9,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 {
     public interface IClientSession
     {
-        public void AddResponse(string variableName, ICapturedResponse response);
-        public ICapturedResponse? GetResponse(string variableName);
+        public void AddResponse(string variableName, IVariableHolder response);
+        public IVariableHolder? GetResponse(string variableName);
     }
 }

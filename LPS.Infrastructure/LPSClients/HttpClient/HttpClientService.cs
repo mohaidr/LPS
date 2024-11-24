@@ -25,6 +25,7 @@ using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
+using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -41,6 +42,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly IMessageService _messageService;
         readonly IResponseProcessingService _responseProcessingService;
         readonly ISessionManager _sessionManager;
+        readonly IVariableManager _variableManager;
         readonly object _lock = new();
         public HttpClientService(IClientConfiguration<HttpRequest> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -48,7 +50,8 @@ namespace LPS.Infrastructure.LPSClients
             ISessionManager sessionManager,
             IMessageService messageService,
             IMetricsService metricsService,
-            IResponseProcessingService responseProcessingService)
+            IResponseProcessingService responseProcessingService,
+            IVariableManager variableManager)
         {
             ArgumentNullException.ThrowIfNull(config, nameof(config));
             _logger = logger;
@@ -59,6 +62,7 @@ namespace LPS.Infrastructure.LPSClients
             _sessionManager = sessionManager;
             _messageService = messageService;
             _responseProcessingService = responseProcessingService;
+            _variableManager = variableManager;
             SocketsHttpHandler socketsHandler = new()
             {
                 PooledConnectionLifetime = ((ILPSHttpClientConfiguration<HttpRequest>)config).PooledConnectionLifetime,
@@ -102,22 +106,31 @@ namespace LPS.Infrastructure.LPSClients
                 //This will only run if save response is set to true
                 if (captureResponse)
                 {
-                    var @as = request.Capture.As switch
+                    MimeType @as = request.Capture.As switch
                     {
-                        string s when s.Equals("JSON", StringComparison.OrdinalIgnoreCase) => MimeType.ApplicationJson.ToString(),
-                        string s when s.Equals("XML", StringComparison.OrdinalIgnoreCase) => MimeType.TextXml.ToString(),
-                        string s when s.Equals("Regex", StringComparison.Ordinal) => "Regex",
-                        _ => string.Empty
+                        string s when s.Equals("JSON", StringComparison.OrdinalIgnoreCase) => MimeType.ApplicationJson,
+                        string s when s.Equals("XML", StringComparison.OrdinalIgnoreCase) => MimeType.TextXml,
+                        string s when s.Equals("Text", StringComparison.OrdinalIgnoreCase) => MimeType.TextPlain,
+                        _ => MimeType.Unknown
                     };
 
                     var rawContent = await _memoryCacheService.GetItemAsync($"Content_{request.Id}");
-                    var format = mimeType == MimeType.Unknown ? @as : mimeType.ToString();
-                    if (rawContent != null && !string.IsNullOrEmpty(format))
+                    MimeType format = mimeType == MimeType.Unknown ? @as : mimeType;
+                    if (rawContent != null && format != MimeType.Unknown)
                     {
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
-                        _sessionManager.AddResponse(this.SessionId, request.Capture.Variable, new CapturedResponse(rawContent, format));
+                        if (request.Capture.MakeGlobal)
+                        {
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} as a global variable", LPSLoggingLevel.Verbose, token);
+                            _variableManager.AddVariable(request.Capture.Variable, new VariableHolder(rawContent, format, request.Capture.Regex));
+                        }
+                        else
+                        {
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
+                            _sessionManager.AddResponse(this.SessionId, request.Capture.Variable, new VariableHolder(rawContent, format, request.Capture.Regex));
+                        }
                     }
-                    else {
+                    else
+                    {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is unknown or the content is empty.", LPSLoggingLevel.Warning, token);
                     }
                 }

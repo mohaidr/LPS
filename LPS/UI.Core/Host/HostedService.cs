@@ -16,6 +16,7 @@ using Microsoft.Extensions.Options;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using LPS.DTOs;
+using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 
 namespace LPS.UI.Core.Host
 {
@@ -27,6 +28,7 @@ namespace LPS.UI.Core.Host
         IWatchdog watchdog,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsDataMonitor metricDataMonitor,
+        IVariableManager variableManager,
         ICommandStatusMonitor<IAsyncCommand<HttpIteration>,
         HttpIteration> httpIterationExecutionCommandStatusMonitor,
         AppSettingsWritableOptions appSettings,
@@ -40,6 +42,7 @@ namespace LPS.UI.Core.Host
         readonly AppSettingsWritableOptions _appSettings = appSettings;
         readonly IMetricsDataMonitor _metricDataMonitor = metricDataMonitor;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
+        readonly IVariableManager _variableManager = variableManager;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
         static bool _cancelRequested;
@@ -57,7 +60,7 @@ namespace LPS.UI.Core.Host
 
             if (_command_args != null && _command_args.Length > 0)
             {
-                  var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _cts);
+                  var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _cts);
                  await commandLineManager.RunAsync(_cts.Token);
                  await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
             }

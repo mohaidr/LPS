@@ -1,4 +1,5 @@
 ﻿#nullable enable
+using LPS.Infrastructure.LPSClients.SessionManager;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,8 +10,8 @@ namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
 {
     public interface IVariableManager
     {
-        void AddVariable(string variableName, string methodOrValue);
-        object? GetVariable(string variableName);
+        void AddVariable(string variableName, IVariableHolder variableHolder);
+        IVariableHolder GetVariable(string variableName);
     }
 
 }

@@ -15,11 +15,15 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             public SetupCommand()
             {
                 As = string.Empty;
+                Regex = string.Empty;
+                MakeGlobal = false;
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             public string Variable { get; set; }
             public string As { get; set; }
+            public bool? MakeGlobal { get; set; }
             public Guid? Id { get; set; }
+            public string Regex { get; set; }
             public bool IsValid { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
 
@@ -38,6 +42,8 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 clone.Id = this.Id;
                 clone.Variable = this.Variable;
                 clone.As = this.As;
+                clone.Regex = this.Regex;
+                clone.MakeGlobal = this.MakeGlobal;
                 clone.IsValid = true;
             }
             return clone;
@@ -51,6 +57,8 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             {
                 this.Variable = command.Variable;
                 this.As = command.As;
+                this.MakeGlobal = command.MakeGlobal.Value;
+                this.Regex = command.Regex;
                 this.IsValid = true;
             }
             else

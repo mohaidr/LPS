@@ -1,66 +1,37 @@
 ﻿#nullable enable
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LPS.Domain.Common;
+using LPS.Infrastructure.LPSClients.SessionManager;
 
 namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
 {
-    using System;
-    using System.Collections.Concurrent;
-    using System.Text.RegularExpressions;
-
-    public class VariableManager : IVariableManager
+    public partial class VariableManager : IVariableManager
     {
-        private readonly ConcurrentDictionary<string, Func<object?>> _variables = new();
+        private readonly ConcurrentDictionary<string, IVariableHolder> _variables = new();
 
-        // Regex patterns for dynamic methods
-        private const string RandomStringPattern = @"^RandomString\(\)$";
-        private const string RandomNumberPattern = @"^RandomNumber\((\d+),(\d+)\)$";
-
-        public void AddVariable(string variableName, string methodOrValue)
+        public void AddVariable(string variableName, IVariableHolder variableHolder)
         {
             if (string.IsNullOrWhiteSpace(variableName))
                 throw new ArgumentException("Variable name cannot be null or whitespace.", nameof(variableName));
 
-            Func<object?> valueGenerator = ParseMethodOrValue(methodOrValue);
+            if (variableHolder == null)
+                throw new ArgumentNullException(nameof(variableHolder), "Variable holder cannot be null.");
 
-            if (!_variables.TryAdd(variableName, valueGenerator))
+            if (!_variables.TryAdd(variableName, variableHolder))
             {
                 throw new InvalidOperationException($"Variable '{variableName}' already exists.");
             }
         }
-
-        public object? GetVariable(string variableName)
+        public IVariableHolder GetVariable(string variableName)
         {
-            if (_variables.TryGetValue(variableName, out var valueGenerator))
+            if (_variables.TryGetValue(variableName, out var variableHolder))
             {
-                return valueGenerator.Invoke();
+                return variableHolder;
             }
 
             throw new KeyNotFoundException($"Variable '{variableName}' not found.");
         }
-
-        private static Func<object?> ParseMethodOrValue(string methodOrValue)
-        {
-            // Check for dynamic methods
-            if (Regex.IsMatch(methodOrValue, RandomStringPattern))
-            {
-                return () => Guid.NewGuid().ToString(); // Generate random string
-            }
-
-            var match = Regex.Match(methodOrValue, RandomNumberPattern);
-            if (match.Success)
-            {
-                int min = int.Parse(match.Groups[1].Value);
-                int max = int.Parse(match.Groups[2].Value);
-                return () => new Random().Next(min, max); // Generate random number in range
-            }
-
-            // If no method detected, treat as a plain text value
-            return () => methodOrValue;
-        }
     }
-
 }
