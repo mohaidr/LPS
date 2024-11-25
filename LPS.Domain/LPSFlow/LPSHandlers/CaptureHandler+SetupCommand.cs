@@ -14,7 +14,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         {
             public SetupCommand()
             {
-                As = string.Empty;
+                As = "Text";
                 Regex = string.Empty;
                 MakeGlobal = false;
                 ValidationErrors = new Dictionary<string, List<string>>();

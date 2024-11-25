@@ -26,6 +26,7 @@ using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
+using Microsoft.Extensions.Options;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -106,27 +107,27 @@ namespace LPS.Infrastructure.LPSClients
                 //This will only run if save response is set to true
                 if (captureResponse)
                 {
-                    MimeType @as = request.Capture.As switch
-                    {
-                        string s when s.Equals("JSON", StringComparison.OrdinalIgnoreCase) => MimeType.ApplicationJson,
-                        string s when s.Equals("XML", StringComparison.OrdinalIgnoreCase) => MimeType.TextXml,
-                        string s when s.Equals("Text", StringComparison.OrdinalIgnoreCase) => MimeType.TextPlain,
-                        _ => MimeType.Unknown
-                    };
+                    MimeType @as = MimeTypeExtensions.FromKeyword(request.Capture.As);
 
                     var rawContent = await _memoryCacheService.GetItemAsync($"Content_{request.Id}");
-                    MimeType format = mimeType == MimeType.Unknown ? @as : mimeType;
-                    if (rawContent != null && format != MimeType.Unknown)
+                    if (rawContent != null)
                     {
+                        var builder = new VariableHolder.Builder();
+                        var variableHolder = builder.Build();
+                        variableHolder = builder
+                            .WithFormat(!(variableHolder.CheckIfSupportsParsing(mimeType)) ? @as : mimeType)
+                            .WithPattern(request.Capture.Regex)
+                            .WithRawResponse(rawContent).Build();
+
                         if (request.Capture.MakeGlobal)
                         {
                             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} as a global variable", LPSLoggingLevel.Verbose, token);
-                            _variableManager.AddVariable(request.Capture.Variable, new VariableHolder(rawContent, format, request.Capture.Regex));
+                            await _variableManager.AddVariableAsync(request.Capture.Variable, variableHolder, token);
                         }
                         else
                         {
                             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
-                            _sessionManager.AddResponse(this.SessionId, request.Capture.Variable, new VariableHolder(rawContent, format, request.Capture.Regex));
+                            _sessionManager.AddResponse(this.SessionId, request.Capture.Variable, variableHolder);
                         }
                     }
                     else

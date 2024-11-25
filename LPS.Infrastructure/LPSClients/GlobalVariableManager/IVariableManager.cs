@@ -4,13 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
 {
     public interface IVariableManager
     {
-        void AddVariable(string variableName, IVariableHolder variableHolder);
+        Task AddVariableAsync(string variableName, IVariableHolder variableHolder, CancellationToken token);
         IVariableHolder GetVariable(string variableName);
     }
 

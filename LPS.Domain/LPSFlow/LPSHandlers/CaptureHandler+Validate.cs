@@ -42,8 +42,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                         @as ??= string.Empty;
                         return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
                         || @as.Equals("XML", StringComparison.OrdinalIgnoreCase) 
-                        || @as.Equals("Text", StringComparison.OrdinalIgnoreCase) 
-                        || string.IsNullOrEmpty(@as);
+                        || @as.Equals("Text", StringComparison.OrdinalIgnoreCase);
                     });
                 RuleFor(command => command.Regex)
                 .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))

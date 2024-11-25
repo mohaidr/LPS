@@ -1,17 +1,24 @@
 ﻿using LPS.Domain.Common;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SessionManager
 {
-    public class VariableHolder(string rawResponse, MimeType format, string pattern) : IVariableHolder
+    public class VariableHolder : IVariableHolder
     {
-        public MimeType Format { get; private set; } = format != MimeType.Unknown ? format : throw new ArgumentNullException(nameof(format));
-        public string Pattern { get; private set; }   = pattern ?? throw new ArgumentNullException(nameof(pattern));
-        public string RawResponse { get; private set; } = rawResponse ?? throw new ArgumentNullException(nameof(rawResponse));
+        public MimeType Format { get; private set; }
+        public string Pattern { get; private set; }
+        public string RawResponse { get; private set; }
+
+        private VariableHolder() { } // Private constructor for controlled instantiation via builder
+
+        public bool CheckIfSupportsParsing(MimeType mimeType)
+        {
+            return mimeType == MimeType.ApplicationJson ||
+                   mimeType == MimeType.RawXml ||
+                   mimeType == MimeType.TextXml ||
+                   mimeType == MimeType.ApplicationXml ||
+                   mimeType == MimeType.TextPlain;
+        }
 
         public string ExtractJsonValue(string jsonPath)
         {
@@ -21,7 +28,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             try
             {
                 var json = Newtonsoft.Json.Linq.JObject.Parse(RawResponse);
-                var token= json.SelectToken(jsonPath)?.ToString() ?? throw new InvalidOperationException($"JSON path '{jsonPath}' not found.");
+                var token = json.SelectToken(jsonPath)?.ToString() ?? throw new InvalidOperationException($"JSON path '{jsonPath}' not found.");
                 return ExtractRegexMatch(token, Pattern);
             }
             catch (Exception ex)
@@ -32,9 +39,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
         public string ExtractXmlValue(string xpath)
         {
-            if (Format != MimeType.TextXml &&
-                   Format != MimeType.ApplicationXml &&
-                   Format != MimeType.RawXml)
+            if (Format != MimeType.TextXml && Format != MimeType.ApplicationXml && Format != MimeType.RawXml)
             {
                 throw new InvalidOperationException("Response is not XML.");
             }
@@ -51,10 +56,12 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
                 throw new InvalidOperationException($"Failed to extract XML value using XPath '{xpath}'.", ex);
             }
         }
-        public string ExtractTextValue()
+
+        public string ApplyRegexAndReturn()
         {
-            return ExtractRegexMatch(rawResponse, Pattern);
+            return ExtractRegexMatch(RawResponse, Pattern);
         }
+
         private static string ExtractRegexMatch(string value, string pattern)
         {
             if (string.IsNullOrEmpty(pattern))
@@ -70,6 +77,39 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
                 throw new InvalidOperationException($"Failed to apply regex pattern '{pattern}'.", ex);
             }
         }
-    }
 
+        // Builder class
+        public class Builder
+        {
+            private readonly VariableHolder _variableHolder;
+
+            public Builder()
+            {
+                _variableHolder = new VariableHolder();
+            }
+
+            public Builder WithFormat(MimeType format)
+            {
+                _variableHolder.Format = format;
+                return this;
+            }
+
+            public Builder WithPattern(string pattern)
+            {
+                _variableHolder.Pattern = pattern;
+                return this;
+            }
+
+            public Builder WithRawResponse(string rawResponse)
+            {
+                _variableHolder.RawResponse = rawResponse;
+                return this;
+            }
+
+            public VariableHolder Build()
+            {
+                return _variableHolder;
+            }
+        }
+    }
 }

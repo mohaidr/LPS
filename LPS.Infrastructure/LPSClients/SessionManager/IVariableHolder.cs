@@ -9,11 +9,12 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 {
     public interface IVariableHolder
     {
+        public bool CheckIfSupportsParsing(MimeType mimeType);
         public string RawResponse { get;}
         public MimeType Format { get; }
         public string Pattern { get; }
         public string ExtractJsonValue(string pattern);
         public string ExtractXmlValue(string xpath);
-        public string ExtractTextValue();
+        public string ApplyRegexAndReturn();
     }
 }

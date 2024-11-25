@@ -2,16 +2,20 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using LPS.Domain.Common;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.SessionManager;
 
 namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
 {
-    public partial class VariableManager : IVariableManager
+    public partial class VariableManager(IRuntimeOperationIdProvider operationProvider, ILogger logger) : IVariableManager
     {
         private readonly ConcurrentDictionary<string, IVariableHolder> _variables = new();
-
-        public void AddVariable(string variableName, IVariableHolder variableHolder)
+        private readonly IRuntimeOperationIdProvider _operationIdProvider= operationProvider;
+        private readonly ILogger _logger= logger;
+        public async Task AddVariableAsync(string variableName, IVariableHolder variableHolder, CancellationToken token = default)
         {
             if (string.IsNullOrWhiteSpace(variableName))
                 throw new ArgumentException("Variable name cannot be null or whitespace.", nameof(variableName));
@@ -21,9 +25,13 @@ namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
 
             if (!_variables.TryAdd(variableName, variableHolder))
             {
-                throw new InvalidOperationException($"Variable '{variableName}' already exists.");
+                await _logger.LogAsync(_operationIdProvider.OperationId, $" Variable '{{variableName}}' already exists and will be overridden", LPSLoggingLevel.Warning);
+
+                // Override the existing variable
+                _variables[variableName] = variableHolder;
             }
         }
+
         public IVariableHolder GetVariable(string variableName)
         {
             if (_variables.TryGetValue(variableName, out var variableHolder))

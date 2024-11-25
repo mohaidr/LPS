@@ -24,12 +24,11 @@ namespace LPS.Domain.Common
         TextHtml,
         ApplicationJson,
         Unknown, // Enum value for unknown content types
-                 // Add more MIME types as needed
     }
 
     public static class MimeTypeExtensions
     {
-        private static readonly Dictionary<MimeType, string> MimeTypeToExtension = new Dictionary<MimeType, string>
+        private static readonly Dictionary<MimeType, string> MimeTypeToExtension = new()
         {
             { MimeType.ImageJpeg, ".jpg" },
             { MimeType.ImagePng, ".png" },
@@ -42,17 +41,16 @@ namespace LPS.Domain.Common
             { MimeType.ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation, ".pptx" },
             { MimeType.ApplicationXml, ".xml" },
             { MimeType.TextXml, ".xml" },
-            { MimeType.RawXml, ".xml" }, // Added mapping for RawXml
+            { MimeType.RawXml, ".xml" },
             { MimeType.TextJavascript, ".js" },
             { MimeType.ApplicationJavascript, ".js" },
             { MimeType.ApplicationXJavascript, ".js" },
             { MimeType.TextCss, ".css" },
             { MimeType.TextHtml, ".html" },
             { MimeType.ApplicationJson, ".json" },
-            // Add more mappings as needed
         };
 
-        private static readonly Dictionary<string, MimeType> ContentTypeToMimeType = new Dictionary<string, MimeType>
+        private static readonly Dictionary<string, MimeType> ContentTypeToMimeType = new(StringComparer.OrdinalIgnoreCase)
         {
             { "image/jpeg", MimeType.ImageJpeg },
             { "image/png", MimeType.ImagePng },
@@ -65,13 +63,26 @@ namespace LPS.Domain.Common
             { "application/vnd.openxmlformats-officedocument.presentationml.presentation", MimeType.ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation },
             { "application/xml", MimeType.ApplicationXml },
             { "text/xml", MimeType.TextXml },
-            { "application/raw+xml", MimeType.RawXml }, // Added mapping for raw XML
+            { "application/raw+xml", MimeType.RawXml },
             { "text/javascript", MimeType.TextJavascript },
             { "application/javascript", MimeType.ApplicationJavascript },
             { "application/x-javascript", MimeType.ApplicationXJavascript },
             { "text/css", MimeType.TextCss },
             { "text/html", MimeType.TextHtml },
             { "application/json", MimeType.ApplicationJson },
+        };
+
+        private static readonly Dictionary<string, MimeType> KeywordToMimeType = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "JSON", MimeType.ApplicationJson },
+            { "XML", MimeType.ApplicationXml },
+            { "Text", MimeType.TextPlain },
+            { "JPEG", MimeType.ImageJpeg },
+            { "PNG", MimeType.ImagePng },
+            { "HTML", MimeType.TextHtml },
+            { "PDF", MimeType.ApplicationPdf },
+            { "JS", MimeType.ApplicationJavascript },
+            { "CSS", MimeType.TextCss },
             // Add more mappings as needed
         };
 
@@ -94,7 +105,6 @@ namespace LPS.Domain.Common
 
             return MimeType.Unknown; // Default MIME type representing unknown content types
         }
-
         public static string ToContentType(this MimeType mimeType)
         {
             foreach (var kvp in ContentTypeToMimeType)
@@ -106,6 +116,15 @@ namespace LPS.Domain.Common
             }
 
             return "application/octet-stream"; // Default content type for unknown MIME types
+        }
+        public static MimeType FromKeyword(string keyword)
+        {
+            if (keyword != null && KeywordToMimeType.TryGetValue(keyword, out MimeType mimeType))
+            {
+                return mimeType;
+            }
+
+            return MimeType.Unknown; // Default MIME type representing unknown content types
         }
     }
 }

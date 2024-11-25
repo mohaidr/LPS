@@ -95,14 +95,15 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         {
                             foreach (var variable in planDto.Variables)
                             {
-                                MimeType @as = variable.As switch
-                                {
-                                    string s when s.Equals("JSON", StringComparison.OrdinalIgnoreCase) => MimeType.ApplicationJson,
-                                    string s when s.Equals("XML", StringComparison.OrdinalIgnoreCase) => MimeType.TextXml,
-                                    string s when s.Equals("Text", StringComparison.OrdinalIgnoreCase) => MimeType.TextPlain,
-                                    _ => MimeType.Unknown
-                                };
-                                _variableManager.AddVariable(variable.Name, new VariableHolder(variable.Value, @as, variable.Regex));
+                                MimeType @as = MimeTypeExtensions.FromKeyword(variable.As);
+                                var builder = new VariableHolder.Builder();
+                                var variableHolder = builder
+                                    .WithFormat(@as)
+                                    .WithPattern(variable.Regex)
+                                    .WithRawResponse(variable.Value)
+                                    .Build();
+
+                                _variableManager.AddVariableAsync(variable.Name, variableHolder, cancellationToken).Wait();
                             }
                         }
 
