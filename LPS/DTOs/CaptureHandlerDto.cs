@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 
 namespace LPS.DTOs
 {
-    public class CaptureDTO : CaptureHandler.SetupCommand
+    public class CaptureHandlerDto : CaptureHandler.SetupCommand
     {
-        public CaptureDTO() { }
+        public CaptureHandlerDto() { }
     }
 }

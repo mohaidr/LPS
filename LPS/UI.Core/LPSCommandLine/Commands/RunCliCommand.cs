@@ -20,6 +20,8 @@ using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Domain.Common;
+using LPS.UI.Core.LPSValidators;
+using FluentValidation;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -95,6 +97,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         {
                             foreach (var variable in planDto.Variables)
                             {
+                                var variableDtoValidator = new VariableValidator();
+                                variableDtoValidator.ValidateAndThrow(variable);
                                 MimeType @as = MimeTypeExtensions.FromKeyword(variable.As);
                                 var builder = new VariableHolder.Builder();
                                 var variableHolder = builder

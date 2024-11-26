@@ -14,6 +14,7 @@ namespace LPS.DTOs
         {
             Iterations = [];
             Rounds = [];
+            Variables = [];
         }
         public override string Name { get; set; }
         public IList<RoundDto> Rounds { get; set; }
@@ -42,18 +43,5 @@ namespace LPS.DTOs
                 return copiedRound;
             }).ToList();
         }
-    }
-
-    public class VariableDto
-    {
-        public VariableDto()
-        {
-            As = "Text";
-            Regex = string.Empty;
-        }
-        public string Name { get; set; }
-        public string Value { get; set; }
-        public string As { get; set; }
-        public string Regex { get; set; }
     }
 }

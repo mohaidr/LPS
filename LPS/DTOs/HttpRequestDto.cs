@@ -13,7 +13,7 @@ namespace LPS.DTOs
         public HttpRequestDto()
         {             
         }
-        public CaptureDTO Capture { get; set; }
+        public CaptureHandlerDto Capture { get; set; }
         public void DeepCopy(out HttpRequestDto targetDto)
         {
             targetDto = new HttpRequestDto();
