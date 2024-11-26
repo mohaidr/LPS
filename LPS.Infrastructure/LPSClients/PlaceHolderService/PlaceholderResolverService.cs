@@ -15,26 +15,14 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         private readonly ISessionManager _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
         private readonly IVariableManager _variableManager = variableManager ?? throw new ArgumentNullException(nameof(variableManager));
         private readonly ICacheService<string> _memoryCacheService = memoryCacheService ?? throw new ArgumentNullException(nameof(memoryCacheService));
-
         public string ResolvePlaceholders(string input, string identifier)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return string.Empty;
 
-            // Use a cache key unique to the input and clientId
-            string cacheKey = $"Placeholder_{identifier}_{input.GetHashCode()}";
-
-            // Check if the result is already cached
-            if (_memoryCacheService.TryGetItem(cacheKey, out string cachedResult))
-            {
-                return cachedResult;
-            }
-
             // Perform placeholder resolution
             string resolvedInput = PerformResolution(input, identifier);
 
-            // Cache the resolved result
-            _memoryCacheService.SetItemAsync(cacheKey, resolvedInput).Wait();
 
             return resolvedInput;
         }
@@ -116,7 +104,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         {
             // Check if the placeholder is a function (contains parentheses)
             bool isFunction = placeholder.Contains('(') && placeholder.EndsWith(')');
-
+            string resolvedValue;
             if (isFunction)
             {
                 // Extract the function name and parameters
@@ -124,33 +112,78 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 string functionName = placeholder.Substring(0, openParenIndex).Trim();
                 string parameters = placeholder.Substring(openParenIndex + 1, placeholder.Length - openParenIndex - 2).Trim();
                 // Resolve based on function name
-                return functionName switch
+                resolvedValue = functionName.ToLowerInvariant() switch
                 {
-                    "Random" => GenerateRandomString(parameters, sessionId), // Handle Random function
-                    "RandomNumber" => GenerateRandomNumber(parameters, sessionId), // Handle RandomNumber function
-                    "Timestamp" => GenerateTimestamp(parameters, sessionId), // Handle Timestamp function
-                    "Guid" => Guid.NewGuid().ToString(), // Handle Guid function
-                    "Base64Encode" => Base64Encode(parameters, sessionId), // Handle Base64Encode function
-                    "Hash" => GenerateHash(parameters, sessionId), // Handle Hash function
-                    "CustomVariable" => ResolveCustomVariable(parameters, sessionId), // Handle CustomVariable function
+                    "random" => GenerateRandomString(parameters, sessionId), // Handle Random function
+                    "randomnumber" => GenerateRandomNumber(parameters, sessionId), // Handle RandomNumber function
+                    "timestamp" => GenerateTimestamp(parameters, sessionId), // Handle Timestamp function
+                    "guid" => Guid.NewGuid().ToString(), // Handle Guid function
+                    "base64encode" => Base64Encode(parameters, sessionId), // Handle Base64Encode function
+                    "hash" => GenerateHash(parameters, sessionId), // Handle Hash function
+                    "customvariable" => ResolveCustomVariable(parameters, sessionId), // Handle CustomVariable function
                     _ => throw new InvalidOperationException($"Unknown function: {functionName}") // Handle unknown functions
                 };
             }
             else
             {
                 // Treat as a plain variable
-                return ResolveVariable(placeholder, sessionId);
+                resolvedValue = ResolveVariable(placeholder, sessionId);
             }
+            return resolvedValue;
         }
-
-        private string ResolveVariable(string variableName, string sessionId)
+        private string ResolveVariable(string placeholder, string sessionId)
         {
-            var response = _sessionManager.GetResponse(sessionId, variableName) ?? _variableManager.GetVariable(variableName);
-            if (response == null)
+            if (_memoryCacheService.TryGetItem(placeholder, out string cachedResult))
             {
-                throw new InvalidOperationException($"Variable '{variableName}' not found in session.");
+                return cachedResult;
             }
-            return response.ApplyRegexAndReturn();
+            // Check if the placeholder contains a path (JSON or XML)
+            string variableName = placeholder;
+            string path = null;
+            string resolvedPlaceHolder;
+            TimeSpan cacheDuration;
+            if (!string.IsNullOrEmpty(placeholder) && (placeholder.Contains(".") || placeholder.Contains("/")))
+            {
+                // Split the variable name and path
+                var splitIndex = placeholder.IndexOfAny(new[] { '.', '/' });
+                variableName = placeholder.Substring(0, splitIndex);
+                path = placeholder.Substring(splitIndex); // Extract path
+            }
+
+            // Get the variable holder from the session or global manager
+            var variableHolder = _sessionManager.GetResponse(sessionId, variableName) ?? _variableManager.GetVariable(variableName);
+
+            if (variableHolder == null)
+            {
+                throw new InvalidOperationException($"Variable '{variableName}' not found in session or global scope.");
+            }
+            cacheDuration = variableHolder.IsGlobal ? TimeSpan.MaxValue : TimeSpan.FromSeconds(30);
+            // Handle paths if provided
+            if (!string.IsNullOrEmpty(path))
+            {
+                if (path.StartsWith(".") && variableHolder.Format == MimeType.ApplicationJson)
+                {
+                    // JSON path extraction
+                    resolvedPlaceHolder= variableHolder.ExtractJsonValue(path);
+                }
+                else if (path.StartsWith("/") && (variableHolder.Format == MimeType.ApplicationXml || variableHolder.Format == MimeType.TextXml || variableHolder.Format == MimeType.RawXml))
+                {
+                    // XML path extraction
+                    resolvedPlaceHolder= variableHolder.ExtractXmlValue(path);
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Unsupported path '{path}' for variable '{variableName}' with format '{variableHolder.Format}'.");
+                }
+            }
+            else
+            {
+
+                // If no path, return the raw response with regex applied
+                resolvedPlaceHolder= variableHolder.ExtractValueWithRegex();
+            }
+            _memoryCacheService.SetItemAsync(placeholder, resolvedPlaceHolder, cacheDuration).Wait();
+            return resolvedPlaceHolder;
         }
 
         // Helper methods for dynamic functions

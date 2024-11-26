@@ -25,8 +25,7 @@ namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
 
             if (!_variables.TryAdd(variableName, variableHolder))
             {
-                await _logger.LogAsync(_operationIdProvider.OperationId, $" Variable '{{variableName}}' already exists and will be overridden", LPSLoggingLevel.Warning);
-
+                await _logger.LogAsync(_operationIdProvider.OperationId, $" Variable '{{variableName}}' already exists and will be overridden", LPSLoggingLevel.Warning, token);
                 // Override the existing variable
                 _variables[variableName] = variableHolder;
             }

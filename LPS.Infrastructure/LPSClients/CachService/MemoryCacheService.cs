@@ -25,20 +25,19 @@ namespace LPS.Infrastructure.Caching
             bool semaphoreAcquired = false;
             try
             {
-                var cacheDuration = duration ?? _defaultCacheDuration;
-                MemoryCacheEntryOptions cacheEntryOptions;
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSize(1); // Set size for memory management
 
-                if (cacheDuration == TimeSpan.MaxValue)
+                if (duration == TimeSpan.MaxValue)
                 {
-                    cacheEntryOptions = new MemoryCacheEntryOptions()
-                        .SetSize(1)
-                        .SetAbsoluteExpiration(DateTimeOffset.MaxValue);
+                    // Set priority to prevent eviction and avoid expiration
+                    cacheEntryOptions.SetPriority(CacheItemPriority.NeverRemove);
                 }
                 else
                 {
-                    cacheEntryOptions = new MemoryCacheEntryOptions()
-                        .SetAbsoluteExpiration(cacheDuration)
-                        .SetSize(1);
+                    // Use provided duration or default duration
+                    var cacheDuration = duration ?? _defaultCacheDuration;
+                    cacheEntryOptions.SetAbsoluteExpiration(DateTimeOffset.UtcNow.Add(cacheDuration));
                 }
 
                 // Ensure thread-safety using a semaphore
@@ -54,6 +53,7 @@ namespace LPS.Infrastructure.Caching
                 }
             }
         }
+
 
         public bool TryGetItem(string key, out T item)
         {

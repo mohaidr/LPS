@@ -101,6 +101,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                     .WithFormat(@as)
                                     .WithPattern(variable.Regex)
                                     .WithRawResponse(variable.Value)
+                                    .SetGlobal(true)
                                     .Build();
 
                                 _variableManager.AddVariableAsync(variable.Name, variableHolder, cancellationToken).Wait();

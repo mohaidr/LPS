@@ -7,7 +7,8 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
     {
         public MimeType Format { get; private set; }
         public string Pattern { get; private set; }
-        public string RawResponse { get; private set; }
+        public string RawValue { get; private set; }
+        public bool IsGlobal { get; private set; }
 
         private VariableHolder() { } // Private constructor for controlled instantiation via builder
 
@@ -27,7 +28,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
             try
             {
-                var json = Newtonsoft.Json.Linq.JObject.Parse(RawResponse);
+                var json = Newtonsoft.Json.Linq.JObject.Parse(RawValue);
                 var token = json.SelectToken(jsonPath)?.ToString() ?? throw new InvalidOperationException($"JSON path '{jsonPath}' not found.");
                 return ExtractRegexMatch(token, Pattern);
             }
@@ -47,7 +48,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             try
             {
                 var doc = new System.Xml.XmlDocument();
-                doc.LoadXml(RawResponse);
+                doc.LoadXml(RawValue);
                 var node = doc.SelectSingleNode(xpath);
                 return ExtractRegexMatch(node?.InnerText, Pattern) ?? throw new InvalidOperationException($"XPath '{xpath}' not found.");
             }
@@ -57,9 +58,9 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             }
         }
 
-        public string ApplyRegexAndReturn()
+        public string ExtractValueWithRegex()
         {
-            return ExtractRegexMatch(RawResponse, Pattern);
+            return ExtractRegexMatch(RawValue, Pattern);
         }
 
         private static string ExtractRegexMatch(string value, string pattern)
@@ -102,9 +103,17 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
             public Builder WithRawResponse(string rawResponse)
             {
-                _variableHolder.RawResponse = rawResponse;
+                _variableHolder.RawValue = rawResponse;
                 return this;
             }
+
+
+            public Builder SetGlobal(bool isGlobal)
+            {
+                _variableHolder.IsGlobal = isGlobal;
+                return this;
+            }
+
 
             public VariableHolder Build()
             {

@@ -121,13 +121,15 @@ namespace LPS.Infrastructure.LPSClients
 
                         if (request.Capture.MakeGlobal)
                         {
+                            variableHolder = builder.SetGlobal(true)
+                                .Build();
                             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} as a global variable", LPSLoggingLevel.Verbose, token);
                             await _variableManager.AddVariableAsync(request.Capture.Variable, variableHolder, token);
                         }
                         else
                         {
                             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
-                            _sessionManager.AddResponse(this.SessionId, request.Capture.Variable, variableHolder);
+                            await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.Variable, variableHolder, token);
                         }
                     }
                     else
