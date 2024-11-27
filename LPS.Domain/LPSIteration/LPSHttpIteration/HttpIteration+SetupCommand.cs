@@ -38,6 +38,7 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public Guid? Id { get; set; }
+            public int StartupDelay { get; set; }
             public virtual string Name { get; set; }
             public bool? MaximizeThroughput { get; set; }
             public IterationMode? Mode { get; set; }
@@ -58,6 +59,7 @@ namespace LPS.Domain
             {
                 targetCommand.Id = this.Id;
                 targetCommand.Name = this.Name;
+                targetCommand.StartupDelay = this.StartupDelay;
                 targetCommand.MaximizeThroughput = this.MaximizeThroughput;
                 targetCommand.Mode = this.Mode;
                 targetCommand.RequestCount = this.RequestCount;
@@ -82,9 +84,10 @@ namespace LPS.Domain
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && IterationSetUpCommand.IsValid)
             {
-                this.RequestCount = command.RequestCount;
+                this.StartupDelay = command.StartupDelay;
                 this.MaximizeThroughput = command.MaximizeThroughput.Value;
                 this.Mode = command.Mode;
+                this.RequestCount = command.RequestCount;
                 this.Duration = command.Duration;
                 this.CoolDownTime = command.CoolDownTime; ;
                 this.BatchSize = command.BatchSize;
@@ -104,6 +107,7 @@ namespace LPS.Domain
             {
                 clone.Id = this.Id;
                 clone.Name = this.Name;
+                clone.StartupDelay = this.StartupDelay;
                 clone.RequestCount = this.RequestCount;
                 clone.Mode = this.Mode;
                 clone.HttpRequest = (HttpRequest)this.HttpRequest.Clone();

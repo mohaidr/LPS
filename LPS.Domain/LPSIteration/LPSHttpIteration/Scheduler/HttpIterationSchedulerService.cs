@@ -39,21 +39,20 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             {
                 _httpIterationExecutionCommandStatusMonitor.RegisterCommand(httpIterationCommand, httpIteration);
 
-                var delayTime = (int)(scheduledTime - DateTime.Now).TotalMilliseconds;
-                if (delayTime > 0)
+                var delayTime = (scheduledTime - DateTime.Now) + TimeSpan.FromSeconds(httpIteration.StartupDelay);
+                if (delayTime > TimeSpan.Zero)
                 {
                     await Task.Delay(delayTime, _cts.Token);
                 }
-
                 _lpsMetricsDataMonitor?.Monitor(httpIteration, httpIterationCommand.GetHashCode().ToString());
                 await httpIterationCommand.ExecuteAsync(httpIteration);
-                _lpsMetricsDataMonitor?.Stop(httpIteration, httpIterationCommand.GetHashCode().ToString());
             }
             catch (OperationCanceledException) when (_cts.IsCancellationRequested)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Scheduled execution of '{httpIteration.Name}' has been cancelled", LPSLoggingLevel.Warning);
             }
-            finally { 
+            finally {
+                _lpsMetricsDataMonitor?.Stop(httpIteration, httpIterationCommand.GetHashCode().ToString());
                 httpIterationCommand.CancellIfScheduled();
             }
         }

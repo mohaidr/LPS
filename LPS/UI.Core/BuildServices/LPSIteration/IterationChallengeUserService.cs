@@ -31,6 +31,15 @@ namespace LPS.UI.Core.Build.Services
                     continue;
                 }
 
+                if (!_validator.Validate(nameof(Dto.StartupDelay)))
+                {
+
+                    AnsiConsole.MarkupLine("[blue]Use this option cautiously, such as when you want to mimic the navigation between web pages with delays, resembling how a human would browse between pages.[/]");
+                    _validator.PrintValidationErrors(nameof(Dto.StartupDelay));
+                    _iterationDto.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay (in seconds)'[/]? Enter 0 if not.");
+                    continue;
+                }
+
                 if (!_validator.Validate(nameof(Dto.Mode)))
                 {
 
@@ -88,6 +97,7 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
+                _iterationDto.StartupDelay = 0;
                 _iterationDto.MaximizeThroughput = null;
             }
         }

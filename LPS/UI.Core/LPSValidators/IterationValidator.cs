@@ -30,6 +30,9 @@ namespace LPS.UI.Core.LPSValidators
             .Length(1, 60)
             .WithMessage("The 'Name' should be between 1 and 60 characters");
 
+            RuleFor(dto => dto.StartupDelay).GreaterThanOrEqualTo(0).
+                WithMessage("The 'StartupDelay' must be greater than or equal to 0");
+
             RuleFor(dto => dto.Mode)
             .NotNull()
             .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)"); 

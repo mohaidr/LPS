@@ -43,6 +43,9 @@ namespace LPS.Domain
                .Length(1, 60)
                .WithMessage("The 'Name' should be between 1 and 60 characters");
 
+                RuleFor(command => command.StartupDelay).GreaterThanOrEqualTo(0).
+                    WithMessage("The 'StartupDelay' must be greater than or equal to 0");
+
                 RuleFor(command => command.Mode)
                 .NotNull()
                 .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)");

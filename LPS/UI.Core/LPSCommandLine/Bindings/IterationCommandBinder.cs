@@ -26,7 +26,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         Option<string>? payloadOption = null,
         Option<bool>? downloadHtmlEmbeddedResourcesOption = null,
         Option<bool>? saveResponseOption = null,
-        Option<bool?>? supportH2C = null) : BinderBase<HttpIterationDto>
+        Option<bool?>? supportH2C = null,
+        Option<int>? startupDelayOption = null) : BinderBase<HttpIterationDto>
     {
         readonly private Option<string> _nameOption = nameOption ?? CommandLineOptions.LPSIterationCommandOptions.IterationNameOption;
         readonly private Option<int?> _requestCountOption = requestCountOption ?? CommandLineOptions.LPSIterationCommandOptions.RequestCountOption;
@@ -43,7 +44,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         readonly private Option<IList<string>> _headerOption = headerOption ?? CommandLineOptions.LPSIterationCommandOptions.HeaderOption;
         readonly private Option<string> _payloadOption = payloadOption ?? CommandLineOptions.LPSIterationCommandOptions.PayloadOption;
         readonly Option<IterationMode> _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSIterationCommandOptions.IterationModeOption;
-
+        private readonly Option<int> _startupDelayOption = startupDelayOption ?? CommandLineOptions.LPSIterationCommandOptions.StartupDelayOption;
         protected override HttpIterationDto GetBoundValue(BindingContext bindingContext) =>
             new()
             {
@@ -54,6 +55,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                 CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                 BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
+                StartupDelay = bindingContext.ParseResult.GetValueForOption(_startupDelayOption),
                 HttpRequest = new HttpRequestDto()
                 {
                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),

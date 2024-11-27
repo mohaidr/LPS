@@ -50,7 +50,7 @@ namespace LPS.UI.Core.Build.Services
                 if (!_validator.Validate(nameof(Dto.StartupDelay)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.StartupDelay));
-                    _roundDto.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay'[/]? Enter 0 if not.");
+                    _roundDto.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay (in seconds)'[/]? Enter 0 if not.");
                     continue;
                 }
 

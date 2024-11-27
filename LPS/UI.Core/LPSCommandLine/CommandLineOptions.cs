@@ -118,7 +118,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<int> StartupDelayOption { get; } = new Option<int>(
-                "--startupdelay", () => 0, "Add startup delay to your round")
+                "--startupDelay", () => 0, "Add startup (in seconds) delay to your round")
             {
                 IsRequired = false
             };
@@ -336,7 +336,7 @@ namespace LPS.UI.Core.LPSCommandLine
 
 
             public static Option<int> StartupDelayOption { get; } = new Option<int>(
-                "--startupdelay", () => 0, "Add startup delay to your round")
+                "--startupDelay", () => 0, "Add startup (in seconds) delay to your round")
             {
                 IsRequired = false
             };
@@ -405,6 +405,7 @@ namespace LPS.UI.Core.LPSCommandLine
             static LPSIterationCommandOptions()
             {
                 // Shortcut aliases
+                StartupDelayOption.AddAlias("-sd");
                 RoundNameOption.AddAlias("-rn");
                 IterationNameOption.AddAlias("-n");
                 GlobalOption.AddAlias("-g");
@@ -426,6 +427,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundName");
                 AddCaseInsensitiveAliases(IterationNameOption, "--name");
+                AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
                 AddCaseInsensitiveAliases(GlobalOption, "--global");
                 AddCaseInsensitiveAliases(RequestCountOption, "--requestcount");
                 AddCaseInsensitiveAliases(Duration, "--duration");
@@ -469,7 +471,11 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = true
             };
-
+            public static Option<int> StartupDelayOption { get; } = new Option<int>(
+                "--startupdelay", () => 0, "Add startup delay to your round")
+            {
+                IsRequired = false
+            };
             public static Option<int?> RequestCountOption { get; } = new Option<int?>(
                 "--requestcount", "Number of requests")
             {

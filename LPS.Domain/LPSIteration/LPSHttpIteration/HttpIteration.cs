@@ -69,6 +69,7 @@ namespace LPS.Domain
                 }
             }
         }
+        public int StartupDelay { get; private set; }
 
         public int? RequestCount { get; private set; }
         public int? Duration { get; private set; }
@@ -78,6 +79,5 @@ namespace LPS.Domain
         public bool MaximizeThroughput { get; private set; }
         public ExecutionStatus Status { get; private set; }
         public HttpRequest HttpRequest { get; protected set; }
-
     }
 }
