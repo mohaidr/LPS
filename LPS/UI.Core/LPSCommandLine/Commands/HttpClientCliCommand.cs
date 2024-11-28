@@ -22,15 +22,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private Command _rootLpsCliCommand;
         private Command _httpClientCommand;
         public Command Command => _httpClientCommand;
-        private string[] _args;
         IWritableOptions<HttpClientOptions> _clientOptions;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public HttpClientCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<HttpClientOptions> clientOptions, string[] args)
+        public HttpClientCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<HttpClientOptions> clientOptions)
         {
             _rootLpsCliCommand = rootLpsCliCommand;
-            _args = args;
             _clientOptions = clientOptions;
             _logger = logger;
            _runtimeOperationIdProvider= runtimeOperationIdProvider;

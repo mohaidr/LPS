@@ -28,13 +28,14 @@ namespace LPS.UI.Core.LPSCommandLine
         readonly IVariableManager _variableManager;
         Command _rootCliCommand;
         LpsCliCommand _lpsCliCommand;
-        CreateCliCommand _lpsCreateCliCommand;
-        RoundCliCommand _lpsRoundCliCommand;
-        IterationCliCommand _lpsIterationCliCommand;
-        RunCliCommand _lpsRunCliCommand;
-        LoggerCliCommand _lpsLoggerCliCommand;
-        WatchDogCliCommand _lpsSWatchdogCliCommand;
-        HttpClientCliCommand _lpsSHttpClientCliCommand;
+        CreateCliCommand _createCliCommand;
+        RoundCliCommand _roundCliCommand;
+        VariableCliCommand _variableCliCommand;
+        IterationCliCommand _iterationCliCommand;
+        RunCliCommand _runCliCommand;
+        LoggerCliCommand _loggerCliCommand;
+        WatchDogCliCommand _watchdogCliCommand;
+        HttpClientCliCommand _httpClientCliCommand;
         readonly AppSettingsWritableOptions _appSettings;
         readonly IMetricsDataMonitor _lpsMonitoringEnroller;
         readonly CancellationTokenSource _cts;
@@ -56,7 +57,6 @@ namespace LPS.UI.Core.LPSCommandLine
             CancellationTokenSource cts)
         {
             _logger = logger;
-            _command_args = command_args;
             _command_args = command_args.Select(arg => arg.ToLowerInvariant()).ToArray();
             _config = config;
             _httpClientManager = httpClientManager;
@@ -73,13 +73,15 @@ namespace LPS.UI.Core.LPSCommandLine
         {
             _rootCliCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
             _lpsCliCommand = new LpsCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _cts, _command_args);
-            _lpsCreateCliCommand = new CreateCliCommand(_rootCliCommand, _logger,  _runtimeOperationIdProvider, _command_args);
-            _lpsRoundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
-            _lpsIterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
-            _lpsRunCliCommand = new RunCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog,_httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _variableManager, _cts, _command_args);
-            _lpsLoggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions, _command_args);
-            _lpsSHttpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions, _command_args);
-            _lpsSWatchdogCliCommand = new WatchDogCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions, _command_args);
+            _createCliCommand = new CreateCliCommand(_rootCliCommand, _logger,  _runtimeOperationIdProvider, _command_args);
+            _roundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
+            _iterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
+            _runCliCommand = new RunCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog,_httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _variableManager, _cts);
+            _loggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions);
+            _httpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions);
+            _watchdogCliCommand = new WatchDogCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions);
+            _variableCliCommand = new VariableCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
+
         }
 
         public async Task RunAsync(CancellationToken cancellationToken)
@@ -89,30 +91,32 @@ namespace LPS.UI.Core.LPSCommandLine
             switch (joinedCommand.ToLowerInvariant())
             {
                 case string cmd when cmd.StartsWith("create"):
-                    _lpsCreateCliCommand.SetHandler(cancellationToken);
+                    _createCliCommand.SetHandler(cancellationToken);
                     break;
                 case string cmd when cmd.StartsWith("round"):
-                    _lpsRoundCliCommand.SetHandler(cancellationToken);
+                    _roundCliCommand.SetHandler(cancellationToken);
                     break;
                 case string cmd when (cmd.StartsWith("iteration")):
-                    _lpsIterationCliCommand.SetHandler(cancellationToken);
+                    _iterationCliCommand.SetHandler(cancellationToken);
+                    break;
+                case string cmd when cmd.StartsWith("variable"):
+                    _variableCliCommand.SetHandler(cancellationToken);
                     break;
                 case string cmd when cmd.StartsWith("run"):
-                    _lpsRunCliCommand.SetHandler(cancellationToken);
+                    _runCliCommand.SetHandler(cancellationToken);
                     break;
 
                 case string cmd when cmd.StartsWith("logger"):
-                    _lpsLoggerCliCommand.SetHandler(cancellationToken);
+                    _loggerCliCommand.SetHandler(cancellationToken);
                     break;
 
                 case string cmd when cmd.StartsWith("httpclient"):
-                    _lpsSHttpClientCliCommand.SetHandler(cancellationToken);
+                    _httpClientCliCommand.SetHandler(cancellationToken);
                     break;
 
                 case string cmd when cmd.StartsWith("watchdog"):
-                    _lpsSWatchdogCliCommand.SetHandler(cancellationToken);
+                    _watchdogCliCommand.SetHandler(cancellationToken);
                     break;
-
                 default:
                     _lpsCliCommand.SetHandler(cancellationToken);
                     break;

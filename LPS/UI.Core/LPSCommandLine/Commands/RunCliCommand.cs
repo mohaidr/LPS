@@ -28,7 +28,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
     internal class RunCliCommand : ICliCommand
     {
         readonly Command _rootLpsCliCommand;
-        private string[] _args;
         readonly ILogger _logger;
         readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
         readonly IClientConfiguration<HttpRequest> _config;
@@ -54,11 +53,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             IMetricsDataMonitor lPSMonitoringEnroller,
             IOptions<DashboardConfigurationOptions> dashboardConfig,
             IVariableManager variableManager,
-            CancellationTokenSource cts,
-            string[] args)
+            CancellationTokenSource cts)
         {
             _rootLpsCliCommand = rootCLICommandLine;
-            _args = args;
             _logger = logger;
             _httpClientManager = httpClientManager;
             _config = config;

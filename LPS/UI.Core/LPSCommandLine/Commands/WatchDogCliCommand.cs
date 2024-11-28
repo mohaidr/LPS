@@ -25,15 +25,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private Command _watchdogCommand;
         public Command Command => _watchdogCommand;
 
-        private string[] _args;
         IWritableOptions<WatchdogOptions> _watchdogOptions;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        public WatchDogCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<WatchdogOptions> watchdogOptions, string[] args)
+        public WatchDogCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<WatchdogOptions> watchdogOptions)
         {
             _rootLpsCliCommand = rootLpsCliCommand;
-            _args = args;
             _watchdogOptions = watchdogOptions;
             _logger = logger;
            _runtimeOperationIdProvider= runtimeOperationIdProvider;

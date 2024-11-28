@@ -10,7 +10,7 @@ namespace LPS.DTOs
     {
         public VariableDto()
         {
-            As = "Text";
+            As = string.Empty;
             Regex = string.Empty;
         }
         public string Name { get; set; }

@@ -18,11 +18,11 @@ namespace LPS.UI.Core.LPSValidators
         public VariableValidator()
         {
             RuleFor(variable => variable.Name)
-                .NotNull().NotEmpty().WithMessage("'Variable Name' must be a non-null value");
-            RuleFor(variable => variable.As)
-            .NotNull().NotEmpty().WithMessage("'As' must be a non-null value");
+                .NotNull().NotEmpty().WithMessage("'Variable Name' must not be empty");
             RuleFor(variable => variable.Value)
-            .NotNull().NotEmpty().WithMessage("'Variable Value' must be a non-null value");
+            .NotNull().NotEmpty().WithMessage("'Variable Value' must not be empty");
+            RuleFor(variable => variable.As)
+               .NotNull().WithMessage("'As' must be a non-null value");
             RuleFor(variable => variable.Regex)
                 .NotNull().WithMessage("'Regex' must be a non-null value");
         }

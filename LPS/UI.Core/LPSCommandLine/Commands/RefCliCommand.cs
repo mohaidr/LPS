@@ -29,13 +29,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _rootCliCommand = rootCliCommand;
             _logger = logger;
-            Setup();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            Setup();
         }
 
         private void Setup()
         {
-            _refCommand = new Command("ref", "reference a global http iteration")
+            _refCommand = new Command("ref", "Reference a global http iteration")
             {
                 CommandLineOptions.RefCommandOptions.ConfigFileArgument
             };

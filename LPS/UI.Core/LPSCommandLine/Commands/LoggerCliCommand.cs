@@ -23,14 +23,12 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private Command _rootLpsCliCommand;
         private Command _loggerCliCommand;
         public Command Command => _loggerCliCommand;
-        private string[] _args;
         IWritableOptions<FileLoggerOptions> _loggerOptions;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public LoggerCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<FileLoggerOptions> loggerOptions, string[] args) 
+        public LoggerCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IWritableOptions<FileLoggerOptions> loggerOptions) 
         {
             _rootLpsCliCommand = rootLpsCliCommand;
-            _args = args;
             _loggerOptions = loggerOptions;
             _logger = logger;
            _runtimeOperationIdProvider= runtimeOperationIdProvider;
