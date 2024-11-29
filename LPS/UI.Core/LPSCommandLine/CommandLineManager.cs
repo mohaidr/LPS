@@ -31,6 +31,7 @@ namespace LPS.UI.Core.LPSCommandLine
         CreateCliCommand _createCliCommand;
         RoundCliCommand _roundCliCommand;
         VariableCliCommand _variableCliCommand;
+        CaptureCliCommand _captureCliCommand;
         IterationCliCommand _iterationCliCommand;
         RunCliCommand _runCliCommand;
         LoggerCliCommand _loggerCliCommand;
@@ -81,6 +82,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _httpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions);
             _watchdogCliCommand = new WatchDogCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions);
             _variableCliCommand = new VariableCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
+            _captureCliCommand = new CaptureCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
 
         }
 
@@ -102,10 +104,12 @@ namespace LPS.UI.Core.LPSCommandLine
                 case string cmd when cmd.StartsWith("variable"):
                     _variableCliCommand.SetHandler(cancellationToken);
                     break;
+                case string cmd when cmd.StartsWith("capture"):
+                    _captureCliCommand.SetHandler(cancellationToken);
+                    break;
                 case string cmd when cmd.StartsWith("run"):
                     _runCliCommand.SetHandler(cancellationToken);
                     break;
-
                 case string cmd when cmd.StartsWith("logger"):
                     _loggerCliCommand.SetHandler(cancellationToken);
                     break;

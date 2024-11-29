@@ -23,7 +23,7 @@ namespace LPS.UI.Core.LPSValidators
         {
             ArgumentNullException.ThrowIfNull(captureHandlerDto);
             _captureHandlerDto = captureHandlerDto;
-            RuleFor(dto => dto.Variable)
+            RuleFor(dto => dto.Name)
                 .NotNull()
                 .NotEmpty();
             RuleFor(dto => dto.MakeGlobal)
@@ -34,8 +34,9 @@ namespace LPS.UI.Core.LPSValidators
                     @as ??= string.Empty;
                     return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
                     || @as.Equals("XML", StringComparison.OrdinalIgnoreCase)
-                    || @as.Equals("Text", StringComparison.OrdinalIgnoreCase);
-                });
+                    || @as.Equals("Text", StringComparison.OrdinalIgnoreCase)
+                    || @as == string.Empty;
+                }).WithMessage("The provided value for 'As' is not valid or supported.");
             RuleFor(dto => dto.Regex)
             .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))
             .WithMessage("Input must be either empty or a valid .NET regular expression.");

@@ -9,6 +9,9 @@ namespace LPS.DTOs
 {
     public class CaptureHandlerDto : CaptureHandler.SetupCommand
     {
-        public CaptureHandlerDto() { }
+        public CaptureHandlerDto() 
+        { 
+        
+        }
     }
 }

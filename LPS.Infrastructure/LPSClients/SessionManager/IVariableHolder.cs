@@ -9,7 +9,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 {
     public interface IVariableHolder
     {
-        public bool CheckIfSupportsParsing(MimeType mimeType);
+        public bool CheckIfKnownSupportedFormat(MimeType mimeType);
         public string RawValue { get;}
         public MimeType Format { get; }
         public string Pattern { get; }

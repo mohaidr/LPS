@@ -14,12 +14,12 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         {
             public SetupCommand()
             {
-                As = "Text";
+                As = string.Empty;
                 Regex = string.Empty;
                 MakeGlobal = false;
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
-            public string Variable { get; set; }
+            public string Name { get; set; }
             public string As { get; set; }
             public bool? MakeGlobal { get; set; }
             public Guid? Id { get; set; }
@@ -40,7 +40,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             if (this.IsValid)
             {
                 clone.Id = this.Id;
-                clone.Variable = this.Variable;
+                clone.Name = this.Name;
                 clone.As = this.As;
                 clone.Regex = this.Regex;
                 clone.MakeGlobal = this.MakeGlobal;
@@ -55,7 +55,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid)
             {
-                this.Variable = command.Variable;
+                this.Name = command.Name;
                 this.As = command.As;
                 this.MakeGlobal = command.MakeGlobal.Value;
                 this.Regex = command.Regex;

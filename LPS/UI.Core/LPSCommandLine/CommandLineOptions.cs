@@ -460,6 +460,80 @@ namespace LPS.UI.Core.LPSCommandLine
             };
         }
 
+        public static class CaptureCommandOptions
+        {
+            static CaptureCommandOptions()
+            {
+                IterationNameOption.AddAlias("-in");
+                AddCaseInsensitiveAliases(IterationNameOption, "--iterationname");
+                RoundNameOption.AddAlias("-rn");
+                AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
+
+
+                // Shortcut aliases
+                NameOption.AddAlias("-n");
+                // Add case-insensitive aliases
+                AddCaseInsensitiveAliases(NameOption, "--name");
+                // Shortcut aliases
+                AsOption.AddAlias("-as");
+                // Add case-insensitive aliases
+                AddCaseInsensitiveAliases(AsOption, "--as");
+
+
+                // Shortcut aliases
+                RegexOption.AddAlias("-r");
+                // Add case-insensitive aliases
+                AddCaseInsensitiveAliases(RegexOption, "--regex");
+
+                MakeGlobal.AddAlias("-mg");
+                AddCaseInsensitiveAliases(MakeGlobal, "--makeglobal");
+            }
+
+            public static Option<string> IterationNameOption { get; } = new Option<string>(
+                "--iterationname", "Iteration name")
+            {
+                IsRequired = true
+            };
+            public static Option<string> RoundNameOption { get; } = new Option<string>(
+                "--roundName", "Round name")
+            {
+                IsRequired = false
+            };
+            public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
+                "config", // This makes it positional
+                "Test configuration file name")
+                {
+                    Arity = ArgumentArity.ExactlyOne
+                };
+
+
+            public static Option<string> NameOption { get; } = new Option<string>(
+                "--name", "Variable name")
+            {
+                IsRequired = true
+            };
+
+
+            public static Option<string> AsOption { get; } = new Option<string>(
+                "--as", () => string.Empty, "Read the variable As (Text, Json or XML)")
+            {
+                IsRequired = false
+            };
+
+
+            public static Option<bool> MakeGlobal { get; } = new Option<bool>(
+                "--makeGlobal", () => false, "Store the response as a global variable")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> RegexOption { get; } = new Option<string>(
+                "--regex", () => string.Empty, "regex to apply at your value")
+            {
+                IsRequired = false
+            };
+
+        }
         public static class LPSIterationCommandOptions
         {
             static LPSIterationCommandOptions()

@@ -31,7 +31,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 }
 
                 #region Validation Rules
-                RuleFor(command => command.Variable)
+                RuleFor(command => command.Name)
                     .NotNull()
                     .NotEmpty();
                 RuleFor(command => command.MakeGlobal)
@@ -41,9 +41,10 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                     {
                         @as ??= string.Empty;
                         return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
-                        || @as.Equals("XML", StringComparison.OrdinalIgnoreCase) 
-                        || @as.Equals("Text", StringComparison.OrdinalIgnoreCase);
-                    });
+                        || @as.Equals("XML", StringComparison.OrdinalIgnoreCase)
+                        || @as.Equals("Text", StringComparison.OrdinalIgnoreCase)
+                        || @as == string.Empty;
+                    }).WithMessage("The provided value for 'As' is not valid or supported.");
                 RuleFor(command => command.Regex)
                 .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))
                 .WithMessage("Input must be either empty or a valid .NET regular expression.");

@@ -115,7 +115,8 @@ namespace LPS.Infrastructure.LPSClients
                         var builder = new VariableHolder.Builder();
                         var variableHolder = builder.Build();
                         variableHolder = builder
-                            .WithFormat(!(variableHolder.CheckIfSupportsParsing(mimeType)) ? @as : mimeType)
+                            .WithFormat(variableHolder.CheckIfKnownSupportedFormat(mimeType) ? mimeType:
+                                        variableHolder.CheckIfKnownSupportedFormat(@as)? @as: MimeType.Unknown)
                             .WithPattern(request.Capture.Regex)
                             .WithRawResponse(rawContent).Build();
 
@@ -123,13 +124,13 @@ namespace LPS.Infrastructure.LPSClients
                         {
                             variableHolder = builder.SetGlobal(true)
                                 .Build();
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} as a global variable", LPSLoggingLevel.Verbose, token);
-                            await _variableManager.AddVariableAsync(request.Capture.Variable, variableHolder, token);
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Name} as a global variable", LPSLoggingLevel.Verbose, token);
+                            await _variableManager.AddVariableAsync(request.Capture.Name, variableHolder, token);
                         }
                         else
                         {
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Variable} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
-                            await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.Variable, variableHolder, token);
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Name} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
+                            await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.Name, variableHolder, token);
                         }
                     }
                     else

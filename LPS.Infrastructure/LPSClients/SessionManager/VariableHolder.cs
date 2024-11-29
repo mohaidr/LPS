@@ -12,7 +12,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
         private VariableHolder() { } // Private constructor for controlled instantiation via builder
 
-        public bool CheckIfSupportsParsing(MimeType mimeType)
+        public bool CheckIfKnownSupportedFormat(MimeType mimeType)
         {
             return mimeType == MimeType.ApplicationJson ||
                    mimeType == MimeType.RawXml ||
