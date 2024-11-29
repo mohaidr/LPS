@@ -56,7 +56,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     else
                     {
                         PlanDto planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile) ?? new PlanDto() { Name = "Default" };
-                        var selectedRound = planDto?.Rounds.FirstOrDefault(r => r.Name == round.Name);
+                        var selectedRound = planDto?.Rounds.FirstOrDefault(r => r.Name.Equals(round.Name, StringComparison.OrdinalIgnoreCase));
                         if (selectedRound != null)
                         {
                             selectedRound.Name = round.Name;
@@ -66,6 +66,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             selectedRound.ArrivalDelay = round.ArrivalDelay;
                             selectedRound.DelayClientCreationUntilIsNeeded = round.DelayClientCreationUntilIsNeeded;
                             selectedRound.RunInParallel = round.RunInParallel;
+                            selectedRound.Tags = round.Tags;
                         }
                         else
                         {

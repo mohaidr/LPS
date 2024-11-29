@@ -51,9 +51,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         var variableDtoValidator = new VariableValidator();
                         if (variableDtoValidator.Validate(variable).IsValid)
                         {
-                            if (plandto.Variables.Any(v => v.Name == variable.Name))
+                            if (plandto.Variables.Any(v => v.Name.Equals(variable.Name, StringComparison.OrdinalIgnoreCase)))
                             {
-                                var selectedVariable = plandto.Variables.FirstOrDefault(v => v.Name == variable.Name);
+                                var selectedVariable = plandto.Variables.FirstOrDefault(v => v.Name.Equals(variable.Name, StringComparison.OrdinalIgnoreCase));
                                 plandto.Variables.Remove(selectedVariable);
 
                             }

@@ -249,9 +249,18 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 RoundNameOption.AddAlias("-rn");
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
+                TagOption.AddAlias("-t");
+                AddCaseInsensitiveAliases(TagOption, "--tag");
             }
             public static Option<IList<string>> RoundNameOption { get; } = new Option<IList<string>>(
             "--roundname", "Round name")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> TagOption { get; } = new Option<IList<string>>(
+                "--tag", "tag")
             {
                 IsRequired = false,
                 AllowMultipleArgumentsPerToken = true
@@ -301,6 +310,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
                 RunInParallel.AddAlias("-rip");
+                TagOption.AddAlias("-t");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(RoundNameOption, "--name");
@@ -310,6 +320,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
                 AddCaseInsensitiveAliases(RunInParallel, "--runinparallel");
+                AddCaseInsensitiveAliases(TagOption, "--tag");
             }
             public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
                 "config", // This makes it positional
@@ -363,6 +374,13 @@ namespace LPS.UI.Core.LPSCommandLine
                 "--runinparallel", () => true, "Execute your iterations in parallel")
             {
                 IsRequired = false
+            };
+
+            public static Option<IList<string>> TagOption { get; } = new Option<IList<string>>(
+                    "--tag", "tag")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
             };
         }
 

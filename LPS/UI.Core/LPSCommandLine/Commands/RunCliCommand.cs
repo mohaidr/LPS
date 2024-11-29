@@ -82,8 +82,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         public void SetHandler(CancellationToken cancellationToken)
         {
-            _runCommand.SetHandler(async (string configFile, IList<string> roundNames) =>
+            _runCommand.SetHandler(async (string configFile, IList<string> roundNames, IList<string> tags) =>
             {
+                Console.WriteLine(roundNames.Count);
+                Console.WriteLine(tags.Count);
                 try
                 {
                     var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
@@ -109,7 +111,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             }
                         }
 
-                        foreach (var roundDto in planDto.Rounds.Where(round => roundNames.Count == 0 || roundNames.Contains(round.Name)))
+                        foreach (var roundDto in planDto.Rounds.Where(
+                            round => (roundNames.Count == 0 && tags.Count == 0) || 
+                            (roundNames.Contains(round.Name, StringComparer.OrdinalIgnoreCase) || round.Tags.Any(tag => tags.Contains(tag, StringComparer.OrdinalIgnoreCase)))))                        
                         {
                             var roundEntity = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                             if (roundEntity.IsValid)
@@ -143,7 +147,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                 foreach (var referencedIteration in roundDto.ReferencedIterations)
                                 {
                                     // Find the referenced iteration by name in the global iterations list
-                                    var globalIteration = planDto.Iterations.FirstOrDefault(i => i.Name == referencedIteration.Name);
+                                    var globalIteration = planDto.Iterations.FirstOrDefault(i => i.Name.Equals(referencedIteration.Name, StringComparison.OrdinalIgnoreCase));
                                     if (globalIteration != null)
                                     {
                                         var referencedIterationEntity = new HttpIteration(globalIteration, _logger, _runtimeOperationIdProvider);
@@ -194,8 +198,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
-            }, LPSRunCommandOptions.ConfigFileArgument,
-            LPSRunCommandOptions.RoundNameOption);
+            }, 
+            LPSRunCommandOptions.ConfigFileArgument,
+            LPSRunCommandOptions.RoundNameOption,
+            LPSRunCommandOptions.TagOption);
         }
     }
 }

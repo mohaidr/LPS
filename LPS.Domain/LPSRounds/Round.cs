@@ -15,7 +15,8 @@ namespace LPS.Domain
         private ILogger _logger;
         private Round()
         {
-            Iterations = new List<Iteration>();
+            Iterations = [];
+            Tags = [];
         }
 
         IClientManager<HttpRequest,HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
@@ -47,5 +48,6 @@ namespace LPS.Domain
         public int NumberOfClients { get; private set; }
         public int? ArrivalDelay { get; private set; }
         private IList<Iteration> Iterations { get; set; }
+        private IList<string> Tags { get; set; }
     }
 }

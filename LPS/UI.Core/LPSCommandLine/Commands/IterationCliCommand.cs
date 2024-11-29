@@ -52,7 +52,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 iteration.DeepCopy(out HttpIterationDto ItrationDtoCopy);
                 var iterationValidator = new IterationValidator(ItrationDtoCopy);
                 ValidationResult results = iterationValidator.Validate();
-                var roundDto = planDto?.Rounds.FirstOrDefault(r => r.Name == roundName);
+                var roundDto = planDto?.Rounds.FirstOrDefault(r => r.Name.Equals(roundName, StringComparison.OrdinalIgnoreCase));
                 if (ItrationDtoCopy.HttpRequest?.URL != null &&  roundDto?.BaseUrl != null && !ItrationDtoCopy.HttpRequest.URL.StartsWith("http://") && !ItrationDtoCopy.HttpRequest.URL.StartsWith("https://"))
                 {
                     ItrationDtoCopy.HttpRequest.URL = $"{roundDto.BaseUrl}{ItrationDtoCopy.HttpRequest.URL}";
@@ -68,7 +68,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         // Determine where to add the iteration based on the global and roundName options
                         if (isGlobal || isRoundNameEmpty)
                         {
-                            var existingGlobalIteration = planDto?.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
+                            var existingGlobalIteration = planDto?.Iterations.FirstOrDefault(i => i.Name.Equals(iteration.Name, StringComparison.OrdinalIgnoreCase));
                             if (existingGlobalIteration != null)
                             {
                                 planDto?.Iterations.Remove(existingGlobalIteration);
@@ -88,7 +88,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                 }
                                 else
                                 {
-                                    var existingRoundIteration = roundDto.Iterations.FirstOrDefault(i => i.Name == iteration.Name);
+                                    var existingRoundIteration = roundDto.Iterations.FirstOrDefault(i => i.Name.Equals(iteration.Name, StringComparison.OrdinalIgnoreCase));
                                     if (existingRoundIteration != null)
                                     {
                                         roundDto.Iterations.Remove(existingRoundIteration);

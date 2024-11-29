@@ -18,7 +18,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         Option<int>? numberOfClientsOption = null,
         Option<int>? arrivalDelayOption = null,
         Option<bool>? delayClientCreationOption = null,
-        Option<bool?>? runInParallerOption = null) : BinderBase<RoundDto>
+        Option<bool?>? runInParallerOption = null,
+        Option<IList<string>>? tagOption = null) : BinderBase<RoundDto>
     {
         private readonly Option<string> _roundNameOption = roundNameOption ?? CommandLineOptions.LPSRoundCommandOptions.RoundNameOption;
         private readonly Option<string> _baseUrlOption = baseUrlOption ?? CommandLineOptions.LPSRoundCommandOptions.BaseUrlOption;
@@ -27,7 +28,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private readonly Option<int> _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSRoundCommandOptions.ArrivalDelayOption;
         private readonly Option<bool> _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSRoundCommandOptions.DelayClientCreation;
         private readonly Option<bool?> _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSRoundCommandOptions.RunInParallel;
-
+        private readonly Option<IList<string>>? _tagOption = tagOption ?? CommandLineOptions.LPSRoundCommandOptions.TagOption;
         protected override RoundDto GetBoundValue(BindingContext bindingContext) =>
             new()
             {
@@ -38,6 +39,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                 DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                 RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
+                Tags = bindingContext.ParseResult.GetValueForOption(_tagOption),
             };
     }
 }

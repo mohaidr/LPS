@@ -18,6 +18,7 @@ namespace LPS.Domain
         {
             public SetupCommand()
             {
+                Tags = [];
                 DelayClientCreationUntilIsNeeded = false;
                 RunInParallel = false;
                 ValidationErrors = new Dictionary<string, List<string>>();
@@ -36,6 +37,7 @@ namespace LPS.Domain
             public int? ArrivalDelay { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
+            public IList<string> Tags { get; set; } // TODO: Make domain level
 
             [JsonIgnore]
             [YamlIgnore]
@@ -85,6 +87,13 @@ namespace LPS.Domain
             }
         }
 
+        public IEnumerable<string> GetReadOnlyTags()
+        {
+            foreach (var tag in Tags)
+            {
+                yield return tag;
+            }
+        }
 
         private void Setup(SetupCommand command)
         {
@@ -100,6 +109,7 @@ namespace LPS.Domain
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
                 this.RunInParallel = command.RunInParallel;
+                this.Tags = command.Tags;
             }
             else
             {
