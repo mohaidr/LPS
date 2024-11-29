@@ -57,7 +57,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             {
                 this.Name = command.Name;
                 this.As = command.As;
-                this.MakeGlobal = command.MakeGlobal.Value;
+                this.MakeGlobal = command.MakeGlobal;
                 this.Regex = command.Regex;
                 this.IsValid = true;
             }

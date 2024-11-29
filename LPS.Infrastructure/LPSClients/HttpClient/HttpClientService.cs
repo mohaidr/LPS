@@ -120,7 +120,7 @@ namespace LPS.Infrastructure.LPSClients
                             .WithPattern(request.Capture.Regex)
                             .WithRawResponse(rawContent).Build();
 
-                        if (request.Capture.MakeGlobal)
+                        if (request.Capture.MakeGlobal == true)
                         {
                             variableHolder = builder.SetGlobal(true)
                                 .Build();

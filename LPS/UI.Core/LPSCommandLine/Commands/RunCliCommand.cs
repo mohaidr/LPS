@@ -84,8 +84,6 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         {
             _runCommand.SetHandler(async (string configFile, IList<string> roundNames, IList<string> tags) =>
             {
-                Console.WriteLine(roundNames.Count);
-                Console.WriteLine(tags.Count);
                 try
                 {
                     var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
