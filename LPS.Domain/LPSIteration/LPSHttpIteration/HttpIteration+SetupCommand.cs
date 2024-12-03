@@ -50,7 +50,7 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public bool IsValid { get; set; }
-            [JsonConverter(typeof(JsonStringEnumConverter))]
+
             [JsonIgnore]
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }

@@ -29,7 +29,7 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(dto => dto.BaseUrl)
             .Must(url =>
             {
-                return Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                return url?.StartsWith("$") == true || Uri.TryCreate(url, UriKind.Absolute, out Uri result)
                 && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
             })
             .When(dto=> !string.IsNullOrEmpty(dto.BaseUrl))

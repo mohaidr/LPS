@@ -25,52 +25,63 @@ namespace LPS.UI.Core.LPSValidators
             _requestDto = requestDto;
 
             RuleFor(dto => dto.HttpVersion)
-                .Must(version => version == "1.0" 
-                    || version == "1.1" 
+                .NotEmpty()
+                .WithMessage("The 'HttpVersion' cannot be null or empty.")
+                .Must(version => string.IsNullOrEmpty(version)
+                    || version.StartsWith("$")
+                    || version == "1.0"
+                    || version == "1.1"
                     || version == "2.0")
-                .WithMessage("The accepted 'Http Versions' are (\"1.0\", \"1.1\", \"2.0\")")
+                .WithMessage("The accepted 'Http Versions' are (\"1.0\", \"1.1\", \"2.0\") or placeholders starting with '$'")
                 .Must((dto, version) =>
                     string.IsNullOrEmpty(version)
                     || !dto.SupportH2C.HasValue
                     || !dto.SupportH2C.Value
                     || version.Equals("2.0"))
-                .WithMessage("H2C only works with the HTTP/2");
-            
+                .WithMessage("H2C only works with HTTP/2");
+
             RuleFor(dto => dto.HttpMethod)
-                .Must(httpMethod => _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
-                .WithMessage("The supported 'Http Methods' are (\"GET\", \"HEAD\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\", \"CONNECT\", \"OPTIONS\", \"TRACE\") ");
-            
+                .NotEmpty()
+                .WithMessage("The 'HttpMethod' cannot be null or empty.")
+                .Must(httpMethod => string.IsNullOrEmpty(httpMethod)
+                    || httpMethod.StartsWith("$")
+                    || _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
+                .WithMessage("The supported 'Http Methods' are (\"GET\", \"HEAD\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\", \"CONNECT\", \"OPTIONS\", \"TRACE\") or placeholders starting with '$'");
+
             RuleFor(dto => dto.URL)
-                .Must(url =>
-                {
-                    return Uri.TryCreate(url, UriKind.Absolute, out Uri result)
-                    && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
-                })
-                .WithMessage("The 'URL' must be a valid URL according to RFC 3986")
+                .NotEmpty()
+                .WithMessage("The 'URL' cannot be null or empty.")
+                .Must(url => string.IsNullOrEmpty(url)
+                    || url.StartsWith("$")
+                    || (Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                        && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps)))
+                .WithMessage("The 'URL' must be a valid URL according to RFC 3986 or a placeholder starting with '$'")
                 .Must((dto, url) =>
-                    string.IsNullOrEmpty(url) 
-                    ||!dto.SupportH2C.HasValue
+                    string.IsNullOrEmpty(url)
+                    || url.StartsWith("$")
+                    || !dto.SupportH2C.HasValue
                     || !dto.SupportH2C.Value
                     || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                .WithMessage("H2C only works with the HTTP schema");
-            
+                .WithMessage("H2C only works with the HTTP schema or placeholders starting with '$'");
+
+            RuleFor(dto => dto.SupportH2C)
+                .NotNull()
+                .When(dto =>
+                    !string.IsNullOrEmpty(dto.URL)
+                    && dto.URL.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrEmpty(Dto.HttpVersion)
+                    && Dto.HttpVersion.Equals("2.0"))
+                .WithMessage("'SupportH2C' must be (y) or (n)");
+
             RuleFor(dto => dto.SaveResponse)
                 .NotNull()
                 .WithMessage("'Save Response' must be (y) or (n)");
-            
+
             RuleFor(dto => dto.DownloadHtmlEmbeddedResources)
                 .NotNull()
                 .WithMessage("'Download Html Embedded Resources' must be (y) or (n)");
-            
-            RuleFor(dto => dto.SupportH2C)
-                .NotNull()
-                .When(dto => 
-                    !string.IsNullOrEmpty(dto.URL) 
-                    && dto.URL.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
-                    && !string.IsNullOrEmpty(Dto.HttpVersion)  
-                    && Dto.HttpVersion.Equals("2.0"))
-                .WithMessage("'SupportH2C' must be (y) or (n)");
-            
+
+
             // Enforce HTTP when SupportH2C is true
             When(dto => dto.SupportH2C == true, () =>
             {

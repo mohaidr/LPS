@@ -32,8 +32,11 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
 
                 #region Validation Rules
                 RuleFor(command => command.Name)
-                    .NotNull()
-                    .NotEmpty();
+                    .NotNull().NotEmpty()
+                    .WithMessage("'Variable Name' must not be empty")
+                    .Matches("^[a-zA-Z0-9]+$")
+                    .WithMessage("'Variable Name' must only contain letters and numbers.");
+
                 RuleFor(command => command.MakeGlobal)
                     .NotNull();
                 RuleFor(command => command.As)
@@ -43,6 +46,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                         return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
                         || @as.Equals("XML", StringComparison.OrdinalIgnoreCase)
                         || @as.Equals("Text", StringComparison.OrdinalIgnoreCase)
+                        || @as.Equals("CSV", StringComparison.OrdinalIgnoreCase)
                         || @as == string.Empty;
                     }).WithMessage("The provided value for 'As' is not valid or supported.");
                 RuleFor(command => command.Regex)

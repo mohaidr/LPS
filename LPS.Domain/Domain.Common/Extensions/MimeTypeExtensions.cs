@@ -16,13 +16,14 @@ namespace LPS.Domain.Common
         ApplicationVndOpenXmlFormatsOfficedocumentPresentationmlPresentation,
         ApplicationXml,
         TextXml,
-        RawXml, // New enum value for raw XML formats
+        RawXml,
         TextJavascript,
         ApplicationJavascript,
         ApplicationXJavascript,
         TextCss,
         TextHtml,
         ApplicationJson,
+        TextCsv, // New enum value for CSV
         Unknown, // Enum value for unknown content types
     }
 
@@ -48,6 +49,7 @@ namespace LPS.Domain.Common
             { MimeType.TextCss, ".css" },
             { MimeType.TextHtml, ".html" },
             { MimeType.ApplicationJson, ".json" },
+            { MimeType.TextCsv, ".csv" },
         };
 
         private static readonly Dictionary<string, MimeType> ContentTypeToMimeType = new(StringComparer.OrdinalIgnoreCase)
@@ -70,6 +72,7 @@ namespace LPS.Domain.Common
             { "text/css", MimeType.TextCss },
             { "text/html", MimeType.TextHtml },
             { "application/json", MimeType.ApplicationJson },
+            { "text/csv", MimeType.TextCsv }, // MIME type for CSV
         };
 
         private static readonly Dictionary<string, MimeType> KeywordToMimeType = new(StringComparer.OrdinalIgnoreCase)
@@ -83,6 +86,7 @@ namespace LPS.Domain.Common
             { "PDF", MimeType.ApplicationPdf },
             { "JS", MimeType.ApplicationJavascript },
             { "CSS", MimeType.TextCss },
+            { "CSV", MimeType.TextCsv }, // Keyword for CSV
             // Add more mappings as needed
         };
 

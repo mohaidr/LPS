@@ -21,22 +21,25 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private static Option<string>? _asOption;
         private static Option<string>? _regexOption;
         private static Option<bool>? _makeGlobal;
+        private static Option<IList<string>>? _headerOption;
 
 
 
         public CaptureBinder(Option<string>? nameOption = null,
          Option<string>? valueOPtion = null,
-        Option<string>? asOption = null,
+         Option<string>? asOption = null,
          Option<string>? regexOption = null,
-         Option<bool>? makeGlobal = null)
+         Option<bool>? makeGlobal = null,
+         Option<IList<string>>? headerOption = null)
         {
             _nameOption = nameOption?? CaptureCommandOptions.NameOption;
             _asOption = asOption?? CaptureCommandOptions.AsOption;
             _regexOption = regexOption?? CaptureCommandOptions.RegexOption;
             _makeGlobal = makeGlobal ?? CaptureCommandOptions.MakeGlobal;
+            _headerOption = headerOption;
         }
 
-#pragma warning disable CS8601 // Possible null reference assignment.
+        #pragma warning disable CS8601 // Possible null reference assignment.
         protected override CaptureHandlerDto GetBoundValue(BindingContext bindingContext) =>
             new()
             {
@@ -44,7 +47,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 As = bindingContext.ParseResult.GetValueForOption(_asOption),
                 Regex = bindingContext.ParseResult.GetValueForOption(_regexOption),
                 MakeGlobal = bindingContext.ParseResult.GetValueForOption(_makeGlobal),
+                Headers = bindingContext.ParseResult.GetValueForOption(_headerOption),
             };
-#pragma warning restore CS8601 // Possible null reference assignment.
+        #pragma warning restore CS8601 // Possible null reference assignment.
     }
 }

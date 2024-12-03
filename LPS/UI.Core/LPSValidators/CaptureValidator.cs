@@ -12,6 +12,8 @@ using Microsoft.AspNetCore.Http;
 using LPS.DTOs;
 using System.CommandLine;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Domain.Common;
+using LPS.Infrastructure.LPSClients.SessionManager;
 
 namespace LPS.UI.Core.LPSValidators
 {
@@ -24,17 +26,18 @@ namespace LPS.UI.Core.LPSValidators
             ArgumentNullException.ThrowIfNull(captureHandlerDto);
             _captureHandlerDto = captureHandlerDto;
             RuleFor(dto => dto.Name)
-                .NotNull()
-                .NotEmpty();
+                .NotNull().NotEmpty()
+                .WithMessage("'Variable Name' must not be empty")
+                .Matches("^[a-zA-Z0-9]+$")
+                .WithMessage("'Variable Name' must only contain letters and numbers.");
+
             RuleFor(dto => dto.MakeGlobal)
                 .NotNull();
             RuleFor(dto => dto.As)
                 .Must(@as =>
                 {
                     @as ??= string.Empty;
-                    return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
-                    || @as.Equals("XML", StringComparison.OrdinalIgnoreCase)
-                    || @as.Equals("Text", StringComparison.OrdinalIgnoreCase)
+                    return IVariableHolder.IsKnownSupportedFormat(MimeTypeExtensions.FromKeyword(@as))
                     || @as == string.Empty;
                 }).WithMessage("The provided value for 'As' is not valid or supported.");
             RuleFor(dto => dto.Regex)

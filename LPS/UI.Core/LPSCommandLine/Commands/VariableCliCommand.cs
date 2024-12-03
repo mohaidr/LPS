@@ -41,42 +41,102 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         public void SetHandler(CancellationToken cancellation)
         {
-            _variableCommand.SetHandler((configFile, variable) =>
+            _variableCommand.SetHandler((configFile, variable, environments) =>
             {
                 try
                 {
-                    var plandto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
-                    if (plandto != null)
+                    // Fetch existing configuration
+                    var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                    if (planDto != null)
                     {
+                        // Validate the variable using VariableValidator
                         var variableDtoValidator = new VariableValidator();
-                        if (variableDtoValidator.Validate(variable).IsValid)
-                        {
-                            if (plandto.Variables.Any(v => v.Name.Equals(variable.Name, StringComparison.OrdinalIgnoreCase)))
-                            {
-                                var selectedVariable = plandto.Variables.FirstOrDefault(v => v.Name.Equals(variable.Name, StringComparison.OrdinalIgnoreCase));
-                                plandto.Variables.Remove(selectedVariable);
-
-                            }
-                            plandto.Variables.Add(variable);
-                        }
-                        else
+                        if (!variableDtoValidator.Validate(variable).IsValid)
                         {
                             variableDtoValidator.ValidateAndThrow(variable);
                         }
+
+                        // Initialize EnvironmentValidator
+                        var environmentValidator = new EnvironmentValidator();
+
+                        // Handle global variable addition
+                        if (!environments.Any())
+                        {
+                            // Remove existing global variable if it exists
+                            var existingGlobalVariable = planDto.Variables
+                                .FirstOrDefault(v => v.Name.Equals(variable.Name, StringComparison.OrdinalIgnoreCase));
+                            if (existingGlobalVariable != null)
+                            {
+                                planDto.Variables.Remove(existingGlobalVariable);
+                            }
+
+                            // Add the variable as a global variable
+                            planDto.Variables.Add(variable);
+                        }
+                        else
+                        {
+                            // Handle environment-specific variables
+                            foreach (var environmentName in environments)
+                            {
+                                var environment = planDto.Environments
+                                    .FirstOrDefault(env => env.Name.Equals(environmentName, StringComparison.OrdinalIgnoreCase));
+
+                                if (environment == null)
+                                {
+                                    // Create new environment if it does not exist
+                                    environment = new EnvironmentDto
+                                    {
+                                        Name = environmentName,
+                                        Variables = new List<VariableDto>()
+                                    };
+
+                                    // Validate the new environment
+                                    environmentValidator.ValidateAndThrow(environment);
+
+                                    planDto.Environments.Add(environment);
+                                }
+
+                                // Remove existing variable in the environment if it exists
+                                var existingVariable = environment.Variables
+                                    .FirstOrDefault(v => v.Name.Equals(variable.Name, StringComparison.OrdinalIgnoreCase));
+                                if (existingVariable != null)
+                                {
+                                    environment.Variables.Remove(existingVariable);
+                                }
+
+                                // Add the variable to the environment
+                                environment.Variables.Add(variable);
+
+                                // Revalidate the environment after modification
+                                environmentValidator.ValidateAndThrow(environment);
+                            }
+                        }
+
+                        // Save updated configuration
+                        ConfigurationService.SaveConfiguration(configFile, planDto);
                     }
                     else
                     {
                         _logger.Log(_runtimeOperationIdProvider.OperationId, "No plan defined for adding the variable to.", LPSLoggingLevel.Error);
                     }
-                    ConfigurationService.SaveConfiguration(configFile, plandto);
                 }
-                catch(Exception ex) {
+                catch (FluentValidation.ValidationException ex)
+                {
+                    // Handle FluentValidation-specific errors
+                    foreach (var error in ex.Errors)
+                    {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, error.ErrorMessage, LPSLoggingLevel.Error);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Handle other errors
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
-
                 }
             },
             CommandLineOptions.VariableCommandOptions.ConfigFileArgument,
-            new VariableBinder());
+            new VariableBinder(),
+            CommandLineOptions.VariableCommandOptions.EnvironmentOption);
         }
     }
 }

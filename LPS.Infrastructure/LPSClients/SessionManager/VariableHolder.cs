@@ -1,5 +1,15 @@
-﻿using LPS.Domain.Common;
+﻿using CsvHelper;
+using CsvHelper.Configuration;
+using LPS.Domain.Common;
+using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using System;
+using System.Collections.Generic;
+using System.Formats.Asn1;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SessionManager
 {
@@ -7,19 +17,10 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
     {
         public MimeType Format { get; private set; }
         public string Pattern { get; private set; }
-        public string RawValue { get; private set; }
+        public string Value { get; private set; }
         public bool IsGlobal { get; private set; }
 
         private VariableHolder() { } // Private constructor for controlled instantiation via builder
-
-        public bool CheckIfKnownSupportedFormat(MimeType mimeType)
-        {
-            return mimeType == MimeType.ApplicationJson ||
-                   mimeType == MimeType.RawXml ||
-                   mimeType == MimeType.TextXml ||
-                   mimeType == MimeType.ApplicationXml ||
-                   mimeType == MimeType.TextPlain;
-        }
 
         public string ExtractJsonValue(string jsonPath)
         {
@@ -28,8 +29,9 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
             try
             {
-                var json = Newtonsoft.Json.Linq.JObject.Parse(RawValue);
-                var token = json.SelectToken(jsonPath)?.ToString() ?? throw new InvalidOperationException($"JSON path '{jsonPath}' not found.");
+                var json = Newtonsoft.Json.Linq.JToken.Parse(Value); // Use JToken to handle both arrays and objects
+                var token = json.SelectToken(jsonPath)?.ToString()
+                             ?? throw new InvalidOperationException($"JSON path '{jsonPath}' not found.");
                 return ExtractRegexMatch(token, Pattern);
             }
             catch (Exception ex)
@@ -37,6 +39,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
                 throw new InvalidOperationException($"Failed to extract JSON value using path '{jsonPath}'.", ex);
             }
         }
+
 
         public string ExtractXmlValue(string xpath)
         {
@@ -48,7 +51,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             try
             {
                 var doc = new System.Xml.XmlDocument();
-                doc.LoadXml(RawValue);
+                doc.LoadXml(Value);
                 var node = doc.SelectSingleNode(xpath);
                 return ExtractRegexMatch(node?.InnerText, Pattern) ?? throw new InvalidOperationException($"XPath '{xpath}' not found.");
             }
@@ -60,7 +63,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
         public string ExtractValueWithRegex()
         {
-            return ExtractRegexMatch(RawValue, Pattern);
+            return ExtractRegexMatch(Value, Pattern);
         }
 
         private static string ExtractRegexMatch(string value, string pattern)
@@ -79,13 +82,59 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             }
         }
 
+        public string ExtractCsvValue(string indices)
+        {
+            var trimmed = indices.Trim('[', ']');
+            var parts = trimmed.Split(',');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out int rowIndex) || !int.TryParse(parts[1], out int columnIndex))
+            {
+                throw new ArgumentException("Invalid index format. Use the format [rowIndex,columnIndex].");
+            }
+
+            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = true // Ensure headers are read correctly
+            };
+
+            using (var reader = new StringReader(Value)) // Use StringReader to read from string
+            using (var csv = new CsvReader(reader, config))
+            {
+                var records = csv.GetRecords<dynamic>().ToList(); // Convert records to a list for indexing
+
+                // Adjust for skipping the header row
+                if (rowIndex < 0 || rowIndex >= records.Count)
+                {
+                    throw new IndexOutOfRangeException("Row index is out of range.");
+                }
+
+                // Get the record (row) at the specified index
+                var record = records[rowIndex];
+
+                // Convert the record to a dictionary for column access
+                var recordDict = (IDictionary<string, object>)record;
+
+                // Ensure the column index is valid
+                if (columnIndex < 0 || columnIndex >= recordDict.Count)
+                {
+                    throw new IndexOutOfRangeException("Column index is out of range.");
+                }
+
+                // Access the column value by index
+                var value = recordDict.Values.ElementAt(columnIndex);
+                return value?.ToString() ?? string.Empty;
+
+            }
+        }
+
         // Builder class
         public class Builder
         {
             private readonly VariableHolder _variableHolder;
+            private readonly IPlaceholderResolverService _placeholderResolverService;
 
-            public Builder()
+            public Builder(IPlaceholderResolverService placeholderResolverService)
             {
+                _placeholderResolverService = placeholderResolverService ?? throw new ArgumentNullException(nameof(placeholderResolverService));
                 _variableHolder = new VariableHolder();
             }
 
@@ -101,12 +150,11 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
                 return this;
             }
 
-            public Builder WithRawResponse(string rawResponse)
+            public Builder WithRawValue(string value)
             {
-                _variableHolder.RawValue = rawResponse;
+                _variableHolder.Value = value;
                 return this;
             }
-
 
             public Builder SetGlobal(bool isGlobal)
             {
@@ -114,9 +162,15 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
                 return this;
             }
 
-
-            public VariableHolder Build()
+            public async Task<VariableHolder> BuildAsync(CancellationToken token)
             {
+                // Resolve placeholder if the value is a supported method
+                if (!string.IsNullOrEmpty(_variableHolder.Value) && (IPlaceholderResolverService.IsSupportedPlaceHolderMethod(_variableHolder.Value) || _variableHolder.Value.StartsWith("$")))
+                {
+                    _variableHolder.Value = await _placeholderResolverService.ResolvePlaceholdersAsync(
+                        _variableHolder.Value, sessionId: null, token); // Resolve placeholder value
+                }
+
                 return _variableHolder;
             }
         }

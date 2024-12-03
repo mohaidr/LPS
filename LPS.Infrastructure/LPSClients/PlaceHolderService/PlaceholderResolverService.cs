@@ -5,29 +5,38 @@ using System;
 using System.Linq;
 using System.Text;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
+using System.Threading.Tasks;
+using System.Threading;
+using LPS.Domain.Common.Interfaces;
+using System.IO;
 
 namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 {
-    public partial class PlaceholderResolverService(ISessionManager sessionManager,
+    public partial class PlaceholderResolverService(
+        ISessionManager sessionManager,
         ICacheService<string> memoryCacheService,
-        IVariableManager variableManager) : IPlaceholderResolverService
+        IVariableManager variableManager,
+        IRuntimeOperationIdProvider runtimeOperationIdProvider,
+        ILogger logger) : IPlaceholderResolverService
     {
         private readonly ISessionManager _sessionManager = sessionManager ?? throw new ArgumentNullException(nameof(sessionManager));
         private readonly IVariableManager _variableManager = variableManager ?? throw new ArgumentNullException(nameof(variableManager));
         private readonly ICacheService<string> _memoryCacheService = memoryCacheService ?? throw new ArgumentNullException(nameof(memoryCacheService));
-        public string ResolvePlaceholders(string input, string identifier)
+        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider= runtimeOperationIdProvider;
+        readonly ILogger _logger= logger;
+        public async Task<string> ResolvePlaceholdersAsync(string input, string sessionId, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(input))
                 return string.Empty;
 
             // Perform placeholder resolution
-            string resolvedInput = PerformResolution(input, identifier);
+            string resolvedInput = await PerformResolution(input, sessionId, token);
 
 
-            return resolvedInput;
+            return resolvedInput.Trim();
         }
 
-        private string PerformResolution(string input, string sessionId)
+        private async Task<string> PerformResolution(string input, string sessionId, CancellationToken token)
         {
             StringBuilder result = new(input);
             int currentIndex = 0;
@@ -50,7 +59,9 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                     // Find the end of the placeholder
                     int endIndex = startIndex;
                     bool insideParentheses = false;
+                    bool insideSequareBracket = false;
                     int parenthesesBalance = 0;
+                    int sequareBracketBalance = 0;
 
                     while (endIndex < result.Length)
                     {
@@ -69,8 +80,20 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                                 insideParentheses = false;
                         }
 
+                        if (currentChar == '[')
+                        {
+                            insideSequareBracket = true;
+                            sequareBracketBalance++;
+                        }
+                        else if (currentChar == ']')
+                        {
+                            sequareBracketBalance--;
+                            if (sequareBracketBalance == 0)
+                                insideParentheses = false;
+                        }
+
                         // Stop at the first valid delimiter outside parentheses
-                        if (!insideParentheses && (char.IsWhiteSpace(currentChar) || currentChar == ',' || currentChar == '}' || currentChar == '"' || currentChar == '\''))
+                        if (!insideParentheses && !insideSequareBracket && (char.IsWhiteSpace(currentChar) || currentChar == ',' || currentChar == '}' || currentChar == '"' || currentChar == '\'' || currentChar == '['))
                         {
                             break;
                         }
@@ -78,10 +101,11 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                         endIndex++;
                     }
 
+
                     // Extract the full placeholder, including arguments
-                    string rawInput = result.ToString(startIndex, endIndex - startIndex);
+                    string variableOrMethod = result.ToString(startIndex, endIndex - startIndex);
                     // Recursively resolve nested placeholders inside arguments
-                    string resolvedPlaceholder = ResolvePlaceholder(rawInput, sessionId);
+                    string resolvedPlaceholder = await ResolvePlaceholderAsync(variableOrMethod, sessionId, token);
 
                     // Replace the placeholder with the resolved value
                     result.Remove(currentIndex, endIndex - currentIndex);
@@ -99,77 +123,94 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
             return result.ToString();
         }
-
-        private string ResolvePlaceholder(string placeholder, string sessionId)
+        private async Task<string> ResolvePlaceholderAsync(string variableOrMethodName, string sessionId, CancellationToken token)
         {
-            // Check if the placeholder is a function (contains parentheses)
-            bool isFunction = placeholder.Contains('(') && placeholder.EndsWith(')');
             string resolvedValue;
-            if (isFunction)
+            if (IPlaceholderResolverService.IsSupportedPlaceHolderMethod($"${variableOrMethodName}"))
             {
                 // Extract the function name and parameters
-                int openParenIndex = placeholder.IndexOf('(');
-                string functionName = placeholder.Substring(0, openParenIndex).Trim();
-                string parameters = placeholder.Substring(openParenIndex + 1, placeholder.Length - openParenIndex - 2).Trim();
+                int openParenIndex = variableOrMethodName.IndexOf('(');
+                string functionName = variableOrMethodName.Substring(0, openParenIndex).Trim();
+                string parameters = variableOrMethodName.Substring(openParenIndex + 1, variableOrMethodName.Length - openParenIndex - 2).Trim();
                 // Resolve based on function name
                 resolvedValue = functionName.ToLowerInvariant() switch
                 {
-                    "random" => GenerateRandomString(parameters, sessionId), // Handle Random function
-                    "randomnumber" => GenerateRandomNumber(parameters, sessionId), // Handle RandomNumber function
-                    "timestamp" => GenerateTimestamp(parameters, sessionId), // Handle Timestamp function
+                    "random" => await GenerateRandomStringAsync(parameters, sessionId, token), // Handle Random function
+                    "randomnumber" => await GenerateRandomNumber(parameters, sessionId, token), // Handle RandomNumber function
+                    "timestamp" => await GenerateTimestampAsync(parameters, sessionId, token), // Handle Timestamp function
                     "guid" => Guid.NewGuid().ToString(), // Handle Guid function
-                    "base64encode" => Base64Encode(parameters, sessionId), // Handle Base64Encode function
-                    "hash" => GenerateHash(parameters, sessionId), // Handle Hash function
-                    "customvariable" => ResolveCustomVariable(parameters, sessionId), // Handle CustomVariable function
+                    "base64encode" => await Base64EncodeAsync(parameters, sessionId, token), // Handle Base64Encode function
+                    "hash" => await GenerateHashAsync(parameters, sessionId, token), // Handle Hash function
+                    "read" => await ReadFileAsync(parameters, sessionId, token), // Handle ReadFile function
                     _ => throw new InvalidOperationException($"Unknown function: {functionName}") // Handle unknown functions
                 };
             }
             else
             {
                 // Treat as a plain variable
-                resolvedValue = ResolveVariable(placeholder, sessionId);
+                resolvedValue = await ResolveVariableAsync(variableOrMethodName, sessionId, token);
             }
             return resolvedValue;
         }
-        private string ResolveVariable(string placeholder, string sessionId)
+        private async Task<string> ResolveVariableAsync(string placeholder, string sessionId, CancellationToken token)
         {
             if (_memoryCacheService.TryGetItem(placeholder, out string cachedResult))
             {
                 return cachedResult;
             }
-            // Check if the placeholder contains a path (JSON or XML)
+
+            // Check if the placeholder contains a path
             string variableName = placeholder;
             string path = null;
             string resolvedPlaceHolder;
             TimeSpan cacheDuration;
-            if (!string.IsNullOrEmpty(placeholder) && (placeholder.Contains(".") || placeholder.Contains("/")))
+            bool isEmptyPlaceHolder = string.IsNullOrEmpty(placeholder);
+            bool isMethod =  !isEmptyPlaceHolder  && (placeholder.Contains("(") && placeholder.Contains(")"));
+            bool hasPath = (placeholder.Contains(".") || placeholder.Contains("/") || (placeholder.Contains("[") && placeholder.Contains("]")));
+            if (!isEmptyPlaceHolder && !isMethod && hasPath) // Methods do not allow path so ignore the . and / chars
             {
                 // Split the variable name and path
-                var splitIndex = placeholder.IndexOfAny(new[] { '.', '/' });
+                var splitIndex = placeholder.IndexOfAny(['.', '/', '[']);
                 variableName = placeholder.Substring(0, splitIndex);
-                path = placeholder.Substring(splitIndex); // Extract path
+                path = placeholder.Substring(splitIndex); // Extract path, including delimiters
             }
 
             // Get the variable holder from the session or global manager
-            var variableHolder = _sessionManager.GetResponse(sessionId, variableName) ?? _variableManager.GetVariable(variableName);
+            var variableHolder = await _sessionManager.GetResponseAsync(sessionId, variableName, token)
+                                  ?? await _variableManager.GetVariableAsync(variableName, token);
 
             if (variableHolder == null)
             {
-                throw new InvalidOperationException($"Variable '{variableName}' not found in session or global scope.");
+                await _logger.LogAsync(
+                    _runtimeOperationIdProvider.OperationId,
+                    $"The variable '{variableName}' was not found; it either does not exist or has not been defined yet. The variable will not be resolved.",
+                    LPSLoggingLevel.Warning,
+                    token
+                );
+                return $"${variableName}"; // Return unresolved placeholder
             }
+
             cacheDuration = variableHolder.IsGlobal ? TimeSpan.MaxValue : TimeSpan.FromSeconds(30);
-            // Handle paths if provided
+
+            // Handle paths for structured formats
             if (!string.IsNullOrEmpty(path))
             {
-                if (path.StartsWith(".") && variableHolder.Format == MimeType.ApplicationJson)
+                if (path.StartsWith(".") || path.StartsWith("[") && variableHolder.Format == MimeType.ApplicationJson)
                 {
                     // JSON path extraction
-                    resolvedPlaceHolder= variableHolder.ExtractJsonValue(path);
+                    resolvedPlaceHolder = variableHolder.ExtractJsonValue(path);
                 }
-                else if (path.StartsWith("/") && (variableHolder.Format == MimeType.ApplicationXml || variableHolder.Format == MimeType.TextXml || variableHolder.Format == MimeType.RawXml))
+                else if (path.StartsWith("/") &&
+                         (variableHolder.Format == MimeType.ApplicationXml ||
+                          variableHolder.Format == MimeType.TextXml ||
+                          variableHolder.Format == MimeType.RawXml))
                 {
                     // XML path extraction
-                    resolvedPlaceHolder= variableHolder.ExtractXmlValue(path);
+                    resolvedPlaceHolder = variableHolder.ExtractXmlValue(path);
+                }
+                else if (path.StartsWith("[") && variableHolder.Format == MimeType.TextCsv)
+                {
+                    resolvedPlaceHolder = variableHolder.ExtractCsvValue(path);
                 }
                 else
                 {
@@ -178,19 +219,19 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
             else
             {
-
                 // If no path, return the raw response with regex applied
-                resolvedPlaceHolder= variableHolder.ExtractValueWithRegex();
+                resolvedPlaceHolder = variableHolder.ExtractValueWithRegex();
             }
-            _memoryCacheService.SetItemAsync(placeholder, resolvedPlaceHolder, cacheDuration).Wait();
+
+            await _memoryCacheService.SetItemAsync(placeholder, resolvedPlaceHolder, cacheDuration);
             return resolvedPlaceHolder;
         }
 
         // Helper methods for dynamic functions
-        private string GenerateRandomString(string parameters, string sessionId)
+        private async Task<string> GenerateRandomStringAsync(string parameters, string sessionId, CancellationToken token)
         {
             // Default length
-            int length = ExtractValueFromParameters(parameters, "length", 10, sessionId);
+            int length = await ExtractValueFromParametersAsync(parameters, "length", 10, sessionId, token);
 
             // Generate the random string
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -198,33 +239,33 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        private string GenerateRandomNumber(string parameters, string sessionId)
+        private async Task<string> GenerateRandomNumber(string parameters, string sessionId, CancellationToken token)
         {
             // Default range
-            int min = ExtractValueFromParameters(parameters, "min", 1, sessionId);
-            int max = ExtractValueFromParameters(parameters, "max", 100, sessionId);
+            int min = await ExtractValueFromParametersAsync(parameters, "min", 1, sessionId, token);
+            int max = await ExtractValueFromParametersAsync(parameters, "max", 100, sessionId, token);
 
             // Generate the random number
             var random = new Random();
             return random.Next(min, max + 1).ToString();
         }
 
-        private string GenerateTimestamp(string parameters, string sessionId)
+        private async Task<string> GenerateTimestampAsync(string parameters, string sessionId, CancellationToken token)
         {
-            string format = ExtractStringFromParameters(parameters, "format", "yyyy-MM-ddTHH:mm:ss", sessionId);
+            string format = await ExtractStringFromParametersAsync(parameters, "format", "yyyy-MM-ddTHH:mm:ss", sessionId, token);
             return DateTime.UtcNow.ToString(format);
         }
 
-        private string Base64Encode(string parameters, string sessionId)
+        private async Task<string> Base64EncodeAsync(string parameters, string sessionId, CancellationToken token)
         {
-            string value = ExtractStringFromParameters(parameters, "value", string.Empty, sessionId);
+            string value = await ExtractStringFromParametersAsync(parameters, "value", string.Empty, sessionId, token);
             return Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(value));
         }
 
-        private string GenerateHash(string parameters, string sessionId)
+        private async Task<string> GenerateHashAsync(string parameters, string sessionId, CancellationToken token)
         {
-            string value = ExtractStringFromParameters(parameters, "value", string.Empty, sessionId);
-            string algorithm = ExtractStringFromParameters(parameters, "algorithm", "SHA256", sessionId);
+            string value = await ExtractStringFromParametersAsync(parameters, "value", string.Empty, sessionId, token);
+            string algorithm = await ExtractStringFromParametersAsync(parameters, "algorithm", "SHA256", sessionId, token);
 
             using var hasher = algorithm switch
             {
@@ -237,16 +278,43 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             byte[] hash = hasher.ComputeHash(System.Text.Encoding.UTF8.GetBytes(value));
             return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
-
-        private string ResolveCustomVariable(string parameters, string sessionId)
+        private async Task<string> ReadFileAsync(string parameters, string sessionId, CancellationToken token)
         {
-            string name = ExtractStringFromParameters(parameters, "name", string.Empty, sessionId);
-            var variable = _variableManager.GetVariable(name);
-            return variable != null ? variable.ToString() : string.Empty;
+            // Extract the file path from parameters
+            string filePath = await ExtractStringFromParametersAsync(parameters, "path", string.Empty, sessionId, token);
+            if (string.IsNullOrWhiteSpace(filePath))
+            {
+                throw new ArgumentException("File path cannot be null or empty.", nameof(parameters));
+            }
+
+            // Validate the file path (optional: add security checks for allowed directories)
+            if (!System.IO.File.Exists(filePath))
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"File '{filePath}' does not exist.", LPSLoggingLevel.Warning, token);
+                return string.Empty; // Return an empty string for non-existent files
+            }
+
+            try
+            {
+                // Read file content
+                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var reader = new StreamReader(fileStream, Encoding.UTF8);
+
+                string content = await reader.ReadToEndAsync();
+
+                // Log the successful read operation
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Successfully read content from file '{filePath}'.", LPSLoggingLevel.Information, token);
+                return content;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Error reading file '{filePath}': {ex.Message}", LPSLoggingLevel.Error, token);
+                throw new InvalidOperationException($"Failed to read the file at '{filePath}'. See logs for details.", ex);
+            }
         }
 
         // Helper methods for extracting values from placeholders
-        private int ExtractValueFromParameters(string parameters, string key, int defaultValue, string sessionId)
+        private async Task<int> ExtractValueFromParametersAsync(string parameters, string key, int defaultValue, string sessionId, CancellationToken token)
         {
             if (string.IsNullOrEmpty(parameters))
                 return defaultValue;
@@ -259,7 +327,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 if (parts.Length == 2 && parts[0].Trim() == key)
                 {
                     // Resolve any placeholders in the value
-                    string resolvedValue = PerformResolution(parts[1].Trim(), sessionId);
+                    string resolvedValue = await PerformResolution(parts[1].Trim(), sessionId, token);
 
                     // Attempt to parse the resolved value
                     return int.TryParse(resolvedValue, out int result) ? result : defaultValue;
@@ -269,7 +337,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             return defaultValue; // Return default if key is not found
         }
 
-        private string ExtractStringFromParameters(string parameters, string key, string defaultValue, string sessionId)
+        private async Task<string> ExtractStringFromParametersAsync(string parameters, string key, string defaultValue, string sessionId, CancellationToken token)
         {
             if (string.IsNullOrEmpty(parameters))
                 return defaultValue;
@@ -282,7 +350,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 if (parts.Length == 2 && parts[0].Trim() == key)
                 {
                     // Resolve any placeholders in the value
-                    return PerformResolution(parts[1].Trim(), sessionId);
+                    return await PerformResolution(parts[1].Trim(), sessionId, token);
                 }
             }
 

@@ -79,7 +79,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         }
                         else
                         {
-                            _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File does not exist, creating new setup command.", LPSLoggingLevel.Information);
+                            _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File does not exist, creating new plan.", LPSLoggingLevel.Information);
                             planDto = new PlanDto { Name = name };
                         }
 

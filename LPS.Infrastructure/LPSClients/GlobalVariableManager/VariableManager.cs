@@ -31,14 +31,29 @@ namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
             }
         }
 
-        public IVariableHolder GetVariable(string variableName)
+        public async Task<IVariableHolder?> GetVariableAsync(string variableName, CancellationToken token)
         {
             if (_variables.TryGetValue(variableName, out var variableHolder))
             {
                 return variableHolder;
             }
-
-            throw new KeyNotFoundException($"Variable '{variableName}' not found.");
+            await _logger.LogAsync(_operationIdProvider.OperationId, $"Variable ${variableName} does not exist", LPSLoggingLevel.Warning, token);
+            return null;
         }
+        public async Task RemoveVariableAsync(string variableName, CancellationToken token = default)
+        {
+            if (string.IsNullOrWhiteSpace(variableName))
+                throw new ArgumentException("Variable name cannot be null or whitespace.", nameof(variableName));
+
+            if (_variables.TryRemove(variableName, out var removedVariable))
+            {
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Variable '{variableName}' was successfully removed.", LPSLoggingLevel.Information, token);
+            }
+            else
+            {
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Attempted to remove non-existent variable '{variableName}'.", LPSLoggingLevel.Warning, token);
+            }
+        }
+
     }
 }

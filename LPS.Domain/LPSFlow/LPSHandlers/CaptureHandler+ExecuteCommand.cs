@@ -52,7 +52,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
 
         async public Task ExecuteAsync(ExecuteCommand command)
         {
-
+            await Task.CompletedTask;
         }
     }
 }

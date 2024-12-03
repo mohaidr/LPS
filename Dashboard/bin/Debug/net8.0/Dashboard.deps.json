@@ -15,6 +15,14 @@
           "Dashboard.dll": {}
         }
       },
+      "CsvHelper/33.0.1": {
+        "runtime": {
+          "lib/net8.0/CsvHelper.dll": {
+            "assemblyVersion": "33.0.0.0",
+            "fileVersion": "33.0.1.24"
+          }
+        }
+      },
       "FluentValidation/11.10.0": {
         "runtime": {
           "lib/net8.0/FluentValidation.dll": {
@@ -1084,6 +1092,7 @@
       },
       "LPS.Infrastructure/1.0.0": {
         "dependencies": {
+          "CsvHelper": "33.0.1",
           "HdrHistogram": "2.5.0",
           "HtmlAgilityPack": "1.11.70",
           "LPS.Domain": "1.0.0",
@@ -1108,6 +1117,13 @@
       "type": "project",
       "serviceable": false,
       "sha512": ""
+    },
+    "CsvHelper/33.0.1": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-fev4lynklAU2A9GVMLtwarkwaanjSYB4wUqO2nOJX5hnzObORzUqVLe+bDYCUyIIRQM4o5Bsq3CcyJR89iMmEQ==",
+      "path": "csvhelper/33.0.1",
+      "hashPath": "csvhelper.33.0.1.nupkg.sha512"
     },
     "FluentValidation/11.10.0": {
       "type": "package",

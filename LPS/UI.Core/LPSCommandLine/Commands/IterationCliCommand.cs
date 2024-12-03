@@ -55,6 +55,11 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 var roundDto = planDto?.Rounds.FirstOrDefault(r => r.Name.Equals(roundName, StringComparison.OrdinalIgnoreCase));
                 if (ItrationDtoCopy.HttpRequest?.URL != null &&  roundDto?.BaseUrl != null && !ItrationDtoCopy.HttpRequest.URL.StartsWith("http://") && !ItrationDtoCopy.HttpRequest.URL.StartsWith("https://"))
                 {
+                    if (ItrationDtoCopy.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
+                    {
+                        throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
+                    }
+
                     ItrationDtoCopy.HttpRequest.URL = $"{roundDto.BaseUrl}{ItrationDtoCopy.HttpRequest.URL}";
                 }
                 var requestValidator = new RequestValidator(ItrationDtoCopy.HttpRequest);

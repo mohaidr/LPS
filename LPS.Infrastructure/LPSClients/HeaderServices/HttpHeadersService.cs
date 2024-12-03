@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
+using System.Threading.Tasks;
 using YamlDotNet.Core.Tokens;
 namespace LPS.Infrastructure.LPSClients.HeaderServices
 {
@@ -16,7 +18,7 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
         {
             _placeHolderResolver = placeHolderResolver;
         }
-        public void ApplyHeaders(HttpRequestMessage httpRequestMessage, string sessionId, Dictionary<string, string> HttpHeaders)
+        public async Task ApplyHeadersAsync(HttpRequestMessage httpRequestMessage, string sessionId, Dictionary<string, string> HttpHeaders, CancellationToken token)
         {
             bool supportContentHeaders = httpRequestMessage?.Method != null &&
                                          (string.Equals(httpRequestMessage.Method.Method, "POST", StringComparison.OrdinalIgnoreCase) ||
@@ -24,8 +26,7 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                                           string.Equals(httpRequestMessage.Method.Method, "PATCH", StringComparison.OrdinalIgnoreCase));
             foreach (var header in HttpHeaders)
             {
-                var resolvedValue = _placeHolderResolver.ResolvePlaceholders(header.Value, sessionId);
-
+                var resolvedValue = await _placeHolderResolver.ResolvePlaceholdersAsync(header.Value, sessionId, token);
                 if (supportContentHeaders)
                 {
                     var contentHeaders = httpRequestMessage.Content.Headers;

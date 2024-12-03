@@ -13,7 +13,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
     public interface ISessionManager
     {
         public Task AddResponseAsync(string sessionId, string variableName, IVariableHolder response, CancellationToken token);
-        public IVariableHolder? GetResponse(string sessionId, string variableName);
+        public Task<IVariableHolder?> GetResponseAsync(string sessionId, string variableName, CancellationToken token);
         public void CleanupSession(string sessionId);
     }
 }

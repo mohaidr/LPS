@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using YamlDotNet.Core.Tokens;
 
 namespace LPS.Infrastructure.LPSClients.SessionManager
 {
@@ -24,9 +25,14 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             await session.AddResponseAsync(variableName, capturedResponse, token);
         }
 
-        public IVariableHolder? GetResponse(string sessionId, string variableName)
+        public async Task<IVariableHolder?> GetResponseAsync(string sessionId, string variableName, CancellationToken token)
         {
-            return _sessions.TryGetValue(sessionId, out var session) ? session.GetResponse(variableName) : null;
+
+            if (!string.IsNullOrEmpty(sessionId) && _sessions.TryGetValue(sessionId, out var session))
+                return session.GetResponse(variableName);
+
+            await _logger.LogAsync(_operationIdProvider.OperationId, $"No variable named '${variableName}' is defined for the session with Id: {sessionId}", LPSLoggingLevel.Warning, token);
+            return null;
         }
 
         public void CleanupSession(string clientId)

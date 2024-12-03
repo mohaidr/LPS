@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace LPS.DTOs
 {
+    //TODO Create Domain entities for those so we can store them in DB once implemented.
     public class VariableDto
     {
         public VariableDto()

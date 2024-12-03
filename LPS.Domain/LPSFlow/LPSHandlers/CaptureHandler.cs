@@ -15,10 +15,11 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected CancellationTokenSource _cts;
         public Guid Id { get; protected set; }
+        public string Name { get; protected set; }
         public string As { get; protected set; }
         public bool? MakeGlobal { get; protected set; }
         public string Regex { get; protected set; }
-        public string Name { get; protected set; }
+        public IList<string> Headers { get; protected set; }
 
         public HandlerType HandlerType => HandlerType.StopIf;
         public bool IsValid
@@ -29,6 +30,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         private CaptureHandler(ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
+            Headers = [];
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
@@ -38,6 +40,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         {
             ArgumentNullException.ThrowIfNull(command);
             Id = Guid.NewGuid();
+            Headers = [];
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);

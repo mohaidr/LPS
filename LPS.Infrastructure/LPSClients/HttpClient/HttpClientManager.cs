@@ -6,6 +6,7 @@ using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.MessageServices;
 using LPS.Infrastructure.LPSClients.MetricsServices;
+using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using Microsoft.Extensions.Caching.Memory;
@@ -29,7 +30,8 @@ namespace LPS.Infrastructure.LPSClients
         ISessionManager sessionManager,
         IMessageService messageService,
         IMetricsService metricsService,
-        IResponseProcessingService responseProcessingService, IVariableManager variableManager) : IHttpClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>>
+        IResponseProcessingService responseProcessingService, 
+        IVariableManager variableManager, IPlaceholderResolverService placeholderResolverService) : IHttpClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>>
     {
         readonly ICacheService<string> _memoryCache = memoryCache;
         readonly ILogger _logger = logger;
@@ -40,16 +42,17 @@ namespace LPS.Infrastructure.LPSClients
         readonly IMetricsService _metricsService = metricsService;
         readonly IResponseProcessingService _responseProcessingService = responseProcessingService;
         readonly IVariableManager _variableManager = variableManager;
+        IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
         public IClientService<HttpRequest, HttpResponse> CreateInstance(IClientConfiguration<HttpRequest> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
         public void CreateAndQueueClient(IClientConfiguration<HttpRequest> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
             _clientsQueue.Enqueue(client);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created and queued", LPSLoggingLevel.Verbose);
         }
@@ -81,7 +84,7 @@ namespace LPS.Infrastructure.LPSClients
             {
                 if (byPassQueueIfEmpty)
                 {
-                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager);
+                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.SessionId} was created", LPSLoggingLevel.Information);
                     return client;
                 }

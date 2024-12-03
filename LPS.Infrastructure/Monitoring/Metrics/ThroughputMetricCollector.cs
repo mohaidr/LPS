@@ -154,8 +154,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _dimensionSet.StopUpdate = true;
             try
             {
-                _throughputWatch.Stop();
-                _timer.Dispose();
+                _throughputWatch?.Stop();
+                _timer?.Dispose();
             }
             finally { }
         }

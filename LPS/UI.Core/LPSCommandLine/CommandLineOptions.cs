@@ -251,6 +251,9 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
                 TagOption.AddAlias("-t");
                 AddCaseInsensitiveAliases(TagOption, "--tag");
+
+                EnvironmentOption.AddAlias("-e");
+                AddCaseInsensitiveAliases(EnvironmentOption, "--environment");
             }
             public static Option<IList<string>> RoundNameOption { get; } = new Option<IList<string>>(
             "--roundname", "Round name")
@@ -260,7 +263,14 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<IList<string>> TagOption { get; } = new Option<IList<string>>(
-                "--tag", "tag")
+                "--tag", "tag(s)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> EnvironmentOption { get; } = new Option<IList<string>>(
+            "--environment", "Run a against a specifiv environment(s)")
             {
                 IsRequired = false,
                 AllowMultipleArgumentsPerToken = true
@@ -442,6 +452,11 @@ namespace LPS.UI.Core.LPSCommandLine
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(RegexOption, "--regex");
 
+                // Shortcut aliases
+                EnvironmentOption.AddAlias("-e");
+                // Add case-insensitive aliases
+                AddCaseInsensitiveAliases(EnvironmentOption, "--environment");
+
 
 
             }
@@ -457,6 +472,13 @@ namespace LPS.UI.Core.LPSCommandLine
                 "--name", "Variable name")
             {
                 IsRequired = true
+            };
+
+            public static Option<IList<string>> EnvironmentOption { get; } = new Option<IList<string>>(
+            "--environment", "Run a against a specifiv environment(s)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
             };
 
             public static Option<string>ValueOption { get; } = new Option<string>(
@@ -505,6 +527,10 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 MakeGlobal.AddAlias("-mg");
                 AddCaseInsensitiveAliases(MakeGlobal, "--makeglobal");
+
+
+                HeaderOption.AddAlias("-h");
+                AddCaseInsensitiveAliases(HeaderOption, "--header");
             }
 
             public static Option<string> IterationNameOption { get; } = new Option<string>(
@@ -531,6 +557,12 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
 
+            public static Option<IList<string>> HeaderOption { get; } = new Option<IList<string>>(
+            "--header", "Header")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
 
             public static Option<string> AsOption { get; } = new Option<string>(
                 "--as", () => string.Empty, "Read the variable As (Text, Json or XML)")

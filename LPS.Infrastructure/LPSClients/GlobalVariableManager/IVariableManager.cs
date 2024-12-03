@@ -12,7 +12,8 @@ namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
     public interface IVariableManager
     {
         Task AddVariableAsync(string variableName, IVariableHolder variableHolder, CancellationToken token);
-        IVariableHolder GetVariable(string variableName);
+        Task<IVariableHolder?> GetVariableAsync(string variableName, CancellationToken token);
+        Task RemoveVariableAsync(string variableName, CancellationToken token = default);
     }
 
 }

@@ -15,10 +15,12 @@ namespace LPS.DTOs
             Iterations = [];
             Rounds = [];
             Variables = [];
+            Environments = [];
         }
         public override string Name { get; set; }
         public IList<RoundDto> Rounds { get; set; }
         public IList<VariableDto> Variables { get; set; }
+        public IList<EnvironmentDto> Environments { get; set; }
         public IList<HttpIterationDto> Iterations { get; set; }
         public void DeepCopy(out PlanDto targetDto)
         {
