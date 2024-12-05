@@ -6,12 +6,13 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPS.UI.Common
+namespace LPS.Infrastructure.Common
 {
-    internal class AppConstants
+    public class AppConstants
     {
         #pragma warning disable CS8601 // Possible null reference assignment.
         public static readonly string AppExecutableLocation = Path.GetDirectoryName(Assembly.GetEntryAssembly().Location);
+        public static readonly string EnvironmentCurrentDirectory = Environment.CurrentDirectory;
         #pragma warning restore CS8601 // Possible null reference assignment.
         public static readonly string AppSettingsFileName = "lpsSettings.json";
         public static readonly string AppSettingsFileLocation = Path.Combine(AppExecutableLocation, "config", AppConstants.AppSettingsFileName);

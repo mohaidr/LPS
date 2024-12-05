@@ -14,10 +14,11 @@ namespace LPS.Domain.Domain.Common.Enums
         * B refers to Batch Size  
         * R refers to Request Count
         */
-        DCB = 0,
-        CRB = 1,
-        CB = 2,
-        R = 3,
-        D = 4
+        Default = 0, // This is currently used as a workaround (hack) because the custom JSON serializer is configured to ignore default values. Since 0 is the default value, this ensures that DCB is not ignored. However, this approach violates our coding standards.
+        DCB = 1,
+        CRB = 2,
+        CB = 3,
+        R = 4,
+        D = 5
     }
 }

@@ -76,7 +76,7 @@ namespace LPS.UI.Core.LPSCommandLine
         private void Configure()
         {
             _rootCliCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
-            _lpsCliCommand = new LpsCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _cts, _command_args);
+            _lpsCliCommand = new LpsCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _placeholderResolverService, _appSettings.DashboardConfigurationOptions, _cts, _command_args);
             _createCliCommand = new CreateCliCommand(_rootCliCommand, _logger,  _runtimeOperationIdProvider, _command_args);
             _roundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
             _iterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);

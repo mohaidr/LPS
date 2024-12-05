@@ -66,7 +66,7 @@ namespace LPS.Domain
 
             if (iteration != null && iteration.IsValid)
             {
-                if (iteration.HttpRequest?.Capture?.MakeGlobal != true && this.RunInParallel == true)
+                if (iteration.HttpRequest?.Capture != null && iteration.HttpRequest.Capture.MakeGlobal == false && this.RunInParallel == true)
                 {
                     throw new NotSupportedException("The 'Capture' capability is not supported in parallel mode unless MakeGlobal is set to true for use in subsequent rounds. In parallel mode, capturing a variable in one iteration and reusing it in another iteration within the same round can lead to unexpected behavior.");  
                 }

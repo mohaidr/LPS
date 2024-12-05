@@ -80,7 +80,7 @@ namespace LPS.Domain
             if (command.IsValid)
             {
 
-                this.Name = command.Name;
+                this.Name =  command.Name;
                 this.IsValid = true;
             }
             else

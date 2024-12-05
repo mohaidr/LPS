@@ -71,7 +71,7 @@ namespace LPS.UI.Core.Host
             {
                 PlanDto planDto = new();
 
-                var manualBuild = new ManualBuild(new PlanValidator(planDto), _logger, _runtimeOperationIdProvider);
+                var manualBuild = new ManualBuild(new PlanValidator(planDto), _logger, _runtimeOperationIdProvider, _placeholderResolverService);
                 var plan = manualBuild.Build(planDto);
                 SavePlanToDisk(planDto);
                 bool runTest = AnsiConsole.Confirm("Would you like to run your test now?");

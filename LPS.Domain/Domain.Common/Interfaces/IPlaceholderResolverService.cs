@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using YamlDotNet.Core.Tokens;
 
-namespace LPS.Infrastructure.LPSClients.PlaceHolderService
+namespace LPS.Domain.Common.Interfaces
 {
     public interface IPlaceholderResolverService
     {

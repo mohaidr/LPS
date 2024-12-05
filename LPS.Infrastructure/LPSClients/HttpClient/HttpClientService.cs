@@ -1,13 +1,9 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.LPSClients.HeaderServices;
 using LPS.Infrastructure.LPSClients.EmbeddedResourcesServices;
-using LPS.Infrastructure.LPSClients.URLServices;
-using LPS.Infrastructure.LPSClients.Metrics;
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -15,18 +11,10 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Infrastructure.LPSClients.MetricsServices;
 using LPS.Infrastructure.LPSClients.MessageServices;
-using System.Buffers;
 using LPS.Infrastructure.Caching;
-using LPS.Infrastructure.LPSClients.SampleResponseServices;
-using Microsoft.Extensions.Caching.Memory;
 using LPS.Infrastructure.LPSClients.ResponseService;
-using LPS.Infrastructure.Common.Interfaces;
-using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.Infrastructure.LPSClients.SessionManager;
-using LPS.Domain.Domain.Common.Interfaces;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
-using Microsoft.Extensions.Options;
 
 namespace LPS.Infrastructure.LPSClients
 {

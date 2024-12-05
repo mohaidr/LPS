@@ -33,6 +33,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         readonly Command _rootCliCommand;
         public Command Command => _rootCliCommand;
         readonly IMetricsDataMonitor _lpsMonitoringEnroller;
+        readonly IPlaceholderResolverService _placeholdersResolver;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         readonly CancellationTokenSource _cts;
         readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
@@ -46,6 +47,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
             IMetricsDataMonitor lpsMonitoringEnroller,
+            IPlaceholderResolverService placeholdersResolver,
             IOptions<DashboardConfigurationOptions> dashboardConfig,
             CancellationTokenSource cts,
             string[] args)
@@ -60,6 +62,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
             _dashboardConfig = dashboardConfig;
+            _placeholdersResolver = placeholdersResolver;
             _cts = cts;
             Setup();
         }
@@ -75,10 +78,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 try
                 {
                     ValidationResult planValidationResults, roundValidationResults, iterationValidationResults, requestValidationResults;
-                    planDto.DeepCopy(out PlanDto planDtoCopy);
                     var roundDto = planDto.Rounds[0];
                     var iterationDto = planDto.Rounds[0].Iterations[0];
-                    var planValidator = new PlanValidator(planDtoCopy);
+                    var planValidator = new PlanValidator(planDto);
                     planValidationResults = planValidator.Validate();
                     var roundValidator = new RoundValidator(planDto.Rounds[0]);
                     roundValidationResults = roundValidator.Validate();
@@ -89,7 +91,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
                     if (planValidationResults.IsValid && roundValidationResults.IsValid && iterationValidationResults.IsValid && requestValidationResults.IsValid)
                     {
-                        var plan = new Plan(planDtoCopy, _logger, _runtimeOperationIdProvider);
+                        var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider, _placeholdersResolver);
                         var testRound = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                         var httpIteration = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
                         var request = new HttpRequest(iterationDto.HttpRequest, _logger, _runtimeOperationIdProvider);
@@ -99,8 +101,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         var manager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _dashboardConfig, _cts);
                         if (save)
                         {
-                            ConfigurationService.SaveConfiguration($"{planDtoCopy.Name}.yaml", planDtoCopy);
-                            ConfigurationService.SaveConfiguration($"{planDtoCopy.Name}.json", planDtoCopy);
+                            ConfigurationService.SaveConfiguration($"{planDto.Name}.yaml", planDto);
+                            ConfigurationService.SaveConfiguration($"{planDto.Name}.json", planDto);
                         }
                         await manager.RunAsync(plan);
                     }

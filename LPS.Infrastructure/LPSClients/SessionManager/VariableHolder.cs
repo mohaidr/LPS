@@ -4,7 +4,7 @@ using LPS.Domain.Common;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using System;
 using System.Collections.Generic;
-using System.Formats.Asn1;
+using LPS.Domain.Common.Interfaces;
 using System.Globalization;
 using System.IO;
 using System.Linq;

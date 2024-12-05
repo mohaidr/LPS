@@ -9,7 +9,7 @@ using LPS.UI.Common;
 using LPS.UI.Common.Options;
 using Newtonsoft.Json;
 using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Monitoring;
+using LPS.Infrastructure.Common;
 using LPS.UI.Core.Host;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Command;

@@ -9,6 +9,8 @@ using System.Threading.Tasks;
 using System.Threading;
 using LPS.Domain.Common.Interfaces;
 using System.IO;
+using LPS.Infrastructure.Common;
+
 
 namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 {
@@ -93,7 +95,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                         }
 
                         // Stop at the first valid delimiter outside parentheses
-                        if (!insideParentheses && !insideSequareBracket && (char.IsWhiteSpace(currentChar) || currentChar == ',' || currentChar == '}' || currentChar == '"' || currentChar == '\'' || currentChar == '['))
+                        if (!insideParentheses && !insideSequareBracket && (char.IsWhiteSpace(currentChar) || currentChar == ',' || currentChar == '}' || currentChar == '"' || currentChar == '\'' || currentChar == '$'))
                         {
                             break;
                         }
@@ -133,6 +135,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 string functionName = variableOrMethodName.Substring(0, openParenIndex).Trim();
                 string parameters = variableOrMethodName.Substring(openParenIndex + 1, variableOrMethodName.Length - openParenIndex - 2).Trim();
                 // Resolve based on function name
+
                 resolvedValue = functionName.ToLowerInvariant() switch
                 {
                     "random" => await GenerateRandomStringAsync(parameters, sessionId, token), // Handle Random function
@@ -282,36 +285,56 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         {
             // Extract the file path from parameters
             string filePath = await ExtractStringFromParametersAsync(parameters, "path", string.Empty, sessionId, token);
+
             if (string.IsNullOrWhiteSpace(filePath))
             {
                 throw new ArgumentException("File path cannot be null or empty.", nameof(parameters));
             }
 
-            // Validate the file path (optional: add security checks for allowed directories)
-            if (!System.IO.File.Exists(filePath))
+            // Resolve the path to ensure it works for both relative and absolute paths
+            string resolvedPath = Path.GetFullPath(filePath, AppConstants.EnvironmentCurrentDirectory);
+
+            // Validate the resolved path (check if the file exists)
+            if (!System.IO.File.Exists(resolvedPath))
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"File '{filePath}' does not exist.", LPSLoggingLevel.Warning, token);
+                await _logger.LogAsync(
+                    _runtimeOperationIdProvider.OperationId,
+                    $"File '{resolvedPath}' does not exist.",
+                    LPSLoggingLevel.Warning,
+                    token
+                );
                 return string.Empty; // Return an empty string for non-existent files
             }
 
             try
             {
                 // Read file content
-                using var fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var fileStream = new FileStream(resolvedPath, FileMode.Open, FileAccess.Read, FileShare.Read);
                 using var reader = new StreamReader(fileStream, Encoding.UTF8);
 
                 string content = await reader.ReadToEndAsync();
 
                 // Log the successful read operation
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Successfully read content from file '{filePath}'.", LPSLoggingLevel.Information, token);
+                await _logger.LogAsync(
+                    _runtimeOperationIdProvider.OperationId,
+                    $"Successfully read content from file '{resolvedPath}'.",
+                    LPSLoggingLevel.Verbose,
+                    token
+                );
                 return content;
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Error reading file '{filePath}': {ex.Message}", LPSLoggingLevel.Error, token);
-                throw new InvalidOperationException($"Failed to read the file at '{filePath}'. See logs for details.", ex);
+                await _logger.LogAsync(
+                    _runtimeOperationIdProvider.OperationId,
+                    $"Error reading file '{resolvedPath}': {ex.Message}",
+                    LPSLoggingLevel.Error,
+                    token
+                );
+                throw new InvalidOperationException($"Failed to read the file at '{resolvedPath}'. See logs for details.", ex);
             }
         }
+
 
         // Helper methods for extracting values from placeholders
         private async Task<int> ExtractValueFromParametersAsync(string parameters, string key, int defaultValue, string sessionId, CancellationToken token)

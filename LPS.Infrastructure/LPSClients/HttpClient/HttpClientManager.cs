@@ -1,24 +1,14 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Caching;
-using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.MessageServices;
 using LPS.Infrastructure.LPSClients.MetricsServices;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SessionManager;
-using Microsoft.Extensions.Caching.Memory;
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Eventing.Reader;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+
 
 
 namespace LPS.Infrastructure.LPSClients

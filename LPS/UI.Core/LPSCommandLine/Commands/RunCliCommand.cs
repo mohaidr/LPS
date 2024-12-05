@@ -22,7 +22,6 @@ using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Domain.Common;
 using LPS.UI.Core.LPSValidators;
 using FluentValidation;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -91,7 +90,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 try
                 {
                     var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
-                    var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider);
+                    var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
                     if (plan.IsValid)
                     {
                         var variableValidator = new VariableValidator();

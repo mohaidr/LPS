@@ -8,7 +8,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
-using YamlDotNet.Core.Tokens;
+using LPS.Domain.Common.Interfaces;
 namespace LPS.Infrastructure.LPSClients.HeaderServices
 {
     public class HttpHeadersService : IHttpHeadersService

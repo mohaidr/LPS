@@ -33,7 +33,7 @@ namespace LPS.DTOs
             targetDto.Iterations = Iterations?.Select(iteration =>
             {
                 var copiedIteration = new HttpIterationDto();
-                iteration.Copy(copiedIteration);
+                iteration.DeepCopy(out copiedIteration);
                 return copiedIteration;
             }).ToList();
 
@@ -41,7 +41,7 @@ namespace LPS.DTOs
             targetDto.Rounds = Rounds?.Select(round =>
             {
                 var copiedRound = new RoundDto();
-                round.Copy(copiedRound); 
+                round.DeepCopy(out copiedRound); 
                 return copiedRound;
             }).ToList();
         }

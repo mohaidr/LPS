@@ -25,15 +25,18 @@ namespace LPS.Domain
         IWatchdog _watchdog;
         IMetricsDataMonitor _lpsMetricsDataMonitor;
         ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        IPlaceholderResolverService _placeholderResolverService;
         CancellationTokenSource _cts;
         public Plan(SetupCommand command,
             ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IPlaceholderResolverService placeholderResolverService)
         {
             ArgumentNullException.ThrowIfNull(command);
             Rounds = new List<Round>();
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;
+            _placeholderResolverService = placeholderResolverService;
             Id = Guid.NewGuid();
             this.Setup(command);
         }
