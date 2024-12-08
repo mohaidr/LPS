@@ -17,7 +17,7 @@ using LPS.Infrastructure.LPSClients.SessionManager;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    public class CaptureValidator : CommandBaseValidator<CaptureHandlerDto, CaptureHandler>
+    public class CaptureValidator : CommandBaseValidator<CaptureHandlerDto>
     {
 
         readonly CaptureHandlerDto _captureHandlerDto;
@@ -32,7 +32,15 @@ namespace LPS.UI.Core.LPSValidators
                 .WithMessage("'Variable Name' must only contain letters and numbers.");
 
             RuleFor(dto => dto.MakeGlobal)
-                .NotNull();
+                .NotNull()
+                .WithMessage("The 'MakeGlobal' property must not be null.")
+                .Must(makeGlobal =>
+                {
+                    // Allow valid boolean values or placeholders
+                    return makeGlobal.StartsWith("$") || bool.TryParse(makeGlobal, out _);
+                })
+                .WithMessage("The 'MakeGlobal' property must be 'true', 'false', or a placeholder starting with '$'");
+
             RuleFor(dto => dto.As)
                 .Must(@as =>
                 {
@@ -40,6 +48,7 @@ namespace LPS.UI.Core.LPSValidators
                     return IVariableHolder.IsKnownSupportedFormat(MimeTypeExtensions.FromKeyword(@as))
                     || @as == string.Empty;
                 }).WithMessage("The provided value for 'As' is not valid or supported.");
+            
             RuleFor(dto => dto.Regex)
             .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))
             .WithMessage("Input must be either empty or a valid .NET regular expression.");

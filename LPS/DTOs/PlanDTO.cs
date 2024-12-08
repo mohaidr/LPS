@@ -1,49 +1,65 @@
 ﻿using LPS.Domain;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace LPS.DTOs
 {
-    public class PlanDto : Plan.SetupCommand
+    public class PlanDto: IDto<PlanDto>
     {
         public PlanDto()
         {
             Iterations = [];
             Rounds = [];
-            Variables = [];
-            Environments = [];
+            Variables = [] ;
+            Environments = [] ;
         }
-        public override string Name { get; set; }
+
+        // Name of the plan
+        public string Name { get; set; }
+
+        // List of rounds in the plan
         public IList<RoundDto> Rounds { get; set; }
+
+        // List of variables in the plan
         public IList<VariableDto> Variables { get; set; }
+
+        // List of environments in the plan
         public IList<EnvironmentDto> Environments { get; set; }
+
+        // Inline iterations for the plan
         public IList<HttpIterationDto> Iterations { get; set; }
+
+        // Deep copy method to create a new instance with the same data
         public void DeepCopy(out PlanDto targetDto)
         {
-            targetDto = new PlanDto();
-
-            // Call base.Clone() and cast it to PlanDto
-            base.Copy(targetDto);
-
             #pragma warning disable CS8601 // Possible null reference assignment.
-            targetDto.Iterations = Iterations?.Select(iteration =>
+            targetDto = new PlanDto
             {
-                var copiedIteration = new HttpIterationDto();
-                iteration.DeepCopy(out copiedIteration);
-                return copiedIteration;
-            }).ToList();
-
-            #pragma warning disable CS8601 // Possible null reference assignment.
-            targetDto.Rounds = Rounds?.Select(round =>
-            {
-                var copiedRound = new RoundDto();
-                round.DeepCopy(out copiedRound); 
-                return copiedRound;
-            }).ToList();
+                Name = this.Name,
+                Iterations = this.Iterations?.Select(iteration =>
+                {
+                    var copiedIteration = new HttpIterationDto();
+                    iteration.DeepCopy(out copiedIteration);
+                    return copiedIteration;
+                }).ToList(),
+                Rounds = this.Rounds?.Select(round =>
+                {
+                    var copiedRound = new RoundDto();
+                    round.DeepCopy(out copiedRound);
+                    return copiedRound;
+                }).ToList(),
+                Variables = this.Variables?.Select(variable =>
+                {
+                    var copiedVariable = new VariableDto();
+                    variable.DeepCopy(out copiedVariable);
+                    return copiedVariable;
+                }).ToList(),
+                Environments = this.Environments?.Select(environment =>
+                {
+                    var copiedEnvironment = new EnvironmentDto();
+                    environment.DeepCopy(out copiedEnvironment);
+                    return copiedEnvironment;
+                }).ToList()
+            };
+            #pragma warning restore CS8601 // Possible null reference assignment.
         }
     }
 }

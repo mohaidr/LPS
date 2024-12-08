@@ -4,6 +4,7 @@ using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.DTOs;
 using LPS.Infrastructure.Common;
+using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.UI.Common;
 using LPS.UI.Common.Extensions;
 using LPS.UI.Core.LPSCommandLine.Bindings;
@@ -21,12 +22,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         public Command Command => _captureCommand;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        IPlaceholderResolverService _placeholderResolverService;
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        internal CaptureCliCommand(Command rootCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        internal CaptureCliCommand(Command rootCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IPlaceholderResolverService placeholderResolverService)
         {
             _rootCliCommand = rootCliCommand;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _placeholderResolverService = placeholderResolverService;
             Setup();
         }
 
@@ -46,7 +49,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             {
                 try
                 {
-                    var plandto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                    var plandto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService);
                     if (plandto != null)
                     {
                         var variableDtoValidator = new CaptureValidator(captureDto);

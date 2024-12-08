@@ -26,7 +26,7 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                                           string.Equals(httpRequestMessage.Method.Method, "PATCH", StringComparison.OrdinalIgnoreCase));
             foreach (var header in HttpHeaders)
             {
-                var resolvedValue = await _placeHolderResolver.ResolvePlaceholdersAsync(header.Value, sessionId, token);
+                var resolvedValue = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(header.Value, sessionId, token);
                 if (supportContentHeaders)
                 {
                     var contentHeaders = httpRequestMessage.Content.Headers;

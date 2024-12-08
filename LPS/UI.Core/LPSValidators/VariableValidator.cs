@@ -1,14 +1,4 @@
-﻿using LPS.Domain;
-using System;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using FluentValidation;
-using LPS.UI.Common;
-using LPS.Infrastructure.Logger;
-using System.IO;
-using LPS.UI.Common.Options;
+﻿using FluentValidation;
 using LPS.DTOs;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Domain.Common;
@@ -24,8 +14,12 @@ namespace LPS.UI.Core.LPSValidators
                 .WithMessage("'Variable Name' must not be empty")
                 .Matches("^[a-zA-Z0-9]+$")
                 .WithMessage("'Variable Name' must only contain letters and numbers.");
+            
             RuleFor(variable => variable.Value)
-            .NotNull().NotEmpty().WithMessage("'Variable Value' must not be empty");
+            .NotNull()
+            .NotEmpty()
+            .WithMessage("'Variable Value' must not be empty");
+
             RuleFor(variable => variable.As)
                 .Must(@as =>
                 {

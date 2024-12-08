@@ -13,38 +13,39 @@ using LPS.DTOs;
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
     public class IterationCommandBinder(Option<string>? nameOption = null,
-        Option<int?>? requestCountOption = null,
-        Option<IterationMode>? iterationModeOption = null,
-        Option<bool>? maximizeThroughput = null,
-        Option<int?>? duratiion = null,
-        Option<int?>? coolDownTime = null,
-        Option<int?>? batchSizeOption = null,
+        Option<string?>? requestCountOption = null,
+        Option<string>? iterationModeOption = null,
+        Option<string>? maximizeThroughput = null,
+        Option<string?>? duratiion = null,
+        Option<string?>? coolDownTime = null,
+        Option<string?>? batchSizeOption = null,
         Option<string>? httpMethodOption = null,
         Option<string>? httpversionOption = null,
         Option<string>? urlOption = null,
         Option<IList<string>>? headerOption = null,
         Option<string>? payloadOption = null,
-        Option<bool>? downloadHtmlEmbeddedResourcesOption = null,
-        Option<bool>? saveResponseOption = null,
-        Option<bool?>? supportH2C = null,
-        Option<int>? startupDelayOption = null) : BinderBase<HttpIterationDto>
+        Option<string>? downloadHtmlEmbeddedResourcesOption = null,
+        Option<string>? saveResponseOption = null,
+        Option<string?>? supportH2C = null,
+        Option<string>? startupDelayOption = null) : BinderBase<HttpIterationDto>
     {
         readonly private Option<string> _nameOption = nameOption ?? CommandLineOptions.LPSIterationCommandOptions.IterationNameOption;
-        readonly private Option<int?> _requestCountOption = requestCountOption ?? CommandLineOptions.LPSIterationCommandOptions.RequestCountOption;
-        readonly private Option<bool> _maximizeThroughputOption = maximizeThroughput ?? CommandLineOptions.LPSIterationCommandOptions.MaximizeThroughputOption;
-        readonly private Option<int?> _duration = duratiion ?? CommandLineOptions.LPSIterationCommandOptions.Duration;
-        readonly private Option<int?> _coolDownTime = coolDownTime ?? CommandLineOptions.LPSIterationCommandOptions.CoolDownTime;
-        readonly private Option<int?> _batchSize = batchSizeOption ?? CommandLineOptions.LPSIterationCommandOptions.BatchSize;
+        readonly private Option<string?> _requestCountOption = requestCountOption ?? CommandLineOptions.LPSIterationCommandOptions.RequestCountOption;
+        readonly private Option<string> _maximizeThroughputOption = maximizeThroughput ?? CommandLineOptions.LPSIterationCommandOptions.MaximizeThroughputOption;
+        readonly private Option<string?> _duration = duratiion ?? CommandLineOptions.LPSIterationCommandOptions.Duration;
+        readonly private Option<string?> _coolDownTime = coolDownTime ?? CommandLineOptions.LPSIterationCommandOptions.CoolDownTime;
+        readonly private Option<string?> _batchSize = batchSizeOption ?? CommandLineOptions.LPSIterationCommandOptions.BatchSize;
         readonly private Option<string> _httpMethodOption = httpMethodOption ?? CommandLineOptions.LPSIterationCommandOptions.HttpMethodOption;
-        readonly private Option<bool> _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? CommandLineOptions.LPSIterationCommandOptions.DownloadHtmlEmbeddedResources;
-        readonly private Option<bool> _saveResponseOption = saveResponseOption ?? CommandLineOptions.LPSIterationCommandOptions.SaveResponse;
-        readonly private Option<bool?> _supportH2C = supportH2C ?? CommandLineOptions.LPSIterationCommandOptions.SupportH2C;
+        readonly private Option<string> _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? CommandLineOptions.LPSIterationCommandOptions.DownloadHtmlEmbeddedResources;
+        readonly private Option<string> _saveResponseOption = saveResponseOption ?? CommandLineOptions.LPSIterationCommandOptions.SaveResponse;
+        readonly private Option<string?> _supportH2C = supportH2C ?? CommandLineOptions.LPSIterationCommandOptions.SupportH2C;
         readonly private Option<string> _httpversionOption = httpversionOption ?? CommandLineOptions.LPSIterationCommandOptions.HttpVersionOption;
         readonly private Option<string> _urlOption = urlOption ?? CommandLineOptions.LPSIterationCommandOptions.UrlOption;
         readonly private Option<IList<string>> _headerOption = headerOption ?? CommandLineOptions.LPSIterationCommandOptions.HeaderOption;
         readonly private Option<string> _payloadOption = payloadOption ?? CommandLineOptions.LPSIterationCommandOptions.PayloadOption;
-        readonly Option<IterationMode> _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSIterationCommandOptions.IterationModeOption;
-        private readonly Option<int> _startupDelayOption = startupDelayOption ?? CommandLineOptions.LPSIterationCommandOptions.StartupDelayOption;
+        readonly Option<string> _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSIterationCommandOptions.IterationModeOption;
+        private readonly Option<string> _startupDelayOption = startupDelayOption ?? CommandLineOptions.LPSIterationCommandOptions.StartupDelayOption;
+        #pragma warning disable CS8601 // Possible null reference assignment.
         protected override HttpIterationDto GetBoundValue(BindingContext bindingContext) =>
             new()
             {
@@ -68,5 +69,6 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),
                 },
             };
+        #pragma warning restore CS8601 // Possible null reference assignment.
     }
 }

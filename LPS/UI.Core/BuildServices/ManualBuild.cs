@@ -8,15 +8,14 @@ using LPS.DTOs;
 
 namespace LPS.UI.Core.Build.Services
 {
-    internal class ManualBuild : IBuilderService<PlanDto, Plan>
+    internal class ManualBuild : IBuilderService<PlanDto>
     {
-        IBaseValidator<PlanDto, Plan> _validator;
+        IBaseValidator<PlanDto> _validator;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         IPlaceholderResolverService _placeholderResolverService;
         public ManualBuild(
-            IBaseValidator<PlanDto,
-            Plan> validator,
+            IBaseValidator<PlanDto > validator,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IPlaceholderResolverService placeholderResolverService)
@@ -30,26 +29,12 @@ namespace LPS.UI.Core.Build.Services
         static bool _skipOptionalFields = true;
         
         //This must be refactored one domain is refactored
-        public Plan Build(PlanDto planDto)
+        public PlanDto Build(ref PlanDto planDto)
         {
             _skipOptionalFields = AnsiConsole.Confirm("Do you want to skip the optional fields?");
 
             new PlanChallengeUserService(_skipOptionalFields, planDto, _validator).Challenge();
-            var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider, _placeholderResolverService); // it should validate and throw if the command is not valid
-
-            foreach (var roundCommand in planDto.Rounds)
-            {
-                var roundEntity = new Round(roundCommand, _logger, _runtimeOperationIdProvider);
-                plan.AddRound(roundEntity);
-                foreach (var iterationCommand in roundCommand.Iterations)
-                {
-                    var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider); // must validate and throw if the command is not valid
-                    iterationEntity.SetHttpRequest(new HttpRequest(iterationCommand.HttpRequest, _logger, _runtimeOperationIdProvider));
-                    roundEntity.AddIteration(iterationEntity);
-                }
-            }
-            
-            return plan;
+            return planDto;
         }
     }
 }

@@ -10,7 +10,7 @@ namespace LPS.Domain.Common.Interfaces
 {
     public interface IPlaceholderResolverService
     {
-        Task<string> ResolvePlaceholdersAsync(string input, string sessionId, CancellationToken Token);
+        Task<T> ResolvePlaceholdersAsync<T>(string input, string sessionId, CancellationToken Token);
         static bool IsSupportedPlaceHolderMethod(string value)
         {
             if (string.IsNullOrWhiteSpace(value) || !value.StartsWith("$") || !value.EndsWith(")"))

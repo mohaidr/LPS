@@ -35,10 +35,10 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
         public async Task<HttpRequestMessage> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default)
         {
             // Resolve placeholders for HttpVersion, HttpMethod, URL, and Payload
-            var resolvedHttpVersion = await _placeHolderResolver.ResolvePlaceholdersAsync(httpRequest.HttpVersion, sessionId, token);
-            var resolvedHttpMethod = await _placeHolderResolver.ResolvePlaceholdersAsync(httpRequest.HttpMethod, sessionId, token);
-            var resolvedUrl = await _placeHolderResolver.ResolvePlaceholdersAsync(httpRequest.URL, sessionId, token);
-            var resolvedContent = await _placeHolderResolver.ResolvePlaceholdersAsync(httpRequest.Payload, sessionId, token);
+            var resolvedHttpVersion = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpVersion, sessionId, token);
+            var resolvedHttpMethod = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpMethod, sessionId, token);
+            var resolvedUrl = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.URL, sessionId, token);
+            var resolvedContent = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload, sessionId, token);
 
             // Create the HttpRequestMessage with resolved values
             var httpRequestMessage = new HttpRequestMessage

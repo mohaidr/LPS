@@ -48,7 +48,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                         || @as.Equals("Text", StringComparison.OrdinalIgnoreCase)
                         || @as.Equals("CSV", StringComparison.OrdinalIgnoreCase)
                         || @as == string.Empty;
-                    }).WithMessage("The provided value for 'As' is not valid or supported.");
+                    }).WithMessage($"The provided value for 'As' ({command?.As}) is not valid or supported.");
                 RuleFor(command => command.Regex)
                 .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))
                 .WithMessage("Input must be either empty or a valid .NET regular expression.");

@@ -25,22 +25,22 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
     internal class CreateCliCommand : ICliCommand
     {
         readonly Command _rootCliCommand;
-        private readonly string[] _args;
         readonly ILogger _logger;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        IPlaceholderResolverService _placeholderResolverService;
         Command _createCommand;
         public Command Command => _createCommand;
-#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         internal CreateCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            string[] args)
+            IPlaceholderResolverService placeholderResolverService)
         {
             _rootCliCommand = rootCLICommandLine;
-            _args = args;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _placeholderResolverService = placeholderResolverService;
             Setup();
         }
 
@@ -74,7 +74,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         if (File.Exists(configFile))
                         {
                             _logger.Log(_runtimeOperationIdProvider.OperationId, $"{configFile} File exists, fetching configuration.", LPSLoggingLevel.Information);
-                            planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile) ?? new PlanDto() { Name = name };
+                            planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService) ?? new PlanDto() { Name = name };
                             planDto.Name = name;
                         }
                         else

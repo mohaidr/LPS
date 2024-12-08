@@ -9,7 +9,7 @@ using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class PlanValidator : CommandBaseValidator<PlanDto, Plan>
+    internal class PlanValidator : CommandBaseValidator<PlanDto>
     {
         readonly PlanDto _planDto;
         public PlanValidator(PlanDto planDto)
@@ -17,13 +17,21 @@ namespace LPS.UI.Core.LPSValidators
             ArgumentNullException.ThrowIfNull(planDto);
             _planDto = planDto;
 
+
             RuleFor(dto => dto.Name)
-            .NotNull().WithMessage("The 'Name' must be a non-null value")
-            .NotEmpty().WithMessage("The 'Name' must not be empty")
-            .Matches("^[a-zA-Z0-9 _.-]+$")
-            .WithMessage("The 'Name' does not accept special charachters")
-            .Length(1, 60)
-            .WithMessage("The 'Name' should be between 1 and 60 characters");
+                .NotNull()
+                .WithMessage("The 'Name' must be a non-null value")
+                .NotEmpty()
+                .WithMessage("The 'Name' must not be empty")
+                .Must(name =>
+                {
+                    // Check if the name matches the regex or starts with a placeholder
+                    return name.StartsWith("$") || System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-zA-Z0-9 _.-]+$");
+                })
+                .WithMessage("The 'Name' must either start with '$' (for placeholders) or match the pattern: only alphanumeric characters, spaces, underscores, periods, and dashes are allowed")
+                .Length(1, 60)
+                .WithMessage("The 'Name' should be between 1 and 60 characters");
+
 
             RuleFor(dto => dto.Rounds)
                 .Must(HaveUniqueRoundNames)

@@ -15,6 +15,8 @@ using LPS.UI.Core.LPSCommandLine.Commands;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
+using AutoMapper;
+using LPS.AutoMapper;
 
 namespace LPS.UI.Core.LPSCommandLine
 {
@@ -43,6 +45,7 @@ namespace LPS.UI.Core.LPSCommandLine
         readonly CancellationTokenSource _cts;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         readonly IPlaceholderResolverService _placeholderResolverService;
+        readonly IMapper _mapper;
         #pragma warning disable CS8618
         public CommandLineManager(
             string[] command_args,
@@ -71,22 +74,32 @@ namespace LPS.UI.Core.LPSCommandLine
             _variableManager = variableManager;
             _cts = cts;
             _placeholderResolverService = placeholderResolverService;
+            // Create the AutoMapper configuration
+            var mapperConfig = new MapperConfiguration(cfg =>
+            {
+                cfg.AddProfile(new DtoToCommandProfile(placeholderResolverService, string.Empty));
+            });
+
+            // Validate the configuration
+            mapperConfig.AssertConfigurationIsValid();
+
+            // Create the mapper instance
+            _mapper = mapperConfig.CreateMapper();
             Configure();
         }
         private void Configure()
         {
             _rootCliCommand = new Command("lps", "Load, Performance and Stress Testing Command Tool.");
-            _lpsCliCommand = new LpsCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _placeholderResolverService, _appSettings.DashboardConfigurationOptions, _cts, _command_args);
-            _createCliCommand = new CreateCliCommand(_rootCliCommand, _logger,  _runtimeOperationIdProvider, _command_args);
-            _roundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
-            _iterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
-            _runCliCommand = new RunCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog,_httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _variableManager, _placeholderResolverService, _cts);
+            _lpsCliCommand = new LpsCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _placeholderResolverService, _appSettings.DashboardConfigurationOptions, _mapper, _cts, _command_args);
+            _createCliCommand = new CreateCliCommand(_rootCliCommand, _logger,  _runtimeOperationIdProvider, _placeholderResolverService);
+            _roundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+            _iterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+            _runCliCommand = new RunCliCommand(_rootCliCommand, _logger, _httpClientManager, _config, _runtimeOperationIdProvider, _watchdog,_httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _appSettings.DashboardConfigurationOptions, _mapper, _variableManager, _placeholderResolverService, _cts);
             _loggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions);
             _httpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions);
             _watchdogCliCommand = new WatchDogCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions);
-            _variableCliCommand = new VariableCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
-            _captureCliCommand = new CaptureCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
-
+            _variableCliCommand = new VariableCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+            _captureCliCommand = new CaptureCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
         }
 
         public async Task RunAsync(CancellationToken cancellationToken)

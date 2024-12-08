@@ -9,7 +9,7 @@ using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class RoundValidator : CommandBaseValidator<RoundDto, Round>
+    internal class RoundValidator : CommandBaseValidator<RoundDto>
     {
         readonly RoundDto _roundDto;
         public RoundValidator(RoundDto roundDto)
@@ -19,47 +19,83 @@ namespace LPS.UI.Core.LPSValidators
             _roundDto = roundDto;
 
             RuleFor(dto => dto.Name)
-            .NotNull().WithMessage("The 'Name' must be a non-null value")
-            .NotEmpty().WithMessage("The 'Name' must not be empty")
-            .Matches("^[a-zA-Z0-9 _.-]+$")
-            .WithMessage("The 'Name' does not accept special charachters")
-            .Length(1, 60)
-            .WithMessage("The 'Name' should be between 1 and 60 characters");
+                .NotNull()
+                .WithMessage("The 'Name' must be a non-null value")
+                .NotEmpty()
+                .WithMessage("The 'Name' must not be empty")
+                .Must(name =>
+                {
+                    // Allow valid names or placeholders
+                    return name.StartsWith("$") || System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-zA-Z0-9 _.-]+$");
+                })
+                .WithMessage("The 'Name' must either start with '$' (for placeholders) or match the pattern: only alphanumeric characters, spaces, underscores, periods, and dashes are allowed")
+                .Length(1, 60)
+                .WithMessage("The 'Name' should be between 1 and 60 characters");
 
             RuleFor(dto => dto.BaseUrl)
-            .Must(url =>
-            {
-                return url?.StartsWith("$") == true || Uri.TryCreate(url, UriKind.Absolute, out Uri result)
-                && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
-            })
-            .When(dto=> !string.IsNullOrEmpty(dto.BaseUrl))
-            .WithMessage("The 'BaseUrl' must be a valid URL according to RFC 3986");
+                .Must(url =>
+                {
+                    // Allow valid URLs or placeholders
+                    return string.IsNullOrEmpty(url) || url.StartsWith("$") || Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                        && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps);
+                })
+                .When(dto => !string.IsNullOrEmpty(dto.BaseUrl))
+                .WithMessage("The 'BaseUrl' must be a valid URL according to RFC 3986 or a placeholder starting with '$'");
 
 
-            RuleFor(dto=> dto.Iterations)
-            .Must(HaveUniqueIterationNames)
-            .WithMessage("The Iteration 'Name' must be unique.");
+            RuleFor(dto => dto.Iterations)
+                .Must(HaveUniqueIterationNames)
+                .WithMessage("The Iteration 'Name' must be unique.");
 
             RuleFor(dto => dto.StartupDelay)
-            .GreaterThanOrEqualTo(0)
-            .WithMessage("The 'StartUpDelay' must be greater than or equal to 0");
+                .Must(startupDelay =>
+                {
+                    // Allow valid numeric values or placeholders
+                    return (int.TryParse(startupDelay, out int parsedValue) && parsedValue >= 0) || startupDelay.StartsWith("$");
+                })
+                .WithMessage("The 'StartupDelay' must be greater than or equal to 0 or a placeholder starting with '$'");
 
             RuleFor(dto => dto.NumberOfClients)
-            .NotNull().WithMessage("The 'Number Of Clients' must be a non-null value")
-            .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
+                .NotNull()
+                .WithMessage("The 'Number Of Clients' must not be null.")
+                .Must(numberOfClients =>
+                {
+                    // Allow valid numeric values or placeholders
+                    return numberOfClients.StartsWith("$")
+                        || int.TryParse(numberOfClients, out int parsedValue) && parsedValue > 0;
+                })
+                .WithMessage("The 'Number Of Clients' must be a positive integer or a placeholder starting with '$'");
 
             RuleFor(dto => dto.ArrivalDelay)
-            .NotNull().WithMessage("The 'Arrival Delay' must be greater than 0")
-            .GreaterThan(0)
-            .When(dto=> dto.NumberOfClients>1)
-            .WithMessage("The 'Arrival Delay' must be greater than 0");
-
+            .NotNull()
+            .WithMessage("The 'Arrival Delay' must be greater than 0")
+            .Must(arrivalDelay =>
+            {
+                // Allow valid numeric values or placeholders
+                return (int.TryParse(arrivalDelay, out int parsedValue) && parsedValue > 0) || arrivalDelay.StartsWith("$");
+            })
+            .When(dto => dto.NumberOfClients != null && int.TryParse(dto.NumberOfClients, out int parsedClients) && parsedClients > 1)
+            .WithMessage("The 'Arrival Delay' must be a positive integer or a placeholder starting with '$' when 'Number Of Clients' > 1");
 
             RuleFor(dto => dto.DelayClientCreationUntilIsNeeded)
-            .NotNull().WithMessage("'Delay Client Creation Until Is Needed' must be (y) or (n)");
+                .NotNull()
+                .WithMessage("The 'DelayClientCreationUntilIsNeeded' must not be null")
+                .Must(value =>
+                {
+                    // Allow valid boolean values or placeholders
+                    return value.StartsWith("$") || bool.TryParse(value, out _);
+                })
+                .WithMessage("'Delay Client Creation Until Is Needed' must be 'true', 'false', or a placeholder starting with '$'");
 
             RuleFor(dto => dto.RunInParallel)
-            .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
+            .NotNull()
+            .WithMessage("'Run In Parallel' must be (y) or (n)")
+            .Must(value =>
+            {
+                // Allow valid boolean values or placeholders
+                return value.StartsWith("$") || bool.TryParse(value, out _);
+            })
+            .WithMessage("'Run In Parallel' must be 'true', 'false', or a placeholder starting with '$'");
         }
         private bool HaveUniqueIterationNames(IList<HttpIterationDto> iterations)
         {

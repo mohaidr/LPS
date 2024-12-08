@@ -20,12 +20,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         public Command Command => _variableCommand;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        IPlaceholderResolverService _placeholderResolverService;
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        internal VariableCliCommand(Command rootCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        internal VariableCliCommand(Command rootCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IPlaceholderResolverService placeholderResolverService)
         {
             _rootCliCommand = rootCliCommand;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _placeholderResolverService = placeholderResolverService;
             Setup();
         }
 
@@ -46,7 +48,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 try
                 {
                     // Fetch existing configuration
-                    var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                    var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService);
                     if (planDto != null)
                     {
                         // Validate the variable using VariableValidator

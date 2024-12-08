@@ -25,13 +25,15 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private RefCliCommand _refCliCommand;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        IPlaceholderResolverService _placeholderResolverService;
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        internal IterationCliCommand(Command rootCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        internal IterationCliCommand(Command rootCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IPlaceholderResolverService placeholderResolverService)
         #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         {
             _rootCliCommand = rootCliCommand;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _placeholderResolverService = placeholderResolverService;
             Setup();
         }
         private void Setup()
@@ -41,14 +43,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 CommandLineOptions.LPSIterationCommandOptions.ConfigFileArgument // Add ConfigFileArgument here
             };
             CommandLineOptions.AddOptionsToCommand(_iterationCommand, typeof(CommandLineOptions.LPSIterationCommandOptions));
-            _refCliCommand = new RefCliCommand(_iterationCommand, _logger, _runtimeOperationIdProvider);
+            _refCliCommand = new RefCliCommand(_iterationCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _rootCliCommand.AddCommand(_iterationCommand);
         }
         public void SetHandler(CancellationToken cancellationToken)
         {
             _iterationCommand.SetHandler((configFile, roundName, iteration, isGlobal) =>
             {
-                var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
+                var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService);
                 iteration.DeepCopy(out HttpIterationDto ItrationDtoCopy);
                 var iterationValidator = new IterationValidator(ItrationDtoCopy);
                 ValidationResult results = iterationValidator.Validate();

@@ -6,9 +6,9 @@ using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
 namespace LPS.UI.Core.Build.Services
 {
-    internal class IterationChallengeUserService(bool skipOptionalFields, HttpIterationDto command, string baseUrl, IBaseValidator<HttpIterationDto, HttpIteration> validator) : IChallengeUserService<HttpIterationDto, HttpIteration>
+    internal class IterationChallengeUserService(bool skipOptionalFields, HttpIterationDto command, string baseUrl, IBaseValidator<HttpIterationDto> validator) : IChallengeUserService<HttpIterationDto>
     {
-        IBaseValidator<HttpIterationDto, HttpIteration> _validator = validator;
+        IBaseValidator<HttpIterationDto> _validator = validator;
         readonly HttpIterationDto _iterationDto = command;
         private readonly bool _skipOptionalFields = skipOptionalFields;
         private string _baseUrl= baseUrl;
@@ -36,7 +36,7 @@ namespace LPS.UI.Core.Build.Services
 
                     AnsiConsole.MarkupLine("[blue]Use this option cautiously, such as when you want to mimic the navigation between web pages with delays, resembling how a human would browse between pages.[/]");
                     _validator.PrintValidationErrors(nameof(Dto.StartupDelay));
-                    _iterationDto.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay (in seconds)'[/]? Enter 0 if not.");
+                    _iterationDto.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay (in seconds)'[/]? Enter 0 if not.").ToString();
                     continue;
                 }
 
@@ -45,7 +45,7 @@ namespace LPS.UI.Core.Build.Services
 
                     AnsiConsole.MarkupLine("[blue]D[/] stands for duration. [blue]C[/] stands for Cool Down, [blue]R[/] stands for Request Count, [blue]B[/] stands for Batch Size");
                     _validator.PrintValidationErrors(nameof(Dto.Mode));
-                    _iterationDto.Mode = AnsiConsole.Ask<IterationMode>("At which [green]'Mode'[/] the 'HTTP RUN' should be executed?"); ;
+                    _iterationDto.Mode = AnsiConsole.Ask<IterationMode>("At which [green]'Mode'[/] the 'HTTP RUN' should be executed?").ToString();
                     continue;
                 }
 
@@ -54,7 +54,7 @@ namespace LPS.UI.Core.Build.Services
                 {
 
                     _validator.PrintValidationErrors(nameof(Dto.Duration));
-                    _iterationDto.Duration = AnsiConsole.Ask<int>("What is the [green]'Duration' (in seconds)[/] for which each client can send requests to your endpoint?");
+                    _iterationDto.Duration = AnsiConsole.Ask<int>("What is the [green]'Duration' (in seconds)[/] for which each client can send requests to your endpoint?").ToString();
                     continue;
                 }
 
@@ -62,27 +62,27 @@ namespace LPS.UI.Core.Build.Services
                 if (!_validator.Validate(nameof(Dto.RequestCount)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.RequestCount));
-                    _iterationDto.RequestCount = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client is supposed to send?");
+                    _iterationDto.RequestCount = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client is supposed to send?").ToString();
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Dto.BatchSize)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.BatchSize));
-                    _iterationDto.BatchSize = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client has to send in a [green]'Batch'[/]?");
+                    _iterationDto.BatchSize = AnsiConsole.Ask<int>("How [green]'Many Requests'[/] the client has to send in a [green]'Batch'[/]?").ToString();
                     continue;
                 }
                 if (!_validator.Validate(nameof(Dto.CoolDownTime)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.CoolDownTime));
-                    _iterationDto.CoolDownTime = AnsiConsole.Ask<int>("For how [green]'Long' (in Milliseconds)[/] the client should pause before running the next batch?");
+                    _iterationDto.CoolDownTime = AnsiConsole.Ask<int>("For how [green]'Long' (in Milliseconds)[/] the client should pause before running the next batch?").ToString();
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Dto.MaximizeThroughput)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.MaximizeThroughput));
-                    _iterationDto.MaximizeThroughput = AnsiConsole.Confirm("Do you want to maximize the [green]throughput[/]? Maximizing the throughput will result in [yellow]higher CPU and Memory usage[/]!", false);
+                    _iterationDto.MaximizeThroughput = AnsiConsole.Confirm("Do you want to maximize the [green]throughput[/]? Maximizing the throughput will result in [yellow]higher CPU and Memory usage[/]!", false).ToString();
                     continue;
                 }
 
@@ -97,7 +97,7 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                _iterationDto.StartupDelay = 0;
+                _iterationDto.StartupDelay = 0.ToString();
                 _iterationDto.MaximizeThroughput = null;
             }
         }

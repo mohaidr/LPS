@@ -1,13 +1,8 @@
-﻿using LPS.Domain;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.CommandLine;
-using static LPS.Domain.HttpIteration;
-using LPS.Domain.Common.Interfaces;
+﻿using System.CommandLine;
 using System.Reflection;
 using LPS.Infrastructure.Watchdog;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Common.Interfaces;
 
 namespace LPS.UI.Core.LPSCommandLine
 {
@@ -95,7 +90,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(UrlOption, "--url");
                 AddCaseInsensitiveAliases(HeaderOption, "--header");
                 AddCaseInsensitiveAliases(PayloadOption, "--payload");
-                AddCaseInsensitiveAliases(IterationModeOption, "--iterationmode");
+                AddCaseInsensitiveAliases(IterationModeOption, "--string");
                 AddCaseInsensitiveAliases(MaximizeThroughputOption, "--maximizethroughput");
                 AddCaseInsensitiveAliases(DownloadHtmlEmbeddedResources, "--downloadhtmlembeddedresources");
                 AddCaseInsensitiveAliases(SaveResponse, "--saveresponse");
@@ -117,31 +112,31 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
 
-            public static Option<int> StartupDelayOption { get; } = new Option<int>(
-                "--startupDelay", () => 0, "Add startup (in seconds) delay to your round")
+            public static Option<string> StartupDelayOption { get; } = new Option<string>(
+                "--startupDelay", () => 0.ToString(), "Add startup (in seconds) delay to your round")
             {
                 IsRequired = false
             };
-            public static Option<int> NumberOfClientsOption { get; } = new Option<int>(
-                "--numberofclients", () => 1, "Number of clients to perform the test round")
+            public static Option<string> NumberOfClientsOption { get; } = new Option<string>(
+                "--numberofclients", () => 1.ToString(), "Number of clients to perform the test round")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> ArrivalDelayOption { get; } = new Option<int?>(
+            public static Option<string?> ArrivalDelayOption { get; } = new Option<string?>(
                 "--arrivaldelay", () => null, "Time in milliseconds to wait before a new client arrives")
             {
                 IsRequired = false
             };
 
-            public static Option<bool> DelayClientCreationOption { get; } = new Option<bool>(
-                "--delayclientcreation", () => false, "Delay client creation until needed")
+            public static Option<string> DelayClientCreationOption { get; } = new Option<string>(
+                "--delayclientcreation", () => false.ToString(), "Delay client creation until needed")
             {
                 IsRequired = false
             };
 
-            public static Option<bool> RunInParallelOption { get; } = new Option<bool>(
-                "--runinparallel", () => true, "Execute your iterations in parallel")
+            public static Option<string> RunInParallelOption { get; } = new Option<string>(
+                "--runinparallel", () => true.ToString(), "Execute your iterations in parallel")
             {
                 IsRequired = false
             };
@@ -177,37 +172,37 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
 
-            public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>(
-                "--iterationmode", () => IterationMode.R, "Defines iteration mode")
+            public static Option<string> IterationModeOption { get; } = new Option<string>(
+                "--string", () => IterationMode.R.ToString(), "Defines iteration mode")
             {
                 IsRequired = false
             };
 
-            public static Option<bool> MaximizeThroughputOption { get; } = new Option<bool>(
-                "--maximizethroughput", () => false, "Maximize test throughput")
+            public static Option<string> MaximizeThroughputOption { get; } = new Option<string>(
+                "--maximizethroughput", () => false.ToString(), "Maximize test throughput")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> RequestCountOption { get; } = new Option<int?>(
+            public static Option<string?> RequestCountOption { get; } = new Option<string?>(
                 "--requestcount", () => null, "Number of requests")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> Duration { get; } = new Option<int?>(
+            public static Option<string?> Duration { get; } = new Option<string?>(
                 "--duration", () => null, "Duration in seconds")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> CoolDownTime { get; } = new Option<int?>(
+            public static Option<string?> CoolDownTime { get; } = new Option<string?>(
                 "--cooldowntime", () => null, "Cooldown time in milliseconds")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> BatchSize { get; } = new Option<int?>(
+            public static Option<string?> BatchSize { get; } = new Option<string?>(
                 "--batchsize", () => null, "Batch size")
             {
                 IsRequired = false
@@ -219,19 +214,19 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
 
-            public static Option<bool> DownloadHtmlEmbeddedResources { get; } = new Option<bool>(
-                "--downloadhtmlembeddedresources", () => false, "Download HTML embedded resources")
+            public static Option<string> DownloadHtmlEmbeddedResources { get; } = new Option<string>(
+                "--downloadhtmlembeddedresources", () => false.ToString(), "Download HTML embedded resources")
             {
                 IsRequired = false
             };
 
-            public static Option<bool> SaveResponse { get; } = new Option<bool>(
-                "--saveresponse", () => false, "Save HTTP response")
+            public static Option<string> SaveResponse { get; } = new Option<string>(
+                "--saveresponse", () => false.ToString(), "Save HTTP response")
             {
                 IsRequired = false
             };
-            public static Option<bool?> SupportH2C { get; } = new Option<bool?>(
-                "--supporth2c", () => false, "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
+            public static Option<string?> SupportH2C { get; } = new Option<string?>(
+                "--supporth2c", () => false.ToString(), "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
             {
                 IsRequired = false
             };
@@ -349,39 +344,39 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> BaseUrlOption { get; } = new Option<string>(
-            "--baseUrl", "Base URL of the target endpoint")
+            "--baseUrl", "Base URL of the target endpostring")
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
             };
 
 
-            public static Option<int> StartupDelayOption { get; } = new Option<int>(
-                "--startupDelay", () => 0, "Add startup (in seconds) delay to your round")
+            public static Option<string> StartupDelayOption { get; } = new Option<string>(
+                "--startupDelay", () => 0.ToString(), "Add startup (in seconds) delay to your round")
             {
                 IsRequired = false
             };
 
-            public static Option<int> NumberOfClientsOption { get; } = new Option<int>(
-                "--numberofclients", () => 1, "Number of clients to perform the test round")
+            public static Option<string> NumberOfClientsOption { get; } = new Option<string>(
+                "--numberofclients", () => 1.ToString(), "Number of clients to perform the test round")
             {
                 IsRequired = true
             };
 
-            public static Option<int> ArrivalDelayOption { get; } = new Option<int>(
-                "--arrivaldelay", () => 0, "Time in milliseconds to wait before a new client arrives")
+            public static Option<string> ArrivalDelayOption { get; } = new Option<string>(
+                "--arrivaldelay", () => 0.ToString(), "Time in milliseconds to wait before a new client arrives")
             {
                 IsRequired = true
             };
 
-            public static Option<bool> DelayClientCreation { get; } = new Option<bool>(
-                "--delayclientcreation", () => false, "Delay client creation until needed")
+            public static Option<string> DelayClientCreation { get; } = new Option<string>(
+                "--delayclientcreation", () => false.ToString(), "Delay client creation until needed")
             {
                 IsRequired = false
             };
 
-            public static Option<bool?> RunInParallel { get; } = new Option<bool?>(
-                "--runinparallel", () => true, "Execute your iterations in parallel")
+            public static Option<string?> RunInParallel { get; } = new Option<string?>(
+                "--runinparallel", () => true.ToString(), "Execute your iterations in parallel")
             {
                 IsRequired = false
             };
@@ -571,8 +566,8 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
 
-            public static Option<bool> MakeGlobal { get; } = new Option<bool>(
-                "--makeGlobal", () => false, "Store the response as a global variable")
+            public static Option<string> MakeGlobal { get; } = new Option<string>(
+                "--makeGlobal", () => false.ToString(), "Store the response as a global variable")
             {
                 IsRequired = false
             };
@@ -622,7 +617,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(UrlOption, "--url");
                 AddCaseInsensitiveAliases(HeaderOption, "--header");
                 AddCaseInsensitiveAliases(PayloadOption, "--payload");
-                AddCaseInsensitiveAliases(IterationModeOption, "--iterationmode");
+                AddCaseInsensitiveAliases(IterationModeOption, "--string");
                 AddCaseInsensitiveAliases(MaximizeThroughputOption, "--maximizethroughput");
                 AddCaseInsensitiveAliases(DownloadHtmlEmbeddedResources, "--downloadhtmlembeddedresources");
                 AddCaseInsensitiveAliases(SaveResponse, "--saveresponse");
@@ -650,41 +645,41 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
 
-            public static Option<IterationMode> IterationModeOption { get; } = new Option<IterationMode>(
-                "--iterationmode", "Defines iteration mode")
+            public static Option<string> IterationModeOption { get; } = new Option<string>(
+                "--string", "Defines iteration mode")
             {
                 IsRequired = true
             };
-            public static Option<int> StartupDelayOption { get; } = new Option<int>(
-                "--startupdelay", () => 0, "Add startup delay to your round")
+            public static Option<string> StartupDelayOption { get; } = new Option<string>(
+                "--startupdelay", () => 0.ToString(), "Add startup delay to your round")
             {
                 IsRequired = false
             };
-            public static Option<int?> RequestCountOption { get; } = new Option<int?>(
+            public static Option<string?> RequestCountOption { get; } = new Option<string?>(
                 "--requestcount", "Number of requests")
             {
                 IsRequired = false
             };
 
-            public static Option<bool> MaximizeThroughputOption { get; } = new Option<bool>(
-                "--maximizethroughput", () => false, "Maximize test throughput")
+            public static Option<string> MaximizeThroughputOption { get; } = new Option<string>(
+                "--maximizethroughput", () => false.ToString(), "Maximize test throughput")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> Duration { get; } = new Option<int?>(
+            public static Option<string?> Duration { get; } = new Option<string?>(
                 "--duration", "Duration in seconds")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> CoolDownTime { get; } = new Option<int?>(
+            public static Option<string?> CoolDownTime { get; } = new Option<string?>(
                 "--cooldowntime", "Cooldown time in milliseconds")
             {
                 IsRequired = false
             };
 
-            public static Option<int?> BatchSize { get; } = new Option<int?>(
+            public static Option<string?> BatchSize { get; } = new Option<string?>(
                 "--batchsize", "Batch size")
             {
                 IsRequired = false
@@ -708,20 +703,20 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
 
-            public static Option<bool> DownloadHtmlEmbeddedResources { get; } = new Option<bool>(
-                "--downloadhtmlembeddedresources", () => false, "Download HTML embedded resources")
+            public static Option<string> DownloadHtmlEmbeddedResources { get; } = new Option<string>(
+                "--downloadhtmlembeddedresources", () => false.ToString(), "Download HTML embedded resources")
             {
                 IsRequired = false
             };
 
-            public static Option<bool> SaveResponse { get; } = new Option<bool>(
-                "--saveresponse", () => false, "Save HTTP response")
+            public static Option<string> SaveResponse { get; } = new Option<string>(
+                "--saveresponse", () => false.ToString(), "Save HTTP response")
             {
                 IsRequired = false
             };
 
-            public static Option<bool?> SupportH2C { get; } = new Option<bool?>(
-                "--supporth2c", () => false, "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
+            public static Option<string?> SupportH2C { get; } = new Option<string?>(
+                "--supporth2c", () => false.ToString(), "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
             {
                 IsRequired = false
             };
@@ -912,7 +907,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<int?> CoolDownRetryTimeInSeconds { get; } = new Option<int?>(
-                "--cooldownretrytimeinseconds", "Cooldown retry interval in seconds")
+                "--cooldownretrytimeinseconds", "Cooldown retry stringerval in seconds")
             {
                 IsRequired = false
             };

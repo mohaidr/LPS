@@ -15,9 +15,9 @@ namespace LPS.UI.Core.Build.Services
 {
     internal class PlanChallengeUserService(bool skipOptionalFields, 
         PlanDto command,
-        IBaseValidator<PlanDto, Plan> validator) : IChallengeUserService<PlanDto, Plan>
+        IBaseValidator<PlanDto> validator) : IChallengeUserService<PlanDto>
     {
-        IBaseValidator<PlanDto, Plan> _validator = validator;
+        IBaseValidator<PlanDto> _validator = validator;
         readonly PlanDto _planDto = command;
         public PlanDto Dto => _planDto;
         public bool SkipOptionalFields => _skipOptionalFields;
@@ -56,8 +56,6 @@ namespace LPS.UI.Core.Build.Services
                 }
                 break;
             }
-
-            _planDto.IsValid = true;
         }
 
         public void ResetOptionalFields()

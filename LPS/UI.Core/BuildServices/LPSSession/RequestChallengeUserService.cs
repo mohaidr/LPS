@@ -7,9 +7,9 @@ using System;
 
 namespace LPS.UI.Core.Build.Services
 {
-    internal class RequestChallengeUserService(bool skipOptionalFields, HttpRequestDto command, string baseUrl, IBaseValidator<HttpRequestDto, HttpRequest> validator) : IChallengeUserService<HttpRequestDto, HttpRequest>
+    internal class RequestChallengeUserService(bool skipOptionalFields, HttpRequestDto command, string baseUrl, IBaseValidator<HttpRequestDto> validator) : IChallengeUserService<HttpRequestDto>
     {
-        readonly IBaseValidator<HttpRequestDto, HttpRequest> _validator = validator;
+        readonly IBaseValidator<HttpRequestDto> _validator = validator;
         public bool SkipOptionalFields => _skipOptionalFields;
         private readonly bool _skipOptionalFields = skipOptionalFields;
         private readonly string _baseUrl= baseUrl;
@@ -52,20 +52,20 @@ namespace LPS.UI.Core.Build.Services
                 if (!_validator.Validate(nameof(Dto.SupportH2C)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.SupportH2C));
-                    Dto.SupportH2C = AnsiConsole.Confirm("Would you like to [green]'Perform'[/] Http2 over cleartext?", false);
+                    Dto.SupportH2C = AnsiConsole.Confirm("Would you like to [green]'Perform'[/] Http2 over cleartext?", false).ToString();
                     continue;
                 }
                 if (!_validator.Validate(nameof(Dto.SaveResponse)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.SaveResponse));
-                    Dto.SaveResponse = AnsiConsole.Confirm("Would you like to [green]'Save'[/] the http responses?", false);
+                    Dto.SaveResponse = AnsiConsole.Confirm("Would you like to [green]'Save'[/] the http responses?", false).ToString();
                     continue;
                 }
 
                 if (!_validator.Validate(nameof(Dto.DownloadHtmlEmbeddedResources)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.DownloadHtmlEmbeddedResources));
-                    Dto.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false);
+                    Dto.DownloadHtmlEmbeddedResources = AnsiConsole.Confirm("If the server returns text/html, would you like to [green]'Download'[/] the html embedded resources?", false).ToString();
                     continue;
                 }
 

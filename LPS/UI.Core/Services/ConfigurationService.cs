@@ -1,13 +1,14 @@
 ﻿using System;
 using System.IO;
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common;
 
 namespace LPS.UI.Core.Services
 {
     public static class ConfigurationService
     {
-        public static T? FetchConfiguration<T>(string configFile)
+        public static T? FetchConfiguration<T>(string configFile, IPlaceholderResolverService placeholderResolverService)
         {
             if (string.IsNullOrWhiteSpace(configFile))
             {

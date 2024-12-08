@@ -10,43 +10,76 @@ using YamlDotNet.Serialization;
 
 namespace LPS.DTOs
 {
-    public class RoundDto : Round.SetupCommand
+    public class RoundDto : IDto<RoundDto>
     {
-        public RoundDto() 
+        public RoundDto()
         {
-            Iterations = [];
-            ReferencedIterations = [];
+            Name = string.Empty;
             BaseUrl = string.Empty;
+            Iterations = new List<HttpIterationDto>();
+            ReferencedIterations = new List<ReferenceIterationDto>();
+            Tags = new List<string>();
         }
-        public override string Name { get; set; }
+
+        // Name of the round
+        public string Name { get; set; }
+
+        // Base URL for the round
         public string BaseUrl { get; set; }
 
-        public List<HttpIterationDto> Iterations { get; set; } // Inline iterations
+        public string StartupDelay { get; set; }
+
+        // Number of clients (can be a variable)
+        public string NumberOfClients { get; set; }
+
+        // Arrival delay (can be a variable)
+        public string ArrivalDelay { get; set; }
+
+        // Inline iterations for this round
+        public List<HttpIterationDto> Iterations { get; set; }
+
+        // Referenced iterations for this round
         [JsonPropertyName("ref")]
         [YamlMember(Alias = "ref")]
-        public List<ReferenceIterationDto> ReferencedIterations { get; set; } // Referenced iterations
+        public List<ReferenceIterationDto> ReferencedIterations { get; set; }
+
+        // Startup delay (can be a variable)
+
+        // Delay client creation until needed (can be a variable)
+        public string DelayClientCreationUntilIsNeeded { get; set; }
+
+        // Run in parallel (can be a variable)
+        public string RunInParallel { get; set; }
+
+        // Tags associated with the round
+        public IList<string> Tags { get; set; }
+
+        // Deep copy method to create a new instance with the same data
         public void DeepCopy(out RoundDto targetDto)
         {
-            targetDto = new RoundDto();
-            // Call base.Clone() and cast it to RoundDto
-            base.Copy(targetDto);
-            targetDto.BaseUrl = BaseUrl;
-            // Clone Iterations list if it's not null
-            #pragma warning disable CS8601 // Possible null reference assignment.
-            targetDto.Iterations = Iterations?.Select(iteration =>
+            targetDto = new RoundDto
             {
-                var copiedIteration = new HttpIterationDto();
-                iteration.DeepCopy(out copiedIteration);
-                return copiedIteration;
-            }).ToList();
-
-            #pragma warning disable CS8601 // Possible null reference assignment.
-            targetDto.ReferencedIterations = ReferencedIterations?.Select(iteration =>
-            {
-                var copiedIteration = new ReferenceIterationDto();
-                iteration.DeepCopy(out copiedIteration);
-                return copiedIteration;
-            }).ToList();
+                Name = this.Name,
+                BaseUrl = this.BaseUrl,
+                StartupDelay = this.StartupDelay,
+                NumberOfClients = this.NumberOfClients,
+                ArrivalDelay = this.ArrivalDelay,
+                DelayClientCreationUntilIsNeeded = this.DelayClientCreationUntilIsNeeded,
+                RunInParallel = this.RunInParallel,
+                Tags = new List<string>(this.Tags),
+                Iterations = this.Iterations?.Select(iteration =>
+                {
+                    var copiedIteration = new HttpIterationDto();
+                    iteration.DeepCopy(out copiedIteration);
+                    return copiedIteration;
+                }).ToList() ?? new List<HttpIterationDto>(),
+                ReferencedIterations = this.ReferencedIterations?.Select(iteration =>
+                {
+                    var copiedIteration = new ReferenceIterationDto();
+                    iteration.DeepCopy(out copiedIteration);
+                    return copiedIteration;
+                }).ToList() ?? new List<ReferenceIterationDto>()
+            };
         }
     }
 

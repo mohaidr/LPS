@@ -10,14 +10,14 @@ using LPS.Infrastructure.Common;
 using Spectre.Console;
 using ValidationResult = FluentValidation.Results.ValidationResult;
 using System;
+using LPS.DTOs;
 
 namespace LPS.UI.Core
 {
-    public abstract class CommandBaseValidator<TCommand, TEntity> : AbstractValidator<TCommand>, IBaseValidator<TCommand, TEntity>
-        where TCommand : IValidCommand<TEntity>
-        where TEntity : IDomainEntity
+    public abstract class CommandBaseValidator<TDto> : AbstractValidator<TDto>, IBaseValidator<TDto>
+        where TDto : IDto<TDto>
     {
-        public abstract TCommand Dto { get; }
+        public abstract TDto Dto { get; }
 
         ValidationResult _validationResults;
 
@@ -31,16 +31,12 @@ namespace LPS.UI.Core
         public bool Validate(string property)
         {
             _validationResults = Validate(Dto);
-            Dto.IsValid = _validationResults.IsValid;
-            Dto.ValidationErrors = ValidationErrors.DeepClone(); // DeepClone to prevent any modification on the validation errors one assigned to Command.ValidationErrors
             return !_validationResults.Errors.Any(error => error.PropertyName == property);
         }
 
         public void ValidateAndThrow(string property)
         {
             _validationResults = Validate(Dto);
-            Dto.IsValid = _validationResults.IsValid;
-            Dto.ValidationErrors = ValidationErrors.DeepClone();
             if (!_validationResults.Errors.Any(error => error.PropertyName == property))
             {
                 StringBuilder errorMessage = new StringBuilder("Validation failed. Details:\n");

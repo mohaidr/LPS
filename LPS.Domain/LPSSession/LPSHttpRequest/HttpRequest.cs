@@ -17,26 +17,31 @@ namespace LPS.Domain
     {
 
         private IClientService<HttpRequest, HttpResponse> _httpClientService;
+        IPlaceholderResolverService _placeholderResolverService;
         private HttpRequest()
         {
         }
         private HttpRequest(ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider, 
+            IPlaceholderResolverService placeholderResolverService)
         {
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _placeholderResolverService = placeholderResolverService;
         }
 
         public HttpRequest(
             HttpRequest.SetupCommand command, 
             ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IPlaceholderResolverService placeholderResolverService)
         {
             ArgumentNullException.ThrowIfNull(command);
             HttpHeaders = new Dictionary<string, string>();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _placeholderResolverService = placeholderResolverService;
             this.Setup(command);
         }
 

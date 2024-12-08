@@ -70,18 +70,11 @@ namespace LPS.UI.Core.Host
             else
             {
                 PlanDto planDto = new();
-
                 var manualBuild = new ManualBuild(new PlanValidator(planDto), _logger, _runtimeOperationIdProvider, _placeholderResolverService);
-                var plan = manualBuild.Build(planDto);
+                var plan = manualBuild.Build(ref planDto);
                 SavePlanToDisk(planDto);
-                bool runTest = AnsiConsole.Confirm("Would you like to run your test now?");
-                if (runTest)
-                {
-                    var lpsManager = new LPSManager(_logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _appSettings.DashboardConfigurationOptions, _cts);
-                    await lpsManager.RunAsync(plan);
-                }
 
-                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run <config>[/] to execute the Plan[/]");
+                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run {planDto}.yaml[/] to execute the Plan[/]");
             }
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             await _logger.FlushAsync();

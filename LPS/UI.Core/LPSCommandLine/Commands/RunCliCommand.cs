@@ -1,48 +1,48 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
-using LPS.Domain.Domain.Common.Interfaces;
+using LPS.DTOs;
 using LPS.Infrastructure.Common;
+using LPS.Infrastructure.LPSClients.GlobalVariableManager;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.Monitoring;
 using LPS.UI.Common;
-using LPS.UI.Common.Options;
+using LPS.UI.Core.Services;
+using LPS.UI.Core.LPSValidators;
 using Microsoft.Extensions.Options;
 using System;
 using System.CommandLine;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using YamlDotNet.Serialization.NamingConventions;
-using YamlDotNet.Serialization;
-using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
-using LPS.UI.Core.Services;
-using LPS.DTOs;
-using LPS.Domain.LPSFlow.LPSHandlers;
-using LPS.Infrastructure.LPSClients.GlobalVariableManager;
-using LPS.Infrastructure.LPSClients.SessionManager;
-using LPS.Domain.Common;
-using LPS.UI.Core.LPSValidators;
 using FluentValidation;
+using AutoMapper;
+using LPS.Domain.Common;
+using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.UI.Common.Options;
+using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
     internal class RunCliCommand : ICliCommand
     {
-        readonly Command _rootLpsCliCommand;
-        readonly ILogger _logger;
-        readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
-        readonly IClientConfiguration<HttpRequest> _config;
-        readonly IVariableManager _variableManager;
-        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        readonly IWatchdog _watchdog;
-        readonly IPlaceholderResolverService _placeholderResolverService;
-        Command _runCommand;
-        public Command Command => _runCommand;
-        readonly IMetricsDataMonitor _lPSMonitoringEnroller;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
-        readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
-        readonly CancellationTokenSource _cts;
+        private readonly Command _rootLpsCliCommand;
+        private readonly ILogger _logger;
+        private readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
+        private readonly IClientConfiguration<HttpRequest> _config;
+        private readonly IVariableManager _variableManager;
+        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private readonly IWatchdog _watchdog;
+        private readonly IPlaceholderResolverService _placeholderResolverService;
+        private readonly IMetricsDataMonitor _lpsMonitoringEnroller;
+        private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        private readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
+        private readonly CancellationTokenSource _cts;
+        private readonly IMapper _mapper; // AutoMapper instance
+        private Command _runCommand;
 
-        #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
+        public Command Command => _runCommand;
+
         internal RunCliCommand(
             Command rootCLICommandLine,
             ILogger logger,
@@ -51,11 +51,12 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IWatchdog watchdog,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
-            IMetricsDataMonitor lPSMonitoringEnroller,
+            IMetricsDataMonitor lpsMonitoringEnroller,
             IOptions<DashboardConfigurationOptions> dashboardConfig,
+            IMapper mapper,
             IVariableManager variableManager,
             IPlaceholderResolverService placeholderResolverService,
-            CancellationTokenSource cts)
+            CancellationTokenSource cts) // Injected AutoMapper
         {
             _rootLpsCliCommand = rootCLICommandLine;
             _logger = logger;
@@ -64,22 +65,20 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _watchdog = watchdog;
             _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
-            _lPSMonitoringEnroller = lPSMonitoringEnroller;
+            _lpsMonitoringEnroller = lpsMonitoringEnroller;
             _dashboardConfig = dashboardConfig;
             _cts = cts;
             _variableManager = variableManager;
             _placeholderResolverService = placeholderResolverService;
+            _mapper = mapper; // Assign mapper
             Setup();
         }
 
         private void Setup()
         {
             _runCommand = new Command("run", "Run existing test");
-
             CommandLineOptions.AddOptionsToCommand(_runCommand, typeof(CommandLineOptions.LPSRunCommandOptions));
-            // Add the positional argument directly to _runCommand
             _runCommand.AddArgument(LPSRunCommandOptions.ConfigFileArgument);
-
             _rootLpsCliCommand.AddCommand(_runCommand);
         }
 
@@ -89,144 +88,96 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             {
                 try
                 {
-                    var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile);
-                    var plan = new Plan(planDto, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+                    var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService);
+                    var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
+                    var plan = new Plan(planCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
                     if (plan.IsValid)
                     {
                         var variableValidator = new VariableValidator();
                         var environmentValidator = new EnvironmentValidator();
 
-                        // Add global variables
-                        if (planDto?.Variables != null)
+                        // Global Variables
+                        foreach (var variableDto in planDto.Variables)
                         {
-                            foreach (var variable in planDto.Variables)
-                            {
-                                variableValidator.ValidateAndThrow(variable);
+                            variableValidator.ValidateAndThrow(variableDto);
+                            var variableHolder = await BuildVariableHolder(variableDto, true, cancellationToken);
+                            _variableManager.AddVariableAsync(variableDto.Name, variableHolder, cancellationToken).Wait();
+                        }
 
-                                MimeType @as = MimeTypeExtensions.FromKeyword(variable.As);
-                                var builder = new VariableHolder.Builder(_placeholderResolverService);
-                                var variableHolder = await builder
-                                    .WithFormat(@as)
-                                    .WithPattern(variable.Regex)
-                                    .WithRawValue(variable.Value)
-                                    .SetGlobal(true)
-                                    .BuildAsync(cancellationToken);
-                                _variableManager.AddVariableAsync(variable.Name, variableHolder, cancellationToken).Wait();
+                        // Environment-Specific Variables
+                        foreach (var environmentName in environments)
+                        {
+                            var environmentDto = planDto.Environments
+                                .FirstOrDefault(env => env.Name.Equals(environmentName, StringComparison.OrdinalIgnoreCase));
+
+                            if (environmentDto != null)
+                            {
+                                environmentValidator.ValidateAndThrow(environmentDto);
+
+                                foreach (var variableDto in environmentDto.Variables)
+                                {
+                                    variableValidator.ValidateAndThrow(variableDto);
+                                    var variableHolder = await BuildVariableHolder(variableDto, false, cancellationToken);
+                                    _variableManager.AddVariableAsync(variableDto.Name, variableHolder, cancellationToken).Wait();
+                                }
+                            }
+                            else
+                            {
+                                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Environment '{environmentName}' not found.", LPSLoggingLevel.Warning);
                             }
                         }
 
-                        // Add environment-specific variables
-                        if (planDto?.Environments != null)
+                        // Rounds and Iterations
+                        foreach (var roundDto in planDto.Rounds.Where(round =>
+                            roundNames.Count == 0 && tags.Count == 0 ||
+                            roundNames.Contains(round.Name, StringComparer.OrdinalIgnoreCase) ||
+                            round.Tags.Any(tag => tags.Contains(tag, StringComparer.OrdinalIgnoreCase))))
                         {
-                            foreach (var environmentName in environments)
-                            {
-                                var environment = planDto.Environments
-                                    .FirstOrDefault(env => env.Name.Equals(environmentName, StringComparison.OrdinalIgnoreCase));
+                            var roundCommand = _mapper.Map<Round.SetupCommand>(roundDto);
+                            var roundEntity = new Round(roundCommand, _logger, _runtimeOperationIdProvider);
 
-                                if (environment != null)
-                                {
-                                    environmentValidator.ValidateAndThrow(environment);
-
-                                    foreach (var variable in environment.Variables)
-                                    {
-                                        variableValidator.ValidateAndThrow(variable);
-
-                                        MimeType @as = MimeTypeExtensions.FromKeyword(variable.As);
-                                        var builder = new VariableHolder.Builder(_placeholderResolverService);
-                                        var variableHolder = await builder
-                                            .WithFormat(@as)
-                                            .WithPattern(variable.Regex)
-                                            .WithRawValue(variable.Value)
-                                            .SetGlobal(false) // Environment-specific
-                                            .BuildAsync(cancellationToken);
-
-                                        _variableManager.AddVariableAsync(variable.Name, variableHolder, cancellationToken).Wait();
-                                    }
-                                }
-                                else
-                                {
-                                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"Environment '{environmentName}' not found.", LPSLoggingLevel.Warning);
-                                }
-                            }
-                        }
-
-                        foreach (var roundDto in planDto.Rounds.Where(
-                            round => (roundNames.Count == 0 && tags.Count == 0) || 
-                            (roundNames.Contains(round.Name, StringComparer.OrdinalIgnoreCase) || round.Tags.Any(tag => tags.Contains(tag, StringComparer.OrdinalIgnoreCase)))))                        
-                        {
-                            var roundEntity = new Round(roundDto, _logger, _runtimeOperationIdProvider);
                             if (roundEntity.IsValid)
                             {
                                 foreach (var iterationDto in roundDto.Iterations)
                                 {
-                                    var iterationEntity = new HttpIteration(iterationDto, _logger, _runtimeOperationIdProvider);
+                                    if (iterationDto.HttpRequest?.URL != null && roundDto?.BaseUrl != null && !iterationDto.HttpRequest.URL.StartsWith("http://") && !iterationDto.HttpRequest.URL.StartsWith("https://"))
+                                    {
+                                        if (iterationDto.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
+                                        {
+                                            throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
+                                        }
+                                        iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
+                                    }
+                                    var iterationCommand = _mapper.Map<HttpIteration.SetupCommand>(iterationDto);
+
+                                    var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
+
                                     if (iterationEntity.IsValid)
                                     {
-                                        if (iterationDto.HttpRequest?.URL !=null && roundDto?.BaseUrl != null && !iterationDto.HttpRequest.URL.StartsWith("http://") && !iterationDto.HttpRequest.URL.StartsWith("https://"))
+                                        var requestCommand = _mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest);
+                                        var requestEntity = new HttpRequest(requestCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+
+                                        if (requestEntity.IsValid)
                                         {
-                                            if (iterationDto.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
+                                            if (iterationDto.HttpRequest.Capture != null)
                                             {
-                                                throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
+                                                var captureCommand = _mapper.Map<CaptureHandler.SetupCommand>(iterationDto.HttpRequest.Capture);
+                                                var captureEntity = new CaptureHandler(captureCommand, _logger, _runtimeOperationIdProvider);
+                                                if (captureEntity.IsValid)
+                                                    requestEntity.SetCapture(captureEntity);
                                             }
-                                            iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
-                                        }
-                                        var request = new HttpRequest(iterationDto.HttpRequest, _logger, _runtimeOperationIdProvider);
-                                        if (request.IsValid)
-                                        {
-                                            if (iterationDto?.HttpRequest?.Capture != null)
-                                            {
-                                                var capture = new CaptureHandler(iterationDto.HttpRequest.Capture, _logger, _runtimeOperationIdProvider);
-                                                if (capture.IsValid)
-                                                {
-                                                    request.SetCapture(capture);
-                                                }
-                                            }
-                                            iterationEntity.SetHttpRequest(request);
+
+                                            iterationEntity.SetHttpRequest(requestEntity);
                                             roundEntity.AddIteration(iterationEntity);
                                         }
-                                    }
-                                }
-
-                                foreach (var referencedIteration in roundDto.ReferencedIterations)
-                                {
-                                    // Find the referenced iteration by name in the global iterations list
-                                    var globalIteration = planDto.Iterations.FirstOrDefault(i => i.Name.Equals(referencedIteration.Name, StringComparison.OrdinalIgnoreCase));
-                                    if (globalIteration != null)
-                                    {
-                                        if (globalIteration.HttpRequest?.URL != null && roundDto?.BaseUrl != null && !globalIteration.HttpRequest.URL.StartsWith("http://") && !globalIteration.HttpRequest.URL.StartsWith("https://"))
-                                        {
-                                            if (globalIteration.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
-                                            {
-                                                throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
-                                            }
-                                            globalIteration.HttpRequest.URL = $"{roundDto.BaseUrl}{globalIteration.HttpRequest.URL}";
-                                        }
-                                        var referencedIterationEntity = new HttpIteration(globalIteration, _logger, _runtimeOperationIdProvider);
-                                        if (referencedIterationEntity.IsValid)
-                                        {
-                                            var request = new HttpRequest(globalIteration.HttpRequest, _logger, _runtimeOperationIdProvider);
-                                            if (request.IsValid)
-                                            {
-                                                if (globalIteration?.HttpRequest?.Capture != null)
-                                                {
-                                                    var capture = new CaptureHandler(globalIteration.HttpRequest.Capture, _logger, _runtimeOperationIdProvider);
-                                                    if (capture.IsValid)
-                                                        request.SetCapture(capture);
-                                                }
-                                                referencedIterationEntity.SetHttpRequest(request);
-                                                roundEntity.AddIteration(referencedIterationEntity);
-                                            }
-                                        }
-                                    }
-                                    else
-                                    {
-                                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"Referenced iteration '{referencedIteration.Name}' not found.", LPSLoggingLevel.Warning);
                                     }
                                 }
                                 plan.AddRound(roundEntity);
                             }
                         }
                     }
+
+                    // Run the Plan
                     if (plan.GetReadOnlyRounds().Any())
                     {
                         await new LPSManager(
@@ -236,12 +187,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             _watchdog,
                             _runtimeOperationIdProvider,
                             _httpIterationExecutionCommandStatusMonitor,
-                            _lPSMonitoringEnroller,
+                            _lpsMonitoringEnroller,
                             _dashboardConfig,
                             _cts
                         ).RunAsync(plan);
                     }
-                    else {
+                    else
+                    {
                         _logger.Log(_runtimeOperationIdProvider.OperationId, "No rounds to execute", LPSLoggingLevel.Information);
                     }
                 }
@@ -249,11 +201,23 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
-            }, 
+            },
             LPSRunCommandOptions.ConfigFileArgument,
             LPSRunCommandOptions.RoundNameOption,
             LPSRunCommandOptions.TagOption,
             LPSRunCommandOptions.EnvironmentOption);
+        }
+
+        private async Task<VariableHolder> BuildVariableHolder(VariableDto variableDto, bool isGlobal, CancellationToken cancellationToken)
+        {
+            var mimeType = MimeTypeExtensions.FromKeyword(variableDto.As);
+            var builder = new VariableHolder.Builder(_placeholderResolverService);
+            return await builder
+                .WithFormat(mimeType)
+                .WithPattern(variableDto.Regex)
+                .WithRawValue(variableDto.Value)
+                .SetGlobal(isGlobal)
+                .BuildAsync(cancellationToken);
         }
     }
 }

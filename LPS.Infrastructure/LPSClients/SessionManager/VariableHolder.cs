@@ -167,7 +167,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
                 // Resolve placeholder if the value is a supported method
                 if (!string.IsNullOrEmpty(_variableHolder.Value) && (IPlaceholderResolverService.IsSupportedPlaceHolderMethod(_variableHolder.Value) || _variableHolder.Value.StartsWith("$")))
                 {
-                    _variableHolder.Value = await _placeholderResolverService.ResolvePlaceholdersAsync(
+                    _variableHolder.Value = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(
                         _variableHolder.Value, sessionId: null, token); // Resolve placeholder value
                 }
 

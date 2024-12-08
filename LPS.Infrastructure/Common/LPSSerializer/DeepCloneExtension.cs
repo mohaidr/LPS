@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
+using System.Text.Json;
 
 namespace LPS.Infrastructure.Common
 {
@@ -60,8 +62,24 @@ namespace LPS.Infrastructure.Common
 
         private static TValue DeepCloneByJson<TValue>(TValue obj)
         {
-            string jsonString = SerializationHelper.Serialize(obj);
-            return SerializationHelper.Deserialize<TValue>(jsonString);
+            if (obj == null)
+                throw new ArgumentNullException(nameof(obj));
+
+            // Serialize the object to JSON
+            string jsonString = JsonSerializer.Serialize(obj, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true,
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false, // Writing indentation isn't necessary for cloning
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
+            });
+
+            // Deserialize the JSON back to a new instance of the object
+            return JsonSerializer.Deserialize<TValue>(jsonString, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
         }
+
     }
 }

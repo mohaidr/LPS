@@ -16,50 +16,50 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
     {
         private Option<string> _nameOption;
         private Option<string> _roundNameOption;
-        private Option<int> _startupDelayOption;
+        private Option<string> _startupDelayOption;
         private Option<string> _httpIterationNameOption;
-        private Option<int?> _requestCountOption;
-        private Option<bool> _maximizeThroughputOption;
-        private Option<int?> _duration;
-        private Option<int?> _coolDownTime;
-        private Option<int?> _batchSize;
+        private Option<string?> _requestCountOption;
+        private Option<string> _maximizeThroughputOption;
+        private Option<string?> _duration;
+        private Option<string?> _coolDownTime;
+        private Option<string?> _batchSize;
         private Option<string> _httpMethodOption;
-        private Option<bool> _downloadHtmlEmbeddedResourcesOption;
-        private Option<bool> _saveResponseOption;
-        private Option<bool?> _supportH2C;
+        private Option<string> _downloadHtmlEmbeddedResourcesOption;
+        private Option<string> _saveResponseOption;
+        private Option<string?> _supportH2C;
         private Option<string> _httpversionOption;
         private Option<string> _urlOption;
         private Option<IList<string>> _headerOption;
         private Option<string> _payloadOption;
-        Option<IterationMode> _iterationModeOption;
-        private Option<int> _numberOfClientsOption;
-        private Option<int?> _arrivalDelayOption;
-        private Option<bool> _delayClientCreationOption;
-        private Option<bool> _runInParallerOption;
+        readonly Option<string> _iterationModeOption;
+        private Option<string> _numberOfClientsOption;
+        private Option<string?> _arrivalDelayOption;
+        private Option<string> _delayClientCreationOption;
+        private Option<string> _runInParallerOption;
 
         public CommandBinder(
             Option<string>? nameOption = null,
             Option<string>? roundNameOption = null,
-            Option<int>? startupDelayOption = null,
-            Option<int>? numberOfClientsOption = null,
-            Option<int?>? arrivalDelayOption = null,
-            Option<bool>? delayClientCreationOption = null,
-            Option<bool>? runInParallerOption = null,
+            Option<string>? startupDelayOption = null,
+            Option<string>? numberOfClientsOption = null,
+            Option<string?>? arrivalDelayOption = null,
+            Option<string>? delayClientCreationOption = null,
+            Option<string>? runInParallerOption = null,
             Option<string>? httpIterationNameOption = null,
-            Option<int?>? requestCountOption = null,
-            Option<IterationMode>? iterationModeOption = null,
-            Option<int?>? duratiion = null,
-            Option<int?>? coolDownTime = null,
-            Option<bool>? maximizeThroughput = null,
-            Option<int?>? batchSizeOption = null,
+            Option<string?>? requestCountOption = null,
+            Option<string>? iterationModeOption = null,
+            Option<string?>? duratiion = null,
+            Option<string?>? coolDownTime = null,
+            Option<string>? maximizeThroughput = null,
+            Option<string?>? batchSizeOption = null,
             Option<string>? httpMethodOption = null,
             Option<string>? httpversionOption = null,
             Option<string>? urlOption = null,
             Option<IList<string>>? headerOption = null,
             Option<string>? payloadOption = null,
-            Option<bool>? downloadHtmlEmbeddedResourcesOption = null,
-            Option<bool>? saveResponseOption = null,
-            Option<bool?>? supportH2C = null)
+            Option<string>? downloadHtmlEmbeddedResourcesOption = null,
+            Option<string>? saveResponseOption = null,
+            Option<string?>? supportH2C = null)
         {
             _nameOption = nameOption ?? CommandLineOptions.LPSCommandOptions.PlanNameOption;
             _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.RoundNameOption;
@@ -87,6 +87,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 
         protected override PlanDto GetBoundValue(BindingContext bindingContext)
         {
+            #pragma warning disable CS8601 // Possible null reference assignment.
+            #pragma warning disable CS8604 // Possible null reference argument.
             return new PlanDto()
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
@@ -127,6 +129,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                     } 
                 }
             };
+            #pragma warning restore CS8604 // Possible null reference argument.
+            #pragma warning restore CS8601 // Possible null reference assignment.
         }
     }
 }

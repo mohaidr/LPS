@@ -20,13 +20,14 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         public Command Command => _roundCommand;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-
+        IPlaceholderResolverService _placeholderResolverService;
         #pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
-        internal RoundCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        internal RoundCliCommand(Command rootLpsCliCommand, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IPlaceholderResolverService placeholderResolverService)
         {
             _rootCliCommand = rootLpsCliCommand;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _placeholderResolverService = placeholderResolverService;
             Setup();
         }
 
@@ -55,7 +56,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     }
                     else
                     {
-                        PlanDto planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile) ?? new PlanDto() { Name = "Default" };
+                        PlanDto planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService) ?? new PlanDto() { Name = "Default" };
                         var selectedRound = planDto?.Rounds.FirstOrDefault(r => r.Name.Equals(round.Name, StringComparison.OrdinalIgnoreCase));
                         if (selectedRound != null)
                         {

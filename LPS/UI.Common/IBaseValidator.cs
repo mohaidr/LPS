@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.DTOs;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
@@ -6,9 +7,9 @@ using System.Text;
 
 namespace LPS.UI.Common
 {
-    internal interface IBaseValidator<TCommand, TEntity> where TCommand : IValidCommand<TEntity> where TEntity : IDomainEntity
+    internal interface IBaseValidator<TDto> where TDto : IDto<TDto>
     {
-        TCommand Dto { get;}
+        TDto Dto { get;}
         bool Validate (string ptoprtty);
         void ValidateAndThrow(string property);
         public void PrintValidationErrors(string property);
