@@ -74,7 +74,7 @@ namespace LPS.UI.Core.Host
                 var plan = manualBuild.Build(ref planDto);
                 SavePlanToDisk(planDto);
 
-                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run {planDto}.yaml[/] to execute the Plan[/]");
+                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run {planDto.Name}.yaml[/] to execute the Plan[/]");
             }
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             await _logger.FlushAsync();

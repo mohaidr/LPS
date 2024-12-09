@@ -63,8 +63,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 {
                     PlanDto planDto = new() { Name = name };
                     ValidationResult results;
-                    var roundValidator = new PlanValidator(planDto);
-                    results = roundValidator.Validate();
+                    var planValidator = new PlanValidator(planDto);
+                    results = planValidator.Validate();
                     if (!results.IsValid)
                     {
                         results.PrintValidationErrors();

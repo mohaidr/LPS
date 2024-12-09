@@ -103,7 +103,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         var plan = new Plan(_mapper.Map<Plan.SetupCommand>(planDto), _logger, _runtimeOperationIdProvider, _placeholdersResolverService);
                         var testRound = new Round(_mapper.Map<Round.SetupCommand>(roundDto), _logger, _runtimeOperationIdProvider);
                         var httpIteration = new HttpIteration(_mapper.Map<HttpIteration.SetupCommand>(iterationDto), _logger, _runtimeOperationIdProvider);
-                        var request =  new HttpRequest(_mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest), _logger, _runtimeOperationIdProvider, _placeholdersResolverService);
+                        var request =  new HttpRequest(_mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest), _logger, _runtimeOperationIdProvider);
 
                         // Establish Relationships
                         httpIteration.SetHttpRequest(request);

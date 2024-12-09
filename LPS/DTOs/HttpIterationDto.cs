@@ -61,17 +61,4 @@ namespace LPS.DTOs
             targetDto.HttpRequest = copiedHttpRequest;
         }
     }
-
-    public class ReferenceIterationDto
-    {
-        public string Name { get; set; }
-        public void DeepCopy(out ReferenceIterationDto targetDto)
-        {
-            targetDto = new ReferenceIterationDto
-            {
-                // Perform a shallow copy of the ReferenceIterationDto, as it has only a single string property.
-                Name = this.Name
-            };
-        }
-    }
 }

@@ -18,7 +18,7 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                ResetOptionalFields();
+                ForceOptionalFields();
             }
             AnsiConsole.MarkupLine("[underline bold blue]Add 'HTTP Iteration' to your round:[/]");
             while (true)
@@ -58,7 +58,6 @@ namespace LPS.UI.Core.Build.Services
                     continue;
                 }
 
-
                 if (!_validator.Validate(nameof(Dto.RequestCount)))
                 {
                     _validator.PrintValidationErrors(nameof(Dto.RequestCount));
@@ -93,12 +92,12 @@ namespace LPS.UI.Core.Build.Services
             requestChallengeUserService.Challenge();
         }
 
-        public void ResetOptionalFields()
+        public void ForceOptionalFields()
         {
             if (!_skipOptionalFields)
             {
-                _iterationDto.StartupDelay = 0.ToString();
-                _iterationDto.MaximizeThroughput = null;
+                _iterationDto.StartupDelay = "-1";
+                _iterationDto.MaximizeThroughput = "-1";
             }
         }
     }

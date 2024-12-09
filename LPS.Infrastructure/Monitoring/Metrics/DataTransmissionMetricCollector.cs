@@ -64,8 +64,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             IsStopped = true;
             try
             {
-                _dataTransmissionWatch.Stop();
-                _timer.Dispose();
+                _dataTransmissionWatch?.Stop();
+                _timer?.Dispose();
             }
             finally { }
             _logger.LogAsync("Stop", "DataTransmissionMetricCollector stopped.", LPSLoggingLevel.Verbose).ConfigureAwait(false);

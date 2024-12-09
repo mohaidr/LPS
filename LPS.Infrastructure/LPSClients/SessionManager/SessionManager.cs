@@ -27,7 +27,6 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
         public async Task<IVariableHolder?> GetResponseAsync(string sessionId, string variableName, CancellationToken token)
         {
-
             if (!string.IsNullOrEmpty(sessionId) && _sessions.TryGetValue(sessionId, out var session))
                 return session.GetResponse(variableName);
 

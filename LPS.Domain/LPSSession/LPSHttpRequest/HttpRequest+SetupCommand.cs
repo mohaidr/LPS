@@ -27,7 +27,7 @@ namespace LPS.Domain
                 HttpVersion = "2.0";
                 DownloadHtmlEmbeddedResources = false;
                 SaveResponse = false;
-                HttpHeaders = new Dictionary<string, string>();
+                HttpHeaders = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             [JsonIgnore]
@@ -93,7 +93,7 @@ namespace LPS.Domain
             var requestSetUpCommand = new Request.SetupCommand() { Id = command.Id };
             base.Setup(requestSetUpCommand);
             //TODO: DeepCopy and then send the copy item instead of the original command for further protection 
-            var validator = new Validator(this, command, false, _httpClientService, _placeholderResolverService, _logger, _runtimeOperationIdProvider);
+            var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && requestSetUpCommand.IsValid)
             {
                 this.HttpMethod = command.HttpMethod;
@@ -123,7 +123,7 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            HttpRequest clone = new(_logger, _runtimeOperationIdProvider, _placeholderResolverService);
+            HttpRequest clone = new(_logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 clone.Id = this.Id;

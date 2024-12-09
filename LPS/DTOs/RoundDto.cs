@@ -17,7 +17,7 @@ namespace LPS.DTOs
             Name = string.Empty;
             BaseUrl = string.Empty;
             Iterations = new List<HttpIterationDto>();
-            ReferencedIterations = new List<ReferenceIterationDto>();
+            ReferencedIterations = new List<string>();
             Tags = new List<string>();
         }
 
@@ -41,7 +41,7 @@ namespace LPS.DTOs
         // Referenced iterations for this round
         [JsonPropertyName("ref")]
         [YamlMember(Alias = "ref")]
-        public List<ReferenceIterationDto> ReferencedIterations { get; set; }
+        public List<string> ReferencedIterations { get; set; }
 
         // Startup delay (can be a variable)
 
@@ -73,12 +73,7 @@ namespace LPS.DTOs
                     iteration.DeepCopy(out copiedIteration);
                     return copiedIteration;
                 }).ToList() ?? new List<HttpIterationDto>(),
-                ReferencedIterations = this.ReferencedIterations?.Select(iteration =>
-                {
-                    var copiedIteration = new ReferenceIterationDto();
-                    iteration.DeepCopy(out copiedIteration);
-                    return copiedIteration;
-                }).ToList() ?? new List<ReferenceIterationDto>()
+                ReferencedIterations = this.ReferencedIterations?.ToList() ?? new List<string>()
             };
         }
     }

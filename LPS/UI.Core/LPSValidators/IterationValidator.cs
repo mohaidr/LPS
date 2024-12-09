@@ -13,7 +13,7 @@ using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class IterationValidator : CommandBaseValidator<HttpIterationDto>
+    internal partial class IterationValidator : CommandBaseValidator<HttpIterationDto>
     {
         readonly HttpIterationDto _iterationDto;
         public IterationValidator(HttpIterationDto iterationDto)
@@ -30,7 +30,7 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(name =>
                 {
                     // Check if the name matches the regex or starts with a placeholder
-                    return name.StartsWith("$") || System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-zA-Z0-9 _.-]+$");
+                    return (!string.IsNullOrEmpty(name) && name.StartsWith("$")) || NameRegex().IsMatch(name ?? string.Empty);
                 })
                 .WithMessage("The 'Name' must either start with '$' (for placeholders) or match the pattern: only alphanumeric characters, spaces, underscores, periods, and dashes are allowed")
                 .Length(1, 60)
@@ -38,13 +38,11 @@ namespace LPS.UI.Core.LPSValidators
 
 
             RuleFor(dto => dto.StartupDelay)
-                .Must(StartupDelay =>
+                .Must(startupDelay =>
                 {
-
-                    int.TryParse(StartupDelay, out int parsedValue);
-
-                    return parsedValue > 0 || StartupDelay.StartsWith("$");
-
+                    return (int.TryParse(startupDelay, out int parsedValue) && parsedValue >= 0) 
+                    || string.IsNullOrEmpty(startupDelay) 
+                    || startupDelay.StartsWith("$");
                 }).
                 WithMessage("The 'StartupDelay' must be greater than or equal to 0 or a placeholder variable");
 
@@ -52,7 +50,7 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(mode =>
                 {
                     // Check if the mode starts with `$` (indicating a placeholder)
-                    if (mode.StartsWith("$"))
+                    if (!string.IsNullOrEmpty(mode) && mode.StartsWith("$"))
                         return true;
 
                     // Attempt to parse the mode as an IterationMode enum value
@@ -64,17 +62,16 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(dto => dto.MaximizeThroughput)
                  .Must(maximizeThroughput =>
                  {
-                     return bool.TryParse(maximizeThroughput, out _) || maximizeThroughput.StartsWith("$");
+                     return bool.TryParse(maximizeThroughput, out _) || string.IsNullOrEmpty(maximizeThroughput) || maximizeThroughput.StartsWith("$");
                  })
                  .WithMessage("The 'MaximizeThroughput' must be a valid boolean");
-
 
 
             RuleFor(dto => dto.RequestCount)
                 .Must(requestCount =>
                 {
                     // Check if the value is a valid integer or a placeholder
-                    return int.TryParse(requestCount, out int parsedValue) && parsedValue > 0 || requestCount.StartsWith("$");
+                    return (int.TryParse(requestCount, out int parsedValue) && parsedValue > 0) || (!string.IsNullOrEmpty(requestCount) && requestCount.StartsWith("$"));
                 })
                 .WithMessage("The 'Request Count' must be a valid positive integer or a placeholder")
                 .When(dto => dto.Mode == IterationMode.CRB.ToString() || dto.Mode == IterationMode.R.ToString()) // Mode is a string and must match IterationMode enum values
@@ -87,7 +84,7 @@ namespace LPS.UI.Core.LPSValidators
                 .Must((dto, requestCount) =>
                 {
                     // Compare RequestCount and BatchSize when both are valid integers
-                    if (requestCount.StartsWith("$") || dto.BatchSize.StartsWith("$"))
+                    if ((!string.IsNullOrEmpty(requestCount) && requestCount.StartsWith("$")) || (!string.IsNullOrEmpty(dto.BatchSize) && dto.BatchSize.StartsWith("$")))
                         return true;
 
                     if (int.TryParse(requestCount, out int parsedRequestCount) &&
@@ -105,22 +102,20 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(duration =>
                 {
                     // Check if the value is a valid integer or a placeholder
-                    return int.TryParse(duration, out int parsedValue) && parsedValue > 0 || duration.StartsWith("$");
+                    return (int.TryParse(duration, out int parsedValue) && parsedValue > 0) || (!string.IsNullOrEmpty(duration) && duration.StartsWith("$"));
                 })
                 .WithMessage("The 'Duration' must be a valid positive integer or a placeholder")
                 .When(dto => dto.Mode == IterationMode.D.ToString() || dto.Mode == IterationMode.DCB.ToString())
-
                 .Must(duration =>
                 {
                     // Ensure the value is null or a placeholder when the mode does not require Duration
                     return duration == null || duration.StartsWith("$");
                 })
                 .When(dto => dto.Mode != IterationMode.D.ToString() && dto.Mode != IterationMode.DCB.ToString(), ApplyConditionTo.CurrentValidator)
-
                 .Must((dto, duration) =>
                 {
                     // Compare Duration and CoolDownTime when both are valid integers
-                    if (duration.StartsWith("$") || dto.CoolDownTime.StartsWith("$"))
+                    if ((!string.IsNullOrEmpty(duration) && duration.StartsWith("$")) || (!string.IsNullOrEmpty(dto.CoolDownTime) && dto.CoolDownTime.StartsWith("$")))
                         return true;
 
                     if (int.TryParse(duration, out int parsedDuration) &&
@@ -138,22 +133,20 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(batchSize =>
                 {
                     // Check if the value is a valid integer or a placeholder
-                    return int.TryParse(batchSize, out int parsedValue) && parsedValue > 0 || batchSize.StartsWith("$");
+                    return (int.TryParse(batchSize, out int parsedValue) && parsedValue > 0) || (!string.IsNullOrEmpty(batchSize) && batchSize.StartsWith("$"));
                 })
                 .WithMessage("The 'Batch Size' must be a valid positive integer or a placeholder")
                 .When(dto => dto.Mode == IterationMode.DCB.ToString() || dto.Mode == IterationMode.CRB.ToString() || dto.Mode == IterationMode.CB.ToString())
-
                 .Must(batchSize =>
                 {
                     // Ensure the value is null or a placeholder when the mode does not require BatchSize
                     return batchSize == null || batchSize.StartsWith("$");
                 })
                 .When(dto => dto.Mode != IterationMode.DCB.ToString() && dto.Mode != IterationMode.CRB.ToString() && dto.Mode != IterationMode.CB.ToString(), ApplyConditionTo.CurrentValidator)
-
                 .Must((dto, batchSize) =>
                 {
                     // Compare BatchSize and RequestCount when both are valid integers
-                    if (batchSize.StartsWith("$") || dto.RequestCount.StartsWith("$"))
+                    if ((!string.IsNullOrEmpty(batchSize) && batchSize.StartsWith("$")) || (!string.IsNullOrEmpty(dto.RequestCount) && dto.RequestCount.StartsWith("$")))
                         return true;
 
                     if (int.TryParse(batchSize, out int parsedBatchSize) &&
@@ -171,22 +164,20 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(coolDownTime =>
                 {
                     // Check if the value is a valid integer or a placeholder
-                    return int.TryParse(coolDownTime, out int parsedValue) && parsedValue > 0 || coolDownTime.StartsWith("$");
+                    return (int.TryParse(coolDownTime, out int parsedValue) && parsedValue > 0) || (!string.IsNullOrEmpty(coolDownTime) && coolDownTime.StartsWith("$"));
                 })
                 .WithMessage("The 'Cool Down Time' must be a valid positive integer or a placeholder")
                 .When(dto => dto.Mode == IterationMode.DCB.ToString() || dto.Mode == IterationMode.CRB.ToString() || dto.Mode == IterationMode.CB.ToString())
-
                 .Must(coolDownTime =>
                 {
                     // Ensure the value is null or a placeholder when the mode does not require CoolDownTime
-                    return coolDownTime == null || coolDownTime.StartsWith("$");
+                    return coolDownTime == null ||  coolDownTime.StartsWith("$");
                 })
                 .When(dto => dto.Mode != IterationMode.DCB.ToString() && dto.Mode != IterationMode.CRB.ToString() && dto.Mode != IterationMode.CB.ToString(), ApplyConditionTo.CurrentValidator)
-
                 .Must((dto, coolDownTime) =>
                 {
                     // Compare CoolDownTime and Duration when both are valid integers
-                    if (coolDownTime.StartsWith("$") || dto.Duration.StartsWith("$"))
+                    if ((!string.IsNullOrEmpty(coolDownTime) && coolDownTime.StartsWith("$")) || (!string.IsNullOrEmpty(dto.Duration) && dto.Duration.StartsWith("$")))
                         return true;
 
                     if (int.TryParse(coolDownTime, out int parsedCoolDownTime) &&
@@ -199,8 +190,15 @@ namespace LPS.UI.Core.LPSValidators
                 })
                 .WithMessage("The 'CoolDownTime' must be less than the 'Duration * 1000'")
                 .When(dto => dto.Mode == IterationMode.DCB.ToString() && !string.IsNullOrWhiteSpace(dto.Duration), ApplyConditionTo.CurrentValidator);
+            
+            RuleFor(dto => dto.HttpRequest)
+                .SetValidator(new RequestValidator(new HttpRequestDto()));
+        
         }
 
         public override HttpIterationDto Dto { get { return _iterationDto; } }
+
+        [GeneratedRegex("^[a-zA-Z0-9 _.-]+$")]
+        private static partial Regex NameRegex();
     }
 }

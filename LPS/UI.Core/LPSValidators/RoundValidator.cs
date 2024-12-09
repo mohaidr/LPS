@@ -9,7 +9,7 @@ using LPS.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class RoundValidator : CommandBaseValidator<RoundDto>
+    internal partial class RoundValidator : CommandBaseValidator<RoundDto>
     {
         readonly RoundDto _roundDto;
         public RoundValidator(RoundDto roundDto)
@@ -26,7 +26,7 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(name =>
                 {
                     // Allow valid names or placeholders
-                    return name.StartsWith("$") || System.Text.RegularExpressions.Regex.IsMatch(name, "^[a-zA-Z0-9 _.-]+$");
+                    return (!string.IsNullOrEmpty(name) && name.StartsWith("$")) || NameRegex().IsMatch(name ?? string.Empty);
                 })
                 .WithMessage("The 'Name' must either start with '$' (for placeholders) or match the pattern: only alphanumeric characters, spaces, underscores, periods, and dashes are allowed")
                 .Length(1, 60)
@@ -43,15 +43,21 @@ namespace LPS.UI.Core.LPSValidators
                 .WithMessage("The 'BaseUrl' must be a valid URL according to RFC 3986 or a placeholder starting with '$'");
 
 
+
+            // Validation for Iterations
             RuleFor(dto => dto.Iterations)
                 .Must(HaveUniqueIterationNames)
-                .WithMessage("The Iteration 'Name' must be unique.");
+                .WithMessage("The Iteration 'Name' must be unique.")
+                .ForEach(iteration =>
+                {
+                    iteration.SetValidator(new IterationValidator(new HttpIterationDto()));
+                });
 
             RuleFor(dto => dto.StartupDelay)
                 .Must(startupDelay =>
                 {
                     // Allow valid numeric values or placeholders
-                    return (int.TryParse(startupDelay, out int parsedValue) && parsedValue >= 0) || startupDelay.StartsWith("$");
+                    return (int.TryParse(startupDelay, out int parsedValue) && parsedValue >= 0) || string.IsNullOrEmpty(startupDelay) || startupDelay.StartsWith("$");
                 })
                 .WithMessage("The 'StartupDelay' must be greater than or equal to 0 or a placeholder starting with '$'");
 
@@ -61,7 +67,7 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(numberOfClients =>
                 {
                     // Allow valid numeric values or placeholders
-                    return numberOfClients.StartsWith("$")
+                    return (!string.IsNullOrEmpty(numberOfClients) && numberOfClients.StartsWith("$"))
                         || int.TryParse(numberOfClients, out int parsedValue) && parsedValue > 0;
                 })
                 .WithMessage("The 'Number Of Clients' must be a positive integer or a placeholder starting with '$'");
@@ -72,28 +78,26 @@ namespace LPS.UI.Core.LPSValidators
             .Must(arrivalDelay =>
             {
                 // Allow valid numeric values or placeholders
-                return (int.TryParse(arrivalDelay, out int parsedValue) && parsedValue > 0) || arrivalDelay.StartsWith("$");
+                return (int.TryParse(arrivalDelay, out int parsedValue) && parsedValue > 0) || (!string.IsNullOrEmpty(arrivalDelay) && arrivalDelay.StartsWith("$"));
             })
             .When(dto => dto.NumberOfClients != null && int.TryParse(dto.NumberOfClients, out int parsedClients) && parsedClients > 1)
             .WithMessage("The 'Arrival Delay' must be a positive integer or a placeholder starting with '$' when 'Number Of Clients' > 1");
 
             RuleFor(dto => dto.DelayClientCreationUntilIsNeeded)
-                .NotNull()
-                .WithMessage("The 'DelayClientCreationUntilIsNeeded' must not be null")
                 .Must(value =>
                 {
                     // Allow valid boolean values or placeholders
-                    return value.StartsWith("$") || bool.TryParse(value, out _);
+                    return string.IsNullOrEmpty(value) || value.StartsWith("$") || bool.TryParse(value, out _);
                 })
                 .WithMessage("'Delay Client Creation Until Is Needed' must be 'true', 'false', or a placeholder starting with '$'");
 
             RuleFor(dto => dto.RunInParallel)
-            .NotNull()
-            .WithMessage("'Run In Parallel' must be (y) or (n)")
             .Must(value =>
             {
                 // Allow valid boolean values or placeholders
-                return value.StartsWith("$") || bool.TryParse(value, out _);
+                return string.IsNullOrEmpty(value) 
+                || value.StartsWith("$") 
+                || bool.TryParse(value, out _);
             })
             .WithMessage("'Run In Parallel' must be 'true', 'false', or a placeholder starting with '$'");
         }
@@ -106,5 +110,8 @@ namespace LPS.UI.Core.LPSValidators
             return iterationsNames.Count == iterationsNames.Distinct(StringComparer.OrdinalIgnoreCase).Count();
         }
         public override RoundDto Dto { get { return _roundDto; } }
+
+        [GeneratedRegex("^[a-zA-Z0-9 _.-]+$")]
+        private static partial Regex NameRegex();
     }
 }

@@ -61,7 +61,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             var iterationValidator = new IterationValidator(globalIteration);
                             if (iterationValidator.Validate(nameof(globalIteration.Name)))
                             {
-                                round?.ReferencedIterations.Add(new ReferenceIterationDto() { Name = globalIteration.Name });
+                                round?.ReferencedIterations.Add(globalIteration.Name);
                             }
                             else
                             {

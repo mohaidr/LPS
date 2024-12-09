@@ -25,7 +25,7 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                ResetOptionalFields();
+                ForceOptionalFields();
             }
             AnsiConsole.MarkupLine("[underline bold blue]Create a Test Round:[/]");
             while (true)
@@ -105,13 +105,13 @@ namespace LPS.UI.Core.Build.Services
             }
         }
 
-        public void ResetOptionalFields()
+        public void ForceOptionalFields()
         {
             if (!_skipOptionalFields)
             {
-                _roundDto.StartupDelay = (-1).ToString();
-                _roundDto.DelayClientCreationUntilIsNeeded = null;
-                _roundDto.RunInParallel = null;
+                _roundDto.StartupDelay = "-1";
+                _roundDto.DelayClientCreationUntilIsNeeded = "-1";
+                _roundDto.RunInParallel = "-1";
                 _roundDto.BaseUrl = "https://";
             }
         }

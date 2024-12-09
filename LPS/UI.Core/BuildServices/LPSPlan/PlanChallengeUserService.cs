@@ -27,7 +27,7 @@ namespace LPS.UI.Core.Build.Services
         {
             if (!_skipOptionalFields)
             {
-                ResetOptionalFields();
+                ForceOptionalFields();
             }
             AnsiConsole.MarkupLine("[underline bold blue]Create a Plan:[/]");
             while (true)
@@ -58,7 +58,7 @@ namespace LPS.UI.Core.Build.Services
             }
         }
 
-        public void ResetOptionalFields()
+        public void ForceOptionalFields()
         {
             if (!_skipOptionalFields)
             {

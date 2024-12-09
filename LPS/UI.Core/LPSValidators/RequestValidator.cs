@@ -11,6 +11,7 @@ using System.Text;
 using Microsoft.AspNetCore.Http;
 using LPS.DTOs;
 using System.CommandLine;
+using System.Linq.Expressions;
 
 namespace LPS.UI.Core.LPSValidators
 {
@@ -67,10 +68,11 @@ namespace LPS.UI.Core.LPSValidators
                     // Allow valid URLs or placeholders
                     return string.IsNullOrEmpty(url)
                         || url.StartsWith("$")
+                        || url.StartsWith("/")
                         || (Uri.TryCreate(url, UriKind.Absolute, out Uri result)
                             && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps));
                 })
-                .WithMessage("The 'URL' must be a valid URL according to RFC 3986 or a placeholder starting with '$'")
+                .WithMessage("The 'URL' must be a valid URL according to RFC 3986, a URI path starting with '/' or a placeholder starting with '$'")
                 .Must((dto, url) =>
                 {
                     // Parse SupportH2C as bool and validate compatibility with URL schema
@@ -81,6 +83,7 @@ namespace LPS.UI.Core.LPSValidators
                     {
                         return string.IsNullOrEmpty(url)
                             || url.StartsWith("$")
+                            || url.StartsWith("/")
                             || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
                     }
 
@@ -107,8 +110,6 @@ namespace LPS.UI.Core.LPSValidators
 
 
             RuleFor(dto => dto.SaveResponse)
-                .NotNull()
-                .WithMessage("'Save Response' must be a valid boolean ('true' or 'false') or a placeholder starting with '$'")
                 .Must(saveResponse =>
                 {
                     // Allow valid boolean values or placeholders
@@ -120,8 +121,6 @@ namespace LPS.UI.Core.LPSValidators
 
 
             RuleFor(dto => dto.DownloadHtmlEmbeddedResources)
-                .NotNull()
-                .WithMessage("'Download Html Embedded Resources' must be a valid boolean ('true' or 'false') or a placeholder starting with '$'")
                 .Must(downloadHtmlEmbeddedResources =>
                 {
                     // Allow valid boolean values or placeholders
@@ -146,7 +145,10 @@ namespace LPS.UI.Core.LPSValidators
                     .Must(url =>
                     {
                         // Ensure URL uses the HTTP scheme when SupportH2C is enabled
-                        return string.IsNullOrEmpty(url) || url.StartsWith("$") || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+                        return string.IsNullOrEmpty(url)
+                        || url.StartsWith("$")
+                        || url.StartsWith("/")
+                        || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
                     })
                     .WithMessage("When 'SupportH2C' is enabled, the 'URL' must use the HTTP scheme.");
 
@@ -154,10 +156,16 @@ namespace LPS.UI.Core.LPSValidators
                     .Must(httpVersion =>
                     {
                         // Ensure HttpVersion is 2.0 when SupportH2C is enabled
-                        return string.IsNullOrEmpty(httpVersion) || httpVersion.Equals("2.0", StringComparison.OrdinalIgnoreCase);
+                        return string.IsNullOrEmpty(httpVersion)
+                        || httpVersion.StartsWith("$")
+                        || httpVersion.Equals("2.0", StringComparison.OrdinalIgnoreCase);
                     })
                     .WithMessage("When 'SupportH2C' is enabled, the 'HttpVersion' must be set to 2.0.");
             });
+
+            RuleFor(dto => dto.Capture)
+                .SetValidator(new CaptureValidator(new CaptureHandlerDto()));
+
 
         }
 

@@ -91,7 +91,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                 if (isGlobal)
                                 {
                                     // Add as a global iteration but also create a setup command in the round with the same name
-                                    roundDto.ReferencedIterations.Add(new ReferenceIterationDto { Name = iteration.Name });
+                                    roundDto.ReferencedIterations.Add(iteration.Name);
                                 }
                                 else
                                 {

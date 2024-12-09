@@ -11,7 +11,7 @@ namespace LPS.UI.Common
         bool SkipOptionalFields { get; }
         TDto Dto { get;}
         public void Challenge();
-        public void ResetOptionalFields();
+        public void ForceOptionalFields();
 
     }
 }

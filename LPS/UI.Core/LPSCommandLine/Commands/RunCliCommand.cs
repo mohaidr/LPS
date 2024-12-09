@@ -21,6 +21,7 @@ using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.UI.Common.Options;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
+using LPS.Domain.Domain.Common.Exceptions;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -89,6 +90,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 try
                 {
                     var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService);
+                    new PlanValidator(planDto).ValidateAndThrow(planDto);
                     var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
                     var plan = new Plan(planCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
                     if (plan.IsValid)
@@ -140,36 +142,29 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             {
                                 foreach (var iterationDto in roundDto.Iterations)
                                 {
-                                    if (iterationDto.HttpRequest?.URL != null && roundDto?.BaseUrl != null && !iterationDto.HttpRequest.URL.StartsWith("http://") && !iterationDto.HttpRequest.URL.StartsWith("https://"))
-                                    {
-                                        if (iterationDto.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
-                                        {
-                                            throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
-                                        }
-                                        iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
-                                    }
-                                    var iterationCommand = _mapper.Map<HttpIteration.SetupCommand>(iterationDto);
-
-                                    var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
-
+                                    var iterationEntity = ProcessIteration(roundDto, iterationDto);
                                     if (iterationEntity.IsValid)
                                     {
-                                        var requestCommand = _mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest);
-                                        var requestEntity = new HttpRequest(requestCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+                                        roundEntity.AddIteration(iterationEntity);
+                                    }
+                                }
 
-                                        if (requestEntity.IsValid)
+
+                                foreach (var referencedIteration in roundDto.ReferencedIterations)
+                                {
+                                    // Find the referenced iteration by name in the global iterations list
+                                    var globalIteration = planDto.Iterations.FirstOrDefault(i => i.Name.Equals(referencedIteration, StringComparison.OrdinalIgnoreCase));
+                                    if (globalIteration != null)
+                                    {
+                                        var iterationEntity = ProcessIteration(roundDto, globalIteration);
+                                        if (iterationEntity.IsValid)
                                         {
-                                            if (iterationDto.HttpRequest.Capture != null)
-                                            {
-                                                var captureCommand = _mapper.Map<CaptureHandler.SetupCommand>(iterationDto.HttpRequest.Capture);
-                                                var captureEntity = new CaptureHandler(captureCommand, _logger, _runtimeOperationIdProvider);
-                                                if (captureEntity.IsValid)
-                                                    requestEntity.SetCapture(captureEntity);
-                                            }
-
-                                            iterationEntity.SetHttpRequest(requestEntity);
                                             roundEntity.AddIteration(iterationEntity);
                                         }
+                                    }
+                                    else
+                                    {
+                                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"Referenced iteration '{referencedIteration}' not found.", LPSLoggingLevel.Warning);
                                     }
                                 }
                                 plan.AddRound(roundEntity);
@@ -218,6 +213,48 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 .WithRawValue(variableDto.Value)
                 .SetGlobal(isGlobal)
                 .BuildAsync(cancellationToken);
+        }
+
+        private HttpIteration ProcessIteration(RoundDto roundDto, HttpIterationDto iterationDto)
+        {
+            if (iterationDto.HttpRequest?.URL != null && roundDto?.BaseUrl != null && !iterationDto.HttpRequest.URL.StartsWith("http://") && !iterationDto.HttpRequest.URL.StartsWith("https://"))
+            {
+                if (iterationDto.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
+                {
+                    throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
+                }
+                iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
+            }
+            var iterationCommand = _mapper.Map<HttpIteration.SetupCommand>(iterationDto);
+            var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
+            if (iterationEntity.IsValid)
+            {
+                var requestCommand = _mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest);
+                var request = new HttpRequest(requestCommand, _logger, _runtimeOperationIdProvider);
+                if (request.IsValid)
+                {
+                    if (iterationDto?.HttpRequest?.Capture != null)
+                    {
+                        var captureCommand = _mapper.Map<CaptureHandler.SetupCommand>(iterationDto.HttpRequest.Capture);
+                        var capture = new CaptureHandler(captureCommand, _logger, _runtimeOperationIdProvider);
+                        if (capture.IsValid)
+                        {
+                            request.SetCapture(capture);
+                        }
+                        else
+                        {
+                            throw new InvalidLPSEntityException($"Invalid Capture handler defined in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
+                        }
+                    }
+                    iterationEntity.SetHttpRequest(request);
+                }
+                else
+                {
+                    throw new InvalidLPSEntityException($"Invalid HttpRequest in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
+                }
+                return iterationEntity;
+            }
+            throw new InvalidLPSEntityException($"Invalid Iteration {iterationDto.Name}, Please fix the validation errors and try again");
         }
     }
 }

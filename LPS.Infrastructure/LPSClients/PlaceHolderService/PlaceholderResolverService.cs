@@ -81,7 +81,6 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
         }
 
-
         private async Task<string> ParseAsync(string input, string sessionId, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(input))
