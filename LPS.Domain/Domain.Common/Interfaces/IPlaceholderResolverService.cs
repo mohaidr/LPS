@@ -76,6 +76,7 @@ namespace LPS.Domain.Common.Interfaces
                 "hash" => true,
                 "customvariable" => true,
                 "read" => true,
+                "loopcounter" => true,
                 _ => false // Unsupported method
             };
         }

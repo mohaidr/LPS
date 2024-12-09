@@ -199,7 +199,7 @@ namespace LPS.Infrastructure.LPSClients
 
                 await _metricsService.TryDecreaseConnectionsCountAsync(request.Id, responseMessage.IsSuccessStatusCode, token);
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {request.HttpMethod} {request.URL} Http/{request.HttpVersion}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {responseMessage.Headers}{responseMessage.Content.Headers}", LPSLoggingLevel.Verbose, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {httpRequestMessage.Method} {httpRequestMessage.RequestUri} Http/{httpRequestMessage.Version}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {responseMessage.Headers}{responseMessage.Content.Headers}", LPSLoggingLevel.Verbose, token);
             }
             catch (Exception ex)
             {

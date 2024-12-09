@@ -101,12 +101,11 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 if (result[currentIndex] == '$')
                 {
                     int startIndex = currentIndex + 1;
-                    int endIndex = FindPlaceholderEndIndex(result, startIndex);
-
-                    string placeholder = result.ToString(startIndex, endIndex - startIndex);
+                    int stopperIndex = FindStopperIndex(result, startIndex); // Stoppers like / ; , ] } etc., indicate the end of a variable. For example, in $x,$y, the ',' acts as a stopper, signaling that $x is a complete placeholder to resolve, so $x,$y should be treated as two separate variables.
+                    string placeholder = result.ToString(startIndex, stopperIndex - startIndex);
                     string resolvedValue = await _processor.ResolvePlaceholderAsync(placeholder, sessionId, token);
 
-                    result.Remove(currentIndex, endIndex - currentIndex);
+                    result.Remove(currentIndex, stopperIndex - currentIndex);
                     result.Insert(currentIndex, resolvedValue);
                     currentIndex += resolvedValue.Length;
                 }
@@ -119,7 +118,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             return result.ToString();
         }
 
-        private static int FindPlaceholderEndIndex(StringBuilder result, int startIndex)
+        private static int FindStopperIndex(StringBuilder result, int startIndex)
         {
             int endIndex = startIndex;
             bool insideParentheses = false;
@@ -138,13 +137,12 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
                 insideParentheses = parenthesesBalance > 0;
                 insideSquareBracket = squareBracketBalance > 0;
-
                 if (!insideParentheses && !insideSquareBracket &&
-                    (char.IsWhiteSpace(currentChar) || currentChar == ',' || currentChar == '}' || currentChar == '"' || currentChar == '\'' || currentChar == '$'))
+                    !char.IsLetterOrDigit(currentChar))
                 {
+                    endIndex++;
                     break;
                 }
-
                 endIndex++;
             }
 
@@ -205,6 +203,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 "base64encode" => await Base64EncodeAsync(parameters, sessionId, token),
                 "hash" => await GenerateHashAsync(parameters, sessionId, token),
                 "read" => await ReadFileAsync(parameters, sessionId, token),
+                "loopcounter" => await LoopCounterAsync(parameters, sessionId, token),
                 _ => throw new InvalidOperationException($"Unknown function: {functionName}")
             };
         }
@@ -332,6 +331,51 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
         }
 
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+        public async Task<string> LoopCounterAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            // Extract parameters for start and end values
+            var startValue = await _paramService.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
+            var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100, sessionId, token);
+
+            if (startValue >= endValue)
+            {
+                throw new ArgumentException("startValue must be less than endValue.");
+            }
+
+            // Determine cache key
+            string cacheKey = string.IsNullOrEmpty(sessionId) || !int.TryParse(sessionId, out _)
+                ? "GlobalCounter"
+                : $"Counter_{sessionId}";
+
+            await _semaphore.WaitAsync(token); // Lock to ensure thread-safety
+            try
+            {
+                // Retrieve the current value from the cache or initialize to startValue
+                if (!_memoryCacheService.TryGetItem(cacheKey, out string currentValueString) || !int.TryParse(currentValueString, out int currentValue))
+                {
+                    currentValue = startValue;
+                }
+                else
+                {
+                    currentValue++;
+                    if (currentValue > endValue)
+                    {
+                        currentValue = startValue; // Restart counter
+                    }
+                }
+
+                // Update the cache with the new value
+                await _memoryCacheService.SetItemAsync(cacheKey, currentValue.ToString(), TimeSpan.FromMinutes(30));
+
+                return currentValue.ToString();
+            }
+            finally
+            {
+                _semaphore.Release(); // Release the lock
+            }
+        }
     }
 
     public class ParameterExtractorService

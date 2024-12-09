@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             var resolvedHttpVersion = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpVersion, sessionId, token);
             var resolvedHttpMethod = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpMethod, sessionId, token);
             var resolvedUrl = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.URL, sessionId, token);
-            var resolvedContent = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload, sessionId, token);
+            var resolvedContent = (await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload, sessionId, token)) ?? string.Empty;
 
             // Create the HttpRequestMessage with resolved values
             var httpRequestMessage = new HttpRequestMessage

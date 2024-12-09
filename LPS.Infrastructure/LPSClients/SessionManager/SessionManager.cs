@@ -30,7 +30,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             if (!string.IsNullOrEmpty(sessionId) && _sessions.TryGetValue(sessionId, out var session))
                 return session.GetResponse(variableName);
 
-            await _logger.LogAsync(_operationIdProvider.OperationId, $"No variable named '${variableName}' is defined for the session with Id: {sessionId}", LPSLoggingLevel.Warning, token);
+            await _logger.LogAsync(_operationIdProvider.OperationId, $"No Session variable named '${variableName}' is defined for the session with Id: {sessionId}", LPSLoggingLevel.Warning, token);
             return null;
         }
 

@@ -59,14 +59,15 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());
 
             // Map HttpRequestDto to HttpRequest.SetupCommand
+            // Do not apply placeholder resolver on (HttpMethod, HttpVersion, URL, HttpHeaders); the values should be resolved instantly when sending the request.
             CreateMap<HttpRequestDto, HttpRequest.SetupCommand>()
-                .ForMember(dest => dest.URL, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.URL).Result))
-                .ForMember(dest => dest.HttpMethod, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.HttpMethod).Result))
-                .ForMember(dest => dest.HttpVersion, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.HttpVersion).Result))
+                .ForMember(dest => dest.URL, opt => opt.MapFrom(src => src.URL)) 
+                .ForMember(dest => dest.HttpMethod, opt => opt.MapFrom(src => src.HttpMethod))
+                .ForMember(dest => dest.HttpVersion, opt => opt.MapFrom(src => src.HttpVersion))
                 .ForMember(dest => dest.HttpHeaders, opt => opt.MapFrom(src => src.HttpHeaders.ToDictionary(
                     kvp => kvp.Key,
-                    kvp => ResolvePlaceholderAsync<string>(kvp.Value).Result)))
-                .ForMember(dest => dest.Payload, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.Payload).Result))
+                    kvp => kvp.Value)))
+                .ForMember(dest => dest.Payload, opt => opt.MapFrom(src => src.Payload))
                 .ForMember(dest => dest.DownloadHtmlEmbeddedResources, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.DownloadHtmlEmbeddedResources).Result))
                 .ForMember(dest => dest.SaveResponse, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.SaveResponse).Result))
                 .ForMember(dest => dest.SupportH2C, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.SupportH2C).Result))
