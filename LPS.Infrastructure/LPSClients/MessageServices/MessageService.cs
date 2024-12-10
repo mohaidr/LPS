@@ -71,7 +71,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
            await _headersService.ApplyHeadersAsync(httpRequestMessage, sessionId, httpRequest.HttpHeaders, token);
 
             // Cache key to identify the request profile
-            string cacheKey = httpRequest.Id.ToString();
+            string cacheKey = $"request_size_{httpRequest.Id}";
 
             // Check if the message size is cached
             if (!_memoryCacheService.TryGetItem(cacheKey, out long messageSize))

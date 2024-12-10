@@ -95,7 +95,7 @@ namespace LPS.Infrastructure.LPSClients
                 bool cacheResponse = (mimeType == MimeType.TextHtml && request.DownloadHtmlEmbeddedResources) || captureResponse;
                 var (command, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, request, cacheResponse, token));
                 HttpResponse.SetupCommand responseCommand = command;
-                //This will only run if save response is set to true
+                
                 if (captureResponse)
                 {
                     MimeType @as = MimeTypeExtensions.FromKeyword(request.Capture.As);
