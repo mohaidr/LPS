@@ -75,8 +75,6 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
             catch (Exception ex)
             {
-                Console.WriteLine(resolvedValue);
-
                 throw new InvalidOperationException($"Failed to convert placeholder value to type {typeof(T)}.", ex);
             }
         }
@@ -193,7 +191,6 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             int openParenIndex = placeholder.IndexOf('(');
             string functionName = placeholder.Substring(0, openParenIndex).Trim();
             string parameters = placeholder.Substring(openParenIndex + 1, placeholder.Length - openParenIndex - 2).Trim();
-
             return functionName.ToLowerInvariant() switch
             {
                 "random" => await GenerateRandomStringAsync(parameters, sessionId, token),
@@ -337,7 +334,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         {
             // Extract parameters for start and end values
             var startValue = await _paramService.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
-            var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100, sessionId, token);
+            var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100000, sessionId, token);
 
             if (startValue >= endValue)
             {
@@ -399,7 +396,9 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         public async Task<int> ExtractNumberAsync(string parameters, string key, int defaultValue, string sessionId, CancellationToken token)
         {
             if (string.IsNullOrEmpty(parameters))
+            {
                 return defaultValue;
+            }
 
             var keyValuePairs = parameters.Split(',');
             foreach (var pair in keyValuePairs)
