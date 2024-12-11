@@ -36,7 +36,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.Name, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.Name).Result))
                 .ForMember(dest => dest.StartupDelay, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int>(src.StartupDelay).Result))
                 .ForMember(dest => dest.NumberOfClients, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.NumberOfClients).Result))
-                .ForMember(dest => dest.ArrivalDelay, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.ArrivalDelay).Result))
+                .ForMember(dest => dest.ArrivalDelay, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int>(src.ArrivalDelay).Result))
                 .ForMember(dest => dest.DelayClientCreationUntilIsNeeded, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.DelayClientCreationUntilIsNeeded).Result))
                 .ForMember(dest => dest.RunInParallel, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.RunInParallel).Result))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags.Select(tag => ResolvePlaceholderAsync<string>(tag).Result).ToList()))
