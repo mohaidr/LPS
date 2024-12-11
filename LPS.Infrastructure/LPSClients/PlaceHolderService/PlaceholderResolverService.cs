@@ -343,8 +343,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
             // Determine cache key
             string cacheKey = string.IsNullOrEmpty(sessionId) || !int.TryParse(sessionId, out _)
-                ? "GlobalCounter"
-                : $"Counter_{sessionId}";
+                ? $"GlobalCounter_{startValue}_{endValue}"
+                : $"Counter_{sessionId}_{startValue}_{endValue}";
 
             await _semaphore.WaitAsync(token); // Lock to ensure thread-safety
             try
@@ -357,14 +357,20 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 else
                 {
                     currentValue++;
-                    if (currentValue > endValue)
+                    if (currentValue > endValue || currentValue < startValue)
                     {
                         currentValue = startValue; // Restart counter
+                        await _logger.LogAsync(
+                            _runtimeOperationIdProvider.OperationId,
+                            $"Cache key '{cacheKey}': Counter reset to start value '{startValue}' because current value '{currentValue}' exceeded end value '{endValue}' or fell below start value.",
+                            LPSLoggingLevel.Information,
+                            token
+                        );
                     }
                 }
 
                 // Update the cache with the new value
-                await _memoryCacheService.SetItemAsync(cacheKey, currentValue.ToString(), TimeSpan.FromMinutes(30));
+                await _memoryCacheService.SetItemAsync(cacheKey, currentValue.ToString(), TimeSpan.MaxValue);
 
                 return currentValue.ToString();
             }

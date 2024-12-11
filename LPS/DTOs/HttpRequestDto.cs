@@ -1,8 +1,10 @@
 ﻿using LPS.Domain;
+using LPS.Infrastructure.Common.LPSSerializer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
@@ -17,16 +19,23 @@ namespace LPS.DTOs
         }
 
         // URL for the HTTP request (supports placeholders)
-        [YamlMember(Alias = "url")]
+        [YamlAlias("url")]
+        [JsonAlias("url")]
         public string URL { get; set; }
 
         // HTTP method (supports placeholders)
+        [YamlAlias("method")]
+        [JsonAlias("method")]
         public string HttpMethod { get; set; }
 
         // HTTP version (supports placeholders)
+        [YamlAlias("version")]
+        [JsonAlias("version")]
         public string HttpVersion { get; set; }
 
         // HTTP headers
+        [YamlAlias("headers")]
+        [JsonAlias("headers")]
         public Dictionary<string, string> HttpHeaders { get; set; }
 
         // Payload for the request (supports placeholders)
@@ -60,7 +69,6 @@ namespace LPS.DTOs
                 HttpHeaders = this.HttpHeaders?.ToDictionary(entry => entry.Key, entry => entry.Value)
             };
             #pragma warning restore CS8601 // Possible null reference assignment.
-
             // Deep copy the Capture object if it exists
             if (this.Capture != null)
             {

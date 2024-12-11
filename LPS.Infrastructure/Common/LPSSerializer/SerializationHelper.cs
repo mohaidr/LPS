@@ -9,6 +9,7 @@ using YamlDotNet.Serialization.NamingConventions;
 using System.Collections.Generic;
 using YamlDotNet.Serialization.TypeInspectors;
 using YamlDotNet.Core;
+using LPS.Infrastructure.Common.LPSSerializer;
 namespace LPS.Infrastructure.Common
 {
     public static class SerializationHelper
@@ -18,7 +19,8 @@ namespace LPS.Infrastructure.Common
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
             WriteIndented = true,
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingDefault,
+            Converters = { new JsonAliasConverter<object>() },
         };
         private static readonly DefaultValuesHandling YamlCurrentDefaultValuesHandling = DefaultValuesHandling.OmitDefaults;
 
@@ -29,6 +31,7 @@ namespace LPS.Infrastructure.Common
 
         private static readonly IDeserializer YamlDeserializer = new DeserializerBuilder()
             .WithNamingConvention(CamelCaseNamingConvention.Instance)
+            .WithTypeConverter(new YamlAliasConverter())
             .Build();
 
         public static bool IsSerializable<T>(Type type = null)
@@ -110,7 +113,7 @@ namespace LPS.Infrastructure.Common
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"YAML Deserialization Has Failed: {ex.Message}");
+                throw new InvalidOperationException($"YAML Deserialization Has Failed: {ex.Message} {ex.InnerException?.Message}");
             }
         }
 

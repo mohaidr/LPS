@@ -128,64 +128,65 @@ namespace LPS.Infrastructure.LPSClients
                     {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is unknown or the content is empty.", LPSLoggingLevel.Warning, token);
                     }
-                }
 
-                if (request.Capture?.Headers != null && request.Capture.Headers.Any())
-                {
-                    foreach (var headerName in request.Capture.Headers)
+                    if (request.Capture.Headers != null && request.Capture.Headers.Any())
                     {
-                        // Check if the response contains the header
-                        if (responseMessage.Headers.TryGetValues(headerName, out var headerValues) ||
-                            responseMessage.Content.Headers.TryGetValues(headerName, out headerValues))
+                        foreach (var headerName in request.Capture.Headers)
                         {
-                            // Combine multiple header values into a single string (if needed)
-                            string headerValue = string.Join(", ", headerValues);
-
-                            // Sanitize the header name to create a valid variable name
-                            string variableName = headerName.Replace("-", string.Empty);
-
-                            // Create a VariableHolder for the header
-                            var builder = new VariableHolder.Builder(_placeholderResolverService);
-                            var variableHolder = await builder
-                                .WithFormat(MimeType.TextPlain) // Assuming plain text for headers
-                                .WithRawValue(headerValue)
-                                .BuildAsync(token);
-
-                            // Store the variable based on the MakeGlobal option
-                            if (request.Capture.MakeGlobal == true)
+                            // Check if the response contains the header
+                            if (responseMessage.Headers.TryGetValues(headerName, out var headerValues) ||
+                                responseMessage.Content.Headers.TryGetValues(headerName, out headerValues))
                             {
-                                variableHolder = await builder.SetGlobal(true).BuildAsync(token);
-                                await _logger.LogAsync(
-                                    _runtimeOperationIdProvider.OperationId,
-                                    $"Setting response header '{headerName}' with value '{headerValue}' as global variable '{variableName}'",
-                                    LPSLoggingLevel.Verbose,
-                                    token
-                                );
-                                await _variableManager.AddVariableAsync(variableName, variableHolder, token);
+                                // Combine multiple header values into a single string (if needed)
+                                string headerValue = string.Join(", ", headerValues);
+
+                                // Sanitize the header name to create a valid variable name
+                                string variableName = headerName.Replace("-", string.Empty);
+
+                                // Create a VariableHolder for the header
+                                var builder = new VariableHolder.Builder(_placeholderResolverService);
+                                var variableHolder = await builder
+                                    .WithFormat(MimeType.TextPlain) // Assuming plain text for headers
+                                    .WithRawValue(headerValue)
+                                    .BuildAsync(token);
+
+                                // Store the variable based on the MakeGlobal option
+                                if (request.Capture.MakeGlobal == true)
+                                {
+                                    variableHolder = await builder.SetGlobal(true).BuildAsync(token);
+                                    await _logger.LogAsync(
+                                        _runtimeOperationIdProvider.OperationId,
+                                        $"Setting response header '{headerName}' with value '{headerValue}' as global variable '{variableName}'",
+                                        LPSLoggingLevel.Verbose,
+                                        token
+                                    );
+                                    await _variableManager.AddVariableAsync(variableName, variableHolder, token);
+                                }
+                                else
+                                {
+                                    await _logger.LogAsync(
+                                        _runtimeOperationIdProvider.OperationId,
+                                        $"Setting response header '{headerName}' with value '{headerValue}' in session '{this.SessionId}' as variable '{variableName}'",
+                                        LPSLoggingLevel.Verbose,
+                                        token
+                                    );
+                                    await _sessionManager.AddResponseAsync(this.SessionId, variableName, variableHolder, token);
+                                }
                             }
                             else
                             {
+                                // Log if the header was not found in the response
                                 await _logger.LogAsync(
                                     _runtimeOperationIdProvider.OperationId,
-                                    $"Setting response header '{headerName}' with value '{headerValue}' in session '{this.SessionId}' as variable '{variableName}'",
-                                    LPSLoggingLevel.Verbose,
+                                    $"Response does not contain the header '{headerName}' specified in the Capture.Headers list.",
+                                    LPSLoggingLevel.Warning,
                                     token
                                 );
-                                await _sessionManager.AddResponseAsync(this.SessionId, variableName, variableHolder, token);
                             }
-                        }
-                        else
-                        {
-                            // Log if the header was not found in the response
-                            await _logger.LogAsync(
-                                _runtimeOperationIdProvider.OperationId,
-                                $"Response does not contain the header '{headerName}' specified in the Capture.Headers list.",
-                                LPSLoggingLevel.Warning,
-                                token
-                            );
                         }
                     }
                 }
+
 
                 stopWatch.Start();
                 await TryDownloadHtmlResourcesAsync(responseCommand, request, httpClient, token);
@@ -197,9 +198,9 @@ namespace LPS.Infrastructure.LPSClients
 
                 await _metricsService.TryUpdateResponseMetricsAsync(request.Id, lpsHttpResponse, token);
 
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
+                
                 await _metricsService.TryDecreaseConnectionsCountAsync(request.Id, responseMessage.IsSuccessStatusCode, token);
-
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {httpRequestMessage.Method} {httpRequestMessage.RequestUri} Http/{httpRequestMessage.Version}\n\tTotal Time: {responseCommand.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage.StatusCode} Reason: {responseMessage.StatusCode}\n\tResponse Body: {responseCommand.LocationToResponse}\n\tResponse Headers: {responseMessage.Headers}{responseMessage.Content.Headers}", LPSLoggingLevel.Verbose, token);
             }
             catch (Exception ex)
             {

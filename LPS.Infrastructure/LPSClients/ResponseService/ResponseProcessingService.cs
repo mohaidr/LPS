@@ -82,7 +82,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
 
                         // Get the response processor
                         IResponseProcessor responseProcessor = await _responseProcessorFactory.CreateResponseProcessorAsync(
-                            httpRequest.URL, mimeType, httpRequest.SaveResponse, token);
+                            responseMessage?.RequestMessage?.RequestUri?.ToString(), mimeType, httpRequest.SaveResponse, token);
 
                         await using (responseProcessor.ConfigureAwait(false))
                         {
