@@ -50,7 +50,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             new()
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
-                Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),
+                Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption)?.ToUpper(),
                 MaximizeThroughput = bindingContext.ParseResult.GetValueForOption(_maximizeThroughputOption),
                 RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),

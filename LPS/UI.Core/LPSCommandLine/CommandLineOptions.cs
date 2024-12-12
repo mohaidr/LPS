@@ -616,7 +616,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(UrlOption, "--url");
                 AddCaseInsensitiveAliases(HeaderOption, "--header");
                 AddCaseInsensitiveAliases(PayloadOption, "--payload");
-                AddCaseInsensitiveAliases(IterationModeOption, "--string");
+                AddCaseInsensitiveAliases(IterationModeOption, "--iterationmode");
                 AddCaseInsensitiveAliases(MaximizeThroughputOption, "--maximizethroughput");
                 AddCaseInsensitiveAliases(DownloadHtmlEmbeddedResources, "--downloadhtmlembeddedresources");
                 AddCaseInsensitiveAliases(SaveResponse, "--saveresponse");
@@ -641,7 +641,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
             public static Option<string> IterationModeOption { get; } = new Option<string>(
-                "--string", "Defines iteration mode")
+                "--iterationMode", "Defines iteration mode")
             {
                 IsRequired = true
             };
