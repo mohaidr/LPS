@@ -64,10 +64,6 @@ namespace LPS.Infrastructure.Common
             try
             {
                 var serializableObject = obj;
-                if (JsonSerializerOptions.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingDefault)
-                {
-                    CleanDefaultValues(serializableObject);
-                }
                 return JsonSerializer.Serialize(serializableObject, JsonSerializerOptions);
             }
             catch (Exception ex)
@@ -81,10 +77,6 @@ namespace LPS.Infrastructure.Common
             try
             {
                 var serializableObject = obj;
-                if (YamlCurrentDefaultValuesHandling == DefaultValuesHandling.OmitDefaults)
-                {
-                    CleanDefaultValues(serializableObject);
-                }
                 return YamlSerializer.Serialize(serializableObject);
             }
             catch (Exception ex)
@@ -115,65 +107,6 @@ namespace LPS.Infrastructure.Common
             {
                 throw new InvalidOperationException($"YAML Deserialization Has Failed: {ex.Message} {ex.InnerException?.Message}");
             }
-        }
-
-        private static T CleanDefaultValues<T>(T obj)
-        {
-            if (obj == null) return default;
-
-            foreach (var prop in obj.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
-            {
-                // Skip properties that have index parameters or no setters
-                if (prop.GetIndexParameters().Length > 0 || !prop.CanWrite)
-                {
-                    continue;
-                }
-
-                var value = prop.GetValue(obj);
-
-                // Recursively clean nested objects
-                if (value != null && !IsDefaultValue(value))
-                {
-                    if (value is IEnumerable enumerable && !(value is string))
-                    {
-                        foreach (var item in enumerable)
-                        {
-                            CleanDefaultValues(item);
-                        }
-                    }
-                    else
-                    {
-                        CleanDefaultValues(value);
-                    }
-                }
-
-                // Set property to null if it has a default value
-                if (IsDefaultValue(value))
-                {
-                    prop.SetValue(obj, null);
-                }
-            }
-
-            return obj;
-        }
-
-
-        public static bool IsDefaultValue(object value)
-        {
-            if (value == null) return true;
-
-            Type type = value.GetType();
-
-            if (type.IsValueType && Activator.CreateInstance(type)?.Equals(value) == true)
-                return true;
-
-            if (value is IEnumerable && !((IEnumerable)value).Cast<object>().Any())
-                return true;
-
-            if (type == typeof(string) && string.IsNullOrEmpty((string)value))
-                return true;
-
-            return false;
         }
     }
 }

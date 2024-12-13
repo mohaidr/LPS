@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
 
         public async Task<IVariableHolder?> GetVariableAsync(string variableName, CancellationToken token)
         {
-            if (_variables.TryGetValue(variableName, out var variableHolder))
+            if (_variables.TryGetValue(variableName.Trim(), out var variableHolder))
             {
                 return variableHolder;
             }

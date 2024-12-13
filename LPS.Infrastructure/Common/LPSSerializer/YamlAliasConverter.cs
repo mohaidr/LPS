@@ -15,7 +15,6 @@ namespace LPS.Infrastructure.Common
             // Apply only to classes with alias attributes
             return type.IsClass && type.GetProperties().Any(p => p.IsDefined(typeof(YamlAliasAttribute), true));
         }
-
         public object ReadYaml(IParser parser, Type type, ObjectDeserializer deserializer)
         {
             // Deserialize into a temporary dictionary
@@ -41,8 +40,20 @@ namespace LPS.Infrastructure.Common
                     {
                         var value = match?.Value;
 
-                        // Check if the property type is a nested object
-                        if (value is IDictionary<string, object>)
+                        if (prop.PropertyType == typeof(Dictionary<string, string>))
+                        {
+                            // Handle dictionary explicitly
+                            var dictValue = value as Dictionary<object, object>;
+                            if (dictValue != null)
+                            {
+                                var stringDict = dictValue.ToDictionary(
+                                    kvp => kvp.Key.ToString(),
+                                    kvp => kvp.Value.ToString()
+                                );
+                                prop.SetValue(instance, stringDict);
+                            }
+                        }
+                        else if (value is IDictionary<string, object>)
                         {
                             // Deserialize nested object using the default deserializer
                             var nestedObject = deserializer(prop.PropertyType);
@@ -71,6 +82,7 @@ namespace LPS.Infrastructure.Common
 
             return instance;
         }
+
 
         public void WriteYaml(IEmitter emitter, object value, Type type, ObjectSerializer serializer)
         {

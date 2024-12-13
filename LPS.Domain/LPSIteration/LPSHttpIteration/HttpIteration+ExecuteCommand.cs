@@ -112,13 +112,13 @@ namespace LPS.Domain
             logEntry.AppendLine($"Http Version: {this.HttpRequest.HttpVersion}");
             logEntry.AppendLine($"URL: {this.HttpRequest.URL}");
 
-            if (!string.IsNullOrEmpty(this.HttpRequest.Payload) &&
+            if (!string.IsNullOrEmpty(this.HttpRequest.Payload.RawValue) &&
                 (this.HttpRequest.HttpMethod.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
                  this.HttpRequest.HttpMethod.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
                  this.HttpRequest.HttpMethod.Equals("PATCH", StringComparison.OrdinalIgnoreCase)))
             {
                 logEntry.AppendLine("...Begin Request Body...");
-                logEntry.AppendLine(this.HttpRequest.Payload);
+                logEntry.AppendLine(this.HttpRequest.Payload.RawValue);
                 logEntry.AppendLine("...End Request Body...");
             }
             else

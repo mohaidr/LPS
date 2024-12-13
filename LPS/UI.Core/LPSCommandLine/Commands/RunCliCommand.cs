@@ -120,6 +120,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                                 {
                                     variableValidator.ValidateAndThrow(variableDto);
                                     var variableHolder = await BuildVariableHolder(variableDto, false, cancellationToken);
+
                                     _variableManager.AddVariableAsync(variableDto.Name, variableHolder, cancellationToken).Wait();
                                 }
                             }

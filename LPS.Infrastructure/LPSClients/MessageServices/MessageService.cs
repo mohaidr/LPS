@@ -15,6 +15,7 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using System.Security.Cryptography.X509Certificates;
 using System.Collections.Generic;
+using LPS.Domain.LPSSession;
 
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
@@ -34,11 +35,10 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
 
         public async Task<HttpRequestMessage> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default)
         {
-            // Resolve placeholders for HttpVersion, HttpMethod, URL, and Payload
+            // Resolve placeholders for HttpVersion, HttpMethod, URL
             var resolvedHttpVersion = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpVersion, sessionId, token);
             var resolvedHttpMethod = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpMethod, sessionId, token);
             var resolvedUrl = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.URL, sessionId, token);
-            var resolvedContent = (await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload, sessionId, token)) ?? string.Empty;
 
             // Create the HttpRequestMessage with resolved values
             var httpRequestMessage = new HttpRequestMessage
@@ -53,6 +53,36 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                                    || resolvedHttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase)
                                    || resolvedHttpMethod.Equals("patch", StringComparison.CurrentCultureIgnoreCase);
 
+            if (supportsContent && httpRequest.Payload != null)
+            {
+                switch (httpRequest.Payload.Type)
+                {
+                    case Payload.PayloadType.Raw:
+                        var resolvedRawValue = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload.RawValue, sessionId, token);
+                        httpRequestMessage.Content = new StringContent(resolvedRawValue ?? string.Empty, Encoding.UTF8);
+                        break;
+
+                    case Payload.PayloadType.Multipart:
+                        var multipartContent = new MultipartFormDataContent();
+                        foreach (var item in httpRequest.Payload.MultipartData)
+                        {
+                            if (item.Value is string stringValue)
+                                multipartContent.Add(new StringContent(stringValue), item.Key);
+                            else if (item.Value is byte[] byteArray)
+                                multipartContent.Add(new ByteArrayContent(byteArray), item.Key, $"{item.Key}.bin");
+                        }
+                        httpRequestMessage.Content = multipartContent;
+                        break;
+
+                    case Payload.PayloadType.Binary:
+                        httpRequestMessage.Content = new ByteArrayContent(httpRequest.Payload.BinaryData);
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"Unsupported payload type: {httpRequest.Payload.Type}");
+                }
+            }
+
             if (httpRequest.SupportH2C.HasValue && httpRequest.SupportH2C.Value)
             {
                 if (httpRequestMessage.Version != HttpVersion.Version20)
@@ -65,10 +95,8 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                 httpRequestMessage.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
             }
 
-            httpRequestMessage.Content = supportsContent ? new StringContent(resolvedContent) : null;
-
             // Apply headers to the request
-           await _headersService.ApplyHeadersAsync(httpRequestMessage, sessionId, httpRequest.HttpHeaders, token);
+            await _headersService.ApplyHeadersAsync(httpRequestMessage, sessionId, httpRequest.HttpHeaders, token);
 
             // Cache key to identify the request profile
             string cacheKey = $"request_size_{httpRequest.Id}";
@@ -88,7 +116,6 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
 
             return httpRequestMessage;
         }
-        //TODO: Move to a separate service
         private static async Task<long> CalculateRequestSizeAsync(HttpRequestMessage httpRequestMessage)
         {
             long size = 0;

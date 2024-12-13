@@ -73,7 +73,6 @@ namespace LPS.Domain
         public void SetHttpRequest(HttpRequest httpRequest)
         {
             string httpIterationName = this.Name ?? string.Empty;
-            _logger.Log(_runtimeOperationIdProvider.OperationId, $"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.", LPSLoggingLevel.Error);
             HttpRequest = httpRequest != null && httpRequest.IsValid ? httpRequest : throw new InvalidLPSEntityException($"In the HTTP iteration '{httpIterationName}', the referenced LPS Entity of type {typeof(HttpRequest)} is either null or invalid.");
         }
         private void Setup(SetupCommand command)

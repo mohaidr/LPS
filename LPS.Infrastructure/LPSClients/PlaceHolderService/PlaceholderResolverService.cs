@@ -81,10 +81,10 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
         private async Task<string> ParseAsync(string input, string sessionId, CancellationToken token)
         {
-            if (string.IsNullOrWhiteSpace(input))
+            if (string.IsNullOrWhiteSpace(input) || !input.Contains('$'))
                 return input;
 
-            StringBuilder result = new(input);
+            StringBuilder result = new(input.Trim());
             int currentIndex = 0;
 
             while (currentIndex < result.Length)
@@ -102,7 +102,6 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                     int stopperIndex = FindStopperIndex(result, startIndex); // Stoppers like / ; , ] } etc., indicate the end of a variable. For example, in $x,$y, the ',' acts as a stopper, signaling that $x is a complete placeholder to resolve, so $x,$y should be treated as two separate variables.
                     string placeholder = result.ToString(startIndex, stopperIndex - startIndex);
                     string resolvedValue = await _processor.ResolvePlaceholderAsync(placeholder, sessionId, token);
-
                     result.Remove(currentIndex, stopperIndex - currentIndex);
                     result.Insert(currentIndex, resolvedValue);
                     currentIndex += resolvedValue.Length;
@@ -119,16 +118,17 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         private static int FindStopperIndex(StringBuilder result, int startIndex)
         {
             int endIndex = startIndex;
-            bool insideParentheses = false;
-            bool insideSquareBracket = false;
+            bool insideParentheses;
+            bool insideSquareBracket;
             int parenthesesBalance = 0;
             int squareBracketBalance = 0;
-
+            char[] pathChars = ['.', '/', '[', ']'];
+            bool isMethod = false;
             while (endIndex < result.Length)
             {
                 char currentChar = result[endIndex];
 
-                if (currentChar == '(') parenthesesBalance++;
+                if (currentChar == '(') { parenthesesBalance++; isMethod = true; }
                 if (currentChar == ')') parenthesesBalance--;
                 if (currentChar == '[') squareBracketBalance++;
                 if (currentChar == ']') squareBracketBalance--;
@@ -136,14 +136,20 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 insideParentheses = parenthesesBalance > 0;
                 insideSquareBracket = squareBracketBalance > 0;
                 if (!insideParentheses && !insideSquareBracket &&
-                    !char.IsLetterOrDigit(currentChar))
+                    !char.IsLetterOrDigit(currentChar) && !pathChars.Contains(currentChar))
                 {
-                    endIndex++;
                     break;
                 }
                 endIndex++;
             }
 
+            /*
+             For methods, the endIndex is increased to ensure the closing ')' is not excluded from the placeholder name.
+             For variables, the stopper should not be part of the variable name. The caller method determines the placeholder name by subtracting the start index (the first letter after $) from the stopper index.
+             For example, in $x_$y, the stopper index is 2, and the start index is 1. Subtracting 1 from 2 gives the variable name length (1), allowing us to extract the variable name by slicing from the start index for the calculated length.
+            */
+            if (isMethod)
+                endIndex++;
             return endIndex;
         }
 
@@ -208,12 +214,14 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         private async Task<string> ResolveVariableAsync(string placeholder, string sessionId, CancellationToken token)
         {
             if (_memoryCacheService.TryGetItem(placeholder, out string cachedResult))
+            {
                 return cachedResult;
+            }
 
             string variableName = placeholder;
             string path = null;
 
-            if (placeholder.Contains(".") || placeholder.Contains("/") || placeholder.Contains("["))
+            if (placeholder.Contains('.') || placeholder.Contains('/') || placeholder.Contains('['))
             {
                 int splitIndex = placeholder.IndexOfAny(new[] { '.', '/', '[' });
                 variableName = placeholder.Substring(0, splitIndex);
@@ -301,6 +309,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             byte[] hash = hasher.ComputeHash(System.Text.Encoding.UTF8.GetBytes(value));
             return BitConverter.ToString(hash).Replace("-", "").ToLower();
         }
+
         private async Task<string> ReadFileAsync(string parameters, string sessionId, CancellationToken token)
         {
             string filePath = await _paramService.ExtractStringAsync(parameters, "path", string.Empty, sessionId, token);
@@ -308,22 +317,32 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             if (string.IsNullOrWhiteSpace(filePath))
                 throw new ArgumentException("File path cannot be null or empty.", nameof(parameters));
 
-            string resolvedPath = Path.GetFullPath(filePath, AppConstants.EnvironmentCurrentDirectory);
-
-            if (!File.Exists(resolvedPath))
+            string fullPath = Path.GetFullPath(filePath, AppConstants.EnvironmentCurrentDirectory);
+            // Check if the file content is already cached
+            if (_memoryCacheService.TryGetItem(fullPath, out string cachedContent))
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"File '{resolvedPath}' does not exist.", LPSLoggingLevel.Warning, token);
+                return cachedContent;
+            }
+
+            if (!File.Exists(fullPath))
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"File '{fullPath}' does not exist.", LPSLoggingLevel.Warning, token);
                 return string.Empty;
             }
 
             try
             {
-                using var reader = new StreamReader(resolvedPath, Encoding.UTF8);
-                return await reader.ReadToEndAsync();
+                using var reader = new StreamReader(fullPath, Encoding.UTF8);
+                string fileContent = await reader.ReadToEndAsync();
+
+                // Cache the file content for the program's lifetime
+                await _memoryCacheService.SetItemAsync(fullPath, fileContent, TimeSpan.MaxValue);
+
+                return fileContent;
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Error reading file '{resolvedPath}': {ex.Message}", LPSLoggingLevel.Error, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Error reading file '{fullPath}': {ex.Message}", LPSLoggingLevel.Error, token);
                 throw;
             }
         }

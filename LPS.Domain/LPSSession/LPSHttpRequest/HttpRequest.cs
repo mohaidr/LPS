@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Domain.LPSSession;
 
 namespace LPS.Domain
 {
@@ -46,7 +47,7 @@ namespace LPS.Domain
 
         public string URL { get; protected set; }
 
-        public string Payload { get; protected set; }
+        public Payload Payload { get; protected set; }
 
         public string HttpVersion { get; protected set; }
 

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Domain.LPSSession;
 using YamlDotNet.Serialization;
 
 namespace LPS.Domain
@@ -30,27 +31,17 @@ namespace LPS.Domain
                 HttpHeaders = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
-            [JsonIgnore]
-            [YamlIgnore]
             public Guid? Id { get; set; }
-            [YamlMember(Alias = "url")]
             public string URL { get; set; }
             public string HttpMethod { get; set; }
             public string HttpVersion { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public Dictionary<string, string> HttpHeaders { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
             public string Payload { get; set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
             public bool? SaveResponse { get; set; }
-            [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
             public bool? SupportH2C { get; set; }
 
-            [JsonIgnore]
-            [YamlIgnore]
             public bool IsValid { get; set; }
-            [JsonIgnore]
-            [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
             public void Execute(HttpRequest entity)
             {
@@ -99,7 +90,7 @@ namespace LPS.Domain
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
                 this.URL = command.URL;
-                this.Payload = command.Payload;
+                this.Payload = Payload.CreateRaw(command.Payload);
                 this.HttpHeaders = [];
                 this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.HasValue ? command.DownloadHtmlEmbeddedResources.Value : false;
                 this.SaveResponse = command.SaveResponse.Value;
