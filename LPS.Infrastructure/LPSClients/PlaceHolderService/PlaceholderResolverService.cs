@@ -238,14 +238,14 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
 
             string resolvedValue = !string.IsNullOrEmpty(path)
-                ? ExtractValueFromPath(variableHolder, path)
+                ? await ExtractValueFromPathAsync(variableHolder, path, sessionId, token)
                 : variableHolder.ExtractValueWithRegex();
 
             await _memoryCacheService.SetItemAsync(placeholder, resolvedValue, TimeSpan.FromSeconds(30));
             return resolvedValue;
         }
 
-        private static string ExtractValueFromPath(IVariableHolder variableHolder, string path)
+        private static async Task<string> ExtractValueFromPathAsync(IVariableHolder variableHolder, string path, string sessionId, CancellationToken token)
         {
             if (path.StartsWith(".") || path.StartsWith("[") && variableHolder.Format == MimeType.ApplicationJson)
             {
@@ -258,7 +258,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
             else if (path.StartsWith("[") && variableHolder.Format == MimeType.TextCsv)
             {
-                return variableHolder.ExtractCsvValue(path);
+                return await variableHolder.ExtractCsvValueAsync(path, sessionId, token);
             }
             else
             {

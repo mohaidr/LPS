@@ -15,7 +15,7 @@ namespace LPS.Domain.LPSSession
         public PayloadType Type { get; private set; }
         public string RawValue { get; private set; }
         public Dictionary<string, object> MultipartData { get; private set; }
-        public byte[] BinaryData { get; private set; }
+        public string FilePath { get; private set; }
 
         private Payload(PayloadType type)
         {
@@ -40,10 +40,7 @@ namespace LPS.Domain.LPSSession
 
         public static Payload CreateBinary(byte[] binaryData)
         {
-            return new Payload(PayloadType.Binary)
-            {
-                BinaryData = binaryData
-            };
+            throw new NotImplementedException();
         }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SessionManager
@@ -24,7 +25,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
         public bool IsGlobal { get; }
         public string ExtractJsonValue(string pattern);
         public string ExtractXmlValue(string xpath);
-        public string ExtractCsvValue(string indices);
+        public Task<string> ExtractCsvValueAsync(string indices, string sessionId, CancellationToken token);
         public string ExtractValueWithRegex();
     }
 }

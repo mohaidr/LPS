@@ -75,7 +75,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                         break;
 
                     case Payload.PayloadType.Binary:
-                        httpRequestMessage.Content = new ByteArrayContent(httpRequest.Payload.BinaryData);
+                        throw new InvalidOperationException();
                         break;
 
                     default:

@@ -19,8 +19,11 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
         public string Pattern { get; private set; }
         public string Value { get; private set; }
         public bool IsGlobal { get; private set; }
-
-        private VariableHolder() { } // Private constructor for controlled instantiation via builder
+        IPlaceholderResolverService _placeholderResolverService;
+        private VariableHolder(IPlaceholderResolverService placeholderResolverService) 
+        { 
+            _placeholderResolverService = placeholderResolverService;
+        } // Private constructor for controlled instantiation via builder
 
         public string ExtractJsonValue(string jsonPath)
         {
@@ -82,10 +85,15 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             }
         }
 
-        public string ExtractCsvValue(string indices)
+        public async Task<string> ExtractCsvValueAsync(string indices, string sessionId, CancellationToken token)
         {
             var trimmed = indices.Trim('[', ']');
             var parts = trimmed.Split(',');
+            if (parts.Length == 2)
+            {
+                parts[0] = await  _placeholderResolverService.ResolvePlaceholdersAsync<string>(parts[0], sessionId, token);
+                parts[1] = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(parts[1], sessionId, token);
+            }
             if (parts.Length != 2 || !int.TryParse(parts[0], out int rowIndex) || !int.TryParse(parts[1], out int columnIndex))
             {
                 throw new ArgumentException("Invalid index format. Use the format [rowIndex,columnIndex].");
@@ -135,7 +143,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             public Builder(IPlaceholderResolverService placeholderResolverService)
             {
                 _placeholderResolverService = placeholderResolverService ?? throw new ArgumentNullException(nameof(placeholderResolverService));
-                _variableHolder = new VariableHolder();
+                _variableHolder = new VariableHolder(placeholderResolverService);
             }
 
             public Builder WithFormat(MimeType format)
