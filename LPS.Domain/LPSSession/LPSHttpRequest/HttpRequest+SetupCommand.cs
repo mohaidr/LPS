@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -36,7 +37,7 @@ namespace LPS.Domain
             public string HttpMethod { get; set; }
             public string HttpVersion { get; set; }
             public Dictionary<string, string> HttpHeaders { get; set; }
-            public string Payload { get; set; }
+            public Payload? Payload { get; protected set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
             public bool? SaveResponse { get; set; }
             public bool? SupportH2C { get; set; }
@@ -90,10 +91,22 @@ namespace LPS.Domain
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
                 this.URL = command.URL;
-                this.Payload = Payload.CreateRaw(command.Payload);
+                if (command.Payload?.Type == Payload.PayloadType.Raw)
+                {
+                    this.Payload = Payload.CreateRaw(command.Payload.RawValue);
+                }
+                else if (command.Payload?.Type == Payload.PayloadType.Multipart)
+                {
+                    this.Payload = Payload.CreateMultipart(command.Payload.Multipart.Fields, command.Payload.Multipart.Files);
+                }
+                else if (command.Payload?.Type == Payload.PayloadType.Binary)
+                {
+                    this.Payload = Payload.CreateBinary(command.Payload.BinaryValue);
+                }
+
                 this.HttpHeaders = [];
                 this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.HasValue ? command.DownloadHtmlEmbeddedResources.Value : false;
-                this.SaveResponse = command.SaveResponse.Value;
+                this.SaveResponse = command.SaveResponse ?? false;
                 this.SupportH2C = command.SupportH2C;
                 if (command.HttpHeaders != null)
                 {

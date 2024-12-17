@@ -28,7 +28,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             _urlSanitizationService = urlSanitizationService;
         }
 
-        public async Task<IResponseProcessor> CreateResponseProcessorAsync(string url,MimeType responseType, bool saveResponse, CancellationToken token)
+        public async Task<IResponseProcessor> CreateResponseProcessorAsync(string url,MimeType responseContentType, bool saveResponse, CancellationToken token)
         {
 
             if (!saveResponse)
@@ -45,7 +45,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                 _runtimeOperationIdProvider, 
                 _urlSanitizationService);
 
-            await processor.InitializeAsync(responseType.ToFileExtension(), token);
+            await processor.InitializeAsync(responseContentType.ToFileExtension(), token);
             return processor;
         }
     }

@@ -39,8 +39,8 @@ namespace LPS.DTOs
         public List<HttpIterationDto> Iterations { get; set; }
 
         // Referenced iterations for this round
-        [JsonPropertyName("ref")]
-        [YamlMember(Alias = "ref")]
+        [JsonPropertyName("reference")]
+        [YamlMember(Alias = "reference")]
         public List<string> ReferencedIterations { get; set; }
 
         // Startup delay (can be a variable)

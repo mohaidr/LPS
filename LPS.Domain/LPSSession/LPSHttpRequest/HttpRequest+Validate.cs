@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using FluentValidation;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Validation;
+using LPS.Domain.LPSSession;
 
 namespace LPS.Domain
 {
@@ -105,6 +106,37 @@ namespace LPS.Domain
                         })
                         .WithMessage("When 'SupportH2C' is enabled, the 'Http Version' must be set to 2.0.");
                 });
+
+                When(command => command.Payload != null, () =>
+                {
+                    if (command.Payload.Type == Payload.PayloadType.Multipart)
+                    {
+                        RuleFor(command => command.Payload.Multipart)
+                        .NotNull()
+                        .Must(multipart =>
+                            (multipart?.Files != null && multipart.Files.Count > 0) ||
+                            (multipart?.Fields != null && multipart.Fields.Count > 0))
+                        .WithMessage("The 'Multipart' object must contain at least one file or one field.");
+
+                        RuleFor(command => command.Payload.Multipart)
+                        .Must(multipart => multipart == null 
+                            || multipart?.Files == null 
+                            || multipart.Files.All(file => !string.IsNullOrWhiteSpace(file.Name) && file.Content!= null && !string.IsNullOrWhiteSpace(file.ContentType)))
+                        .WithMessage("All fields in the Multipart must have both field names and values.");
+
+                        RuleFor(command => command.Payload.Multipart)
+                        .Must(multipart => multipart == null 
+                            || multipart?.Fields== null 
+                            || multipart.Fields.All(field => !string.IsNullOrWhiteSpace(field.Name) && !string.IsNullOrWhiteSpace(field.Value) && !string.IsNullOrWhiteSpace(field.ContentType)))
+                        .WithMessage("All fields in the Multipart must have both field names and values.");
+                    }
+                    else if (command.Payload.Type == Payload.PayloadType.Binary)
+                    {
+                        RuleFor(dto => dto.Payload.BinaryValue)
+                        .NotNull();
+                    }
+                });
+
 
                 //TODO: Validate http headers
                 #endregion

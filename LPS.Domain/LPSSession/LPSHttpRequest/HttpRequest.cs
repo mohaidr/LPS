@@ -1,4 +1,5 @@
-﻿using System;
+﻿#nullable enable
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -47,7 +48,7 @@ namespace LPS.Domain
 
         public string URL { get; protected set; }
 
-        public Payload Payload { get; protected set; }
+        public Payload? Payload { get; protected set; }
 
         public string HttpVersion { get; protected set; }
 

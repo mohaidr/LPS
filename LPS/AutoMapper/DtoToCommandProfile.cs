@@ -1,9 +1,12 @@
 ﻿using AutoMapper;
 using LPS.Domain;
+using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Domain.LPSSession;
 using LPS.DTOs;
+using LPS.Infrastructure.Common;
 
 
 namespace LPS.AutoMapper
@@ -67,7 +70,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.HttpHeaders, opt => opt.MapFrom(src => src.HttpHeaders.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value)))
-                .ForMember(dest => dest.Payload, opt => opt.MapFrom(src => src.Payload))
+                .ForMember(dest => dest.Payload, opt => opt.MapFrom(src => MapPayload(src.Payload)))
                 .ForMember(dest => dest.DownloadHtmlEmbeddedResources, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.DownloadHtmlEmbeddedResources).Result))
                 .ForMember(dest => dest.SaveResponse, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.SaveResponse).Result))
                 .ForMember(dest => dest.SupportH2C, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.SupportH2C).Result))
@@ -85,6 +88,86 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
             .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());
+        }
+
+        private Payload MapPayload(PayloadDto payloadDto)
+        {
+            if (payloadDto == null)
+                return Payload.CreateRaw(string.Empty);
+
+            if (payloadDto.Type == null) // set to the default if null. the type is defined as nullable so it does not default to the first enum value.
+            {
+                if (!string.IsNullOrEmpty(payloadDto.File))
+                {
+                    payloadDto.Type = Payload.PayloadType.Binary;
+                }
+                else if (payloadDto.Multipart != null)
+                {
+                    payloadDto.Type = Payload.PayloadType.Multipart;
+                }
+                else
+                {
+                    payloadDto.Type = Payload.PayloadType.Raw;
+                }
+            }
+
+            switch (payloadDto.Type)
+            {
+                case Payload.PayloadType.Raw:
+                    return Payload.CreateRaw(payloadDto.Raw?? string.Empty); // do not use resolver here, we resolve the raw payload during the session
+                
+                case Payload.PayloadType.Binary:
+                    // Read the file content from the full path and create binary payload
+                    string fullPath = Path.GetFullPath(ResolvePlaceholderAsync<string>(payloadDto.File).Result, AppConstants.EnvironmentCurrentDirectory);
+                    if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
+                    {
+                        throw new ArgumentException($"Invalid file path specified: {payloadDto.File}");
+                    }
+                    var binaryContent =  File.ReadAllBytes(fullPath);
+                    return Payload.CreateBinary(binaryContent);
+                
+                case Payload.PayloadType.Multipart:
+                    // Map fields and files for multipart content
+                    var fields = payloadDto.Multipart?.Fields?
+                        .Select(field => new TextField(ResolvePlaceholderAsync<string>(field.Name).Result, ResolvePlaceholderAsync<string>(field.Value).Result, ResolvePlaceholderAsync<string>(field.ContentType).Result ?? "text/plain"))
+                        .ToList();
+                    var files = payloadDto.Multipart?.Files
+                        .Select(file =>
+                        {
+                            // Resolve placeholders for file properties
+                            string fullPath = Path.GetFullPath(ResolvePlaceholderAsync<string>(file.Path).Result, AppConstants.EnvironmentCurrentDirectory);
+                            if (string.IsNullOrEmpty(fullPath) || !File.Exists(fullPath))
+                            {
+                                throw new ArgumentException($"Invalid file path specified for multipart file: {file.Name}");
+                            }
+                            string multiPartFileName = ResolvePlaceholderAsync<string>(file.Name).Result;
+                            string extension = Path.GetExtension(fullPath).ToLowerInvariant();
+
+                            multiPartFileName = string.IsNullOrEmpty(multiPartFileName) ? Path.GetFileName(fullPath).ToLowerInvariant() : string.Empty;
+                            string contentType = ResolvePlaceholderAsync<string>(file.ContentType).Result;
+
+                            if (string.IsNullOrEmpty(contentType))
+                            { 
+                                contentType = MimeTypeExtensions.FromFileExtension(extension).ToContentType();
+                            }
+                            // Determine MIME type
+                            MimeType mimeType = MimeTypeExtensions.FromContentType(contentType.Trim());
+
+                            // Read file content based on MIME type
+                            object fileContent = mimeType.IsTextContent()
+                                ? File.ReadAllText(fullPath) // Read as text for text-based MIME types
+                                : File.ReadAllBytes(fullPath); // Read as binary for other types
+
+                            // Return the FileField instance
+                            return new FileField(multiPartFileName, contentType, fileContent);
+                        })
+                        .ToList();
+
+                    return Payload.CreateMultipart(fields, files);
+
+                default:
+                    throw new InvalidOperationException($"Unsupported payload type: {payloadDto.Type}");
+            }
         }
 
         private async Task<T> ResolvePlaceholderAsync<T>(string value)

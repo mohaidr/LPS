@@ -12,6 +12,9 @@ using Microsoft.AspNetCore.Http;
 using LPS.DTOs;
 using System.CommandLine;
 using System.Linq.Expressions;
+using LPS.Infrastructure.Common;
+using LPS.Domain.LPSSession;
+using System.Data;
 
 namespace LPS.UI.Core.LPSValidators
 {
@@ -50,7 +53,6 @@ namespace LPS.UI.Core.LPSValidators
                     return true; // Validation passes if SupportH2C is false or invalid
                 })
                 .WithMessage("H2C only works with HTTP/2");
-
 
             RuleFor(dto => dto.HttpMethod)
                 .NotEmpty()
@@ -92,7 +94,7 @@ namespace LPS.UI.Core.LPSValidators
                 .WithMessage("H2C only works with the HTTP schema or placeholders starting with '$'");
 
             RuleFor(dto => dto.SupportH2C)
-                .NotNull()
+                .NotEmpty()
                 .When(dto =>
                     !string.IsNullOrEmpty(dto.URL)
                     && dto.URL.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
@@ -108,7 +110,6 @@ namespace LPS.UI.Core.LPSValidators
                 })
                 .WithMessage("'SupportH2C' must be 'true', 'false', or a placeholder starting with '$'");
 
-
             RuleFor(dto => dto.SaveResponse)
                 .Must(saveResponse =>
                 {
@@ -119,7 +120,6 @@ namespace LPS.UI.Core.LPSValidators
                 })
                 .WithMessage("'Save Response' must be 'true', 'false', or a placeholder starting with '$'");
 
-
             RuleFor(dto => dto.DownloadHtmlEmbeddedResources)
                 .Must(downloadHtmlEmbeddedResources =>
                 {
@@ -129,8 +129,44 @@ namespace LPS.UI.Core.LPSValidators
                         || bool.TryParse(downloadHtmlEmbeddedResources, out _);
                 })
                 .WithMessage("'Download Html Embedded Resources' must be 'true', 'false', or a placeholder starting with '$'");
+           
+            When(dto => dto.Payload != null, () =>
+            {
+
+                RuleFor(dto => dto.Payload.Multipart)
+                .NotNull()
+                .When(dto => dto.Payload.Type == Payload.PayloadType.Multipart)
+                .WithMessage("Multipart content is invalid");
+
+                When(dto => dto.Payload.Multipart != null, () =>
+                {
+                    // Ensure either Files or Fields have at least one item
+                    RuleFor(dto => dto.Payload.Multipart)
+                        .Must(multipart =>
+                            (multipart.Files != null && multipart.Files.Count > 0) ||
+                            (multipart.Fields != null && multipart.Fields.Count > 0))
+                        .WithMessage("The 'Multipart' object must contain at least one file or one field.");
+                   
+                    RuleFor(dto => dto.Payload.Multipart)
+                        .Must((dto, multipart) => multipart.Files == null || multipart.Files.All(file => IsValidFilePath(file.Path)))
+                        .WithMessage("All files in the Multipart must have valid file paths.");
+
+                    RuleFor(dto => dto.Payload.Multipart)
+                        .Must(multipart => multipart?.Fields == null || multipart.Fields.All(field => !string.IsNullOrWhiteSpace(field.Name) && !string.IsNullOrWhiteSpace(field.Value)))
+                        .WithMessage("All fields in the Multipart must have both field names and values.");
+                });
+
+                RuleFor(dto => dto.Payload.File)
+                .NotNull()
+                .NotEmpty()
+                .When(dto => dto.Payload.Type == Payload.PayloadType.Binary)
+                .WithMessage("Invalid File");
 
 
+                RuleFor(dto => dto.Payload.File)
+                    .Must(file => string.IsNullOrWhiteSpace(file) || IsValidFilePath(file))
+                    .WithMessage("The File property must hold a valid file path when it is not null or empty.");
+            });
             // Enforce HTTP when SupportH2C is true
             When(dto =>
             {
@@ -165,10 +201,23 @@ namespace LPS.UI.Core.LPSValidators
 
             RuleFor(dto => dto.Capture)
                 .SetValidator(new CaptureValidator(new CaptureHandlerDto()));
-
-
         }
+        private static bool IsValidFilePath(string path)
+        {
+            try
+            {
+                // Resolve the placeholder if needed and get the absolute path
+                string fullPath = Path.GetFullPath(path, AppConstants.EnvironmentCurrentDirectory);
 
+                // Check if the file exists
+                return !string.IsNullOrEmpty(fullPath) && (fullPath.StartsWith('$') || File.Exists(fullPath));
+            }
+            catch (Exception)
+            {
+                // If any exception occurs (e.g., invalid path characters), the path is invalid
+                return false;
+            }
+        }
         public override HttpRequestDto Dto { get { return _requestDto; } }
     }
 }

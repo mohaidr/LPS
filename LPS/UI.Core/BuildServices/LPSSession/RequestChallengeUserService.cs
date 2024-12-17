@@ -79,7 +79,7 @@ namespace LPS.UI.Core.Build.Services
             if (_requestDto.HttpMethod.Equals("PUT", StringComparison.CurrentCultureIgnoreCase) || _requestDto.HttpMethod.Equals("POST", StringComparison.CurrentCultureIgnoreCase) || _requestDto.HttpMethod.Equals("PATCH", StringComparison.CurrentCultureIgnoreCase))
             {
                 AnsiConsole.WriteLine("Add payload to your http request.\n - Enter Path:[Path] to read the payload from a path file\n - URL:[URL] to read the payload from a URL \n - Or just add your payload inline");
-                _requestDto.Payload = InputPayloadService.Challenge();
+                _requestDto.Payload = new PayloadDto() { Raw= InputPayloadService.Challenge() } ;
             }
         }
 

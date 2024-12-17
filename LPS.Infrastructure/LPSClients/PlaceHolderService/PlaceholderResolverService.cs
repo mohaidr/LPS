@@ -249,7 +249,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 ? await ExtractValueFromPathAsync(variableHolder, path, sessionId, token)
                 : variableHolder.ExtractValueWithRegex();
 
-            await _memoryCacheService.SetItemAsync(placeholder, resolvedValue, TimeSpan.FromSeconds(30));
+            await _memoryCacheService.SetItemAsync(placeholder, resolvedValue, !string.IsNullOrEmpty(sessionId) ? TimeSpan.FromSeconds(30): TimeSpan.MaxValue);
             return resolvedValue;
         }
 

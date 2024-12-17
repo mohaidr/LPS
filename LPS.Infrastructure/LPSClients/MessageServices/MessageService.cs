@@ -16,6 +16,7 @@ using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using System.Security.Cryptography.X509Certificates;
 using System.Collections.Generic;
 using LPS.Domain.LPSSession;
+using System.Net.Http.Headers;
 
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
@@ -24,6 +25,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                                 ILogger logger,
                                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                                 ICacheService<long> memoryCacheService,
+                                ICacheService<object> dynamicTypeMemoryCacheService,
                                 IPlaceholderResolverService placeHolderResolver) : IMessageService
     {
         readonly ILogger _logger = logger;
@@ -31,6 +33,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
         readonly IHttpHeadersService _headersService = headersService;
         readonly IMetricsService _metricsService = metricsService;
         readonly ICacheService<long> _memoryCacheService = memoryCacheService;
+        readonly ICacheService<object> _dynamicTypeCacheService = dynamicTypeMemoryCacheService;
         readonly IPlaceholderResolverService _placeHolderResolver = placeHolderResolver;
 
         public async Task<HttpRequestMessage> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default)
@@ -61,21 +64,51 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                         var resolvedRawValue = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload.RawValue, sessionId, token);
                         httpRequestMessage.Content = new StringContent(resolvedRawValue ?? string.Empty, Encoding.UTF8);
                         break;
-
                     case Payload.PayloadType.Multipart:
                         var multipartContent = new MultipartFormDataContent();
-                        foreach (var item in httpRequest.Payload.MultipartData)
+                        // Add fields
+                        foreach (var field in httpRequest.Payload.Multipart.Fields)
                         {
-                            if (item.Value is string stringValue)
-                                multipartContent.Add(new StringContent(stringValue), item.Key);
-                            else if (item.Value is byte[] byteArray)
-                                multipartContent.Add(new ByteArrayContent(byteArray), item.Key, $"{item.Key}.bin");
+                            var content = new StringContent(field.Value ?? string.Empty);
+                            var contentType = string.IsNullOrEmpty(field.ContentType) ? "text/plain" : field.ContentType;
+                            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
+                            multipartContent.Add(content, field.Name);
                         }
+                        // Add files
+                        foreach (var file in httpRequest.Payload.Multipart.Files)
+                        {
+                            HttpContent fileContent;
+
+                            if (file.Content is byte[] binaryContent)
+                            {
+                                // Use ByteArrayContent without copying the array
+                                fileContent = new ByteArrayContent(binaryContent);
+                            }
+                            else if (file.Content is string textContent)
+                            {
+                                string multipartFileCacheKey = $"multipartfile_{file.Name}";
+                                // Use StringContent for text-based content
+                                fileContent = (await _dynamicTypeCacheService .GetItemAsync(multipartFileCacheKey)) as HttpContent ?? new StringContent(textContent);
+                                await _dynamicTypeCacheService.SetItemAsync(multipartFileCacheKey, fileContent, TimeSpan.FromMinutes(5));
+                            }
+                            else
+                            {
+                                throw new InvalidOperationException($"Unsupported file content type for file: {file.Name}");
+                            }
+
+                            fileContent.Headers.ContentType = new MediaTypeHeaderValue(file.ContentType);
+                            multipartContent.Add(fileContent, file.Name, file.Name);
+                        }
+
                         httpRequestMessage.Content = multipartContent;
                         break;
 
                     case Payload.PayloadType.Binary:
-                        throw new InvalidOperationException();
+                        var binaryData = httpRequest.Payload.BinaryValue;
+                        httpRequestMessage.Content = new ByteArrayContent(binaryData)
+                        {
+                            Headers = { ContentType = new MediaTypeHeaderValue("application/octet-stream") }
+                        };
                         break;
 
                     default:

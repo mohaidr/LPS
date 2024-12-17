@@ -121,7 +121,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                     SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
                                     SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),
                                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
-                                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) : string.Empty,
+                                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? new PayloadDto(){ Raw= InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) } : new PayloadDto(){ Raw= string.Empty },
                                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),
                                 },
                             }

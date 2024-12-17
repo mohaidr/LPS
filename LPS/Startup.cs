@@ -98,6 +98,7 @@ namespace LPS
                     services.AddSingleton<ILogFormatter, LogFormatter>();
                     services.AddSingleton<ICacheService<string>, MemoryCacheService<string>>();
                     services.AddSingleton<ICacheService<long>, MemoryCacheService<long>>();
+                    services.AddSingleton<ICacheService<object>, MemoryCacheService<object>>();
                     services.AddSingleton(new MemoryCache(new MemoryCacheOptions
                     {
                         SizeLimit = 1024
