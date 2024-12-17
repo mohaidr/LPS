@@ -4,6 +4,7 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.URLServices;
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -28,7 +29,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             _urlSanitizationService = urlSanitizationService;
         }
 
-        public async Task<IResponseProcessor> CreateResponseProcessorAsync(string url,MimeType responseContentType, bool saveResponse, CancellationToken token)
+        public async Task<IResponseProcessor> CreateResponseProcessorAsync(HttpResponseMessage message,MimeType responseContentType, bool saveResponse, CancellationToken token)
         {
 
             if (!saveResponse)
@@ -39,7 +40,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 
             // Create a processor that will handle response saving
             var processor = new FileResponseProcessor(
-                url,
+                message,
                 _memoryCache,
                 _logger,
                 _runtimeOperationIdProvider, 

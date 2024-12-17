@@ -7,11 +7,13 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.URLServices;
 using System.Collections.Concurrent;
+using LPS.Infrastructure.LPSClients.CachService;
+using System.Net.Http;
 
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
     public class FileResponseProcessor(
-        string url,
+        HttpResponseMessage message,
         ICacheService<string> memoryCache,
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -23,13 +25,13 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         private readonly ICacheService<string> _memoryCache = memoryCache;
         private readonly ILogger _logger = logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        private readonly string _url = url;
+        private readonly HttpResponseMessage _message = message;
         private bool _disposed = false;
         private bool _isInitialized = false;
         readonly IUrlSanitizationService _urlSanitizationService = urlSanitizationService;
         public string ResponseFilePath { get; private set; }
-        readonly string _cacheKey = $"SampleResponse_{url}";
-
+        readonly string _url = message?.RequestMessage?.RequestUri?.ToString();
+        readonly string _cacheKey = $"{CachePrefixes.SampleResponse}{message?.RequestMessage?.RequestUri?.ToString()}";
         /// <summary>
         /// Initializes the FileStream and updates the cache with no expiration.
         /// This method manages the semaphore internally.

@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,6 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         /// <param name="saveResponse">Indicates whether the response should be saved.</param>
         /// <param name="token">Cancellation token.</param>
         /// <returns>An instance of IResponseProcessor.</returns>
-        Task<IResponseProcessor> CreateResponseProcessorAsync(string url, MimeType responseType, bool saveResponse, CancellationToken token);
+        Task<IResponseProcessor> CreateResponseProcessorAsync(HttpResponseMessage message, MimeType responseType, bool saveResponse, CancellationToken token);
     }
 }

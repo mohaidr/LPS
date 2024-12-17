@@ -17,6 +17,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Collections.Generic;
 using LPS.Domain.LPSSession;
 using System.Net.Http.Headers;
+using LPS.Infrastructure.LPSClients.CachService;
 
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
@@ -86,9 +87,9 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                             }
                             else if (file.Content is string textContent)
                             {
-                                string multipartFileCacheKey = $"multipartfile_{file.Name}";
+                                string multipartFileCacheKey = $"{CachePrefixes.Multipartfile}{file.Name}";
                                 // Use StringContent for text-based content
-                                fileContent = (await _dynamicTypeCacheService .GetItemAsync(multipartFileCacheKey)) as HttpContent ?? new StringContent(textContent);
+                                fileContent = (await _dynamicTypeCacheService.GetItemAsync(multipartFileCacheKey)) as HttpContent ?? new StringContent(textContent);
                                 await _dynamicTypeCacheService.SetItemAsync(multipartFileCacheKey, fileContent, TimeSpan.FromMinutes(5));
                             }
                             else
@@ -132,7 +133,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             await _headersService.ApplyHeadersAsync(httpRequestMessage, sessionId, httpRequest.HttpHeaders, token);
 
             // Cache key to identify the request profile
-            string cacheKey = $"request_size_{httpRequest.Id}";
+            string cacheKey = $"{CachePrefixes.RequestSize}{httpRequest.Id}";
 
             // Check if the message size is cached
             if (!_memoryCacheService.TryGetItem(cacheKey, out long messageSize))

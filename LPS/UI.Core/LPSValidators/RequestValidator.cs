@@ -210,7 +210,7 @@ namespace LPS.UI.Core.LPSValidators
                 string fullPath = Path.GetFullPath(path, AppConstants.EnvironmentCurrentDirectory);
 
                 // Check if the file exists
-                return !string.IsNullOrEmpty(fullPath) && (fullPath.StartsWith('$') || File.Exists(fullPath));
+                return !string.IsNullOrEmpty(fullPath) && (path.StartsWith('$') || File.Exists(fullPath));
             }
             catch (Exception)
             {

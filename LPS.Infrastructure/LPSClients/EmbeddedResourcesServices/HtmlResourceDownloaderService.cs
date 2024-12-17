@@ -49,7 +49,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                 await _logger.LogAsync(_operationIdProvider.OperationId, $"Starting resource download for {requestId}", LPSLoggingLevel.Verbose, cancellationToken);
 
                 // Cache key for the resource URLs
-                string resourceUrlsCacheKey = $"ResourceUrls_{requestId}";
+                string resourceUrlsCacheKey = $"{CachePrefixes.ResourceUrls}{requestId}";
 
                 // Try to get the cached resource URLs from IHtmlCacheService
                 string cachedResourceUrls = await _memoryCacheService.GetItemAsync(resourceUrlsCacheKey);
@@ -64,8 +64,8 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                 else
                 {
                     // Retrieve HTML content if resource URLs are not cached
-                    string htmlCacheKey = $"Content_{requestId}";
-                    string htmlContent = await _memoryCacheService.GetItemAsync(htmlCacheKey);
+                    string contentCacheKey = $"{CachePrefixes.Content}{requestId}";
+                    string htmlContent = await _memoryCacheService.GetItemAsync(contentCacheKey);
                     if (string.IsNullOrEmpty(htmlContent))
                     {
                         await _logger.LogAsync(_operationIdProvider.OperationId, "No cached item found of type html.", LPSLoggingLevel.Warning, cancellationToken);

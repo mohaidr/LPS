@@ -11,6 +11,7 @@ using LPS.Domain.Common.Interfaces;
 using System.IO;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Logger;
+using LPS.Infrastructure.LPSClients.CachService;
 
 namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 {
@@ -221,7 +222,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
         private async Task<string> ResolveVariableAsync(string placeholder, string sessionId, CancellationToken token)
         {
-            if (_memoryCacheService.TryGetItem(placeholder, out string cachedResult))
+            string cacheKey = $"{CachePrefixes.Placeholder}{placeholder}";
+            if (_memoryCacheService.TryGetItem(cacheKey, out string cachedResult))
             {
                 return cachedResult;
             }
@@ -249,7 +251,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 ? await ExtractValueFromPathAsync(variableHolder, path, sessionId, token)
                 : variableHolder.ExtractValueWithRegex();
 
-            await _memoryCacheService.SetItemAsync(placeholder, resolvedValue, !string.IsNullOrEmpty(sessionId) ? TimeSpan.FromSeconds(30): TimeSpan.MaxValue);
+            await _memoryCacheService.SetItemAsync(cacheKey, resolvedValue, !string.IsNullOrEmpty(sessionId) ? TimeSpan.FromSeconds(30): TimeSpan.MaxValue);
             return resolvedValue;
         }
 
@@ -327,7 +329,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
             string fullPath = Path.GetFullPath(filePath, AppConstants.EnvironmentCurrentDirectory);
             // Check if the file content is already cached
-            if (_memoryCacheService.TryGetItem(fullPath, out string cachedContent))
+            string pathCacheKey = $"{CachePrefixes.Path}{fullPath}";
+            if (_memoryCacheService.TryGetItem(pathCacheKey, out string cachedContent))
             {
                 return cachedContent;
             }
@@ -344,7 +347,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 string fileContent = await reader.ReadToEndAsync();
 
                 // Cache the file content for the program's lifetime
-                await _memoryCacheService.SetItemAsync(fullPath, fileContent, TimeSpan.MaxValue);
+                await _memoryCacheService.SetItemAsync(pathCacheKey, fileContent, TimeSpan.MaxValue);
 
                 return fileContent;
             }
@@ -370,8 +373,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
             // Determine cache key
             string cacheKey = string.IsNullOrEmpty(sessionId) || !int.TryParse(sessionId, out _)
-                ? $"GlobalCounter_{startValue}_{endValue}"
-                : $"Counter_{sessionId}_{startValue}_{endValue}";
+                ? $"{CachePrefixes.GlobalCounter}{startValue}_{endValue}"
+                : $"{CachePrefixes.SessionCounter}{sessionId}_{startValue}_{endValue}";
 
             await _semaphore.WaitAsync(token); // Lock to ensure thread-safety
             try

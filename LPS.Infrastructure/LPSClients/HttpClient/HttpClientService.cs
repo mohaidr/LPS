@@ -15,6 +15,7 @@ using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
+using LPS.Infrastructure.LPSClients.CachService;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -100,7 +101,7 @@ namespace LPS.Infrastructure.LPSClients
                 {
                     MimeType @as = MimeTypeExtensions.FromKeyword(request.Capture.As);
 
-                    var rawContent = await _memoryCacheService.GetItemAsync($"Content_{request.Id}");
+                    var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{request.Id}");
                     if (rawContent != null)
                     {
                         var builder = new VariableHolder.Builder(_placeholderResolverService);
@@ -115,18 +116,18 @@ namespace LPS.Infrastructure.LPSClients
                         {
                             variableHolder = await builder.SetGlobal(true)
                                 .BuildAsync(token);
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Name} as a global variable", LPSLoggingLevel.Verbose, token);
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent: "BinaryContent ")} to {request.Capture.Name} as a global variable", LPSLoggingLevel.Verbose, token);
                             await _variableManager.AddVariableAsync(request.Capture.Name, variableHolder, token);
                         }
                         else
                         {
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {rawContent} to {request.Capture.Name} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {request.Capture.Name} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
                             await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.Name, variableHolder, token);
                         }
                     }
                     else
                     {
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is unknown or the content is empty.", LPSLoggingLevel.Warning, token);
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is either unknown or the content is empty.", LPSLoggingLevel.Warning, token);
                     }
 
                     if (request.Capture.Headers != null && request.Capture.Headers.Any())

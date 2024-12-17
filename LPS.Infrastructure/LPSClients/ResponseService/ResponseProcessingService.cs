@@ -18,6 +18,7 @@ using LPS.Infrastructure.LPSClients.URLServices;
 using LPS.Infrastructure.LPSClients.MetricsServices;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using System.Net;
+using LPS.Infrastructure.LPSClients.CachService;
 
 namespace LPS.Infrastructure.LPSClients.ResponseService
 {
@@ -60,7 +61,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                 {
                     // Calculate the headers size (both response and content headers)
                     long responseSize = CalculateHeadersSize(responseMessage);
-                    string cacheKey = $"Content_{httpRequest.Id}";
+                    string cacheKey = $"{CachePrefixes.Content}{httpRequest.Id}";
                     string content = await _memoryCacheService.GetItemAsync(cacheKey);
 
                     using Stream contentStream = await responseMessage.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
@@ -82,7 +83,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
 
                         // Get the response processor
                         IResponseProcessor responseProcessor = await _responseProcessorFactory.CreateResponseProcessorAsync(
-                            responseMessage?.RequestMessage?.RequestUri?.ToString(), mimeType, httpRequest.SaveResponse, token);
+                            responseMessage, mimeType, httpRequest.SaveResponse, token);
 
                         await using (responseProcessor.ConfigureAwait(false))
                         {
