@@ -25,7 +25,7 @@ namespace LPS.UI.Core.LPSValidators
         {
             ArgumentNullException.ThrowIfNull(captureHandlerDto);
             _captureHandlerDto = captureHandlerDto;
-            RuleFor(dto => dto.Name)
+            RuleFor(dto => dto.To)
                 .NotNull().NotEmpty()
                 .WithMessage("'Variable Name' must not be empty")
                 .Matches("^[a-zA-Z0-9]+$")

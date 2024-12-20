@@ -17,7 +17,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
     public class CaptureBinder : BinderBase<CaptureHandlerDto>
     {
-        private static Option<string>? _nameOption;
+        private static Option<string>? _toOption;
         private static Option<string>? _asOption;
         private static Option<string>? _regexOption;
         private static Option<string>? _makeGlobal;
@@ -32,7 +32,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
          Option<string>? makeGlobal = null,
          Option<IList<string>>? headerOption = null)
         {
-            _nameOption = nameOption?? CaptureCommandOptions.NameOption;
+            _toOption = nameOption?? CaptureCommandOptions.ToOption;
             _asOption = asOption?? CaptureCommandOptions.AsOption;
             _regexOption = regexOption?? CaptureCommandOptions.RegexOption;
             _makeGlobal = makeGlobal ?? CaptureCommandOptions.MakeGlobal;
@@ -44,7 +44,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         protected override CaptureHandlerDto GetBoundValue(BindingContext bindingContext) =>
             new()
             {
-                Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
+                To = bindingContext.ParseResult.GetValueForOption(_toOption),
                 As = bindingContext.ParseResult.GetValueForOption(_asOption),
                 Regex = bindingContext.ParseResult.GetValueForOption(_regexOption),
                 MakeGlobal = bindingContext.ParseResult.GetValueForOption(_makeGlobal),

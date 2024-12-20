@@ -505,9 +505,9 @@ namespace LPS.UI.Core.LPSCommandLine
 
 
                 // Shortcut aliases
-                NameOption.AddAlias("-n");
+                ToOption.AddAlias("-to");
                 // Add case-insensitive aliases
-                AddCaseInsensitiveAliases(NameOption, "--name");
+                AddCaseInsensitiveAliases(ToOption, "--to");
                 // Shortcut aliases
                 AsOption.AddAlias("-as");
                 // Add case-insensitive aliases
@@ -545,8 +545,8 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
 
-            public static Option<string> NameOption { get; } = new Option<string>(
-                "--name", "Variable name")
+            public static Option<string> ToOption { get; } = new Option<string>(
+                "--to", "Variable name")
             {
                 IsRequired = true
             };

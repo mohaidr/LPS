@@ -116,13 +116,13 @@ namespace LPS.Infrastructure.LPSClients
                         {
                             variableHolder = await builder.SetGlobal(true)
                                 .BuildAsync(token);
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent: "BinaryContent ")} to {request.Capture.Name} as a global variable", LPSLoggingLevel.Verbose, token);
-                            await _variableManager.AddVariableAsync(request.Capture.Name, variableHolder, token);
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent: "BinaryContent ")} to {request.Capture.To} as a global variable", LPSLoggingLevel.Verbose, token);
+                            await _variableManager.AddVariableAsync(request.Capture.To, variableHolder, token);
                         }
                         else
                         {
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {request.Capture.Name} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
-                            await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.Name, variableHolder, token);
+                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {request.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
+                            await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.To, variableHolder, token);
                         }
                     }
                     else

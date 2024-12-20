@@ -26,7 +26,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             [JsonIgnore]
             [YamlIgnore]
             public Guid? Id { get; set; }
-            public string Name { get; set; }
+            public string To { get; set; }
             public string As { get; set; }
             public bool? MakeGlobal { get; set; }
             public string Regex { get; set; }
@@ -51,7 +51,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             if (this.IsValid)
             {
                 clone.Id = this.Id;
-                clone.Name = this.Name;
+                clone.To = this.To;
                 clone.As = this.As;
                 clone.Regex = this.Regex;
                 clone.MakeGlobal = this.MakeGlobal;
@@ -75,7 +75,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
             var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
             if (command.IsValid)
             {
-                this.Name = command.Name;
+                this.To = command.To;
                 this.As = command.As;
                 this.MakeGlobal = command.MakeGlobal;
                 this.Regex = command.Regex;

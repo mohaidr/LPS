@@ -15,7 +15,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected CancellationTokenSource _cts;
         public Guid Id { get; protected set; }
-        public string Name { get; protected set; }
+        public string To { get; protected set; }
         public string As { get; protected set; }
         public bool? MakeGlobal { get; protected set; }
         public string Regex { get; protected set; }

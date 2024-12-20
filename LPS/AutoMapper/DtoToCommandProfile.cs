@@ -80,7 +80,7 @@ namespace LPS.AutoMapper
 
             // Map CaptureHandlerDto to CaptureHandler.SetupCommand
             CreateMap<CaptureHandlerDto, CaptureHandler.SetupCommand>()
-                .ForMember(dest => dest.Name, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.Name).Result))
+                .ForMember(dest => dest.To, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.To).Result))
                 .ForMember(dest => dest.As, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.As).Result))
                 .ForMember(dest => dest.MakeGlobal, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.MakeGlobal).Result))
                 .ForMember(dest => dest.Regex, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.Regex).Result))

@@ -13,7 +13,7 @@ using System.Net.Http;
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
     public class FileResponseProcessor(
-        HttpResponseMessage message,
+        HttpResponseMessage responseMessage,
         ICacheService<string> memoryCache,
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -25,13 +25,13 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         private readonly ICacheService<string> _memoryCache = memoryCache;
         private readonly ILogger _logger = logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        private readonly HttpResponseMessage _message = message;
+        private readonly HttpResponseMessage _message = responseMessage;
         private bool _disposed = false;
         private bool _isInitialized = false;
         readonly IUrlSanitizationService _urlSanitizationService = urlSanitizationService;
         public string ResponseFilePath { get; private set; }
-        readonly string _url = message?.RequestMessage?.RequestUri?.ToString();
-        readonly string _cacheKey = $"{CachePrefixes.SampleResponse}{message?.RequestMessage?.RequestUri?.ToString()}";
+        readonly string _url = responseMessage?.RequestMessage?.RequestUri?.ToString();
+        readonly string _cacheKey = $"{CachePrefixes.SampleResponse}{responseMessage?.RequestMessage?.RequestUri?.ToString()}";
         /// <summary>
         /// Initializes the FileStream and updates the cache with no expiration.
         /// This method manages the semaphore internally.
@@ -111,7 +111,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                     CancellationToken.None);
             }
         }
-
+        
         public async ValueTask DisposeAsync()
         {
             if (!_disposed)

@@ -29,7 +29,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             _urlSanitizationService = urlSanitizationService;
         }
 
-        public async Task<IResponseProcessor> CreateResponseProcessorAsync(HttpResponseMessage message,MimeType responseContentType, bool saveResponse, CancellationToken token)
+        public async Task<IResponseProcessor> CreateResponseProcessorAsync(HttpResponseMessage responseMessage,MimeType responseContentType, bool saveResponse, CancellationToken token)
         {
 
             if (!saveResponse)
@@ -40,7 +40,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 
             // Create a processor that will handle response saving
             var processor = new FileResponseProcessor(
-                message,
+                responseMessage,
                 _memoryCache,
                 _logger,
                 _runtimeOperationIdProvider, 

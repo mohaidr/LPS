@@ -13,7 +13,7 @@ namespace LPS.DTOs
     {
         public CaptureHandlerDto()
         {
-            Name = string.Empty;
+            To = string.Empty;
             As = string.Empty;
             Regex = string.Empty;
             MakeGlobal = "false"; // Support placeholders for boolean values
@@ -21,7 +21,7 @@ namespace LPS.DTOs
         }
 
         // Name of the capture handler
-        public string Name { get; set; }
+        public string To { get; set; }
 
         // Type information
         public string As { get; set; }
@@ -40,7 +40,7 @@ namespace LPS.DTOs
         {
             targetDto = new CaptureHandlerDto
             {
-                Name = this.Name,
+                To = this.To,
                 As = this.As,
                 Regex = this.Regex,
                 MakeGlobal = this.MakeGlobal,

@@ -31,7 +31,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 }
 
                 #region Validation Rules
-                RuleFor(command => command.Name)
+                RuleFor(command => command.To)
                     .NotNull().NotEmpty()
                     .WithMessage("'Variable Name' must not be empty")
                     .Matches("^[a-zA-Z0-9]+$")
