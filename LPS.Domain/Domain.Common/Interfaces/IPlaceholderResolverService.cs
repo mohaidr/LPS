@@ -74,7 +74,6 @@ namespace LPS.Domain.Common.Interfaces
                 "guid" => true,
                 "base64encode" => true,
                 "hash" => true,
-                "customvariable" => true,
                 "read" => true,
                 "loopcounter" => true,
                 _ => false // Unsupported method
