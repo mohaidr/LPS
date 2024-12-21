@@ -365,7 +365,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             // Extract parameters for start and end values
             var startValue = await _paramService.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
             var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100000, sessionId, token);
-
+            var counterName =  await _paramService.ExtractStringAsync(parameters, "counter", string.Empty, sessionId, token);
+            var counterNameCachePart = !string.IsNullOrEmpty(counterName) ? $"_{counterName.Trim()}" : string.Empty;   
             if (startValue >= endValue)
             {
                 throw new ArgumentException("startValue must be less than endValue.");
@@ -373,8 +374,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
             // Determine cache key
             string cacheKey = string.IsNullOrEmpty(sessionId) || !int.TryParse(sessionId, out _)
-                ? $"{CachePrefixes.GlobalCounter}{startValue}_{endValue}"
-                : $"{CachePrefixes.SessionCounter}{sessionId}_{startValue}_{endValue}";
+                ? $"{CachePrefixes.GlobalCounter}{startValue}_{endValue}{counterNameCachePart}"
+                : $"{CachePrefixes.SessionCounter}{sessionId}_{startValue}_{endValue}{counterNameCachePart}";
 
             await _semaphore.WaitAsync(token); // Lock to ensure thread-safety
             try
