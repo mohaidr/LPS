@@ -97,16 +97,32 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                     continue;
                 }
 
-                if (result[currentIndex] == '$')
+                if (currentIndex + 1 < result.Length && result[currentIndex] == '$')
                 {
-                    int startIndex = currentIndex + 1;
-                    int stopperIndex = FindStopperIndex(result, startIndex); // Stoppers like / ; , ] } etc., indicate the end of a variable. For example, in $x,$y, the ',' acts as a stopper, signaling that $x is a complete placeholder to resolve, so $x,$y should be treated as two separate variables.
-                    string placeholder = result.ToString(startIndex, stopperIndex - startIndex);
-                    string resolvedValue = await _processor.ResolvePlaceholderAsync(placeholder, sessionId, token);
+                    if (currentIndex + 2 < result.Length && result[currentIndex + 1] == '{')
+                    {
+                        // Handle ${variable} syntax
+                        int startIndex = currentIndex + 2;
+                        int stopperIndex = FindStopperIndex(result, startIndex); // the stopper will always be }
 
-                    result.Remove(currentIndex, stopperIndex - currentIndex);
-                    result.Insert(currentIndex, resolvedValue);
-                    currentIndex += resolvedValue.Length;
+                        string placeholder = result.ToString(startIndex, stopperIndex - startIndex); // Exclude closing '}'
+                        string resolvedValue = await _processor.ResolvePlaceholderAsync(placeholder, sessionId, token);
+
+                        result.Remove(currentIndex, stopperIndex - currentIndex + 1); // to remove }
+                        result.Insert(currentIndex, resolvedValue);
+                        currentIndex += resolvedValue.Length;
+                    }
+                    else
+                    {
+                        int startIndex = currentIndex + 1;
+                        int stopperIndex = FindStopperIndex(result, startIndex); // Stoppers like / ; , ] } etc., indicate the end of a variable. For example, in $x,$y, the ',' acts as a stopper, signaling that $x is a complete placeholder to resolve, so $x,$y should be treated as two separate variables.
+                        string placeholder = result.ToString(startIndex, stopperIndex - startIndex);
+                        string resolvedValue = await _processor.ResolvePlaceholderAsync(placeholder, sessionId, token);
+
+                        result.Remove(currentIndex, stopperIndex - currentIndex);
+                        result.Insert(currentIndex, resolvedValue);
+                        currentIndex += resolvedValue.Length;
+                    }
                 }
                 else
                 {
@@ -124,6 +140,24 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             bool insideSquareBracket;
             int parenthesesBalance = 0;
             int squareBracketBalance = 0;
+
+            // Check for ${variable} syntax
+            if (startIndex > 1 && result[startIndex - 2] == '$' && result[startIndex - 1] == '{')
+            {
+                // Look for the matching closing '}'
+                while (endIndex < result.Length)
+                {
+                    if (result[endIndex] == '}')
+                    {
+                        return endIndex; 
+                    }
+                    endIndex++;
+                }
+
+                throw new InvalidOperationException("Unmatched '{' in variable.");
+            }
+
+
             char[] pathChars = ['.', '/', '[', ']'];
             bool isMethod = false;
             char lastChar = ' ';

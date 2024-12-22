@@ -34,7 +34,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             catch(Exception ex)
             {
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Failed to register http iteration. Below are the exception details: \r\nRound:{roundName} \r\nIteration: {httpIteration.Name} \r\nException:{ex.Message}", LPSLoggingLevel.Error);
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Failed to register http iteration. Below are the exception details: \r\nRound:{roundName} \r\nIteration: {httpIteration.Name} \r\nException:{ex.Message} {ex.InnerException?.Message }", LPSLoggingLevel.Error);
                 return false;
             }
         }
