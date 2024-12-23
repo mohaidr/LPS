@@ -130,15 +130,21 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> DelayClientCreationOption { get; } = new Option<string>(
-                "--delayclientcreation", "Delay client creation until needed")
+                name:"--delayclientcreation",
+                description:"Delay client creation until needed",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<string> RunInParallelOption { get; } = new Option<string>(
-                "--runinparallel", "Execute your iterations in parallel")
+                name:"--runinparallel", 
+                description:"Execute your iterations in parallel",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<bool> SaveOption { get; } = new Option<bool>(
@@ -179,9 +185,12 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> MaximizeThroughputOption { get; } = new Option<string>(
-                "--maximizethroughput", "Maximize test throughput")
+                name:"--maximizethroughput",
+                description: "Maximize test throughput. Maximizing test throughput may lead to significantly higher CPU and memory usage.",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<string?> RequestCountOption { get; } = new Option<string?>(
@@ -215,20 +224,29 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> DownloadHtmlEmbeddedResources { get; } = new Option<string>(
-                "--downloadhtmlembeddedresources", "Download HTML embedded resources")
+                name: "--downloadhtmlembeddedresources",
+                description: "Download HTML embedded resources",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<string> SaveResponse { get; } = new Option<string>(
-                "--saveresponse", "Save HTTP response")
+                name: "--saveresponse",
+                description: "Save HTTP response",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<string?> SupportH2C { get; } = new Option<string?>(
-                "--supporth2c", "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
+                name: "--supporth2c", 
+                description: "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.", 
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<string> PayloadOption { get; } = new Option<string>(
@@ -349,7 +367,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
 
-
             public static Option<string> StartupDelayOption { get; } = new Option<string>(
                 "--startupDelay", "Add startup (in seconds) delay to your round")
             {
@@ -369,15 +386,21 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> DelayClientCreation { get; } = new Option<string>(
-                "--delayclientcreation", "Delay client creation until needed")
+               name: "--delayclientcreation", 
+               description:"Delay client creation until needed",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<string?> RunInParallel { get; } = new Option<string?>(
-                "--runinparallel", "Execute your iterations in parallel")
+                name:"--runinparallel", 
+                description:"Execute your iterations in parallel",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<IList<string>> TagOption { get; } = new Option<IList<string>>(
@@ -450,9 +473,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 EnvironmentOption.AddAlias("-e");
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(EnvironmentOption, "--environment");
-
-
-
             }
 
             public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
@@ -651,9 +671,12 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
             public static Option<string> MaximizeThroughputOption { get; } = new Option<string>(
-                "--maximizethroughput", "Maximize test throughput")
+                name:"--maximizethroughput", 
+                description: "Maximize test throughput. Maximizing test throughput may lead to significantly higher CPU and memory usage.",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<string?> RequestCountOption { get; } = new Option<string?>(
                 "--requestcount", "Number of requests")
@@ -691,19 +714,28 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
             public static Option<string> DownloadHtmlEmbeddedResources { get; } = new Option<string>(
-                "--downloadhtmlembeddedresources", "Download HTML embedded resources")
+                name: "--downloadhtmlembeddedresources", 
+                description: "Download HTML embedded resources",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<string> SaveResponse { get; } = new Option<string>(
-                "--saveresponse", "Save HTTP response")
+                name: "--saveresponse", 
+                description: "Save HTTP response",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<string?> SupportH2C { get; } = new Option<string?>(
-                "--supporth2c", "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.")
+                name: "--supporth2c", 
+                description: "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<IList<string>> HeaderOption { get; } = new Option<IList<string>>(
                 "--header", "Header")
@@ -911,6 +943,17 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false
             };
+        }
+        public static string ParseBoolOptionArgument(System.CommandLine.Parsing.ArgumentResult result)
+        {
+            if (result.Tokens.Count == 0)
+            {
+                return "true"; // Default to "false" when no value is provided
+            }
+
+            return result.Tokens[0].Value;
+
+            throw new ArgumentException("Unexpected number of tokens for the option.");
         }
 
         public static void AddOptionsToCommand(Command command, Type optionsType)
