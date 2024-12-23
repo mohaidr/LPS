@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpIteration = httpIteration;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new ProtectedResponseCodeDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.URL, _httpIteration.HttpRequest.HttpVersion);
+            _dimensionSet = new ProtectedResponseCodeDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.Url.Url, _httpIteration.HttpRequest.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }

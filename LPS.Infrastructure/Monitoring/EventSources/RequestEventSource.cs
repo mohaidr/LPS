@@ -19,7 +19,7 @@ namespace LPS.Infrastructure.Monitoring.EventSources
 
         private RequestEventSource(HttpIteration lpshttpIteration)
         {
-            if (lpshttpIteration != null && lpshttpIteration.HttpRequest != null &&  Uri.TryCreate(lpshttpIteration.HttpRequest.URL, UriKind.Absolute, out Uri uriResult))
+            if (lpshttpIteration != null && lpshttpIteration.HttpRequest != null &&  Uri.TryCreate(lpshttpIteration.HttpRequest.Url.Url, UriKind.Absolute, out Uri uriResult))
             {
                 this.requestIncrementCounter = new IncrementingEventCounter("requestsPerSecond", this)
                 {

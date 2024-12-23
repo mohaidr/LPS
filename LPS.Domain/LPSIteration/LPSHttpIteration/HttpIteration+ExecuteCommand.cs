@@ -110,7 +110,7 @@ namespace LPS.Domain
             logEntry.AppendLine($"Cool Down Time: {this.CoolDownTime}");
             logEntry.AppendLine($"Http Method: {this.HttpRequest.HttpMethod.ToUpper()}");
             logEntry.AppendLine($"Http Version: {this.HttpRequest.HttpVersion}");
-            logEntry.AppendLine($"URL: {this.HttpRequest.URL}");
+            logEntry.AppendLine($"URL: {this.HttpRequest.Url.Url}");
 
             if (!string.IsNullOrEmpty(this.HttpRequest.Payload?.RawValue) &&
                 (this.HttpRequest.HttpMethod.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
@@ -226,7 +226,7 @@ namespace LPS.Domain
                     _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.SessionId} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.URL}", LPSLoggingLevel.Verbose, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.SessionId} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.Url.Url}", LPSLoggingLevel.Verbose, _cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {_httpClientService.SessionId} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
 
             }

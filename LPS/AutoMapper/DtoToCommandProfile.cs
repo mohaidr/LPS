@@ -4,6 +4,7 @@ using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Domain.LPSRequest.LPSHttpRequest;
 using LPS.Domain.LPSSession;
 using LPS.DTOs;
 using LPS.Infrastructure.Common;
@@ -64,7 +65,7 @@ namespace LPS.AutoMapper
             // Map HttpRequestDto to HttpRequest.SetupCommand
             // Do not apply placeholder resolver on (HttpMethod, HttpVersion, URL, HttpHeaders); the values should be resolved instantly when sending the request.
             CreateMap<HttpRequestDto, HttpRequest.SetupCommand>()
-                .ForMember(dest => dest.URL, opt => opt.MapFrom(src => src.URL)) 
+                .ForMember(dest => dest.Url, opt => opt.MapFrom(src => ResolveURLShemaAndHostName(new URL(src.URL)))) 
                 .ForMember(dest => dest.HttpMethod, opt => opt.MapFrom(src => src.HttpMethod))
                 .ForMember(dest => dest.HttpVersion, opt => opt.MapFrom(src => src.HttpVersion))
                 .ForMember(dest => dest.HttpHeaders, opt => opt.MapFrom(src => src.HttpHeaders.ToDictionary(
@@ -169,7 +170,11 @@ namespace LPS.AutoMapper
                     throw new InvalidOperationException($"Unsupported payload type: {payloadDto.Type}");
             }
         }
-
+        private URL ResolveURLShemaAndHostName(URL url)
+        {
+            string resolvedUrl = string.Concat(ResolvePlaceholderAsync<string>(url.Schema).Result, $"{(!string.IsNullOrEmpty(url.Schema) ? "://" : string.Empty)}", ResolvePlaceholderAsync<string>(url.HostName).Result, $"{(!string.IsNullOrEmpty(url.GetCombinedPathParameters()) ? "/" : string.Empty)}", url.GetCombinedPathParameters(), $"{(!string.IsNullOrEmpty(url.GetCombinedQueryParameters()) ? "?" : string.Empty)}", url.GetCombinedQueryParameters());
+            return new URL(resolvedUrl);
+        }
         private async Task<T> ResolvePlaceholderAsync<T>(string value)
         {
             return await _placeholderResolver.ResolvePlaceholdersAsync<T>(value, _sessionId, CancellationToken.None);

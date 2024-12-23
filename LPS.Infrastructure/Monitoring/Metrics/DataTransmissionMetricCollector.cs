@@ -25,7 +25,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _roundName = roundName;
             _httpIteration = httpIteration;
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(_roundName, httpIteration.Id, httpIteration.Name, httpIteration.HttpRequest.HttpMethod, httpIteration.HttpRequest.URL, httpIteration.HttpRequest.HttpVersion);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(_roundName, httpIteration.Id, httpIteration.Name, httpIteration.HttpRequest.HttpMethod, httpIteration.HttpRequest.Url.Url, httpIteration.HttpRequest.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _dataTransmissionWatch = new Stopwatch();

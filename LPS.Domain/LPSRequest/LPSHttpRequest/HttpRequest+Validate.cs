@@ -57,27 +57,27 @@ namespace LPS.Domain
                         || _httpMethods.Any(method => method.Equals(httpMethod, StringComparison.OrdinalIgnoreCase)))
                     .WithMessage("The supported 'Http Methods' are (\"GET\", \"HEAD\", \"POST\", \"PUT\", \"PATCH\", \"DELETE\", \"CONNECT\", \"OPTIONS\", \"TRACE\") or placeholders starting with '$'");
 
-                RuleFor(command => command.URL)
+                RuleFor(command => command.Url)
                     .NotEmpty()
                     .WithMessage("The 'URL' cannot be null or empty.")
-                    .Must(url => string.IsNullOrEmpty(url)
-                        || url.StartsWith("$")
-                        || (Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                    .Must(url => string.IsNullOrEmpty(url?.Url)
+                        || url.Url.StartsWith("$")
+                        || (Uri.TryCreate(url?.Url, UriKind.Absolute, out Uri result)
                             && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps)))
                     .WithMessage("The 'URL' must be a valid URL according to RFC 3986 or a placeholder starting with '$'")
                     .Must((command, url) =>
-                        string.IsNullOrEmpty(url)
-                        || url.StartsWith("$")
+                        string.IsNullOrEmpty(url?.Url)
+                        || url.Url.StartsWith("$")
                         || !command.SupportH2C.HasValue
                         || !command.SupportH2C.Value
-                        || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                        || url.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
                     .WithMessage("H2C only works with the HTTP schema or placeholders starting with '$'");
 
                 RuleFor(command => command.SupportH2C)
                     .NotNull()
                     .When(command =>
-                        !string.IsNullOrEmpty(command.URL)
-                        && command.URL.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
+                        !string.IsNullOrEmpty(command.Url?.Url)
+                        && command.Url.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase)
                         && !string.IsNullOrEmpty(command.HttpVersion)
                         && command.HttpVersion.Equals("2.0"))
                     .WithMessage("'SupportH2C' must be true or false");
@@ -93,10 +93,10 @@ namespace LPS.Domain
                 // Enforce HTTP when SupportH2C is true
                 When(command => command.SupportH2C == true, () =>
                 {
-                    RuleFor(command => command.URL)
+                    RuleFor(command => command.Url)
                         .Must(url =>
                         {
-                            return string.IsNullOrEmpty(url) || url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
+                            return string.IsNullOrEmpty(url?.Url) || url.Url.StartsWith("http://", StringComparison.OrdinalIgnoreCase);
                         })
                         .WithMessage("When 'SupportH2C' is enabled, the 'URL' must use the HTTP scheme.");
                     RuleFor(command => command.HttpVersion)

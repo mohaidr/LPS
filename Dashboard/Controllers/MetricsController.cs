@@ -113,7 +113,6 @@ namespace LPS.Controllers
                             URL = ((IHttpDimensionSet)dimensionSet).URL,
                             HttpMethod = ((IHttpDimensionSet)dimensionSet).HttpMethod,
                             HttpVersion = ((IHttpDimensionSet)dimensionSet).HttpVersion,
-
                             Endpoint = $"{((IHttpDimensionSet)dimensionSet).IterationName} {((IHttpDimensionSet)dimensionSet).URL} HTTP/{((IHttpDimensionSet)dimensionSet).HttpVersion}"
                         };
                         metricsList.Add(metricData);

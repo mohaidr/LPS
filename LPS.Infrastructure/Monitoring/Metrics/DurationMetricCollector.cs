@@ -30,7 +30,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpIteration = httpIteration;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(roundName, _httpIteration.Id, httpIteration.Name, httpIteration.HttpRequest.HttpMethod, httpIteration.HttpRequest.URL, httpIteration.HttpRequest.HttpVersion);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(roundName, _httpIteration.Id, httpIteration.Name, httpIteration.HttpRequest.HttpMethod, httpIteration.HttpRequest.Url.Url, httpIteration.HttpRequest.HttpVersion);
             _histogram = new LongHistogram(1, 1000000, 3);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;

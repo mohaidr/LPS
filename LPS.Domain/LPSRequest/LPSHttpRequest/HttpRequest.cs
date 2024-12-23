@@ -10,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Domain.LPSRequest.LPSHttpRequest;
 using LPS.Domain.LPSSession;
 
 namespace LPS.Domain
@@ -46,7 +47,7 @@ namespace LPS.Domain
 
         public string HttpMethod { get; protected set; }
 
-        public string URL { get; protected set; }
+        public URL Url { get; protected set; }
 
         public Payload? Payload { get; protected set; }
 

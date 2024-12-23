@@ -21,15 +21,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
 
-        readonly RequestEventSource _eventSource;
         readonly Stopwatch _throughputWatch;
         Timer _timer;
         private SpinLock _spinLock = new();
         public ThroughputMetricCollector(HttpIteration httpIteration, string roundName, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _httpIteration = httpIteration;
-            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.URL, _httpIteration.HttpRequest.HttpVersion);
-            _eventSource = RequestEventSource.GetInstance(_httpIteration);
+            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.Url.Url, _httpIteration.HttpRequest.HttpVersion);
             _throughputWatch = new Stopwatch();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -94,7 +92,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _spinLock.Enter(ref lockTaken);
                 ++_activeRequestssCount;
                 ++_requestsCount;
-                _eventSource.AddRequest();
                 UpdateMetrics();
                 return true;
             }

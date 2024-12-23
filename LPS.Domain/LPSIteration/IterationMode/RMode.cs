@@ -17,7 +17,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         private RMode(HttpRequest request)
         {
             _request = request;
-            _hostName = new Uri(_request.URL).Host;
+            _hostName = _request.Url.HostName;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)

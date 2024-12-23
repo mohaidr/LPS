@@ -18,7 +18,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         {
             _request = request;
             _watchdog = watchdog;
-            _hostName = new Uri(_request.URL).Host;
+            _hostName = _request.Url.HostName;
         }
         public async Task<int> SendBatchAsync(HttpRequest.ExecuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token)
         {

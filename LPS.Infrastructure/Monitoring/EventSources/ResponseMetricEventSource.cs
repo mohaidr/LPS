@@ -34,7 +34,7 @@ namespace LPS.Infrastructure.Monitoring.EventSources
 
         private void InitializeEventCounters()
         {
-            if (_lpshttpIteration != null && _lpshttpIteration.HttpRequest == null && Uri.TryCreate(_lpshttpIteration.HttpRequest.URL, UriKind.Absolute, out Uri uriResult))
+            if (_lpshttpIteration != null && _lpshttpIteration.HttpRequest == null && Uri.TryCreate(_lpshttpIteration.HttpRequest.Url.Url, UriKind.Absolute, out Uri uriResult))
             {
 
                 _responseTimeMetric = new EventCounter("response-time", this)

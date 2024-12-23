@@ -14,7 +14,9 @@ using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Domain.LPSRequest.LPSHttpRequest;
 using LPS.Domain.LPSSession;
+using Newtonsoft.Json;
 using YamlDotNet.Serialization;
 
 namespace LPS.Domain
@@ -33,7 +35,7 @@ namespace LPS.Domain
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             public Guid? Id { get; set; }
-            public string URL { get; set; }
+            public URL Url { get; set; }
             public string HttpMethod { get; set; }
             public string HttpVersion { get; set; }
             public Dictionary<string, string> HttpHeaders { get; set; }
@@ -53,7 +55,7 @@ namespace LPS.Domain
             public void Copy(SetupCommand targetCommand)
             {
                 targetCommand.Id = this.Id;
-                targetCommand.URL = this.URL;
+                targetCommand.Url = this.Url;
                 targetCommand.HttpMethod = this.HttpMethod;
                 targetCommand.HttpVersion = this.HttpVersion;
                 targetCommand.HttpHeaders = new Dictionary<string, string>(this.HttpHeaders);
@@ -90,7 +92,7 @@ namespace LPS.Domain
             {
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
-                this.URL = command.URL;
+                this.Url = new URL(command.Url.Url);
                 if (command.Payload?.Type == Payload.PayloadType.Raw)
                 {
                     this.Payload = Payload.CreateRaw(command.Payload.RawValue);
@@ -133,9 +135,8 @@ namespace LPS.Domain
                 clone.Id = this.Id;
                 clone.HttpMethod = this.HttpMethod;
                 clone.HttpVersion = this.HttpVersion;
-                clone.URL = this.URL;
-                clone.Payload = this.Payload;
-                clone.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
+                clone.Url = this.Url; // intentionally not doing deep clone here. TODO: review performence and then implement deep clone
+                clone.Payload = this.Payload; // intentionally not doing deep clone here TODO: review performence and then implement deep clone
                 clone.SaveResponse = this.SaveResponse;
                 clone.SupportH2C = this.SupportH2C;
                 clone.Capture =  (CaptureHandler)this.Capture?.Clone();

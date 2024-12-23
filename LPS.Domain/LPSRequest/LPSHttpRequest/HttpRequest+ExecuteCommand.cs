@@ -18,8 +18,7 @@ namespace LPS.Domain
     public partial class HttpRequest
     {
         readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-        public class ExecuteCommand(IClientService<HttpRequest,
-                HttpResponse> httpClientService,
+        public class ExecuteCommand(IClientService<HttpRequest,HttpResponse> httpClientService,
             ILogger logger,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -107,7 +106,7 @@ namespace LPS.Domain
         {
             if (this.IsValid)
             {
-                string hostName = new Uri(this.URL).Host;
+                string hostName = this.Url.HostName;
 
                 await _watchdog.BalanceAsync(hostName, _cts.Token);
                 /* 

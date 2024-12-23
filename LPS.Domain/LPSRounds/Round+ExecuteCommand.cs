@@ -127,8 +127,6 @@ namespace LPS.Domain
                 {
                     continue;
                 }
-                string hostName = new Uri(((HttpIteration)httpIteration).HttpRequest.URL).Host;
-                await _watchdog.BalanceAsync(hostName, _cts.Token);
                 if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {
                     awaitableTasks.Add(_httpIterationSchedulerService.ScheduleHttpIterationExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient));
