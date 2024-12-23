@@ -107,7 +107,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                             new()
                             {
                                 Name = bindingContext.ParseResult.GetValueForOption(_httpIterationNameOption),
-                                Mode = bindingContext.ParseResult.GetValueForOption(_iterationModeOption),
+                                Mode = Enum.TryParse(bindingContext.ParseResult.GetValueForOption(_iterationModeOption), true, out IterationMode im) == true ? im.ToString(): string.Empty ,
                                 RequestCount = bindingContext.ParseResult.GetValueForOption(_requestCountOption),
                                 MaximizeThroughput = bindingContext.ParseResult.GetValueForOption(_maximizeThroughputOption),
                                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
