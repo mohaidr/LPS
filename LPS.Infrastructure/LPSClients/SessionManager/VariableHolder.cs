@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using YamlDotNet.Core.Tokens;
 
 namespace LPS.Infrastructure.LPSClients.SessionManager
 {
@@ -87,12 +88,12 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
 
         public async Task<string> ExtractCsvValueAsync(string indices, string sessionId, CancellationToken token)
         {
-            var trimmed = indices.Trim('[', ']');
+            var trimmed = (await _placeholderResolverService.ResolvePlaceholdersAsync<string>(indices, sessionId, token)).Trim('[', ']');
             var parts = trimmed.Split(',');
             if (parts.Length == 2)
             {
-                parts[0] = await  _placeholderResolverService.ResolvePlaceholdersAsync<string>(parts[0], sessionId, token);
-                parts[1] = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(parts[1], sessionId, token);
+                parts[0] = parts[0];
+                parts[1] = parts[1];
             }
             if (parts.Length != 2 || !int.TryParse(parts[0], out int rowIndex) || !int.TryParse(parts[1], out int columnIndex))
             {

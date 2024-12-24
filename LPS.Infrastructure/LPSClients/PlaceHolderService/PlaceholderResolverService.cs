@@ -400,7 +400,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             var startValue = await _paramService.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
             var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100000, sessionId, token);
             var counterName =  await _paramService.ExtractStringAsync(parameters, "counter", string.Empty, sessionId, token);
-            var counterNameCachePart = !string.IsNullOrEmpty(counterName) ? $"_{counterName.Trim()}" : string.Empty;   
+            var counterNameCachePart = !string.IsNullOrEmpty(counterName) ? $"_{counterName.Trim()}" : string.Empty;
             if (startValue >= endValue)
             {
                 throw new ArgumentException("startValue must be less than endValue.");
