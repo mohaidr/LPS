@@ -161,10 +161,10 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             char[] pathChars = ['.', '/', '[', ']'];
             bool isMethod = false;
             char lastChar = ' ';
+            char currentChar = ' ';
             while (endIndex < result.Length)
             {
-                char currentChar = result[endIndex];
-
+                currentChar = result[endIndex];
                 if (currentChar == '(') { parenthesesBalance++; isMethod = true; }
                 if (currentChar == ')') parenthesesBalance--;
                 if (currentChar == '[') { squareBracketBalance++;};
@@ -187,9 +187,10 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
              For variables, the stopper should not be part of the variable name. The caller method determines the placeholder name by subtracting the start index (the first letter after $) from the stopper index.
              For example, in $x_$y, the stopper index is 2, and the start index is 1. Subtracting 1 from 2 gives the variable name length (1), allowing us to extract the variable name by slicing from the start index for the calculated length.
             */
-            if (isMethod && parenthesesBalance ==0)
+            if (isMethod && currentChar ==')' && parenthesesBalance == 0)
+            {
                 endIndex++;
-
+            }
             // handle the case "[$x, $y]" so we do not take ] with $y
             if (squareBracketBalance !=0 
                 && (lastChar == '[' || lastChar == ']')) 
