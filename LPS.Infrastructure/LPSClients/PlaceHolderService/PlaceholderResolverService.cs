@@ -285,7 +285,9 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 ? await ExtractValueFromPathAsync(variableHolder, path, sessionId, token)
                 : variableHolder.ExtractValueWithRegex();
 
-            await _memoryCacheService.SetItemAsync(cacheKey, resolvedValue, !string.IsNullOrEmpty(sessionId) ? TimeSpan.FromSeconds(30): TimeSpan.MaxValue);
+            if(path== null || (!path.Contains('$') && !string.IsNullOrWhiteSpace(sessionId))) // No cache to handle a case where a method or variable is embedded in a path so it has to be resolved with every request, e.g ${csvData[$loopcounter(start=0, end=5, counter=test),0]}
+                await _memoryCacheService.SetItemAsync(cacheKey, resolvedValue, !string.IsNullOrEmpty(sessionId) ? TimeSpan.FromSeconds(30): TimeSpan.MaxValue);
+            
             return resolvedValue;
         }
 
