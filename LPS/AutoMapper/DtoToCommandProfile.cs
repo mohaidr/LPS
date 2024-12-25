@@ -144,7 +144,7 @@ namespace LPS.AutoMapper
                             string multiPartFileName = ResolvePlaceholderAsync<string>(file.Name).Result;
                             string extension = Path.GetExtension(fullPath).ToLowerInvariant();
 
-                            multiPartFileName = string.IsNullOrEmpty(multiPartFileName) ? Path.GetFileName(fullPath).ToLowerInvariant() : string.Empty;
+                            multiPartFileName = string.IsNullOrEmpty(multiPartFileName) ? Path.GetFileName(fullPath).ToLowerInvariant() : multiPartFileName;
                             string contentType = ResolvePlaceholderAsync<string>(file.ContentType).Result;
 
                             if (string.IsNullOrEmpty(contentType))

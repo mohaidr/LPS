@@ -586,9 +586,12 @@ namespace LPS.UI.Core.LPSCommandLine
 
 
             public static Option<string> MakeGlobal { get; } = new Option<string>(
-                "--makeGlobal", "Store the response as a global variable")
+                name:"--makeGlobal", 
+                description: "Store the response as a global variable",
+                parseArgument: ParseBoolOptionArgument)
             {
-                IsRequired = false
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
 
             public static Option<string> RegexOption { get; } = new Option<string>(

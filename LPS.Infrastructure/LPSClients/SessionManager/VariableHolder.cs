@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using YamlDotNet.Core.Tokens;
+using Newtonsoft.Json.Linq;
 
 namespace LPS.Infrastructure.LPSClients.SessionManager
 {
@@ -26,8 +27,10 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
             _placeholderResolverService = placeholderResolverService;
         } // Private constructor for controlled instantiation via builder
 
-        public string ExtractJsonValue(string jsonPath)
+        public async Task<string> ExtractJsonValue(string jsonPath, string sessionId, CancellationToken CancellationToken)
         {
+            jsonPath = (await _placeholderResolverService.ResolvePlaceholdersAsync<string>(jsonPath, sessionId, CancellationToken));
+
             if (Format != MimeType.ApplicationJson)
                 throw new InvalidOperationException("Response is not JSON.");
 
@@ -45,8 +48,10 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
         }
 
 
-        public string ExtractXmlValue(string xpath)
+        public async Task<string> ExtractXmlValue(string xpath, string sessionId, CancellationToken token)
         {
+            xpath = (await _placeholderResolverService.ResolvePlaceholdersAsync<string>(xpath, sessionId, token));
+
             if (Format != MimeType.TextXml && Format != MimeType.ApplicationXml && Format != MimeType.RawXml)
             {
                 throw new InvalidOperationException("Response is not XML.");

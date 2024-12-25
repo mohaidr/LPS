@@ -122,13 +122,13 @@ namespace LPS.Domain
                         .Must(multipart => multipart == null 
                             || multipart?.Files == null 
                             || multipart.Files.All(file => !string.IsNullOrWhiteSpace(file.Name) && file.Content!= null && !string.IsNullOrWhiteSpace(file.ContentType)))
-                        .WithMessage("All fields in the Multipart must have both field names and values.");
+                        .WithMessage("All files in the Multipart must have both field name and value.");
 
                         RuleFor(command => command.Payload.Multipart)
                         .Must(multipart => multipart == null 
                             || multipart?.Fields== null 
                             || multipart.Fields.All(field => !string.IsNullOrWhiteSpace(field.Name) && !string.IsNullOrWhiteSpace(field.Value) && !string.IsNullOrWhiteSpace(field.ContentType)))
-                        .WithMessage("All fields in the Multipart must have both field names and values.");
+                        .WithMessage("All fields in the Multipart must have both field name and value.");
                     }
                     else if (command.Payload.Type == Payload.PayloadType.Binary)
                     {

@@ -23,8 +23,8 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
         public MimeType Format { get; }
         public string Pattern { get; }
         public bool IsGlobal { get; }
-        public string ExtractJsonValue(string pattern);
-        public string ExtractXmlValue(string xpath);
+        public Task<string> ExtractJsonValue(string pattern, string sessionId, CancellationToken token);
+        public Task<string> ExtractXmlValue(string xpath, string sessionId, CancellationToken token);
         public Task<string> ExtractCsvValueAsync(string indices, string sessionId, CancellationToken token);
         public string ExtractValueWithRegex();
     }

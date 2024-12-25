@@ -188,9 +188,9 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             if (isMethod && parenthesesBalance ==0)
                 endIndex++;
 
-            // handle the case "[$x, $y]" so we do not take ] with $x
+            // handle the case "[$x, $y]" so we do not take ] with $y
             if (squareBracketBalance !=0 
-                && (lastChar == ']' || lastChar == ']')) 
+                && (lastChar == '[' || lastChar == ']')) 
                 endIndex--;
 
             return endIndex;
@@ -293,12 +293,12 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         {
             if (path.StartsWith(".") || path.StartsWith("[") && variableHolder.Format == MimeType.ApplicationJson)
             {
-                return variableHolder.ExtractJsonValue(path);
+                return await variableHolder.ExtractJsonValue(path, sessionId, token);
             }
             else if (path.StartsWith("/") &&
                      (variableHolder.Format == MimeType.ApplicationXml || variableHolder.Format == MimeType.TextXml || variableHolder.Format == MimeType.RawXml))
             {
-                return variableHolder.ExtractXmlValue(path);
+                return await variableHolder.ExtractXmlValue(path, sessionId, token);
             }
             else if (path.StartsWith("[") && variableHolder.Format == MimeType.TextCsv)
             {
