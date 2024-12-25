@@ -171,8 +171,10 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 if (currentChar == ']') { squareBracketBalance--; };
                 insideParentheses = parenthesesBalance > 0;
                 insideSquareBracket = squareBracketBalance > 0;
-                if (!insideParentheses && !insideSquareBracket &&
-                    !char.IsLetterOrDigit(currentChar) && !pathChars.Contains(currentChar))
+                if ((!insideParentheses && !insideSquareBracket &&
+                    !char.IsLetterOrDigit(currentChar) && !pathChars.Contains(currentChar)) 
+                    || parenthesesBalance<0 
+                    || squareBracketBalance <0)
                 {
                     break;
                 }

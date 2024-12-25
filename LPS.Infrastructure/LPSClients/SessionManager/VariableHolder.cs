@@ -30,7 +30,6 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
         public async Task<string> ExtractJsonValue(string jsonPath, string sessionId, CancellationToken CancellationToken)
         {
             jsonPath = (await _placeholderResolverService.ResolvePlaceholdersAsync<string>(jsonPath, sessionId, CancellationToken));
-
             if (Format != MimeType.ApplicationJson)
                 throw new InvalidOperationException("Response is not JSON.");
 
