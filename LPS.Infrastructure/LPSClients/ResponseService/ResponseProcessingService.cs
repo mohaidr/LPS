@@ -162,7 +162,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             // Calculate size of response headers
             foreach (var header in response.Headers)
             {
-                size += Encoding.UTF8.GetByteCount(header.Key);
+                size += Encoding.UTF8.GetByteCount($"{header.Key}: ");
                 size += header.Value.Sum(v => Encoding.UTF8.GetByteCount(v));
             }
 
@@ -171,7 +171,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             {
                 foreach (var contentHeader in response.Content.Headers)
                 {
-                    size += Encoding.UTF8.GetByteCount(contentHeader.Key);
+                    size += Encoding.UTF8.GetByteCount($"{contentHeader.Key}: ");
                     size += contentHeader.Value.Sum(v => Encoding.UTF8.GetByteCount(v));
                 }
             }
