@@ -56,11 +56,12 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                 {
                     throw new InvalidOperationException("Response content is null.");
                 }
-
+                var statusLine = $"{responseMessage.Version} {(int)responseMessage.StatusCode} {responseMessage.ReasonPhrase}\r\n";
+                long responseSize = Encoding.UTF8.GetByteCount(statusLine);
                 if (!(responseMessage.StatusCode == HttpStatusCode.NotModified || responseMessage.StatusCode == HttpStatusCode.NoContent))
                 {
                     // Calculate the headers size (both response and content headers)
-                    long responseSize = CalculateHeadersSize(responseMessage);
+                    responseSize += CalculateHeadersSize(responseMessage);
                     string cacheKey = $"{CachePrefixes.Content}{httpRequest.Id}";
                     string content = await _memoryCacheService.GetItemAsync(cacheKey);
 
