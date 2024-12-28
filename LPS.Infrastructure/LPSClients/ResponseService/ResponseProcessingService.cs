@@ -56,12 +56,12 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                 {
                     throw new InvalidOperationException("Response content is null.");
                 }
-                var statusLine = $"{responseMessage.Version} {(int)responseMessage.StatusCode} {responseMessage.ReasonPhrase}\r\n";
-                long responseSize = Encoding.UTF8.GetByteCount(statusLine);
+                var statusLine = $"HTTP/{responseMessage.Version} {(int)responseMessage.StatusCode} {responseMessage.ReasonPhrase}\r\n";
+                long transferredSize = Encoding.UTF8.GetByteCount(statusLine);
                 if (!(responseMessage.StatusCode == HttpStatusCode.NotModified || responseMessage.StatusCode == HttpStatusCode.NoContent))
                 {
                     // Calculate the headers size (both response and content headers)
-                    responseSize += CalculateHeadersSize(responseMessage);
+                    transferredSize += CalculateHeadersSize(responseMessage);
                     string cacheKey = $"{CachePrefixes.Content}{httpRequest.Id}";
                     string content = await _memoryCacheService.GetItemAsync(cacheKey);
 
@@ -93,7 +93,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
 
                             while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), linkedCts.Token)) > 0)
                             {
-                                responseSize += bytesRead;
+                                transferredSize += bytesRead;
                                 streamStopwatch.Stop();
 
                                 // Write to memoryStream for caching
@@ -109,7 +109,6 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                             }
 
                             streamStopwatch.Stop();
-
                             // Get the response file path if available
                             locationToResponse = responseProcessor.ResponseFilePath;
                         }
@@ -128,7 +127,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         if (isSemaphoreAcquired)
                             _semaphoreSlim.Release();
                         _bufferPool.Return(buffer);
-                        await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, responseSize, token);
+                        await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, transferredSize, token);
                         if (memoryStream != null)
                         {
                             await memoryStream.DisposeAsync();
@@ -163,8 +162,8 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             // Calculate size of response headers
             foreach (var header in response.Headers)
             {
-                size += Encoding.UTF8.GetByteCount($"{header.Key}: ");
-                size += header.Value.Sum(v => Encoding.UTF8.GetByteCount(v));
+                // Include CRLF at the end of each header line
+                size += Encoding.UTF8.GetByteCount($"{header.Key}: {string.Join(", ", header.Value)}\r\n");
             }
 
             // Calculate size of content headers
@@ -172,10 +171,13 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             {
                 foreach (var contentHeader in response.Content.Headers)
                 {
-                    size += Encoding.UTF8.GetByteCount($"{contentHeader.Key}: ");
-                    size += contentHeader.Value.Sum(v => Encoding.UTF8.GetByteCount(v));
+                    // Include CRLF at the end of each content header line
+                    size += Encoding.UTF8.GetByteCount($"{contentHeader.Key}: {string.Join(", ", contentHeader.Value)}\r\n");
                 }
             }
+
+            // Include an additional CRLF after the headers section to separate headers from the body
+            size += Encoding.UTF8.GetByteCount("\r\n");
 
             return size;
         }
