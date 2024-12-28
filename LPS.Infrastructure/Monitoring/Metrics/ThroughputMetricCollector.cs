@@ -171,7 +171,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 HttpVersion = httpVersion;
             }
             // When calling this method, make sure you take thread safety into considration
-            public void Update(int activeRequestsCount, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double timeElapsedInMilliSeconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
+            public void Update(int activeRequestsCount, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double totalDataTransmissionTimeInMilliseconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
             {
                 if (!StopUpdate)
                 {
@@ -180,7 +180,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     this.ActiveRequestsCount = activeRequestsCount;
                     this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;
                     this.FailedRequestsCount = failedRequestsCount.Equals(default) ? this.FailedRequestsCount : failedRequestsCount;
-                    this.TimeElapsedInMilliseconds = timeElapsedInMilliSeconds.Equals(default) ? this.TimeElapsedInMilliseconds : timeElapsedInMilliSeconds;
+                    this.TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds.Equals(default) ? this.TotalDataTransmissionTimeInMilliseconds : totalDataTransmissionTimeInMilliseconds;
                     this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
                     this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
                 }
@@ -221,7 +221,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     {
         [JsonIgnore]
         public DateTime TimeStamp { get; protected set; }
-        public double TimeElapsedInMilliseconds { get; protected set; }
+        public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
         [JsonIgnore]

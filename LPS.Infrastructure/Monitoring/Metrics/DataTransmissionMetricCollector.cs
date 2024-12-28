@@ -153,29 +153,29 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 HttpVersion = httpVersion;
             }
 
-            public void UpdateDataSent(double totalDataSent, double averageDataSent, double averageDataSentPerSecond, double timeElapsedInMilliseconds)
+            public void UpdateDataSent(double totalDataSent, double averageDataSent, double averageDataSentPerSecond, double totalDataTransmissionTimeInMilliseconds)
             {
                 TimeStamp = DateTime.UtcNow;
                 DataSent = totalDataSent;
                 AverageDataSent = averageDataSent;
                 AverageDataSentPerSecond = averageDataSentPerSecond;
-                TimeElapsedInMilliseconds = timeElapsedInMilliseconds;
+                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
             }
 
-            public void UpdateDataReceived(double totalDataReceived, double averageDataReceived, double averageDataReceivedPerSecond, double timeElapsedInMilliseconds)
+            public void UpdateDataReceived(double totalDataReceived, double averageDataReceived, double averageDataReceivedPerSecond, double totalDataTransmissionTimeInMilliseconds)
             {
                 TimeStamp = DateTime.UtcNow;
                 DataReceived = totalDataReceived;
                 AverageDataReceived = averageDataReceived;
                 AverageDataReceivedPerSecond = averageDataReceivedPerSecond;
-                TimeElapsedInMilliseconds = timeElapsedInMilliseconds;
+                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
             }
 
-            public void UpdateAverageBytes(double averageBytesPerSecond, double timeElapsedInMilliseconds)
+            public void UpdateAverageBytes(double averageBytesPerSecond, double totalDataTransmissionTimeInMilliseconds)
             {
                 TimeStamp = DateTime.UtcNow;
                 AverageBytesPerSecond = averageBytesPerSecond;
-                TimeElapsedInMilliseconds = timeElapsedInMilliseconds;
+                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
             }
 
         }
@@ -186,7 +186,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         [JsonIgnore]
         public DateTime TimeStamp { get; protected set; }
-        public double TimeElapsedInMilliseconds { get; protected set; }
+        public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
         [JsonIgnore]
         public string RoundName { get; protected set; }
         [JsonIgnore]
