@@ -110,7 +110,8 @@ namespace LPS.Infrastructure.LPSClients
                         bool cacheResponse = (mimeType == MimeType.TextHtml && request.DownloadHtmlEmbeddedResources) || captureResponse;
                         #endregion
 
-                        //Read the Response
+                        //Read the Response and total time spent to read the data represented as timespan
+                        // TODO: Test moving the download and upload bytes metric to the ProgressContent and the  ResponseProcessingService Service to let the dashboard reflect them instantly for large payloads
                         var (command, dataReceivedSize, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, request, cacheResponse, linkedCts.Token));
                         initialStreamTime = streamTime;
                         HttpResponse.SetupCommand responseCommand = command;
