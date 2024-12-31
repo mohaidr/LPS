@@ -93,14 +93,14 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             return _metrics[requestId.ToString()]
                     .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
         }
-        public async Task<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, CancellationToken token)
+        public async Task<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
         {
             try
             {
                 var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
                 foreach (var metric in dataTransmissionMetrics)
                 {
-                    ((IDataTransmissionMetricCollector)metric).UpdateDataSentAsync(dataSize, token);
+                    ((IDataTransmissionMetricCollector)metric).UpdateDataSent(dataSize, uploadTime, token);
                 }
                 return true;
             }
@@ -112,14 +112,14 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 return false;
             }
         }
-        public async Task<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, CancellationToken token)
+        public async Task<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize,double downloadTime, CancellationToken token)
         {
             try
             {
                 var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
                 foreach (var metric in dataTransmissionMetrics)
                 {
-                    ((IDataTransmissionMetricCollector)metric).UpdateDataReceivedAsync(dataSize, token);
+                    ((IDataTransmissionMetricCollector)metric).UpdateDataReceived(dataSize, downloadTime, token);
                 }
                 return true;
             }

@@ -22,7 +22,6 @@ using LPS.Infrastructure.LPSClients.CachService;
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
     public class MessageService(IHttpHeadersService headersService,
-                                IMetricsService metricsService,
                                 ILogger logger,
                                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                                 ICacheService<long> memoryCacheService,
@@ -32,12 +31,11 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
         readonly ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly IHttpHeadersService _headersService = headersService;
-        readonly IMetricsService _metricsService = metricsService;
         readonly ICacheService<long> _memoryCacheService = memoryCacheService;
         readonly ICacheService<object> _dynamicTypeCacheService = dynamicTypeMemoryCacheService;
         readonly IPlaceholderResolverService _placeHolderResolver = placeHolderResolver;
 
-        public async Task<HttpRequestMessage> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default)
+        public async Task<(HttpRequestMessage HttpRequestMessage, long MessageSize)> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default)
         {
             // Resolve placeholders for HttpVersion, HttpMethod, URL
             var resolvedHttpVersion = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpVersion, sessionId, token);
@@ -146,10 +144,10 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             }
 
             // Update the DataSent metric using MetricsService
-            await _metricsService.TryUpdateDataSentAsync(httpRequest.Id, messageSize, token);
 
-            return httpRequestMessage;
+            return (httpRequestMessage, messageSize);
         }
+
         private static async Task<long> CalculateRequestSizeAsync(HttpRequestMessage httpRequestMessage)
         {
             long size = 0;

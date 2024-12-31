@@ -16,9 +16,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private double _totalDataReceived = 0;
         private int _dataSentCount = 0;
         private int _dataReceivedCount = 0;
+        private double _totalDataUploadTime = 0;
+        private double _totalDataDownloadTime = 0;
         private LPSDurationMetricDimensionSetProtected _dimensionSet;
-        private Timer _timer;
-        readonly Stopwatch _dataTransmissionWatch;
 
         internal DataTransmissionMetricCollector(HttpIteration httpIteration, string roundName, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             : base(httpIteration, logger, runtimeOperationIdProvider)
@@ -28,34 +28,14 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _dimensionSet = new LPSDurationMetricDimensionSetProtected(_roundName, httpIteration.Id, httpIteration.Name, httpIteration.HttpRequest.HttpMethod, httpIteration.HttpRequest.Url.Url, httpIteration.HttpRequest.HttpVersion);
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _dataTransmissionWatch = new Stopwatch();
         }
 
         protected override IDimensionSet DimensionSet => _dimensionSet;
 
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
-        private void SchedualMetricsUpdate()
-        {
-            _timer = new Timer(_ =>
-            {
-                if (!IsStopped)
-                {
-                    try
-                    {
-                        UpdateMetrics();
-                    }
-                    finally
-                    {
-                    }
-                }
-            }, null, 0, 1000);
-
-        }
         public override void Start()
         {
-            _dataTransmissionWatch.Start();
             IsStopped = false;
-            SchedualMetricsUpdate();
             _logger.LogAsync("Start", "DataTransmissionMetricCollector started.", LPSLoggingLevel.Verbose).ConfigureAwait(false);
         }
 
@@ -64,19 +44,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             IsStopped = true;
             try
             {
-                _dataTransmissionWatch?.Stop();
-                _timer?.Dispose();
+                _logger.LogAsync("Stop", "DataTransmissionMetricCollector stopped.", LPSLoggingLevel.Verbose).ConfigureAwait(false);
             }
             finally { }
-            _logger.LogAsync("Stop", "DataTransmissionMetricCollector stopped.", LPSLoggingLevel.Verbose).ConfigureAwait(false);
         }
 
-        public void UpdateDataSentAsync(double dataSize, CancellationToken token = default)
+        public void UpdateDataSent(double dataSize, double uploadTime, CancellationToken token = default)
         {
             bool lockTaken = false;
             try
             {
                 _spinLock.Enter(ref lockTaken);
+                _totalDataUploadTime += uploadTime;
                 if (IsStopped)
                 {
                     throw new InvalidOperationException("Metric collector is stopped.");
@@ -94,7 +73,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public void UpdateDataReceivedAsync(double dataSize, CancellationToken token = default)
+        public void UpdateDataReceived(double dataSize, double downloadTime, CancellationToken token = default)
         {
             bool lockTaken = false;
             try
@@ -107,6 +86,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 }
 
                 // Update the total and count, then calculate the average
+                _totalDataDownloadTime += downloadTime;
                 _totalDataReceived += dataSize;
                 _dataReceivedCount++;
                 UpdateMetrics();
@@ -126,11 +106,14 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 lock (lockObject)
                 {
-                    var totalSeconds = _dataTransmissionWatch.Elapsed.TotalSeconds;
-                    if (totalSeconds > 0 && _dataSentCount > 0 && _dataReceivedCount > 0)
+                    var totalDownloadSeconds = _totalDataDownloadTime / 1000;
+                    var totalUploadSeconds = _totalDataUploadTime / 1000;
+                    var totalSeconds = totalDownloadSeconds + totalUploadSeconds;
+
+                    if ( totalSeconds > 0 && _dataSentCount > 0 && _dataReceivedCount > 0)
                     {
-                        _dimensionSet.UpdateDataSent(_totalDataSent, _totalDataSent / _dataSentCount, _totalDataSent / totalSeconds, totalSeconds*1000);
-                        _dimensionSet.UpdateDataReceived(_totalDataReceived, _totalDataReceived / _dataReceivedCount, _totalDataReceived / totalSeconds, totalSeconds * 1000);
+                        _dimensionSet.UpdateDataSent(_totalDataSent, _totalDataSent / _dataSentCount, (totalUploadSeconds >0? _totalDataSent / totalUploadSeconds : 0), totalSeconds*1000);
+                        _dimensionSet.UpdateDataReceived(_totalDataReceived, _totalDataReceived / _dataReceivedCount, (totalDownloadSeconds > 0 ? _totalDataReceived / totalDownloadSeconds : 0), totalSeconds * 1000);
                         _dimensionSet.UpdateAverageBytes((_totalDataReceived + _totalDataSent) / totalSeconds, totalSeconds * 1000);
                     }
                 }

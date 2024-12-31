@@ -44,7 +44,7 @@ namespace LPS.Domain
             [JsonIgnore]
             [YamlIgnore]
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
-            public TimeSpan ResponseTime { get; set; }
+            public TimeSpan TotalTime { get; set; }
 
             public void Execute(HttpResponse entity)
             {
@@ -60,7 +60,7 @@ namespace LPS.Domain
                 targetCommand.LocationToResponse = this.LocationToResponse;
                 targetCommand.StatusCode = this.StatusCode;
                 targetCommand.StatusMessage = this.StatusMessage;
-                targetCommand.ResponseTime = this.ResponseTime;
+                targetCommand.TotalTime = this.TotalTime;
                 targetCommand.IsSuccessStatusCode = this.IsSuccessStatusCode;
                 targetCommand.IsValid = this.IsValid;
                 targetCommand.HttpRequestId = this.HttpRequestId;
@@ -106,7 +106,7 @@ namespace LPS.Domain
                 this.ResponseHeaders = new Dictionary<string, string>();
                 this.ResponseContentHeaders = new Dictionary<string, string>();
                 this.StatusMessage = command.StatusMessage;
-                this.ResponseTime = command.ResponseTime;
+                this.TotalTime = command.TotalTime;
                 if (command.ResponseHeaders != null)
                 {
                     foreach (var header in command.ResponseHeaders)

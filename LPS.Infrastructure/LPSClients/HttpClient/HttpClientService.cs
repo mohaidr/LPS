@@ -79,132 +79,158 @@ namespace LPS.Infrastructure.LPSClients
 
         public async Task<HttpResponse> SendAsync(HttpRequest request, CancellationToken token = default)
         {
-            
             int sequenceNumber = request.LastSequenceId;
             HttpResponse lpsHttpResponse;
-            Stopwatch stopWatch = new();
+            Stopwatch uploadWatch = new();
+            Stopwatch downloadWatch = new();
+            TimeSpan initialStreamTime = TimeSpan.FromSeconds(0);
             try
             {
-                var httpRequestMessage = await _messageService.BuildAsync(request, this.SessionId, token);
-                await _metricsService.TryIncreaseConnectionsCountAsync(request.Id, token);
-                stopWatch.Start();
-                var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, token);
-                stopWatch.Stop();
-                string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
-                MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
-                bool captureResponse = request.Capture != null && request.Capture.IsValid;
-                bool cacheResponse = (mimeType == MimeType.TextHtml && request.DownloadHtmlEmbeddedResources) || captureResponse;
-                var (command, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, request, cacheResponse, token));
-                HttpResponse.SetupCommand responseCommand = command;
-                
-                if (captureResponse)
+                using var timeoutCts = new CancellationTokenSource();
                 {
-                    MimeType @as = MimeTypeExtensions.FromKeyword(request.Capture.As);
-
-                    var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{request.Id}");
-                    if (rawContent != null)
+                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token);
                     {
-                        var builder = new VariableHolder.Builder(_placeholderResolverService);
-                        var variableHolder = await builder.BuildAsync(token);
-                        variableHolder = await builder
-                            .WithFormat(IVariableHolder.IsKnownSupportedFormat(mimeType) ? mimeType:
-                                        IVariableHolder.IsKnownSupportedFormat(@as)? @as: MimeType.Unknown)
-                            .WithPattern(request.Capture.Regex)
-                            .WithRawValue(rawContent).BuildAsync(token);
+                        timeoutCts.CancelAfter(httpClient.Timeout);
 
-                        if (request.Capture.MakeGlobal == true)
-                        {
-                            variableHolder = await builder.SetGlobal(true)
-                                .BuildAsync(token);
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent: "BinaryContent ")} to {request.Capture.To} as a global variable", LPSLoggingLevel.Verbose, token);
-                            await _variableManager.AddVariableAsync(request.Capture.To, variableHolder, token);
-                        }
-                        else
-                        {
-                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {request.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, token);
-                            await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.To, variableHolder, token);
-                        }
-                    }
-                    else
-                    {
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is either unknown or the content is empty.", LPSLoggingLevel.Warning, token);
-                    }
+                        #region Build The Message
+                        var (httpRequestMessage, dataSentSize) = await _messageService.BuildAsync(request, this.SessionId, linkedCts.Token);
+                        httpRequestMessage.Content = httpRequestMessage.Content != null? await WrapWithProgressContentAsync(httpRequestMessage.Content, uploadWatch, linkedCts.Token): httpRequestMessage.Content;
+                        #endregion
+                        //Update Throughput Metric
+                        await _metricsService.TryIncreaseConnectionsCountAsync(request.Id, token);
+                        //Start the http Request
+                        var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
+                        //Update Data Transmission Metrics
+                        await _metricsService.TryUpdateDataSentAsync(request.Id, dataSentSize, uploadWatch.ElapsedMilliseconds, linkedCts.Token);
 
-                    if (request.Capture.Headers != null && request.Capture.Headers.Any())
-                    {
-                        foreach (var headerName in request.Capture.Headers)
+                        #region Take Content Caching DecesionDecesion
+                        string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
+                        MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
+                        bool captureResponse = request.Capture != null && request.Capture.IsValid;
+                        bool cacheResponse = (mimeType == MimeType.TextHtml && request.DownloadHtmlEmbeddedResources) || captureResponse;
+                        #endregion
+
+                        //Read the Response
+                        var (command, dataReceivedSize, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, request, cacheResponse, linkedCts.Token));
+                        initialStreamTime = streamTime;
+                        HttpResponse.SetupCommand responseCommand = command;
+
+                        #region Capture Response
+                        if (captureResponse)
                         {
-                            // Check if the response contains the header
-                            if (responseMessage.Headers.TryGetValues(headerName, out var headerValues) ||
-                                responseMessage.Content.Headers.TryGetValues(headerName, out headerValues))
+                            MimeType @as = MimeTypeExtensions.FromKeyword(request.Capture.As);
+
+                            var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{request.Id}");
+                            if (rawContent != null)
                             {
-                                // Combine multiple header values into a single string (if needed)
-                                string headerValue = string.Join(", ", headerValues);
-
-                                // Sanitize the header name to create a valid variable name
-                                string variableName = headerName.Replace("-", string.Empty);
-
-                                // Create a VariableHolder for the header
                                 var builder = new VariableHolder.Builder(_placeholderResolverService);
-                                var variableHolder = await builder
-                                    .WithFormat(MimeType.TextPlain) // Assuming plain text for headers
-                                    .WithRawValue(headerValue)
-                                    .BuildAsync(token);
+                                var variableHolder = await builder.BuildAsync(linkedCts.Token);
+                                variableHolder = await builder
+                                    .WithFormat(IVariableHolder.IsKnownSupportedFormat(mimeType) ? mimeType :
+                                                IVariableHolder.IsKnownSupportedFormat(@as) ? @as : MimeType.Unknown)
+                                    .WithPattern(request.Capture.Regex)
+                                    .WithRawValue(rawContent).BuildAsync(token);
 
-                                // Store the variable based on the MakeGlobal option
                                 if (request.Capture.MakeGlobal == true)
                                 {
-                                    variableHolder = await builder.SetGlobal(true).BuildAsync(token);
-                                    await _logger.LogAsync(
-                                        _runtimeOperationIdProvider.OperationId,
-                                        $"Setting response header '{headerName}' with value '{headerValue}' as global variable '{variableName}'",
-                                        LPSLoggingLevel.Verbose,
-                                        token
-                                    );
-                                    await _variableManager.AddVariableAsync(variableName, variableHolder, token);
+                                    variableHolder = await builder.SetGlobal(true)
+                                        .BuildAsync(token);
+                                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {request.Capture.To} as a global variable", LPSLoggingLevel.Verbose, linkedCts.Token);
+                                    await _variableManager.AddVariableAsync(request.Capture.To, variableHolder, token);
                                 }
                                 else
                                 {
-                                    await _logger.LogAsync(
-                                        _runtimeOperationIdProvider.OperationId,
-                                        $"Setting response header '{headerName}' with value '{headerValue}' in session '{this.SessionId}' as variable '{variableName}'",
-                                        LPSLoggingLevel.Verbose,
-                                        token
-                                    );
-                                    await _sessionManager.AddResponseAsync(this.SessionId, variableName, variableHolder, token);
+                                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {request.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, linkedCts.Token);
+                                    await _sessionManager.AddResponseAsync(this.SessionId, request.Capture.To, variableHolder, linkedCts.Token);
                                 }
                             }
                             else
                             {
-                                // Log if the header was not found in the response
-                                await _logger.LogAsync(
-                                    _runtimeOperationIdProvider.OperationId,
-                                    $"Response does not contain the header '{headerName}' specified in the Capture.Headers list.",
-                                    LPSLoggingLevel.Warning,
-                                    token
-                                );
+                                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is either unknown or the content is empty.", LPSLoggingLevel.Warning, linkedCts.Token);
+                            }
+
+                            if (request.Capture.Headers != null && request.Capture.Headers.Any())
+                            {
+                                foreach (var headerName in request.Capture.Headers)
+                                {
+                                    // Check if the response contains the header
+                                    if (responseMessage.Headers.TryGetValues(headerName, out var headerValues) ||
+                                        responseMessage.Content.Headers.TryGetValues(headerName, out headerValues))
+                                    {
+                                        // Combine multiple header values into a single string (if needed)
+                                        string headerValue = string.Join(", ", headerValues);
+
+                                        // Sanitize the header name to create a valid variable name
+                                        string variableName = headerName.Replace("-", string.Empty);
+
+                                        // Create a VariableHolder for the header
+                                        var builder = new VariableHolder.Builder(_placeholderResolverService);
+                                        var variableHolder = await builder
+                                            .WithFormat(MimeType.TextPlain) // Assuming plain text for headers
+                                            .WithRawValue(headerValue)
+                                            .BuildAsync(token);
+
+                                        // Store the variable based on the MakeGlobal option
+                                        if (request.Capture.MakeGlobal == true)
+                                        {
+                                            variableHolder = await builder.SetGlobal(true).BuildAsync(linkedCts.Token);
+                                            await _logger.LogAsync(
+                                                _runtimeOperationIdProvider.OperationId,
+                                                $"Setting response header '{headerName}' with value '{headerValue}' as global variable '{variableName}'",
+                                                LPSLoggingLevel.Verbose,
+                                                linkedCts.Token
+                                            );
+                                            await _variableManager.AddVariableAsync(variableName, variableHolder, linkedCts.Token);
+                                        }
+                                        else
+                                        {
+                                            await _logger.LogAsync(
+                                                _runtimeOperationIdProvider.OperationId,
+                                                $"Setting response header '{headerName}' with value '{headerValue}' in session '{this.SessionId}' as variable '{variableName}'",
+                                                LPSLoggingLevel.Verbose,
+                                                linkedCts.Token
+                                            );
+                                            await _sessionManager.AddResponseAsync(this.SessionId, variableName, variableHolder, linkedCts.Token);
+                                        }
+                                    }
+                                    else
+                                    {
+                                        // Log if the header was not found in the response
+                                        await _logger.LogAsync(
+                                            _runtimeOperationIdProvider.OperationId,
+                                            $"Response does not contain the header '{headerName}' specified in the Capture.Headers list.",
+                                            LPSLoggingLevel.Warning,
+                                            linkedCts.Token
+                                        );
+                                    }
+                                }
                             }
                         }
+                        #endregion
+
+                        // Download Html Embdedded Resources, conditonally
+                        downloadWatch.Start();
+                        await TryDownloadHtmlResourcesAsync(responseCommand, request, httpClient, linkedCts.Token);
+                        downloadWatch.Stop();
+                        responseCommand.TotalTime = uploadWatch.Elapsed + downloadWatch.Elapsed + streamTime; // set the response time after the complete payload is read.
+                        // Data Transmission Metrics 
+                        await _metricsService.TryUpdateDataReceivedAsync(request.Id, dataReceivedSize, (downloadWatch.ElapsedMilliseconds + streamTime.TotalMilliseconds), linkedCts.Token);
+
+                        lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
+                        lpsHttpResponse.SetHttpRequest(request);
+
+                        //Update Response Break Down Metrics
+                        await _metricsService.TryUpdateResponseMetricsAsync(request.Id, lpsHttpResponse, linkedCts.Token);
+
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
+                        //Update Throughput Metrics
+                        await _metricsService.TryDecreaseConnectionsCountAsync(request.Id, responseMessage.IsSuccessStatusCode, linkedCts.Token);
                     }
                 }
-
-
-                stopWatch.Start();
-                await TryDownloadHtmlResourcesAsync(responseCommand, request, httpClient, token);
-                stopWatch.Stop();
-                responseCommand.ResponseTime = stopWatch.Elapsed + streamTime; // set the response time after the complete payload is read.
-
-                lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
-                lpsHttpResponse.SetHttpRequest(request);
-
-                await _metricsService.TryUpdateResponseMetricsAsync(request.Id, lpsHttpResponse, token);
-
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.ResponseTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
-                
-                await _metricsService.TryDecreaseConnectionsCountAsync(request.Id, responseMessage.IsSuccessStatusCode, token);
             }
             catch (Exception ex)
             {
+                //Decrease Connections On Failure
                 await _metricsService.TryDecreaseConnectionsCountAsync(request.Id, false, token);
 
                 HttpResponse.SetupCommand lpsResponseCommand = new()
@@ -214,7 +240,7 @@ namespace LPS.Infrastructure.LPSClients
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
                     HttpRequestId = request.Id,
-                    ResponseTime = stopWatch.Elapsed,
+                    TotalTime = uploadWatch.Elapsed + downloadWatch.Elapsed + initialStreamTime,
                 };
 
                 lpsHttpResponse = new HttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
@@ -230,8 +256,27 @@ namespace LPS.Infrastructure.LPSClients
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {SessionId} - Request # {sequenceNumber} {request.HttpMethod} {request.Url.Url} Http/{request.HttpVersion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
                 throw;
             }
-
             return lpsHttpResponse;
+        }
+        private static async Task<HttpContent> WrapWithProgressContentAsync(HttpContent content, Stopwatch stopwatch, CancellationToken token)
+        {
+            var progress = new Progress<long>(bytesUploaded =>
+            {
+                // TODO: We Need to log the number of read bytes to a different log file (stream.log)
+            });
+
+            // Perform any asynchronous initialization required
+            if (content is null)
+            {
+                throw new ArgumentNullException(nameof(content));
+            }
+
+            // Ensure the original content stream is prepared asynchronously (if needed)
+            if (content is StreamContent streamContent)
+            {
+                await streamContent.LoadIntoBufferAsync(); // Example: Ensure the stream is fully loaded (optional)
+            }
+            return new ProgressContent(content, progress, stopwatch, token);
         }
 
         private async Task<bool> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpRequest httpRequest, HttpClient client, CancellationToken token = default)

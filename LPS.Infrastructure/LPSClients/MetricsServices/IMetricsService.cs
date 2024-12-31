@@ -15,8 +15,8 @@ namespace LPS.Infrastructure.LPSClients.MetricsServices
         Task<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token);
         Task<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token);
         Task<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse response, CancellationToken token);
-        Task<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, CancellationToken token);
-        Task<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, CancellationToken token);
+        Task<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token);
+        Task<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token);
 
 
     }

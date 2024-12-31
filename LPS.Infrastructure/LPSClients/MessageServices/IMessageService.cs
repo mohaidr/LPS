@@ -11,6 +11,6 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
 {
     public interface IMessageService
     {
-        Task<HttpRequestMessage> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default);
+        Task<(HttpRequestMessage HttpRequestMessage, long MessageSize)> BuildAsync(HttpRequest httpRequest, string sessionId, CancellationToken token = default);
     }
 }

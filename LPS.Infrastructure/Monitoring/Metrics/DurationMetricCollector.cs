@@ -43,8 +43,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync();
             try
             {
-                _dimensionSet.Update(response.ResponseTime.TotalMilliseconds, _histogram);
-                _eventSource.WriteResponseTimeMetrics(response.ResponseTime.TotalMilliseconds);
+                _dimensionSet.Update(response.TotalTime.TotalMilliseconds, _histogram);
+                _eventSource.WriteResponseTimeMetrics(response.TotalTime.TotalMilliseconds);
             }
             finally
             {

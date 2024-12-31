@@ -4,7 +4,6 @@ using LPS.Domain;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.SampleResponseServices;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -12,10 +11,8 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Caching.Memory;
 using System.Buffers;
 using LPS.Infrastructure.LPSClients.URLServices;
-using LPS.Infrastructure.LPSClients.MetricsServices;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using System.Net;
 using LPS.Infrastructure.LPSClients.CachService;
@@ -26,12 +23,9 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         ICacheService<string> memoryCacheService,
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IUrlSanitizationService urlSanitizationService,
-        IMetricsService metricsService,
         IResponseProcessorFactory responseProcessorFactory,
         ISessionManager sessionManager) : IResponseProcessingService
     {
-        private readonly IMetricsService _metricsService = metricsService;
         private readonly ICacheService<string> _memoryCacheService = memoryCacheService;
         private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
         private readonly IResponseProcessorFactory _responseProcessorFactory = responseProcessorFactory;
@@ -39,7 +33,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
        private readonly ISessionManager _sessionManager = sessionManager;
         readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
-        public async Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
+        public async Task<(HttpResponse.SetupCommand command, double dataReceivedSize, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage responseMessage,
             HttpRequest httpRequest,
             bool cacheResponse,
@@ -66,10 +60,6 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     string content = await _memoryCacheService.GetItemAsync(cacheKey);
 
                     using Stream contentStream = await responseMessage.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-                    using var timeoutCts = new CancellationTokenSource();
-                    using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, timeoutCts.Token);
-                    timeoutCts.CancelAfter(TimeSpan.FromSeconds(30));
-
                     MemoryStream memoryStream = null;
                     byte[] buffer = _bufferPool.Rent(64000);
                     
@@ -91,7 +81,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                             int bytesRead;
                             streamStopwatch.Start();
 
-                            while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), linkedCts.Token)) > 0)
+                            while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), token)) > 0)
                             {
                                 transferredSize += bytesRead;
                                 streamStopwatch.Stop();
@@ -99,7 +89,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                                 // Write to memoryStream for caching
                                 if (memoryStream != null)
                                 {
-                                    await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), linkedCts.Token);
+                                    await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), token);
                                 }
 
                                 // Process the chunk with the responseProcessor
@@ -127,7 +117,6 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         if (isSemaphoreAcquired)
                             _semaphoreSlim.Release();
                         _bufferPool.Return(buffer);
-                        await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, transferredSize, token);
                         if (memoryStream != null)
                         {
                             await memoryStream.DisposeAsync();
@@ -146,7 +135,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     ResponseHeaders = responseMessage.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ContentType = mimeType,
                     HttpRequestId = httpRequest.Id,
-                }, streamStopwatch.Elapsed);
+                }, transferredSize, streamStopwatch.Elapsed);
             }
             catch (Exception ex)
             {

@@ -49,6 +49,6 @@ namespace LPS.Domain
         //- Assign this through the setupcommand where the command will have the ID so we can fetch the entity from the DB and assign it to prevent creating orphan entities
         public HttpRequest HttpRequest { get; private set; }
 
-        public TimeSpan ResponseTime { get; private set; }
+        public TimeSpan TotalTime { get; private set; }
     }
 }

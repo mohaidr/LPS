@@ -11,7 +11,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
 {
     public interface IResponseProcessingService
     {
-        Task<(HttpResponse.SetupCommand command, TimeSpan streamTime)> ProcessResponseAsync(
+        Task<(HttpResponse.SetupCommand command, double dataReceivedSize, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage response,
             HttpRequest httpRequest,
             bool cacheResponse,
