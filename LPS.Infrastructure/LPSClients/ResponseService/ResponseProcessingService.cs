@@ -16,6 +16,7 @@ using LPS.Infrastructure.LPSClients.URLServices;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using System.Net;
 using LPS.Infrastructure.LPSClients.CachService;
+using LPS.Infrastructure.LPSClients.MetricsServices;
 
 namespace LPS.Infrastructure.LPSClients.ResponseService
 {
@@ -24,14 +25,14 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IResponseProcessorFactory responseProcessorFactory,
-        ISessionManager sessionManager) : IResponseProcessingService
+        IMetricsService metricsService) : IResponseProcessingService
     {
         private readonly ICacheService<string> _memoryCacheService = memoryCacheService;
         private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
         private readonly IResponseProcessorFactory _responseProcessorFactory = responseProcessorFactory;
         private readonly ILogger _logger = logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-       private readonly ISessionManager _sessionManager = sessionManager;
+       private readonly IMetricsService _metricsService = metricsService;
         readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         public async Task<(HttpResponse.SetupCommand command, double dataReceivedSize, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage responseMessage,
@@ -40,6 +41,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             CancellationToken token)
         {
             Stopwatch streamStopwatch = Stopwatch.StartNew();
+            Stopwatch overAllStopWatch = Stopwatch.StartNew();
             string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
             MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
 
@@ -80,11 +82,11 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         {
                             int bytesRead;
                             streamStopwatch.Start();
-
+                            overAllStopWatch.Start();
                             while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), token)) > 0)
                             {
                                 transferredSize += bytesRead;
-                                streamStopwatch.Stop();
+                                await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, streamStopwatch.ElapsedMilliseconds, token);
 
                                 // Write to memoryStream for caching
                                 if (memoryStream != null)
@@ -95,10 +97,11 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                                 // Process the chunk with the responseProcessor
                                 await responseProcessor.ProcessResponseChunkAsync(buffer, 0, bytesRead, token);
 
-                                streamStopwatch.Start();
+                                streamStopwatch.Restart();
                             }
 
                             streamStopwatch.Stop();
+                            overAllStopWatch.Stop();
                             // Get the response file path if available
                             locationToResponse = responseProcessor.ResponseFilePath;
                         }
@@ -135,7 +138,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     ResponseHeaders = responseMessage.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ContentType = mimeType,
                     HttpRequestId = httpRequest.Id,
-                }, transferredSize, streamStopwatch.Elapsed);
+                }, transferredSize, overAllStopWatch.Elapsed);
             }
             catch (Exception ex)
             {

@@ -26,13 +26,13 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             _metrics.TryAdd(requestId.ToString(), 
                 await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
         }
-        private async Task<IEnumerable<IMetricCollector>> GetThrouputMetricsAsync(Guid requestId)
+        private async ValueTask<IEnumerable<IMetricCollector>> GetThrouputMetricsAsync(Guid requestId)
         {
             await QueryMetricsAsync(requestId);
             return _metrics[requestId.ToString()]
                     .Where(metric => metric.MetricType == LPSMetricType.Throughput);
         }
-        public async Task<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
+        public async ValueTask<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
             try
             {
@@ -41,7 +41,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 {
                     ((IThroughputMetricCollector)metric).IncreaseConnectionsCount();
                 }
-                return true;
+                return true; // Avoids allocation, synchronous result
             }
             catch (Exception ex)
             {
@@ -52,7 +52,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             }
         }
 
-        public async Task<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
+        public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
         {
             try
             {
@@ -71,7 +71,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 return false;
             }
         }
-        public async Task<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse lpsResponse, CancellationToken token)
+        public async ValueTask<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse lpsResponse, CancellationToken token)
         {
             try
             {
@@ -87,13 +87,13 @@ namespace LPS.Infrastructure.LPSClients.Metrics
             }
 
         }
-        private async Task<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId)
+        private async ValueTask<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId)
         {
             await QueryMetricsAsync(requestId);
             return _metrics[requestId.ToString()]
                     .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
         }
-        public async Task<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
+        public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
         {
             try
             {
@@ -112,7 +112,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 return false;
             }
         }
-        public async Task<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize,double downloadTime, CancellationToken token)
+        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize,double downloadTime, CancellationToken token)
         {
             try
             {

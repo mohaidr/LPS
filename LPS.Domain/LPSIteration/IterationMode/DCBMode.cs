@@ -45,7 +45,8 @@ namespace LPS.Domain.LPSRun.IterationMode
                 {
                     coolDownWatch.Restart();
                     awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
-                    await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
+                    if (continueCondition())
+                        await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
                 }
             }
 

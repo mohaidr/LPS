@@ -45,7 +45,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                 {
                     await stream.WriteAsync(buffer, 0, bytesRead, _token);
                     totalBytesRead += bytesRead;
-                    _progress.Report(totalBytesRead);
+                    _progress.Report(bytesRead);
                 }
                 _stopwatch.Stop();
             }

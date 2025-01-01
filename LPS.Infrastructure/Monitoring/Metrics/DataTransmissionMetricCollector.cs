@@ -110,12 +110,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     var totalUploadSeconds = _totalDataUploadTime / 1000;
                     var totalSeconds = totalDownloadSeconds + totalUploadSeconds;
 
-                    if ( totalSeconds > 0 && _dataSentCount > 0 && _dataReceivedCount > 0)
-                    {
-                        _dimensionSet.UpdateDataSent(_totalDataSent, _totalDataSent / _dataSentCount, (totalUploadSeconds >0? _totalDataSent / totalUploadSeconds : 0), totalSeconds*1000);
-                        _dimensionSet.UpdateDataReceived(_totalDataReceived, _totalDataReceived / _dataReceivedCount, (totalDownloadSeconds > 0 ? _totalDataReceived / totalDownloadSeconds : 0), totalSeconds * 1000);
-                        _dimensionSet.UpdateAverageBytes((_totalDataReceived + _totalDataSent) / totalSeconds, totalSeconds * 1000);
-                    }
+                        _dimensionSet.UpdateDataSent(_totalDataSent, (_dataSentCount >0? _totalDataSent / _dataSentCount:0), totalUploadSeconds >0 ? _totalDataSent / totalUploadSeconds : 0, totalSeconds*1000);
+                        _dimensionSet.UpdateDataReceived(_totalDataReceived, _dataReceivedCount >0 ? _totalDataReceived / _dataReceivedCount :0, totalDownloadSeconds > 0 ? _totalDataReceived / totalDownloadSeconds : 0, totalSeconds * 1000);
+                        _dimensionSet.UpdateAverageBytes(totalSeconds >0 ? (_totalDataReceived + _totalDataSent) / totalSeconds:0, totalSeconds * 1000);
                 }
             }
             finally
