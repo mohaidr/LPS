@@ -15,8 +15,8 @@ namespace LPS.Infrastructure.Common.Interfaces
         public HttpIteration HttpIteration { get; }
         public LPSMetricType MetricType { get; }
         public string Stringify();
-        public Task<IDimensionSet> GetDimensionSetAsync();
-        Task<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet;
+        public ValueTask<IDimensionSet> GetDimensionSetAsync();
+        ValueTask<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet;
         public void Start();
         public void Stop();
         public bool IsStopped { get; }

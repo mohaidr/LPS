@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public async Task<IDimensionSet> GetDimensionSetAsync()
+        public async ValueTask<IDimensionSet> GetDimensionSetAsync()
         {
             if (DimensionSet != null)
             {
@@ -46,7 +46,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public async Task<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet
+        public async ValueTask<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet
         {
             if (DimensionSet is TDimensionSet dimensionSet)
             {

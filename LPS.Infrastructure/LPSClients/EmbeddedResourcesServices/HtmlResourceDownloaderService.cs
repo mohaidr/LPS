@@ -15,6 +15,8 @@ using System.Buffers;
 using LPS.Infrastructure.LPSClients.CachService;
 using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Generic;
+using System.Diagnostics;
+using LPS.Infrastructure.LPSClients.MetricsServices;
 
 namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
 {
@@ -25,18 +27,19 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
         private readonly HttpClient _httpClient;
         private readonly ICacheService<string> _memoryCacheService;
         private const int _bufferSize = 8 * 1024;
-        private const int _downloadTimeoutSeconds = 30;
-
+        private readonly IMetricsService _metricsService;
         public HtmlResourceDownloaderService(
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider,
             HttpClient httpClient,
+            IMetricsService metricsService,
             ICacheService<string> memoryCacheService)
         {
             _logger = logger;
             _operationIdProvider = operationIdProvider;
             _httpClient = httpClient;
             _memoryCacheService = memoryCacheService;
+            _metricsService = metricsService;
         }
 
         public async Task DownloadResourcesAsync(
@@ -122,7 +125,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                         semaphoreAcquired = true;
                         try
                         {
-                            await DownloadResourceAsync(baseUrl, resourceUrl, cancellationToken);
+                            await DownloadResourceAsync(baseUrl, requestId, resourceUrl, cancellationToken);
                         }
                         finally
                         {
@@ -146,8 +149,9 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
         }
 
 
-        private async Task DownloadResourceAsync(string baseUrl, string resourceUrl, CancellationToken cancellationToken)
+        private async Task DownloadResourceAsync(string baseUrl, Guid requestId, string resourceUrl, CancellationToken cancellationToken)
         {
+            Stopwatch timeToDownloadWatch = new Stopwatch();
             try
             {
                 Uri resourceUri = new Uri(new Uri(baseUrl), resourceUrl);
@@ -156,26 +160,25 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                 {
                     response.EnsureSuccessStatusCode();
 
-                    using (var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(_downloadTimeoutSeconds)))
-                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, timeoutCts.Token))
+                    using (Stream responseStream = await response.Content.ReadAsStreamAsync(cancellationToken))
                     {
-                        CancellationToken linkedToken = linkedCts.Token;
-
-                        using (Stream responseStream = await response.Content.ReadAsStreamAsync(linkedToken))
+                        byte[] buffer = ArrayPool<byte>.Shared.Rent(_bufferSize);
+                        try
                         {
-                            byte[] buffer = ArrayPool<byte>.Shared.Rent(_bufferSize);
-                            try
+                            timeToDownloadWatch.Start();
+                            int totalBytes = 0;
+                            int bytesRead;
+                            while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, _bufferSize), cancellationToken)) > 0)
                             {
-                                int bytesRead;
-                                while ((bytesRead = await responseStream.ReadAsync(buffer.AsMemory(0, _bufferSize), linkedToken)) > 0)
-                                {
-                                    // Process bytes if needed
-                                }
+                                totalBytes += bytesRead;
+                                // Process bytes if needed
                             }
-                            finally
-                            {
-                                ArrayPool<byte>.Shared.Return(buffer);
-                            }
+                            timeToDownloadWatch.Stop();
+                            await _metricsService.TryUpdateDataReceivedAsync(requestId, totalBytes, timeToDownloadWatch.ElapsedMilliseconds, cancellationToken);
+                        }
+                        finally
+                        {
+                            ArrayPool<byte>.Shared.Return(buffer);
                         }
                     }
                 }

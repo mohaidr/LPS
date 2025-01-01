@@ -24,7 +24,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             List<Task<int>> awaitableTasks = [];
             var coolDownWatch = Stopwatch.StartNew();
 
-            bool continueCondition() => ((_requestCount) > 0) && !cancellationToken.IsCancellationRequested;
+            bool continueCondition() => _requestCount > 0 && !cancellationToken.IsCancellationRequested;
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
             while (continueCondition())

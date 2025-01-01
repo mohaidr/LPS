@@ -100,8 +100,6 @@ namespace LPS.Infrastructure.LPSClients
                         await _metricsService.TryIncreaseConnectionsCountAsync(httpRequestEntity.Id, token);
                         //Start the http Request
                         var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
-                        //Update Data Transmission Metrics
-                        //await _metricsService.TryUpdateDataSentAsync(request.Id, dataSentSize, uploadWatch.ElapsedMilliseconds, linkedCts.Token);
 
                         #region Take Content Caching DecesionDecesion
                         string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
@@ -210,11 +208,9 @@ namespace LPS.Infrastructure.LPSClients
                         #endregion
 
                         // Download Html Embdedded Resources, conditonally
-                        var (hasDownloaded, downloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, linkedCts.Token);
-                        initialHtmlDownloadTime = downloadTime;
-                        responseCommand.TotalTime = uploadWatch.Elapsed + downloadTime + streamTime; // set the response time after the complete payload is read.
-                        // Data Transmission Metrics 
-                        await _metricsService.TryUpdateDataReceivedAsync(httpRequestEntity.Id, dataReceivedSize, downloadTime.TotalMilliseconds, linkedCts.Token);
+                        var (hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, linkedCts.Token);
+                        initialHtmlDownloadTime = htmlDownloadTime;
+                        responseCommand.TotalTime = uploadWatch.Elapsed + htmlDownloadTime + streamTime; // set the response time after the complete payload is read.
 
                         lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
                         lpsHttpResponse.SetHttpRequest(httpRequestEntity);
@@ -295,7 +291,7 @@ namespace LPS.Infrastructure.LPSClients
                 if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && httpRequest.Id == responseCommand.HttpRequestId)
                 {
                     downloadWatch.Start();
-                    var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, client, _memoryCacheService);
+                    var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, client, _metricsService, _memoryCacheService);
                     await htmlResourceDownloader.DownloadResourcesAsync(httpRequest.Url.Url, httpRequest.Id, token);
                     downloadWatch.Stop();
                 }

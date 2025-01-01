@@ -60,13 +60,12 @@ namespace LPS.Controllers
                 var dataTransmissionMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.DataTransmission);
 
                 // Await all tasks to complete
-                await Task.WhenAll(responseTimeMetricsTask, responseBreakDownMetricsTask, connectionsMetricsTask, dataTransmissionMetricsTask);
 
                 // Retrieve the results
-                var responseTimeMetrics = responseTimeMetricsTask.Result;
-                var responseBreakDownMetrics = responseBreakDownMetricsTask.Result;
-                var connectionsMetrics = connectionsMetricsTask.Result;
-                var dataTransmissionMetrics = dataTransmissionMetricsTask.Result; // Get data transmission metrics
+                var responseTimeMetrics = await responseTimeMetricsTask;
+                var responseBreakDownMetrics = await responseBreakDownMetricsTask;
+                var connectionsMetrics = await connectionsMetricsTask;
+                var dataTransmissionMetrics = await dataTransmissionMetricsTask; // Get data transmission metrics
 
                 // Populate the metrics list
                 AddToList(responseTimeMetrics, "ResponseTime");

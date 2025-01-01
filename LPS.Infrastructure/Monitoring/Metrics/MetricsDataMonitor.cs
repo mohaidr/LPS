@@ -11,12 +11,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class MetricsDataMonitor(
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMonitoredIterationRepository monitoredRunRepository) : IMetricsDataMonitor, IDisposable
+        IMonitoredIterationRepository monitoredRunRepository,
+        IMetricsQueryService metricsQueryService) : IMetricsDataMonitor, IDisposable
     {
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         private readonly IMonitoredIterationRepository _monitoredIterationsRepository = monitoredRunRepository ?? throw new ArgumentNullException(nameof(monitoredRunRepository));
-
+        private readonly IMetricsQueryService _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException();
         public bool TryRegister(string roundName, HttpIteration httpIteration)
         {
             try
@@ -46,7 +47,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 { $"{httpIteration.Id}-BreakDown", new ResponseCodeMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
                 { $"{httpIteration.Id}-Duration", new DurationMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
                 { $"{httpIteration.Id}-Throughput", new ThroughputMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Id}-DataTransmission", new DataTransmissionMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) }
+                { $"{httpIteration.Id}-DataTransmission", new DataTransmissionMetricCollector(httpIteration, _metricsQueryService,roundName, _logger, _runtimeOperationIdProvider) }
             };
         }
 

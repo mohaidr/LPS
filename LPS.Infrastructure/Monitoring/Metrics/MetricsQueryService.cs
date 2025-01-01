@@ -17,7 +17,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         private readonly IMonitoredIterationRepository _monitoredIterationRepository = monitoredIterationRepository ?? throw new ArgumentNullException(nameof(monitoredIterationRepository));
 
-        public async Task<List<IMetricCollector>> GetAsync(Func<IMetricCollector, bool> predicate)
+        public async ValueTask<List<IMetricCollector>> GetAsync(Func<IMetricCollector, bool> predicate)
         {
             try
             {
@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public async Task<List<T>> GetAsync<T>(Func<T, bool> predicate) where T : IMetricCollector
+        public async ValueTask<List<T>> GetAsync<T>(Func<T, bool> predicate) where T : IMetricCollector
         {
             try
             {
