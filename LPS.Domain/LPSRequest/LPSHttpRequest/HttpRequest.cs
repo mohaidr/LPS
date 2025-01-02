@@ -19,7 +19,6 @@ namespace LPS.Domain
     public partial class HttpRequest :Request, IBusinessEntity, ICloneable
     {
 
-        private IClientService<HttpRequest, HttpResponse> _httpClientService;
         private HttpRequest()
         {
         }

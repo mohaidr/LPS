@@ -22,8 +22,6 @@ namespace LPS.Domain
         {
             Type = IterationType.Http;
         }
-
-        private IClientService<HttpRequest, HttpResponse> _httpClientService;
         private HttpIteration(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)

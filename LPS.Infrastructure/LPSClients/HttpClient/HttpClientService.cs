@@ -24,6 +24,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly HttpClient httpClient;
         readonly ILogger _logger;
         private static int _clientNumber;
+        public static object _lock = new();
         public string SessionId { get; private set; }
         public string GuidId { get; private set; }
         readonly ICacheService<string> _memoryCacheService;
@@ -34,7 +35,6 @@ namespace LPS.Infrastructure.LPSClients
         readonly ISessionManager _sessionManager;
         readonly IVariableManager _variableManager;
         readonly IPlaceholderResolverService _placeholderResolverService;
-        readonly object _lock = new();
         public HttpClientService(IClientConfiguration<HttpRequest> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ICacheService<string> memoryCacheService,
@@ -70,18 +70,18 @@ namespace LPS.Infrastructure.LPSClients
             {
                 Timeout = ((ILPSHttpClientConfiguration<HttpRequest>)config).Timeout
             };
+            GuidId = Guid.NewGuid().ToString();
             lock (_lock)
             {
-                SessionId = _clientNumber++.ToString();
+                SessionId = (++_clientNumber).ToString();
             }
-            GuidId = Guid.NewGuid().ToString();
         }
 
         public async Task<HttpResponse> SendAsync(HttpRequest httpRequestEntity, CancellationToken token = default)
         {
             int sequenceNumber = httpRequestEntity.LastSequenceId;
             HttpResponse lpsHttpResponse;
-            Stopwatch uploadWatch = new();
+            Stopwatch initialResponseWatch = new(); // to calculate the time from sending the data until we receive the headers
             TimeSpan initialStreamTime = TimeSpan.FromSeconds(0);
             TimeSpan initialHtmlDownloadTime = TimeSpan.FromSeconds(0);
             try
@@ -94,12 +94,15 @@ namespace LPS.Infrastructure.LPSClients
 
                         #region Build The Message
                         var (httpRequestMessage, dataSentSize) = await _messageService.BuildAsync(httpRequestEntity, this.SessionId, linkedCts.Token);
-                        httpRequestMessage.Content = httpRequestMessage.Content != null ? await WrapWithProgressContentAsync(httpRequestEntity, httpRequestMessage.Content, uploadWatch, linkedCts.Token) : httpRequestMessage.Content;
+                        httpRequestMessage.Content = httpRequestMessage.Content != null ? WrapWithProgressContentAsync(httpRequestEntity, httpRequestMessage.Content, linkedCts.Token) : httpRequestMessage.Content;
                         #endregion
                         //Update Throughput Metric
                         await _metricsService.TryIncreaseConnectionsCountAsync(httpRequestEntity.Id, token);
+
                         //Start the http Request
+                        initialResponseWatch.Start();
                         var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
+                        initialResponseWatch.Stop();
 
                         #region Take Content Caching DecesionDecesion
                         string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
@@ -210,7 +213,7 @@ namespace LPS.Infrastructure.LPSClients
                         // Download Html Embdedded Resources, conditonally
                         var (hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, linkedCts.Token);
                         initialHtmlDownloadTime = htmlDownloadTime;
-                        responseCommand.TotalTime = uploadWatch.Elapsed + htmlDownloadTime + streamTime; // set the response time after the complete payload is read.
+                        responseCommand.TotalTime = initialResponseWatch.Elapsed + htmlDownloadTime + streamTime; // set the response time after the complete payload is read.
 
                         lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
                         lpsHttpResponse.SetHttpRequest(httpRequestEntity);
@@ -236,7 +239,7 @@ namespace LPS.Infrastructure.LPSClients
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
                     HttpRequestId = httpRequestEntity.Id,
-                    TotalTime = uploadWatch.Elapsed + initialHtmlDownloadTime + initialStreamTime,
+                    TotalTime = initialResponseWatch.Elapsed + initialHtmlDownloadTime + initialStreamTime,
                 };
 
                 lpsHttpResponse = new HttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
@@ -254,27 +257,25 @@ namespace LPS.Infrastructure.LPSClients
             }
             return lpsHttpResponse;
         }
-        private async Task<HttpContent> WrapWithProgressContentAsync(HttpRequest request, HttpContent content, Stopwatch stopwatch, CancellationToken token)
-        {
-            var progress = new Progress<long>(async (bytesRead) =>
-            {
-                await _metricsService.TryUpdateDataSentAsync(request.Id, bytesRead, stopwatch.ElapsedMilliseconds, token);
-                stopwatch.Restart();
-                // TODO: We Need to log the number of read bytes to a different log file (stream.log)
-            });
 
+        private HttpContent WrapWithProgressContentAsync(HttpRequest request, HttpContent content, CancellationToken token)
+        {
             // Perform any asynchronous initialization required
             if (content is null)
             {
                 throw new ArgumentNullException(nameof(content));
             }
 
-            // Ensure the original content stream is prepared asynchronously (if needed)
-            if (content is StreamContent streamContent)
+            Stopwatch uploadWatch = new();
+
+            var progress = new Progress<long>(async (bytesRead) =>
             {
-                await streamContent.LoadIntoBufferAsync(); // Example: Ensure the stream is fully loaded (optional)
-            }
-            return new ProgressContent(content, progress, stopwatch, token);
+                await _metricsService.TryUpdateDataSentAsync(request.Id, bytesRead, uploadWatch.ElapsedMilliseconds, token);
+                uploadWatch.Restart();
+                // TODO: We Need to log the number of read bytes to a different log file (stream.log)
+            });
+
+            return new ProgressContent(content, progress, uploadWatch, token);
         }
 
         private async Task<(bool, TimeSpan)> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpRequest httpRequest, HttpClient client, CancellationToken token = default)
@@ -305,6 +306,3 @@ namespace LPS.Infrastructure.LPSClients
         }
     }
 }
-
-
-

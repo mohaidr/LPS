@@ -25,6 +25,7 @@ namespace LPS.Domain
             CancellationTokenSource cts) : IAsyncCommand<HttpRequest>, IStateSubject
         {
             private IClientService<HttpRequest, HttpResponse> _httpClientService { get; set; } = httpClientService;
+            public IClientService<HttpRequest, HttpResponse> HttpClientService => _httpClientService;
             readonly ILogger _logger = logger;
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -46,7 +47,6 @@ namespace LPS.Domain
                         _logger.Log(_runtimeOperationIdProvider.OperationId, "HttpRequest Entity Must Have a Value", LPSLoggingLevel.Error);
                         throw new ArgumentNullException(nameof(entity));
                     }
-                    entity._httpClientService = this._httpClientService;
                     entity._logger = this._logger;
                     entity._watchdog = this._watchdog;
                     entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
@@ -117,7 +117,7 @@ namespace LPS.Domain
                 try
                 {
                     var clonedEntity = this.Clone();
-                    if (this._httpClientService == null)
+                    if (command.HttpClientService == null)
                     {
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
@@ -126,7 +126,7 @@ namespace LPS.Domain
                     ((HttpRequest)clonedEntity).LastSequenceId = sequenceNumber;
                     _semaphoreSlim.Release();
 
-                    var response = await _httpClientService.SendAsync((HttpRequest)clonedEntity, _cts.Token);
+                    var response = await command.HttpClientService.SendAsync((HttpRequest)clonedEntity, _cts.Token);
                     if (response.IsSuccessStatusCode)
                         this.HasFailed = false; // HasFailed is not valid property here, think of this as an entity you just fetch from DB to execute, so this has to change
                     else
