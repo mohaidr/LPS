@@ -107,26 +107,15 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 string hostName = this.Url.HostName;
-
                 await _watchdog.BalanceAsync(hostName, _cts.Token);
-                /* 
-                 * Clone the entity so we send a different entity to the http client service.
-                 * To avoid writing to the same instnace concurrently where we update the sequence number which is used by the http client service, so if the sequence number changes while used by the http client service, then a wrong sequence number will be used and may result in exceptions or unexpected behaviors
-                 * This logic may change in the future when we refactor the http client service
-                */
                 try
                 {
-                    var clonedEntity = this.Clone();
                     if (command.HttpClientService == null)
                     {
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
-                    await _semaphoreSlim.WaitAsync(_cts.Token);
-                    int sequenceNumber = ++this.LastSequenceId;
-                    ((HttpRequest)clonedEntity).LastSequenceId = sequenceNumber;
-                    _semaphoreSlim.Release();
 
-                    var response = await command.HttpClientService.SendAsync((HttpRequest)clonedEntity, _cts.Token);
+                    var response = await command.HttpClientService.SendAsync(this, _cts.Token);
                     if (response.IsSuccessStatusCode)
                         this.HasFailed = false; // HasFailed is not valid property here, think of this as an entity you just fetch from DB to execute, so this has to change
                     else

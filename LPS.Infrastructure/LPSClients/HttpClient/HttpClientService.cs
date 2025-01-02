@@ -79,11 +79,11 @@ namespace LPS.Infrastructure.LPSClients
 
         public async Task<HttpResponse> SendAsync(HttpRequest httpRequestEntity, CancellationToken token = default)
         {
-            int sequenceNumber = httpRequestEntity.LastSequenceId;
             HttpResponse lpsHttpResponse;
             Stopwatch initialResponseWatch = new(); // to calculate the time from sending the data until we receive the headers
-            TimeSpan initialStreamTime = TimeSpan.FromSeconds(0);
-            TimeSpan initialHtmlDownloadTime = TimeSpan.FromSeconds(0);
+            TimeSpan streamTime = TimeSpan.FromSeconds(0);
+            TimeSpan htmlDownloadTime = TimeSpan.FromSeconds(0);
+            HttpRequestMessage httpRequestMessage = null;
             try
             {
                 using var timeoutCts = new CancellationTokenSource();
@@ -93,7 +93,7 @@ namespace LPS.Infrastructure.LPSClients
                         timeoutCts.CancelAfter(httpClient.Timeout);
 
                         #region Build The Message
-                        var (httpRequestMessage, dataSentSize) = await _messageService.BuildAsync(httpRequestEntity, this.SessionId, linkedCts.Token);
+                        (httpRequestMessage, long dataSentSize) = await _messageService.BuildAsync(httpRequestEntity, this.SessionId, linkedCts.Token);
                         httpRequestMessage.Content = httpRequestMessage.Content != null ? WrapWithProgressContentAsync(httpRequestEntity, httpRequestMessage.Content, linkedCts.Token) : httpRequestMessage.Content;
                         #endregion
                         //Update Throughput Metric
@@ -113,8 +113,7 @@ namespace LPS.Infrastructure.LPSClients
 
                         //Read the Response and total time spent to read the data represented as timespan
                         // TODO: Test moving the download and upload bytes metric to the ProgressContent and the  ResponseProcessingService Service to let the dashboard reflect them instantly for large payloads
-                        var (command, dataReceivedSize, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, httpRequestEntity, cacheResponse, linkedCts.Token));
-                        initialStreamTime = streamTime;
+                        (HttpResponse.SetupCommand command, double dataReceivedSize, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, httpRequestEntity, cacheResponse, linkedCts.Token));
                         HttpResponse.SetupCommand responseCommand = command;
 
                         #region Capture Response
@@ -211,8 +210,7 @@ namespace LPS.Infrastructure.LPSClients
                         #endregion
 
                         // Download Html Embdedded Resources, conditonally
-                        var (hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, linkedCts.Token);
-                        initialHtmlDownloadTime = htmlDownloadTime;
+                        (bool hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, linkedCts.Token);
                         responseCommand.TotalTime = initialResponseWatch.Elapsed + htmlDownloadTime + streamTime; // set the response time after the complete payload is read.
 
                         lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
@@ -221,7 +219,7 @@ namespace LPS.Infrastructure.LPSClients
                         //Update Response Break Down Metrics
                         await _metricsService.TryUpdateResponseMetricsAsync(httpRequestEntity.Id, lpsHttpResponse, linkedCts.Token);
 
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request # {sequenceNumber} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
                         //Update Throughput Metrics
                         await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, responseMessage.IsSuccessStatusCode, linkedCts.Token);
                     }
@@ -239,7 +237,7 @@ namespace LPS.Infrastructure.LPSClients
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
                     HttpRequestId = httpRequestEntity.Id,
-                    TotalTime = initialResponseWatch.Elapsed + initialHtmlDownloadTime + initialStreamTime,
+                    TotalTime = initialResponseWatch.Elapsed + htmlDownloadTime + streamTime,
                 };
 
                 lpsHttpResponse = new HttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
@@ -249,10 +247,10 @@ namespace LPS.Infrastructure.LPSClients
 
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer")))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"Client: {SessionId} - Request # {sequenceNumber} {httpRequestEntity.HttpMethod} {httpRequestEntity.Url.Url} Http/{httpRequestEntity.HttpVersion} \n\t  The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, token);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\t  The request (ID: {httpRequestEntity.Id}) failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Critical, token);
                 }
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, @$"...Client: {SessionId} - Request # {sequenceNumber} {httpRequestEntity.HttpMethod} {httpRequestEntity.Url.Url} Http/{httpRequestEntity.HttpVersion} \n\t The request # {sequenceNumber} failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\t The request failed with the following exception  {(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
                 throw;
             }
             return lpsHttpResponse;
