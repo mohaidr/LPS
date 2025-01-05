@@ -15,13 +15,13 @@
       "CoolDownCPUPercentage": 50,
       "CoolDownRetryTimeInSeconds": 1,
       "MaxConcurrentConnectionsCountPerHostName": 3000,
-      "CoolDownConcurrentConnectionsCountPerHostName": 2500,
-      "MaxCoolingPeriod": 60,
-      "ResumeCoolingAfter": 60,
+      "CoolDownConcurrentConnectionsCountPerHostName": 1500,
+      "MaxCoolingPeriod": 30,
+      "ResumeCoolingAfter": 90,
       "SuspensionMode": 0
     },
     "LPSHttpClientConfiguration": {
-      "ClientTimeoutInSeconds": 300,
+      "ClientTimeoutInSeconds": 60,
       "PooledConnectionLifeTimeInSeconds": 1500,
       "PooledConnectionIdleTimeoutInSeconds": 350,
       "MaxConnectionsPerServer": 3000
