@@ -238,7 +238,7 @@ namespace LPS.Infrastructure.Watchdog
         {
             _isCoolingPaused = true;
             _resetToCoolingStopwatch.Start();
-            await _logger.LogAsync(_operationIdProvider.OperationId, $"Pausing cooling for {MaxCoolingPeriod} seconds", LPSLoggingLevel.Information, token);
+            await _logger.LogAsync(_operationIdProvider.OperationId, $"Pausing cooling for {ResumeCoolingAfter} seconds", LPSLoggingLevel.Information, token);
         }
         private async Task ExecuteGarbageCollectionAsync(CancellationToken token)
         {

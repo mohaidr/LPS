@@ -9,10 +9,10 @@
       "LoggingLevel": 0
     },
     "LPSWatchdogConfiguration": {
-      "MaxMemoryMB": 1000,
-      "CoolDownMemoryMB": 700,
-      "MaxCPUPercentage": 70,
-      "CoolDownCPUPercentage": 50,
+      "MaxMemoryMB": 5000,
+      "CoolDownMemoryMB": 4000,
+      "MaxCPUPercentage": 80,
+      "CoolDownCPUPercentage": 60,
       "CoolDownRetryTimeInSeconds": 1,
       "MaxConcurrentConnectionsCountPerHostName": 3000,
       "CoolDownConcurrentConnectionsCountPerHostName": 1500,
@@ -30,6 +30,10 @@
       "BuiltInDashboard": true,
       "Port": 8009,
       "RefreshRate": 5
+    },
+    "LPSClusterConfiguration": {
+      "Master": "192.168.1.14",
+      "NumberOfMachines": 1
     }
   }
 }
