@@ -3,11 +3,12 @@ using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Metrics;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace LPS.Infrastructure.Monitoring.Metrics
+namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
     public class MetricsDataMonitor(
         ILogger logger,

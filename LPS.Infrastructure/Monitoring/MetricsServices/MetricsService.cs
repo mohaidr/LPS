@@ -9,10 +9,10 @@ using LPS.Domain;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Common.Interfaces;
 
-namespace LPS.Infrastructure.LPSClients.Metrics
+namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
-    public class MetricsService(ILogger logger, 
-        IRuntimeOperationIdProvider runtimeOperationIdProvider, 
+    public class MetricsService(ILogger logger,
+        IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsQueryService metricsQueryService) : IMetricsService
     {
         readonly ILogger _logger = logger;
@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
 
         private async Task QueryMetricsAsync(Guid requestId)
         {
-            _metrics.TryAdd(requestId.ToString(), 
+            _metrics.TryAdd(requestId.ToString(),
                 await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
         }
         private async ValueTask<IEnumerable<IMetricCollector>> GetThrouputMetricsAsync(Guid requestId)
@@ -110,7 +110,7 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 return false;
             }
         }
-        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize,double downloadTime, CancellationToken token)
+        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token)
         {
             try
             {

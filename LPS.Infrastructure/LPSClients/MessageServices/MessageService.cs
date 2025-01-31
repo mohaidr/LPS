@@ -1,6 +1,5 @@
 ﻿using LPS.Domain;
 using LPS.Infrastructure.LPSClients.HeaderServices;
-using LPS.Infrastructure.LPSClients.Metrics;
 using LPS.Infrastructure.Caching;
 using System;
 using System.Net.Http;
@@ -8,7 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Linq;
-using LPS.Infrastructure.LPSClients.MetricsServices;
 using System.Net;
 using Microsoft.Extensions.Caching.Memory;
 using LPS.Domain.Common.Interfaces;

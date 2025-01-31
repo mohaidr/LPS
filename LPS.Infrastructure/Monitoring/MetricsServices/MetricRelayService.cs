@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPS.Infrastructure.LPSClients.MetricsServices
+namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
     public class MetricRelayService
     {

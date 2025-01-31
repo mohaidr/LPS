@@ -26,8 +26,6 @@ using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Caching;
 using Microsoft.Extensions.Caching.Memory;
 using LPS.Infrastructure.LPSClients.HeaderServices;
-using LPS.Infrastructure.LPSClients.MetricsServices;
-using LPS.Infrastructure.LPSClients.Metrics;
 using LPS.Infrastructure.LPSClients.URLServices;
 using LPS.Infrastructure.LPSClients.MessageServices;
 using LPS.Infrastructure.LPSClients.ResponseService;
@@ -35,6 +33,7 @@ using LPS.Infrastructure.LPSClients.SampleResponseServices;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.SessionManager;
+using LPS.Infrastructure.Monitoring.MetricsServices;
 
 
 namespace LPS

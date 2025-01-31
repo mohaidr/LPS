@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace LPS.Infrastructure.Monitoring.Metrics
+namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
     public class MetricsQueryService(
         ILogger logger,
