@@ -19,6 +19,6 @@ namespace LPS.Infrastructure.Common.Interfaces
         ValueTask<TDimensionSet> GetDimensionSetAsync<TDimensionSet>() where TDimensionSet : IDimensionSet;
         public void Start();
         public void Stop();
-        public bool IsStopped { get; }
+        public bool IsStarted { get; }
     }
 }

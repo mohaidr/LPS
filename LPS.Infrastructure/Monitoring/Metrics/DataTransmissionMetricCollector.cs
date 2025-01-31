@@ -36,18 +36,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
         public override void Start()
         {
-            IsStopped = false;
-            _logger.LogAsync("Start", "DataTransmissionMetricCollector started.", LPSLoggingLevel.Verbose).ConfigureAwait(false);
+            if (!IsStarted)
+            {
+                IsStarted = true;
+                _logger.LogAsync("Start", "DataTransmissionMetricCollector started.", LPSLoggingLevel.Verbose).ConfigureAwait(false);
+            }
         }
 
         public override void Stop()
         {
-            IsStopped = true;
-            try
+            if (IsStarted)
             {
-                _logger.LogAsync("Stop", "DataTransmissionMetricCollector stopped.", LPSLoggingLevel.Verbose).ConfigureAwait(false);
+                IsStarted = false;
+                try
+                {
+                    _logger.LogAsync("Stop", "DataTransmissionMetricCollector stopped.", LPSLoggingLevel.Verbose).ConfigureAwait(false);
+                }
+                finally { }
             }
-            finally { }
         }
 
         public void UpdateDataSent(double dataSize, double uploadTime, CancellationToken token = default)
@@ -57,7 +63,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 _spinLock.Enter(ref lockTaken);
                 _totalDataUploadTime += uploadTime;
-                if (IsStopped)
+                if (!IsStarted)
                 {
                     throw new InvalidOperationException("Metric collector is stopped.");
                 }
@@ -84,7 +90,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 _spinLock.Enter(ref lockTaken);
 
-                if (IsStopped)
+                if (!IsStarted)
                 {
                     throw new InvalidOperationException("Metric collector is stopped.");
                 }

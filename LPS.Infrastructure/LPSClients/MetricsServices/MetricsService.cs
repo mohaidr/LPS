@@ -8,7 +8,6 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Domain;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.LPSClients.MetricsServices;
 
 namespace LPS.Infrastructure.LPSClients.Metrics
 {
@@ -51,7 +50,6 @@ namespace LPS.Infrastructure.LPSClients.Metrics
                 return false;
             }
         }
-
         public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
         {
             try

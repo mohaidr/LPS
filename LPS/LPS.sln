@@ -18,7 +18,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LPS.Infrastructure", "..\LP
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LPS.UnitTest", "..\LPS.UnitTest\LPS.UnitTest.csproj", "{88BD4582-E061-4C33-8575-FAC3814D7DFA}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dashboard", "..\Dashboard\Dashboard.csproj", "{79C1320F-92DC-48A6-9D3D-20CCAE05FAF6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Apis", "..\Dashboard\Apis.csproj", "{79C1320F-92DC-48A6-9D3D-20CCAE05FAF6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

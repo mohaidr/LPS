@@ -5,8 +5,8 @@ using System.Collections.Concurrent;
 
 namespace LPS.Infrastructure.Common.Interfaces
 {
-    public interface IMonitoredIterationRepository
+    public interface IMetricsRepository
     {
-        ConcurrentDictionary<HttpIteration, MonitoredHttpIteration> MonitoredIterations { get; }
+        ConcurrentDictionary<HttpIteration, MetricsContainer> Data { get; }
     }
 }

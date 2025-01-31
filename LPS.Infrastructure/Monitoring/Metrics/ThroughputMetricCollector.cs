@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             bool isCoolDown = _httpIteration.Mode == IterationMode.DCB || _httpIteration.Mode == IterationMode.CRB || _httpIteration.Mode == IterationMode.CB;
             int cooldownPeriod = isCoolDown ? _httpIteration.CoolDownTime.Value : 1;
 
-            if (!IsStopped)
+            if (IsStarted)
             {
                 try
                 {
@@ -70,7 +70,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _timer = new Timer(_ =>
             {
-                if (!IsStopped)
+                if (IsStarted)
                 {
                     try
                     {
@@ -139,22 +139,28 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override void Start()
         {
-            _throughputWatch.Start();
-            IsStopped = false;
-            _dimensionSet.StopUpdate = false;
-            SchedualMetricsUpdate();
+            if (!IsStarted)
+            {
+                IsStarted = true;
+                _throughputWatch.Start();
+                _dimensionSet.StopUpdate = false;
+                SchedualMetricsUpdate();
+            }
         }
 
         public override void Stop()
         {
-            IsStopped = true;
-            _dimensionSet.StopUpdate = true;
-            try
+            if (IsStarted)
             {
-                _throughputWatch?.Stop();
-                _timer?.Dispose();
+                IsStarted = false;
+                _dimensionSet.StopUpdate = true;
+                try
+                {
+                    _throughputWatch?.Stop();
+                    _timer?.Dispose();
+                }
+                finally { }
             }
-            finally { }
         }
 
         private class ProtectedConnectionDimensionSet : ThroughputDimensionSet

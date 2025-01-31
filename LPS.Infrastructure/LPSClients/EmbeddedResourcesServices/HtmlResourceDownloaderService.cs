@@ -16,7 +16,7 @@ using LPS.Infrastructure.LPSClients.CachService;
 using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Generic;
 using System.Diagnostics;
-using LPS.Infrastructure.LPSClients.MetricsServices;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
 {

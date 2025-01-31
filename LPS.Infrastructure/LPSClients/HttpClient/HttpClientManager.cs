@@ -1,9 +1,9 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Caching;
+using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.MessageServices;
-using LPS.Infrastructure.LPSClients.MetricsServices;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SessionManager;

@@ -9,13 +9,13 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Infrastructure.LPSClients.MetricsServices;
 using LPS.Infrastructure.LPSClients.MessageServices;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.CachService;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.LPSClients
 {

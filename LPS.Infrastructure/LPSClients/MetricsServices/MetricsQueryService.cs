@@ -11,18 +11,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class MetricsQueryService(
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMonitoredIterationRepository monitoredIterationRepository) : IMetricsQueryService
+        IMetricsRepository metricsRepository) : IMetricsQueryService
     {
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-        private readonly IMonitoredIterationRepository _monitoredIterationRepository = monitoredIterationRepository ?? throw new ArgumentNullException(nameof(monitoredIterationRepository));
+        private readonly IMetricsRepository _metricsRepository = metricsRepository ?? throw new ArgumentNullException(nameof(metricsRepository));
 
         public async ValueTask<List<IMetricCollector>> GetAsync(Func<IMetricCollector, bool> predicate)
         {
             try
             {
-                return _monitoredIterationRepository.MonitoredIterations.Values
-                    .SelectMany(iteration => iteration.Metrics.Values)
+                return _metricsRepository.Data.Values
+                    .SelectMany(metricsContainer => metricsContainer.Metrics.Values)
                     .Where(predicate)
                     .ToList();
             }
@@ -37,8 +37,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             try
             {
-                return _monitoredIterationRepository.MonitoredIterations.Values
-                    .SelectMany(iteration => iteration.Metrics.Values.OfType<T>())
+                return _metricsRepository.Data.Values
+                    .SelectMany(metricsContainer => metricsContainer.Metrics.Values.OfType<T>())
                     .Where(predicate)
                     .ToList();
             }

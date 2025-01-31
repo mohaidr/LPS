@@ -4,11 +4,10 @@ using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain;
 using LPS.Infrastructure.Monitoring.Metrics;
-using LPS.Infrastructure.Common.Interfaces;
 using System;
 using LPS.Infrastructure.Logger;
 
-namespace LPS.Infrastructure.LPSClients.MetricsServices
+namespace LPS.Infrastructure.Common.Interfaces
 {
     public interface IMetricsService
     {

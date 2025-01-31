@@ -1,6 +1,7 @@
 ﻿// MetricsDataMonitor.cs
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -11,32 +12,34 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     public class MetricsDataMonitor(
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMonitoredIterationRepository monitoredRunRepository,
-        IMetricsQueryService metricsQueryService) : IMetricsDataMonitor, IDisposable
+        IMetricsRepository metricRepository,
+        IMetricsQueryService metricsQueryService,
+        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> commandStatusMonitor) : IMetricsDataMonitor, IDisposable
     {
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-        private readonly IMonitoredIterationRepository _monitoredIterationsRepository = monitoredRunRepository ?? throw new ArgumentNullException(nameof(monitoredRunRepository));
+        private readonly IMetricsRepository _metricsRepository = metricRepository ?? throw new ArgumentNullException(nameof(metricRepository));
         private readonly IMetricsQueryService _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException();
+        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _commandStatusMonitor = commandStatusMonitor ?? throw new ArgumentNullException();
         public bool TryRegister(string roundName, HttpIteration httpIteration)
         {
             try
             {
-                if (_monitoredIterationsRepository.MonitoredIterations.ContainsKey(httpIteration))
+                if (_metricsRepository.Data.ContainsKey(httpIteration))
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"Iteration has already been registered. Below are the iteration details: \r\nRound:{roundName} \r\nIteration: {httpIteration.Name}", LPSLoggingLevel.Verbose);
                     return false;
                 }
 
                 var metrics = CreateMetricCollectors(roundName, httpIteration);
-                var monitoredIteration = new MonitoredHttpIteration(httpIteration, metrics);
+                var metricsContainer = new MetricsContainer(metrics);
 
-                return _monitoredIterationsRepository.MonitoredIterations.TryAdd(httpIteration, monitoredIteration);
+                return _metricsRepository.Data.TryAdd(httpIteration, metricsContainer);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Failed to register http iteration. Below are the exception details: \r\nRound:{roundName} \r\nIteration: {httpIteration.Name} \r\nException:{ex.Message} {ex.InnerException?.Message }", LPSLoggingLevel.Error);
-                return false;
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Failed to register http iteration. Below are the exception details: \r\nRound:{roundName} \r\nIteration: {httpIteration.Name} \r\nException:{ex.Message} {ex.InnerException?.Message}", LPSLoggingLevel.Error);
+                throw;
             }
         }
 
@@ -53,57 +56,37 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public void Monitor(HttpIteration httpIteration, string executionId)
         {
-           bool iterationRegistered = _monitoredIterationsRepository.MonitoredIterations.TryGetValue(httpIteration, out MonitoredHttpIteration monitoredIteration);
+            bool iterationRegistered = _metricsRepository.Data.TryGetValue(httpIteration, out MetricsContainer metricsContainer);
             if (!iterationRegistered)
             {
                 _logger.Log(_runtimeOperationIdProvider.OperationId, $"Monitoring can't start. iteration {httpIteration.Name} has not been registered yet.", LPSLoggingLevel.Error);
                 return;
             }
 
-            lock (monitoredIteration.ExecutionIds)
+            foreach (var metric in metricsContainer.Metrics.Values)
             {
-                if (!monitoredIteration.ExecutionIds.Contains(executionId))
-                {
-                    if (!monitoredIteration.ExecutionIds.Any())
-                    {
-                        foreach (var metric in monitoredIteration.Metrics.Values)
-                        {
-                            metric.Start();
-                        }
-                    }
-                    monitoredIteration.ExecutionIds.Add(executionId);
-                }
+                metric.Start();
             }
         }
 
         public void Stop(HttpIteration httpIteration, string executionId)
         {
-            if (_monitoredIterationsRepository.MonitoredIterations.TryGetValue(httpIteration, out var monitoredIteration))
+            if (_metricsRepository.Data.TryGetValue(httpIteration, out var metricsContainer))
             {
-                lock (monitoredIteration.ExecutionIds)
+                if (!_commandStatusMonitor.IsAnyCommandOngoing(httpIteration))
                 {
-                    var executionIds = monitoredIteration.ExecutionIds.ToList();
-                    executionIds.Remove(executionId);
-                    monitoredIteration.ExecutionIds.Clear();
-                    foreach (var id in executionIds)
+                    foreach (var metric in metricsContainer.Metrics.Values)
                     {
-                        monitoredIteration.ExecutionIds.Add(id);
-                    }
-
-                    if (monitoredIteration.ExecutionIds.IsEmpty)
-                    {
-                        foreach (var metric in monitoredIteration.Metrics.Values)
-                        {
-                            metric.Stop();
-                        }
+                        metric.Stop();
                     }
                 }
+
             }
         }
 
         public void Dispose()
         {
-            foreach (var monitoredIteration in _monitoredIterationsRepository.MonitoredIterations.Values)
+            foreach (var monitoredIteration in _metricsRepository.Data.Values)
             {
                 foreach (var metricCollector in monitoredIteration.Metrics.Values)
                 {

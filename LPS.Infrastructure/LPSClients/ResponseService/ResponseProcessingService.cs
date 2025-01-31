@@ -16,7 +16,7 @@ using LPS.Infrastructure.LPSClients.URLServices;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using System.Net;
 using LPS.Infrastructure.LPSClients.CachService;
-using LPS.Infrastructure.LPSClients.MetricsServices;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.LPSClients.ResponseService
 {

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPS.Controllers
+namespace Apis.Controllers
 {
     public class HomeController : Controller
     {

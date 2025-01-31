@@ -13,17 +13,17 @@ using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using HdrHistogram;
 
-namespace LPS.Controllers
+namespace Apis.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
     public class MetricsController(
-        Domain.Common.Interfaces.ILogger logger,
+        LPS.Domain.Common.Interfaces.ILogger logger,
         ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationCommandStatusMonitor,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsQueryService metricsQueryService) : ControllerBase
     {
-        readonly Domain.Common.Interfaces.ILogger _logger = logger;
+        readonly LPS.Domain.Common.Interfaces.ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider? _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>? _httpIterationCommandStatusMonitor = httpIterationCommandStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;

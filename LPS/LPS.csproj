@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Dashboard\Dashboard.csproj" />
+    <ProjectReference Include="..\Dashboard\Apis.csproj" />
     <ProjectReference Include="..\LPS.Domain\LPS.Domain.csproj" />
     <ProjectReference Include="..\LPS.Infrastructure\LPS.Infrastructure.csproj" />
   </ItemGroup>

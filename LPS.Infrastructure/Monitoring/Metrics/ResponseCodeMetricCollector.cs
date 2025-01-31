@@ -55,12 +55,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override void Stop()
         {
-            IsStopped = true;
+            if (IsStarted)
+            {
+                IsStarted = false;
+            }
         }
 
         public override void Start()
         {
-            IsStopped = false;
+            if (!IsStarted)
+            {
+                IsStarted = true;
+            }
         }
 
         private class ProtectedResponseCodeDimensionSet : ResponseCodeDimensionSet

@@ -17,7 +17,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
 
         public HttpIteration HttpIteration => _httpIteration;
-        public bool IsStopped { get; protected set; }
+        public bool IsStarted { get; protected set; }
 
         public abstract LPSMetricType MetricType { get; }
 

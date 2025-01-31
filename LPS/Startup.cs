@@ -88,7 +88,7 @@ namespace LPS
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    services.AddSingleton<IMonitoredIterationRepository, MonitoredIterationRepository>();
+                    services.AddSingleton<IMetricsRepository, MetricsRepository>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddSingleton<IMetricsQueryService, MetricsQueryService>();
                     services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>, HttpIterationCommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>>();
