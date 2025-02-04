@@ -70,10 +70,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
                 // Update the total and count, then calculate the average
                 _totalDataSent += dataSize;
-                _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => true).Result
-                .Select(metric => metric.GetDimensionSetAsync<ThroughputDimensionSet>().Result)
-                .First(dimensionSet => dimensionSet?.IterationId == this._dimensionSet.IterationId)
-                .RequestsCount;
+                _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
+                    .Single()
+                    .GetDimensionSetAsync<ThroughputDimensionSet>().Result
+                    .RequestsCount;
                 UpdateMetrics();
             }
             finally
@@ -98,10 +98,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 // Update the total and count, then calculate the average
                 _totalDataDownloadTime += downloadTime;
                 _totalDataReceived += dataSize;
-                _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => true).Result
-                .Select(metric => metric.GetDimensionSetAsync<ThroughputDimensionSet>().Result)
-                .First(dimensionSet => dimensionSet?.IterationId == this._dimensionSet.IterationId)
-                .RequestsCount;
+                _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
+                    .Single()
+                    .GetDimensionSetAsync<ThroughputDimensionSet>().Result
+                    .RequestsCount;
+
                 UpdateMetrics();
             }
             finally

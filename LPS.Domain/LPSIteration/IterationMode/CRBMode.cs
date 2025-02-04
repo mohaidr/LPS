@@ -16,7 +16,6 @@ namespace LPS.Domain.LPSRun.IterationMode
         private int _batchSize;
         private bool _maximizeThroughput;
         private IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
-
         private CRBMode() { }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -25,7 +24,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             var coolDownWatch = Stopwatch.StartNew();
 
             bool continueCondition() => _requestCount > 0 && !cancellationToken.IsCancellationRequested;
-            Func<bool> batchCondition = continueCondition;
+            Func<bool> batchCondition = ()=> !cancellationToken.IsCancellationRequested;
             bool newBatch = true;
             while (continueCondition())
             {

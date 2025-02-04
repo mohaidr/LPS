@@ -48,10 +48,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             return new Dictionary<string, IMetricCollector>
             {
-                { $"{httpIteration.Id}-BreakDown", new ResponseCodeMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Id}-Duration", new DurationMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Id}-Throughput", new ThroughputMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Id}-DataTransmission", new DataTransmissionMetricCollector(httpIteration, _metricsQueryService,roundName, _logger, _runtimeOperationIdProvider) }
+                { $"{httpIteration.Name}-{roundName}-BreakDown", new ResponseCodeMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Name}-{roundName}-Duration", new DurationMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Name}-{roundName}-Throughput", new ThroughputMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
+                { $"{httpIteration.Name}-{roundName}-DataTransmission", new DataTransmissionMetricCollector(httpIteration, _metricsQueryService,roundName, _logger, _runtimeOperationIdProvider) }
             };
         }
 

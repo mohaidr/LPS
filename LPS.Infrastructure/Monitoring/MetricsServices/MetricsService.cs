@@ -20,23 +20,14 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new();
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
 
-        private async Task QueryMetricsAsync(Guid requestId)
-        {
-            _metrics.TryAdd(requestId.ToString(),
-                await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
-        }
-        private async ValueTask<IEnumerable<IMetricCollector>> GetThrouputMetricsAsync(Guid requestId)
-        {
-            await QueryMetricsAsync(requestId);
-            return _metrics[requestId.ToString()]
-                    .Where(metric => metric.MetricType == LPSMetricType.Throughput);
-        }
         public async ValueTask<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
             try
             {
-                var connectionsMetrics = GetThrouputMetricsAsync(requestId);
-                foreach (var metric in await connectionsMetrics)
+                await QueryMetricsAsync(requestId);
+                var throughputMetrics = _metrics[requestId.ToString()]
+                        .Where(metric => metric.MetricType == LPSMetricType.Throughput);
+                foreach (var metric in throughputMetrics)
                 {
                     ((IThroughputMetricCollector)metric).IncreaseConnectionsCount();
                 }
@@ -54,8 +45,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             try
             {
-                var throughputMetrics = GetThrouputMetricsAsync(requestId);
-                foreach (var metric in await throughputMetrics)
+                await QueryMetricsAsync(requestId);
+                var throughputMetrics= _metrics[requestId.ToString()]
+                        .Where(metric => metric.MetricType == LPSMetricType.Throughput);
+
+                foreach (var metric in throughputMetrics)
                 {
                     ((IThroughputMetricCollector)metric).DecreseConnectionsCount(isSuccessful);
                 }
@@ -129,6 +123,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return false;
             }
         }
-
+        private async Task QueryMetricsAsync(Guid requestId)
+        {
+            _metrics.TryAdd(requestId.ToString(),
+                await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
+        }
     }
 }
