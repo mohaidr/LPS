@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             try
             {
                 return _metricsRepository.Data.Values
-                    .SelectMany(metricsContainer => metricsContainer.Metrics.Values)
+                    .SelectMany(metricsContainer => metricsContainer.Metrics)
                     .Where(predicate)
                     .ToList();
             }
@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             try
             {
                 return _metricsRepository.Data.Values
-                    .SelectMany(metricsContainer => metricsContainer.Metrics.Values.OfType<T>())
+                    .SelectMany(metricsContainer => metricsContainer.Metrics.OfType<T>())
                     .Where(predicate)
                     .ToList();
             }

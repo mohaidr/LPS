@@ -11,9 +11,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public class MetricsContainer
     {
-        public IReadOnlyDictionary<string, IMetricCollector> Metrics { get; }
+        public IReadOnlyList<IMetricCollector> Metrics { get; }
 
-        public MetricsContainer(IReadOnlyDictionary<string, IMetricCollector> metrics)
+        public MetricsContainer(IReadOnlyList<IMetricCollector> metrics)
         {
             Metrics = metrics;
         }

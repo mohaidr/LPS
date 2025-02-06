@@ -44,14 +44,14 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        private IReadOnlyDictionary<string, IMetricCollector> CreateMetricCollectors(string roundName, HttpIteration httpIteration)
+        private IReadOnlyList<IMetricCollector> CreateMetricCollectors(string roundName, HttpIteration httpIteration)
         {
-            return new Dictionary<string, IMetricCollector>
+            return new List<IMetricCollector>
             {
-                { $"{httpIteration.Name}-{roundName}-BreakDown", new ResponseCodeMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Name}-{roundName}-Duration", new DurationMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Name}-{roundName}-Throughput", new ThroughputMetricCollector(httpIteration,roundName, _logger, _runtimeOperationIdProvider) },
-                { $"{httpIteration.Name}-{roundName}-DataTransmission", new DataTransmissionMetricCollector(httpIteration, _metricsQueryService,roundName, _logger, _runtimeOperationIdProvider) }
+               new ResponseCodeMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider),
+               new DurationMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider) ,
+               new ThroughputMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider) ,
+               new DataTransmissionMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider)
             };
         }
 
@@ -64,7 +64,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return;
             }
 
-            foreach (var metric in metricsContainer.Metrics.Values)
+            foreach (var metric in metricsContainer.Metrics)
             {
                 metric.Start();
             }
@@ -76,7 +76,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             {
                 if (!_commandStatusMonitor.IsAnyCommandOngoing(httpIteration))
                 {
-                    foreach (var metric in metricsContainer.Metrics.Values)
+                    foreach (var metric in metricsContainer.Metrics)
                     {
                         metric.Stop();
                     }
@@ -89,7 +89,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             foreach (var monitoredIteration in _metricsRepository.Data.Values)
             {
-                foreach (var metricCollector in monitoredIteration.Metrics.Values)
+                foreach (var metricCollector in monitoredIteration.Metrics)
                 {
                     if (metricCollector is IDisposable disposable)
                     {

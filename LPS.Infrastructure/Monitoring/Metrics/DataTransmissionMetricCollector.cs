@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private double _totalDataDownloadTime = 0;
         private LPSDurationMetricDimensionSetProtected _dimensionSet;
         IMetricsQueryService _metricsQueryService;
-        internal DataTransmissionMetricCollector(HttpIteration httpIteration, IMetricsQueryService metricsQueryService, string roundName, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        internal DataTransmissionMetricCollector(HttpIteration httpIteration, string roundName, IMetricsQueryService metricsQueryService, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _roundName = roundName;
