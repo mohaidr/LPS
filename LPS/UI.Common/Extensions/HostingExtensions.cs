@@ -16,19 +16,14 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
+using LPS.Infrastructure.Nodes;
 
 namespace LPS.UI.Common.Extensions
 {
-    public static class ServiceProviderExtension
+
+
+    public static class HostingExtensions
     {
-        public static T ResolveWith<T>(this IServiceProvider provider, params object[] parameters) where T : class =>
-            ActivatorUtilities.CreateInstance<T>(provider, parameters);
-
-    }
-
-    public static class HostingHostBuilderExtensions
-    {
-
         public static IHostBuilder ConfigureLPSFileLogger(this IHostBuilder hostBuilder, FileLoggerOptions? lpsFileOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
@@ -85,7 +80,7 @@ namespace LPS.UI.Common.Extensions
                     if (isDefaultConfigurationsApplied)
                     {
                         string jsonString = JsonSerializer.Serialize(fileLogger);
-                        Console.WriteLine($"[Magenta]Applied Logger Options: {jsonString}[/]");
+                        AnsiConsole.WriteLine($"[Magenta]Applied Logger Options: {jsonString}[/]");
                     }
 
                     return fileLogger;
@@ -210,6 +205,63 @@ namespace LPS.UI.Common.Extensions
 
             return hostBuilder;
         }
+        public static IHostBuilder ConfigureLPSCluster(this IHostBuilder hostBuilder, ClusterConfiguration? lpsClusterOptions = null)
+        {
+            hostBuilder.ConfigureServices((hostContext, services) =>
+            {
+                lpsClusterOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSClusterConfiguration").Get<ClusterConfiguration>();
 
+                services.AddSingleton<IClusterConfiguration>(serviceProvider =>
+                {
+                    var logger = serviceProvider.GetRequiredService<ILogger>();
+                    ClusterConfiguration clusterConfiguration;
+                    bool isDefaultConfigurationsApplied = false;
+
+                    if (lpsClusterOptions == null)
+                    {
+                        clusterConfiguration = new ClusterConfiguration
+                        {
+                            MasterNodeIP = "127.0.0.1",
+                            WorkerRegistrationPort = 9009,
+                            ExpectedNumberOfWorkers = 1
+                        };
+                        isDefaultConfigurationsApplied = true;
+                        logger.Log("0000-0000-0000-0000", "LPSClusterConfiguration Section is missing from the settings file. Default settings will be applied.", LPSLoggingLevel.Warning);
+                    }
+                    else
+                    {
+                        var clusterValidator = new ClusteredConfigurationValidator();
+                        var validationResults = clusterValidator.Validate(lpsClusterOptions);
+
+                        if (!validationResults.IsValid)
+                        {
+                            clusterConfiguration = new ClusterConfiguration
+                            {
+                                MasterNodeIP = "127.0.0.1",
+                                WorkerRegistrationPort = 9009,
+                                ExpectedNumberOfWorkers = 1
+                            };
+                            isDefaultConfigurationsApplied = true;
+                            logger.Log("0000-0000-0000-0000", "Cluster configuration options are not valid. Default settings will be applied.", LPSLoggingLevel.Warning);
+                            validationResults.PrintValidationErrors();
+                        }
+                        else
+                        {
+                            clusterConfiguration = lpsClusterOptions;
+                        }
+                    }
+
+                    if (isDefaultConfigurationsApplied)
+                    {
+                        string jsonString = JsonSerializer.Serialize(clusterConfiguration);
+                        AnsiConsole.MarkupLine($"[Magenta]Applied LPS Cluster Configuration: {jsonString}[/]");
+                    }
+
+                    return clusterConfiguration;
+                });
+            });
+
+            return hostBuilder;
+        }
     }
 }

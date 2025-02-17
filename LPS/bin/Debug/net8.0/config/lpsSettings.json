@@ -32,8 +32,9 @@
       "RefreshRate": 5
     },
     "LPSClusterConfiguration": {
-      "Master": "192.168.1.14",
-      "NumberOfMachines": 1
+      "MasterNodeIP": "192.168.1.14",
+      "WorkerRegistrationPort": 9009,
+      "ExpectedNumberOfWorkers": 2
     }
   }
 }
