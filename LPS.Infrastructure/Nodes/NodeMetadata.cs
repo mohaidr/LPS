@@ -7,14 +7,15 @@ using System.Management;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Nodes
 {
     public class NodeMetadata : INodeMetadata
     {
+        private readonly IClusterConfiguration _clusterConfiguration;
+
         public string NodeName { get; }
+        public NodeType NodeType => INode.NodeIP == _clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker;
         public string OS { get; }
         public string Architecture { get; }
         public string Framework { get; }
@@ -24,10 +25,9 @@ namespace LPS.Infrastructure.Nodes
         public List<IDiskInfo> Disks { get; }
         public List<INetworkInfo> NetworkInterfaces { get; }
 
-        // Private constructor to prevent instantiation
-        public NodeMetadata()
+        public NodeMetadata(IClusterConfiguration clusterConfiguration)
         {
-
+            _clusterConfiguration = clusterConfiguration;
             NodeName = Environment.MachineName;
             OS = RuntimeInformation.OSDescription;
             Architecture = RuntimeInformation.OSArchitecture.ToString();
@@ -35,154 +35,87 @@ namespace LPS.Infrastructure.Nodes
             CPU = GetCpuInfo();
             LogicalProcessors = Environment.ProcessorCount;
             TotalRAM = GetMemoryInfo();
-            Disks = GetDiskInfo().Cast<IDiskInfo>().ToList();
-            NetworkInterfaces = GetNetworkInfo().Cast<INetworkInfo>().ToList();
+            Disks = new List<IDiskInfo>();
+            NetworkInterfaces = new List<INetworkInfo>();
+        }
+
+        public NodeMetadata(
+            IClusterConfiguration clusterConfiguration,
+            string nodeName,
+            string os,
+            string architecture,
+            string framework,
+            string cpu,
+            int logicalProcessors,
+            string totalRam,
+            List<IDiskInfo> disks,
+            List<INetworkInfo> networkInterfaces)
+        {
+            _clusterConfiguration = clusterConfiguration;
+            NodeName = nodeName;
+            OS = os;
+            Architecture = architecture;
+            Framework = framework;
+            CPU = cpu;
+            LogicalProcessors = logicalProcessors;
+            TotalRAM = totalRam;
+            Disks = disks ?? throw new ArgumentNullException(nameof(disks));
+            NetworkInterfaces = networkInterfaces ?? throw new ArgumentNullException(nameof(networkInterfaces));
         }
 
         private static string GetCpuInfo()
         {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                return Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown CPU";
-            }
-            else
-            {
-                try
-                {
-                    return File.ReadLines("/proc/cpuinfo").FirstOrDefault(line => line.StartsWith("model name"))?.Split(":")[1].Trim() ?? "Unknown CPU";
-                }
-                catch
-                {
-                    return "Unknown CPU";
-                }
-            }
+            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
+                Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown CPU" :
+                File.ReadLines("/proc/cpuinfo").FirstOrDefault(line => line.StartsWith("model name"))?.Split(":")[1].Trim() ?? "Unknown CPU";
         }
 
         private static string GetMemoryInfo()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return $"{GetTotalMemoryWindows()} MB";
+                return "Unknown RAM";
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
-                try
-                {
-                    return File.ReadLines("/proc/meminfo").FirstOrDefault(line => line.StartsWith("MemTotal"))?.Split(":")[1].Trim() ?? "Unknown RAM";
-                }
-                catch
-                {
-                    return "Unknown RAM";
-                }
+                return File.ReadLines("/proc/meminfo").FirstOrDefault(line => line.StartsWith("MemTotal"))?.Split(":")[1].Trim() ?? "Unknown RAM";
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                try
-                {
-                    var output = ExecuteBashCommand("sysctl -n hw.memsize");
-                    return $"{long.Parse(output.Trim()) / (1024 * 1024)} MB";
-                }
-                catch
-                {
-                    return "Unknown RAM";
-                }
+                var output = "Unknown RAM";
+                return output;
             }
-
             return "Unknown RAM";
-        }
-
-        private static long GetTotalMemoryWindows()
-        {
-            try
-            {
-                using (var searcher = new ManagementObjectSearcher("SELECT TotalPhysicalMemory FROM Win32_ComputerSystem"))
-                {
-                    foreach (var obj in searcher.Get())
-                    {
-                        return Convert.ToInt64(obj["TotalPhysicalMemory"]) / (1024 * 1024);
-                    }
-                }
-            }
-            catch
-            {
-                return -1;
-            }
-            return -1;
-        }
-
-        private static List<DiskInfo> GetDiskInfo()
-        {
-            var diskList = new List<DiskInfo>();
-            foreach (DriveInfo drive in DriveInfo.GetDrives().Where(d => d.IsReady))
-            {
-                diskList.Add(new DiskInfo
-                {
-                    Name = drive.Name,
-                    TotalSize = $"{drive.TotalSize / (1024 * 1024 * 1024)} GB",
-                    FreeSpace = $"{drive.AvailableFreeSpace / (1024 * 1024 * 1024)} GB"
-                });
-            }
-            return diskList;
-        }
-
-        private static List<NetworkInfo> GetNetworkInfo()
-        {
-            var networkList = new List<NetworkInfo>();
-            foreach (NetworkInterface ni in NetworkInterface.GetAllNetworkInterfaces())
-            {
-                var netInfo = new NetworkInfo
-                {
-                    InterfaceName = ni.Name,
-                    Type = ni.NetworkInterfaceType.ToString(),
-                    Status = ni.OperationalStatus.ToString(),
-                    IPAddresses = ni.GetIPProperties().UnicastAddresses
-                        .Where(ip => ip.Address.AddressFamily == AddressFamily.InterNetwork || ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                        .Select(ip => ip.Address.ToString())
-                        .ToList()
-                };
-                networkList.Add(netInfo);
-            }
-            return networkList;
-        }
-
-        private static string ExecuteBashCommand(string command)
-        {
-            try
-            {
-                var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "/bin/bash",
-                        Arguments = $"-c \"{command}\"",
-                        RedirectStandardOutput = true,
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                };
-                process.Start();
-                return process.StandardOutput.ReadToEnd();
-            }
-            catch
-            {
-                return string.Empty;
-            }
         }
     }
 
     public class DiskInfo : IDiskInfo
     {
-        public string Name { get; set; }
-        public string TotalSize { get; set; }
-        public string FreeSpace { get; set; }
+        public string Name { get; }
+        public string TotalSize { get; }
+        public string FreeSpace { get; }
+
+        public DiskInfo(string name, string totalSize, string freeSpace)
+        {
+            Name = name;
+            TotalSize = totalSize;
+            FreeSpace = freeSpace;
+        }
     }
 
     public class NetworkInfo : INetworkInfo
     {
-        public string InterfaceName { get; set; }
-        public string Type { get; set; }
-        public string Status { get; set; }
-        public List<string> IPAddresses { get; set; }
-    }
+        public string InterfaceName { get; }
+        public string Type { get; }
+        public string Status { get; }
+        public List<string> IpAddresses { get; }
 
+        public NetworkInfo(string interfaceName, string type, string status, List<string> ipAddresses)
+        {
+            InterfaceName = interfaceName;
+            Type = type;
+            Status = status;
+            IpAddresses = ipAddresses ?? new List<string>();
+        }
+    }
 }

@@ -1,4 +1,4 @@
-namespace Dashboard.Models
+namespace Apis.Models
 {
     public class ErrorViewModel
     {

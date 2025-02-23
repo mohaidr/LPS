@@ -19,7 +19,7 @@ namespace LPS.Infrastructure.Nodes
                 _nodes.Add(node);
 
                 // Assign master node if it is the first node or explicitly marked
-                if (_masterNode == null && node.NodeType == NodeType.Master)
+                if (_masterNode == null && node.Metadata.NodeType == NodeType.Master)
                 {
                     _masterNode = node;
                 }
@@ -30,7 +30,7 @@ namespace LPS.Infrastructure.Nodes
         {
             if (_nodes.Remove(node) && node == _masterNode)
             {
-                _masterNode = _nodes.FirstOrDefault(n => n.NodeType == NodeType.Master);
+                _masterNode = _nodes.FirstOrDefault(n => n.Metadata.NodeType == NodeType.Master);
             }
         }
 
@@ -58,7 +58,7 @@ namespace LPS.Infrastructure.Nodes
         private bool IsLocalNode(INode node)
         {
             return node.Metadata.NetworkInterfaces
-                .SelectMany(n => n.IPAddresses)
+                .SelectMany(n => n.IpAddresses)
                 .Contains(INode.GetLocalIPAddress());
         }
     }

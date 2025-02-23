@@ -17,6 +17,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Text.Json;
 using LPS.Infrastructure.Nodes;
+using FluentValidation;
 
 namespace LPS.UI.Common.Extensions
 {
@@ -24,244 +25,262 @@ namespace LPS.UI.Common.Extensions
 
     public static class HostingExtensions
     {
-        public static IHostBuilder ConfigureLPSFileLogger(this IHostBuilder hostBuilder, FileLoggerOptions? lpsFileOptions = null)
+        private const string DefaultLogEventId = "0000-0000-0000-0000";
+        private const string FileLoggerConfigSection = "LPSAppSettings:FileLogger";
+        private const string HttpClientConfigSection = "LPSAppSettings:HttpClient";
+        private const string WatchdogConfigSection = "LPSAppSettings:Watchdog";
+        private const string ClusterConfigSection = "LPSAppSettings:Cluster";
+
+        public static IHostBuilder UseFileLogger(this IHostBuilder hostBuilder, FileLoggerOptions? lpsFileOptions = null)
         {
-            hostBuilder.ConfigureServices((hostContext, services) =>
+            var unused = hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                lpsFileOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSFileLoggerConfiguration").Get<FileLoggerOptions>();
+                lpsFileOptions ??= hostContext.Configuration.GetSection(FileLoggerConfigSection).Get<FileLoggerOptions>();
 
                 services.AddSingleton<ILogger>(serviceProvider =>
                 {
                     FileLogger fileLogger;
-                    bool isDefaultConfigurationsApplied = false;
+                    var (validOptions, isValid) = ValidateOptions(
+                        lpsFileOptions,
+                        hostContext,
+                        new FileLoggerValidator(),
+                        FileLoggerConfigSection);
 
-                    if (lpsFileOptions == null)
+                    if (!isValid)
                     {
-                        fileLogger = new FileLogger(new LoggingConfiguration(),
-                         serviceProvider.GetRequiredService<IConsoleLogger>(),
-                         serviceProvider.GetRequiredService<ILogFormatter>());
-                        isDefaultConfigurationsApplied = true;
-                        fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSFileLoggerConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
+                        fileLogger = CreateDefaultFileLogger(serviceProvider);
+                        LogConfigurationIssue(fileLogger, "Logger", FileLoggerConfigSection, validOptions == null);
                     }
                     else
                     {
-                        var loggerValidator = new FileLoggerValidator();
-                        var validationResults = loggerValidator.Validate(lpsFileOptions);
-                        if (!validationResults.IsValid)
-                        {
-                            fileLogger = new FileLogger(new LoggingConfiguration(),
-                                serviceProvider.GetRequiredService<IConsoleLogger>(),
-                                serviceProvider.GetRequiredService<ILogFormatter>());
-                            isDefaultConfigurationsApplied = true;
-                            fileLogger.Log("0000-0000-0000-0000", "Logger options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
-                            validationResults.PrintValidationErrors();
-                        }
-                        else
-                        {
-                            var loggingConfig = new LoggingConfiguration
-                            {
-                                LogFilePath = lpsFileOptions.LogFilePath,
-                                LoggingLevel = lpsFileOptions.LoggingLevel.Value,
-                                ConsoleLoggingLevel = lpsFileOptions.ConsoleLogingLevel.Value,
-                                EnableConsoleLogging = lpsFileOptions.EnableConsoleLogging.Value,
-                                DisableConsoleErrorLogging = lpsFileOptions.DisableConsoleErrorLogging.Value,
-                                DisableFileLogging = lpsFileOptions.DisableFileLogging.Value
-                            };
-
-                            // Initialize the logger with LoggingConfiguration and services like IConsoleLogger, ILogFormatter
-                            fileLogger = new FileLogger(
-                                loggingConfig,
-                                serviceProvider.GetRequiredService<IConsoleLogger>(),
-                                serviceProvider.GetRequiredService<ILogFormatter>()
-                            );
-                        }
+                        var loggingConfig = validOptions != null
+                            ? MapToLoggingConfiguration(validOptions)
+                            : new LoggingConfiguration();
+                        fileLogger = new FileLogger(
+                            loggingConfig,
+                            serviceProvider.GetRequiredService<IConsoleLogger>(),
+                            serviceProvider.GetRequiredService<ILogFormatter>());
                     }
 
-                    if (isDefaultConfigurationsApplied)
-                    {
-                        string jsonString = JsonSerializer.Serialize(fileLogger);
-                        AnsiConsole.WriteLine($"[Magenta]Applied Logger Options: {jsonString}[/]");
-                    }
-
+                    LogAppliedConfiguration(fileLogger, !isValid || validOptions == null, "Logger Options");
                     return fileLogger;
                 });
             });
 
             return hostBuilder;
         }
-        public static IHostBuilder ConfigureLPSHttpClient(this IHostBuilder hostBuilder, HttpClientOptions? lpsHttpClientOptions = null)
+
+        public static IHostBuilder UseHttpClient(this IHostBuilder hostBuilder, HttpClientOptions? lpsHttpClientOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                lpsHttpClientOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSHttpClientConfiguration").Get<HttpClientOptions>();
+                lpsHttpClientOptions ??= hostContext.Configuration.GetSection(HttpClientConfigSection).Get<HttpClientOptions>();
 
                 services.AddSingleton<IClientConfiguration<HttpRequest>>(serviceProvider =>
                 {
-                    var fileLogger = serviceProvider.GetRequiredService<ILogger>();
-                    HttpClientConfiguration lpsHttpClientConfiguration;
-                    bool isDefaultConfigurationsApplied = false;
+                    var (validOptions, isValid) = ValidateOptions(
+                        lpsHttpClientOptions,
+                        hostContext,
+                        new HttpClientValidator(),
+                        HttpClientConfigSection);
 
-                    if (lpsHttpClientOptions == null)
+                    var fileLogger = serviceProvider.GetRequiredService<ILogger>();
+                    HttpClientConfiguration instance;
+
+                    if (!isValid)
                     {
-                        lpsHttpClientConfiguration = HttpClientConfiguration.GetDefaultInstance();
-                        isDefaultConfigurationsApplied = true;
-                        fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSHttpClientConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
+                        instance = HttpClientConfiguration.GetDefaultInstance();
+                        LogConfigurationIssue(fileLogger, "Http Client", HttpClientConfigSection, validOptions == null);
                     }
                     else
                     {
-                        HttpClientValidator httpClientValidator = new();
-                        var validationResults = httpClientValidator.Validate(lpsHttpClientOptions);
-
-                        if (!validationResults.IsValid)
-                        {
-                            lpsHttpClientConfiguration = HttpClientConfiguration.GetDefaultInstance();
-                            isDefaultConfigurationsApplied = true;
-                            fileLogger.Log("0000-0000-0000-0000", "Http Client Options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
-                            validationResults.PrintValidationErrors();
-                        }
-                        else
-                        {
-                            lpsHttpClientConfiguration = new HttpClientConfiguration(
-                                TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionLifeTimeInSeconds.Value),
-                                TimeSpan.FromSeconds(lpsHttpClientOptions.PooledConnectionIdleTimeoutInSeconds.Value),
-                                lpsHttpClientOptions.MaxConnectionsPerServer.Value,
-                                TimeSpan.FromSeconds(lpsHttpClientOptions.ClientTimeoutInSeconds.Value));
-                        }
+                        instance = validOptions != null
+                            ? MapToHttpClientConfiguration(validOptions)
+                            : HttpClientConfiguration.GetDefaultInstance();
                     }
 
-                    if (isDefaultConfigurationsApplied)
-                    {
-                        string jsonString = JsonSerializer.Serialize(lpsHttpClientConfiguration);
-                        AnsiConsole.MarkupLine($"[Magenta]Applied LPS Http Client Configuration: {jsonString}[/]");
-                    }
-
-                    return lpsHttpClientConfiguration;
+                    LogAppliedConfiguration(instance, !isValid || validOptions ==null, "LPS Http Client");
+                    return instance;
                 });
             });
 
             return hostBuilder;
         }
-        public static IHostBuilder ConfigureLPSWatchdog(this IHostBuilder hostBuilder, WatchdogOptions? watchdogOptions = null)
+
+        public static IHostBuilder UseWatchdog(this IHostBuilder hostBuilder, WatchdogOptions? watchdogOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                watchdogOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSWatchdogConfiguration").Get<WatchdogOptions>();
+                watchdogOptions ??= hostContext.Configuration.GetSection(WatchdogConfigSection).Get<WatchdogOptions>();
 
-                // Register ILogger, IMetricsQueryService, and IRuntimeOperationIdProvider as services to avoid building a new service provider
                 services.AddSingleton<IWatchdog>(serviceProvider =>
                 {
+                    var (validOptions, isValid) = ValidateOptions(
+                        watchdogOptions,
+                        hostContext,
+                        new WatchdogValidator(),
+                        WatchdogConfigSection);
+
                     var fileLogger = serviceProvider.GetRequiredService<ILogger>();
-                    var metricsQueryService = serviceProvider.GetRequiredService<IMetricsQueryService>();
-                    var runtimeOperationIdProvider = serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>();
+                    var metricsService = serviceProvider.GetRequiredService<IMetricsQueryService>();
+                    var operationIdProvider = serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>();
 
                     Watchdog watchdog;
-                    bool isDefaultConfigurationsApplied = false;
 
-                    if (watchdogOptions == null)
+                    if (!isValid)
                     {
-                        watchdog = Watchdog.GetDefaultInstance(fileLogger, runtimeOperationIdProvider, metricsQueryService);
-                        isDefaultConfigurationsApplied = true;
-                        fileLogger.Log("0000-0000-0000-0000", "LPSAppSettings:LPSWatchdogConfiguration Section is missing from the lpsSettings.json file. Default settings will be applied.", LPSLoggingLevel.Warning);
+                        watchdog = Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, metricsService);
+                        LogConfigurationIssue(fileLogger, "Watchdog", WatchdogConfigSection, validOptions == null);
                     }
                     else
                     {
-                        var lpsWatchdogValidator = new WatchdogValidator();
-                        var validationResults = lpsWatchdogValidator.Validate(watchdogOptions);
-                        if (!validationResults.IsValid)
-                        {
-                            watchdog = Watchdog.GetDefaultInstance(fileLogger, runtimeOperationIdProvider, metricsQueryService);
-                            isDefaultConfigurationsApplied = true;
-                            fileLogger.Log("0000-0000-0000-0000", "Watchdog options are not valid. Default settings will be applied. You will need to fix the below errors.", LPSLoggingLevel.Warning);
-                            validationResults.PrintValidationErrors();
-                        }
-                        else
-                        {
-                            watchdog = new Watchdog(
-                                watchdogOptions.MaxMemoryMB.Value,
-                                watchdogOptions.MaxCPUPercentage.Value,
-                                watchdogOptions.CoolDownMemoryMB.Value,
-                                watchdogOptions.CoolDownCPUPercentage.Value,
-                                watchdogOptions.MaxConcurrentConnectionsCountPerHostName.Value,
-                                watchdogOptions.CoolDownConcurrentConnectionsCountPerHostName.Value,
-                                watchdogOptions.CoolDownRetryTimeInSeconds.Value,
-                                watchdogOptions.MaxCoolingPeriod.Value,
-                                watchdogOptions.ResumeCoolingAfter.Value,
-                                watchdogOptions.SuspensionMode.Value,
-                                fileLogger,
-                                runtimeOperationIdProvider,
-                                metricsQueryService);
-                        }
+                        watchdog = validOptions != null
+                            ? MapToWatchdog(validOptions, fileLogger, operationIdProvider, metricsService)
+                            : Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, metricsService);
                     }
 
-                    if (isDefaultConfigurationsApplied)
-                    {
-                        string jsonString = JsonSerializer.Serialize(watchdog);
-                        AnsiConsole.MarkupLine($"[Magenta]Applied Watchdog Configuration: {jsonString}[/]");
-                    }
-
+                    LogAppliedConfiguration(watchdog, !isValid || validOptions == null, "Watchdog Configuration");
                     return watchdog;
                 });
             });
 
             return hostBuilder;
         }
-        public static IHostBuilder ConfigureLPSCluster(this IHostBuilder hostBuilder, ClusterConfiguration? lpsClusterOptions = null)
+
+        public static IHostBuilder UseClusterConfiguration(this IHostBuilder hostBuilder, ClusterConfigurationOptions? lpsClusterOptions = null)
         {
             hostBuilder.ConfigureServices((hostContext, services) =>
             {
-                lpsClusterOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:LPSClusterConfiguration").Get<ClusterConfiguration>();
+                lpsClusterOptions ??= hostContext.Configuration.GetSection(ClusterConfigSection).Get<ClusterConfigurationOptions>();
 
                 services.AddSingleton<IClusterConfiguration>(serviceProvider =>
                 {
-                    var logger = serviceProvider.GetRequiredService<ILogger>();
-                    ClusterConfiguration clusterConfiguration;
-                    bool isDefaultConfigurationsApplied = false;
+                    var (validOptions, isValid) = ValidateOptions(
+                        lpsClusterOptions,
+                        hostContext,
+                        new ClusteredConfigurationValidator(),
+                        ClusterConfigSection);
 
-                    if (lpsClusterOptions == null)
+                    var logger = serviceProvider.GetRequiredService<ILogger>();
+                    ClusterConfiguration instance;
+
+                    if (!isValid)
                     {
-                        clusterConfiguration = new ClusterConfiguration
-                        {
-                            MasterNodeIP = "127.0.0.1",
-                            WorkerRegistrationPort = 9009,
-                            ExpectedNumberOfWorkers = 1
-                        };
-                        isDefaultConfigurationsApplied = true;
-                        logger.Log("0000-0000-0000-0000", "LPSClusterConfiguration Section is missing from the settings file. Default settings will be applied.", LPSLoggingLevel.Warning);
+                        instance = ClusterConfiguration.GetDefaultInstance();
+                        LogConfigurationIssue(logger, "Cluster", ClusterConfigSection, validOptions == null);
                     }
                     else
                     {
-                        var clusterValidator = new ClusteredConfigurationValidator();
-                        var validationResults = clusterValidator.Validate(lpsClusterOptions);
-
-                        if (!validationResults.IsValid)
-                        {
-                            clusterConfiguration = new ClusterConfiguration
-                            {
-                                MasterNodeIP = "127.0.0.1",
-                                WorkerRegistrationPort = 9009,
-                                ExpectedNumberOfWorkers = 1
-                            };
-                            isDefaultConfigurationsApplied = true;
-                            logger.Log("0000-0000-0000-0000", "Cluster configuration options are not valid. Default settings will be applied.", LPSLoggingLevel.Warning);
-                            validationResults.PrintValidationErrors();
-                        }
-                        else
-                        {
-                            clusterConfiguration = lpsClusterOptions;
-                        }
+                        instance = validOptions!=null 
+                        ? MapToClusterConfiguration(validOptions)
+                        : ClusterConfiguration.GetDefaultInstance();
                     }
 
-                    if (isDefaultConfigurationsApplied)
-                    {
-                        string jsonString = JsonSerializer.Serialize(clusterConfiguration);
-                        AnsiConsole.MarkupLine($"[Magenta]Applied LPS Cluster Configuration: {jsonString}[/]");
-                    }
-
-                    return clusterConfiguration;
+                    LogAppliedConfiguration(instance, !isValid || validOptions == null, "LPS Cluster Configuration");
+                    return instance;
                 });
             });
 
             return hostBuilder;
         }
+
+        #region Helper Methods
+
+        private static (TOptions? validOptions, bool isValid) ValidateOptions<TOptions>(
+            TOptions? providedOptions,
+            HostBuilderContext hostContext,
+            IValidator<TOptions> validator,
+            string configSection)
+            where TOptions : class
+        {
+            var options = providedOptions ?? hostContext.Configuration.GetSection(configSection).Get<TOptions>();
+            if (options == null)
+            {
+                return (null, false);
+            }
+
+            var validationResult = validator.Validate(options);
+            return validationResult.IsValid ? (options, true) : (null, false);
+        }
+
+        private static void LogConfigurationIssue(ILogger logger, string configType, string configSection, bool isMissing)
+        {
+            var message = isMissing
+                ? $"{configSection} Section is missing from the settings file. Default settings will be applied."
+                : "Options are not valid. Default settings will be applied. Fix the errors below.";
+            logger.Log(DefaultLogEventId, message, LPSLoggingLevel.Warning);
+        }
+
+        private static void LogAppliedConfiguration<T>(T configuration, bool isDefault, string configName)
+        {
+            if (isDefault)
+            {
+                string jsonString = JsonSerializer.Serialize(configuration);
+                AnsiConsole.MarkupLine($"[Magenta]Applied {configName}: {jsonString}[/]");
+            }
+        }
+
+        private static FileLogger CreateDefaultFileLogger(IServiceProvider serviceProvider)
+        {
+            return new FileLogger(
+                new LoggingConfiguration(),
+                serviceProvider.GetRequiredService<IConsoleLogger>(),
+                serviceProvider.GetRequiredService<ILogFormatter>());
+        }
+
+        private static LoggingConfiguration MapToLoggingConfiguration(FileLoggerOptions options)
+        {
+            #pragma warning disable CS8629 // Nullable value type may be null.
+            return new LoggingConfiguration
+            {
+                LogFilePath = options.LogFilePath,
+                LoggingLevel = options.LoggingLevel.Value,
+                ConsoleLoggingLevel = options.ConsoleLogingLevel.Value,
+                EnableConsoleLogging = options.EnableConsoleLogging.Value,
+                DisableConsoleErrorLogging = options.DisableConsoleErrorLogging.Value,
+                DisableFileLogging = options.DisableFileLogging.Value
+            };
+        }
+
+        private static HttpClientConfiguration MapToHttpClientConfiguration(HttpClientOptions options)
+        {
+            #pragma warning disable CS8629 // Nullable value type may be null.
+            return new HttpClientConfiguration(
+                TimeSpan.FromSeconds(options.PooledConnectionLifeTimeInSeconds.Value),
+                TimeSpan.FromSeconds(options.PooledConnectionIdleTimeoutInSeconds.Value),
+                options.MaxConnectionsPerServer.Value,
+                TimeSpan.FromSeconds(options.ClientTimeoutInSeconds.Value));
+        }
+
+        private static ClusterConfiguration MapToClusterConfiguration(ClusterConfigurationOptions options)
+        {
+            return new ClusterConfiguration(options.MasterNodeIP, options.WorkerRegistrationPort.Value, options.ExpectedNumberOfWorkers.Value);
+        }
+
+        private static Watchdog MapToWatchdog(
+            WatchdogOptions options,
+            ILogger logger,
+            IRuntimeOperationIdProvider operationIdProvider,
+            IMetricsQueryService metricsService)
+        {
+            #pragma warning disable CS8629 // Nullable value type may be null.
+            return new Watchdog(
+                options.MaxMemoryMB.Value,
+                options.MaxCPUPercentage.Value,
+                options.CoolDownMemoryMB.Value,
+                options.CoolDownCPUPercentage.Value,
+                options.MaxConcurrentConnectionsCountPerHostName.Value,
+                options.CoolDownConcurrentConnectionsCountPerHostName.Value,
+                options.CoolDownRetryTimeInSeconds.Value,
+                options.MaxCoolingPeriod.Value,
+                options.ResumeCoolingAfter.Value,
+                options.SuspensionMode.Value,
+                logger,
+                operationIdProvider,
+                metricsService);
+            #pragma warning restore CS8629 // Nullable value type may be null.
+        }
+
+        #endregion
     }
 }

@@ -11,7 +11,7 @@ namespace LPS.Infrastructure.Nodes
     public enum NodeType
     {
         Master,
-        Slave
+        Worker
     }
     public interface INode
     {
@@ -22,7 +22,8 @@ namespace LPS.Infrastructure.Nodes
                       .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?
                       .ToString() ?? "No IPv4 Address Found";
         }
-        NodeType NodeType { get; }
         INodeMetadata Metadata { get; }
+
+        bool IsNodeReady { get; set; }
     }
 }

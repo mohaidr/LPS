@@ -8,8 +8,8 @@ namespace LPS.Infrastructure.Nodes
 {
     public interface IClusterConfiguration
     {
-        string MasterNodeIP {  get; set; }
-        public int WorkerRegistrationPort { get; set; }
-        public int ExpectedNumberOfWorkers { get; set; }
+        string MasterNodeIP {  get;}
+        public int WorkerRegistrationPort { get; }
+        public int ExpectedNumberOfWorkers { get;}
     }
 }

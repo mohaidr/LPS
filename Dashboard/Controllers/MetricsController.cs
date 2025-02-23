@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using HdrHistogram;
+using LPS.Infrastructure.Nodes;
 
 namespace Apis.Controllers
 {
@@ -21,12 +22,14 @@ namespace Apis.Controllers
         LPS.Domain.Common.Interfaces.ILogger logger,
         ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationCommandStatusMonitor,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMetricsQueryService metricsQueryService) : ControllerBase
+        IMetricsQueryService metricsQueryService,
+        INodeRegistry nodeRegistry) : ControllerBase
     {
         readonly LPS.Domain.Common.Interfaces.ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider? _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>? _httpIterationCommandStatusMonitor = httpIterationCommandStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
+        readonly INodeRegistry _nodeRegistry = nodeRegistry;
 
         // MetricData class extended to hold Data Transmission metrics
         private class MetricData

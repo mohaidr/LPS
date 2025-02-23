@@ -8,19 +8,16 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Nodes
 {
-
     public class Node: INode
     {
-        public Node(INodeMetadata metadata, IClusterConfiguration clusterConfiguration) 
+        public Node(INodeMetadata metadata) 
         { 
-            if(INode.NodeIP == clusterConfiguration.MasterNodeIP)
-                NodeType = NodeType.Master;
-            else NodeType = NodeType.Slave;
-
             Metadata = metadata;
+            IsNodeReady = false;
         }
 
-        public NodeType NodeType { get; }
         public INodeMetadata Metadata { get; }
+
+        public bool IsNodeReady { get; set; }
     }
 }

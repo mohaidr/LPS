@@ -2,7 +2,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-namespace Dashboard.Common
+namespace Apis.Common
 {
     public static class GlobalSettings
     {

@@ -18,11 +18,15 @@ using YamlDotNet.Serialization.NamingConventions;
 using LPS.DTOs;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
+using LPS.Infrastructure.Nodes;
+using Grpc.Net.Client;
+using Nodes;
 
 namespace LPS.UI.Core.Host
 {
     internal class HostedService(
         dynamic command_args,
+        INodeMetadata nodeMetadata,
         ILogger logger,
         IClientConfiguration<HttpRequest> config,
         IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
@@ -36,6 +40,7 @@ namespace LPS.UI.Core.Host
         AppSettingsWritableOptions appSettings,
         CancellationTokenSource cts) : IHostedService
     {
+        readonly INodeMetadata _nodeMetadata = nodeMetadata;
         readonly ILogger _logger = logger;
         readonly IClientConfiguration<HttpRequest> _config = config;
         readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager = httpClientManager;
@@ -45,27 +50,26 @@ namespace LPS.UI.Core.Host
         readonly IMetricsDataMonitor _metricDataMonitor = metricDataMonitor;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
         readonly IVariableManager _variableManager = variableManager;
-        readonly IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;  
+        readonly IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
         static bool _cancelRequested;
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
+            await RegisterNodeAsync();
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this iteration", LPSLoggingLevel.Information);
 
-            #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
+#pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
             Console.CancelKeyPress += CancelKeyPressHandler;
             _ = WatchForCancellationAsync();
 
-
-
             if (_command_args != null && _command_args.Length > 0)
             {
-                  var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
-                 await commandLineManager.RunAsync(_cts.Token);
-                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
+                var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
+                await commandLineManager.RunAsync(_cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
             }
             else
             {
@@ -79,6 +83,52 @@ namespace LPS.UI.Core.Host
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             await _logger.FlushAsync();
         }
+
+        private async Task RegisterNodeAsync()
+        {
+            // ✅ Create a gRPC Channel to the Server
+            var channel = GrpcChannel.ForAddress("http://localhost:5001");
+
+            // ✅ Create the gRPC Client
+            var client = new NodeService.NodeServiceClient(channel);
+
+            // ✅ Map Disks from `_nodeMetadata`
+            var diskList = _nodeMetadata.Disks.Select(d => new Nodes.DiskInfo
+            {
+                Name = d.Name,
+                TotalSize = d.TotalSize,
+                FreeSpace = d.FreeSpace
+            }).ToList();
+
+            // ✅ Map Network Interfaces from `_nodeMetadata`
+            var networkList = _nodeMetadata.NetworkInterfaces.Select(n => new Nodes.NetworkInfo
+            {
+                InterfaceName = n.InterfaceName,
+                Type = n.Type,
+                Status = n.Status,
+                IpAddresses = { n.IpAddresses } // Converts List<string> to repeated field
+            }).ToList();
+
+            // ✅ Construct gRPC Request
+            var request = new Nodes.NodeMetadata
+            {
+                NodeName = _nodeMetadata.NodeName,
+                NodeType = _nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master ? Nodes.NodeType.Master : Nodes.NodeType.Worker,
+                Os = _nodeMetadata.OS,
+                Architecture = _nodeMetadata.Architecture,
+                Framework = _nodeMetadata.Framework,
+                Cpu = _nodeMetadata.CPU,
+                LogicalProcessors = _nodeMetadata.LogicalProcessors,
+                TotalRam = _nodeMetadata.TotalRAM,
+                Disks = { diskList }, // ✅ Assign mapped Disks
+                NetworkInterfaces = { networkList } // ✅ Assign mapped NetworkInterfaces
+            };
+
+            // ✅ Call the gRPC Service
+            RegisterNodeResponse response = await client.RegisterNodeAsync(request);
+            Console.WriteLine(response.ToString());
+        }
+
         private static void SavePlanToDisk(PlanDto planDto)
         {
             var jsonContent = SerializationHelper.Serialize(planDto);

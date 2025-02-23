@@ -1,5 +1,6 @@
 ﻿using FluentValidation;
 using LPS.Infrastructure.Nodes;
+using LPS.UI.Common.Options;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Core.LPSValidators
 {
-    internal class ClusteredConfigurationValidator : AbstractValidator<ClusterConfiguration>
+    internal class ClusteredConfigurationValidator : AbstractValidator<ClusterConfigurationOptions>
     {
         public ClusteredConfigurationValidator()
         {

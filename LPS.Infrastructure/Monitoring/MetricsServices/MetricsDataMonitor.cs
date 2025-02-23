@@ -81,7 +81,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                         metric.Stop();
                     }
                 }
-
             }
         }
 

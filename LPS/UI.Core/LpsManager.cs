@@ -1,4 +1,4 @@
-﻿using Dashboard.Common;
+﻿using Apis.Common;
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;

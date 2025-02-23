@@ -137,7 +137,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             round.Tags.Any(tag => tags.Contains(tag, StringComparer.OrdinalIgnoreCase))))
                         {
                             var roundCommand = _mapper.Map<Round.SetupCommand>(roundDto);
-                            var roundEntity = new Round(roundCommand, _logger, _runtimeOperationIdProvider);
+                            var roundEntity = new Round(roundCommand, _logger, _lpsMonitoringEnroller, _runtimeOperationIdProvider);
 
                             if (roundEntity.IsValid)
                             {

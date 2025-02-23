@@ -9,6 +9,7 @@ namespace LPS.Infrastructure.Nodes
     public interface INodeMetadata
     {
         string NodeName { get; }
+        NodeType NodeType { get; }
         string OS { get; }
         string Architecture { get; }
         string Framework { get; }
@@ -31,6 +32,6 @@ namespace LPS.Infrastructure.Nodes
         string InterfaceName { get; }
         string Type { get; }
         string Status { get; }
-        List<string> IPAddresses { get; }
+        List<string> IpAddresses { get; }
     }
 }

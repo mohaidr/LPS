@@ -1,6 +1,6 @@
 {
   "LPSAppSettings": {
-    "LPSFileLoggerConfiguration": {
+    "FileLogger": {
       "LogFilePath": "logs/lpslog.log",
       "ConsoleLogingLevel": 1,
       "EnableConsoleLogging": true,
@@ -8,7 +8,7 @@
       "DisableFileLogging": false,
       "LoggingLevel": 0
     },
-    "LPSWatchdogConfiguration": {
+    "Watchdog": {
       "MaxMemoryMB": 5000,
       "CoolDownMemoryMB": 4000,
       "MaxCPUPercentage": 80,
@@ -20,19 +20,20 @@
       "ResumeCoolingAfter": 90,
       "SuspensionMode": 0
     },
-    "LPSHttpClientConfiguration": {
+    "HttpClient": {
       "ClientTimeoutInSeconds": 60,
       "PooledConnectionLifeTimeInSeconds": 1500,
       "PooledConnectionIdleTimeoutInSeconds": 350,
       "MaxConnectionsPerServer": 3000
     },
-    "LPSDashboardConfiguration": {
+    "Dashboard": {
       "BuiltInDashboard": true,
       "Port": 8009,
       "RefreshRate": 5
     },
-    "LPSClusterConfiguration": {
-      "MasterNodeIP": "192.168.1.14",
+    "Cluster": {
+      "MasterNodeIP": "192.168.1.10",
+      "MasterNodeIsWorker": true,
       "WorkerRegistrationPort": 9009,
       "ExpectedNumberOfWorkers": 2
     }
