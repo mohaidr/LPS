@@ -4,125 +4,154 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Grpc.Net.Client;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Nodes;
+using Metrics;
+using static Metrics.MetricsProtoService;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
-    public class MetricsService(ILogger logger,
-        IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMetricsQueryService metricsQueryService) : IMetricsService
+    public class MetricsService : IMetricsService
     {
-        readonly ILogger _logger = logger;
-        readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new();
-        readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
+        private readonly ILogger _logger;
+        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new();
+        private readonly IMetricsQueryService _metricsQueryService;
+        private readonly INodeMetadata _nodeMetaData;
+        private readonly MetricsProtoServiceClient _grpcClient;
+
+        public MetricsService(ILogger logger,
+            INodeMetadata nodeMetaData,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMetricsQueryService metricsQueryService)
+        {
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _metricsQueryService = metricsQueryService;
+            _nodeMetaData = nodeMetaData;
+
+            if (_nodeMetaData.NodeType != NodeType.Master)
+            {
+                var channel = GrpcChannel.ForAddress("https://your-grpc-server");
+                _grpcClient = new MetricsProtoServiceClient(channel);
+            }
+        }
 
         public async ValueTask<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
-            try
+            if (_nodeMetaData.NodeType != NodeType.Master)
             {
-                await QueryMetricsAsync(requestId);
-                var throughputMetrics = _metrics[requestId.ToString()]
-                        .Where(metric => metric.MetricType == LPSMetricType.Throughput);
-                foreach (var metric in throughputMetrics)
+                var response = await _grpcClient.UpdateConnectionsAsync(new UpdateConnectionsRequest
                 {
-                    ((IThroughputMetricCollector)metric).IncreaseConnectionsCount();
-                }
-                return true; // Avoids allocation, synchronous result
+                    RequestId = requestId.ToString(),
+                    Increase = true
+                });
+                return response.Success;
             }
-            catch (Exception ex)
+            await QueryMetricsAsync(requestId);
+            var throughputMetrics = _metrics[requestId.ToString()]
+                .Where(metric => metric.MetricType == LPSMetricType.Throughput);
+            foreach (var metric in throughputMetrics)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                                       $"Failed to increase connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
-                                       LPSLoggingLevel.Error, token);
-                return false;
+                ((IThroughputMetricCollector)metric).IncreaseConnectionsCount();
             }
+            return true;
         }
+
         public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
         {
-            try
+            if (_nodeMetaData.NodeType != NodeType.Master)
             {
-                await QueryMetricsAsync(requestId);
-                var throughputMetrics= _metrics[requestId.ToString()]
-                        .Where(metric => metric.MetricType == LPSMetricType.Throughput);
-
-                foreach (var metric in throughputMetrics)
+                var response = await _grpcClient.UpdateConnectionsAsync(new UpdateConnectionsRequest
                 {
-                    ((IThroughputMetricCollector)metric).DecreseConnectionsCount(isSuccessful);
-                }
-                return true;
+                    RequestId = requestId.ToString(),
+                    Increase = false,
+                    IsSuccessful = isSuccessful
+                });
+                return response.Success;
             }
-            catch (Exception ex)
+            await QueryMetricsAsync(requestId);
+            var throughputMetrics = _metrics[requestId.ToString()]
+                .Where(metric => metric.MetricType == LPSMetricType.Throughput);
+            foreach (var metric in throughputMetrics)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                                       $"Failed to decrease connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
-                                       LPSLoggingLevel.Error, token);
-                return false;
+                ((IThroughputMetricCollector)metric).DecreseConnectionsCount(isSuccessful);
             }
+            return true;
         }
-        public async ValueTask<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse lpsResponse, CancellationToken token)
-        {
-            try
-            {
-                await QueryMetricsAsync(requestId);
-                var responsMetrics = _metrics[requestId.ToString()].Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
-                await Task.WhenAll(responsMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse)));
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update connections metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}", LPSLoggingLevel.Error, token);
-                return false;
-            }
 
+        public async ValueTask<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse.SetupCommand lpsResponse, CancellationToken token)
+        {
+            if (_nodeMetaData.NodeType != NodeType.Master)
+            {
+                var response = await _grpcClient.UpdateResponseMetricsAsync(new UpdateResponseMetricsRequest
+                {
+                    RequestId = requestId.ToString(),
+                    ResponseCode = (int)lpsResponse.StatusCode,
+                    ResponseTime = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(lpsResponse.TotalTime)
+                });
+                return response.Success;
+            }
+            await QueryMetricsAsync(requestId);
+            var responseMetrics = _metrics[requestId.ToString()]
+                .Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
+            await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse)));
+            return true;
         }
+
+        public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
+        {
+            if (_nodeMetaData.NodeType != NodeType.Master)
+            {
+                var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
+                {
+                    RequestId = requestId.ToString(),
+                    DataSize = dataSize,
+                    TimeTaken = uploadTime,
+                    IsSent = true
+                });
+                return response.Success;
+            }
+            var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
+            foreach (var metric in dataTransmissionMetrics)
+            {
+                ((IDataTransmissionMetricCollector)metric).UpdateDataSent(dataSize, uploadTime, token);
+            }
+            return true;
+        }
+
+        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token)
+        {
+            if (_nodeMetaData.NodeType != NodeType.Master)
+            {
+                var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
+                {
+                    RequestId = requestId.ToString(),
+                    DataSize = dataSize,
+                    TimeTaken = downloadTime,
+                    IsSent = false
+                });
+                return response.Success;
+            }
+            var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
+            foreach (var metric in dataTransmissionMetrics)
+            {
+                ((IDataTransmissionMetricCollector)metric).UpdateDataReceived(dataSize, downloadTime, token);
+            }
+            return true;
+        }
+
         private async ValueTask<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId)
         {
             await QueryMetricsAsync(requestId);
             return _metrics[requestId.ToString()]
-                    .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
+                .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
         }
-        public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
-        {
-            try
-            {
-                var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
-                foreach (var metric in dataTransmissionMetrics)
-                {
-                    ((IDataTransmissionMetricCollector)metric).UpdateDataSent(dataSize, uploadTime, token);
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                                       $"Failed to update data sent metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
-                                       LPSLoggingLevel.Error, token);
-                return false;
-            }
-        }
-        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token)
-        {
-            try
-            {
-                var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
-                foreach (var metric in dataTransmissionMetrics)
-                {
-                    ((IDataTransmissionMetricCollector)metric).UpdateDataReceived(dataSize, downloadTime, token);
-                }
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                                       $"Failed to update data received metrics\n{(ex.InnerException != null ? ex.InnerException.Message : string.Empty)} \n\t  {ex.Message} \n  {ex.StackTrace}",
-                                       LPSLoggingLevel.Error, token);
-                return false;
-            }
-        }
+
         private async Task QueryMetricsAsync(Guid requestId)
         {
             _metrics.TryAdd(requestId.ToString(),

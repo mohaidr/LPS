@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         protected override IDimensionSet DimensionSet => _dimensionSet;
 
         public override LPSMetricType MetricType => LPSMetricType.ResponseTime;
-        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse response)
+        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse.SetupCommand response)
         {
             await _semaphore.WaitAsync();
             try
@@ -53,7 +53,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public IResponseMetricCollector Update(HttpResponse httpResponse)
+        public IResponseMetricCollector Update(HttpResponse.SetupCommand httpResponse)
         {
             return UpdateAsync(httpResponse).Result;
         }

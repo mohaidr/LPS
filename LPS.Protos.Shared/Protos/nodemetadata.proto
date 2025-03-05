@@ -1,0 +1,51 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "LPS.Protos.Shared";
+
+package nodes;
+
+// Node Type Enum
+enum NodeType {
+    UNKNOWN = 0;
+    MASTER = 1;
+    WORKER = 2;
+}
+
+// Disk Info
+message DiskInfo {
+    string name = 1;
+    string total_size = 2;
+    string free_space = 3;
+}
+
+// Network Info
+message NetworkInfo {
+    string interface_name = 1;
+    string type = 2;
+    string status = 3;
+    repeated string ip_addresses = 4;
+}
+
+// Node Metadata
+message NodeMetadata {
+    string node_name = 1;
+    NodeType node_type = 2;
+    string os = 3;
+    string architecture = 4;
+    string framework = 5;
+    string cpu = 6;
+    int32 logical_processors = 7;
+    string total_ram = 8;
+    repeated DiskInfo disks = 9;
+    repeated NetworkInfo network_interfaces = 10;
+}
+
+// Response Message
+message RegisterNodeResponse {
+    string message = 1;
+}
+
+// gRPC Service Definition
+service NodeService {
+    rpc RegisterNode(NodeMetadata) returns (RegisterNodeResponse);
+}

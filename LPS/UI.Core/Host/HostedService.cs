@@ -20,12 +20,13 @@ using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.Nodes;
 using Grpc.Net.Client;
-using Nodes;
+using LPS.Protos.Shared;
 
 namespace LPS.UI.Core.Host
 {
     internal class HostedService(
         dynamic command_args,
+        IClusterConfiguration clusterConfiguration,
         INodeMetadata nodeMetadata,
         ILogger logger,
         IClientConfiguration<HttpRequest> config,
@@ -40,6 +41,7 @@ namespace LPS.UI.Core.Host
         AppSettingsWritableOptions appSettings,
         CancellationTokenSource cts) : IHostedService
     {
+        readonly IClusterConfiguration _clusterConfiguration = clusterConfiguration;
         readonly INodeMetadata _nodeMetadata = nodeMetadata;
         readonly ILogger _logger = logger;
         readonly IClientConfiguration<HttpRequest> _config = config;
@@ -61,7 +63,7 @@ namespace LPS.UI.Core.Host
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this iteration", LPSLoggingLevel.Information);
 
-#pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
+            #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
             Console.CancelKeyPress += CancelKeyPressHandler;
             _ = WatchForCancellationAsync();
 
@@ -86,22 +88,22 @@ namespace LPS.UI.Core.Host
 
         private async Task RegisterNodeAsync()
         {
-            // ✅ Create a gRPC Channel to the Server
-            var channel = GrpcChannel.ForAddress("http://localhost:5001");
+            // Create a gRPC Channel to the Server
+            var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:5001");
 
-            // ✅ Create the gRPC Client
+            // Create the gRPC Client
             var client = new NodeService.NodeServiceClient(channel);
 
-            // ✅ Map Disks from `_nodeMetadata`
-            var diskList = _nodeMetadata.Disks.Select(d => new Nodes.DiskInfo
+            // Map Disks from `_nodeMetadata`
+            var diskList = _nodeMetadata.Disks.Select(d => new LPS.Protos.Shared.DiskInfo
             {
                 Name = d.Name,
                 TotalSize = d.TotalSize,
                 FreeSpace = d.FreeSpace
             }).ToList();
 
-            // ✅ Map Network Interfaces from `_nodeMetadata`
-            var networkList = _nodeMetadata.NetworkInterfaces.Select(n => new Nodes.NetworkInfo
+            // Map Network Interfaces from `_nodeMetadata`
+            var networkList = _nodeMetadata.NetworkInterfaces.Select(n => new LPS.Protos.Shared.NetworkInfo
             {
                 InterfaceName = n.InterfaceName,
                 Type = n.Type,
@@ -109,22 +111,22 @@ namespace LPS.UI.Core.Host
                 IpAddresses = { n.IpAddresses } // Converts List<string> to repeated field
             }).ToList();
 
-            // ✅ Construct gRPC Request
-            var request = new Nodes.NodeMetadata
+            // Construct gRPC Request
+            var request = new LPS.Protos.Shared.NodeMetadata
             {
                 NodeName = _nodeMetadata.NodeName,
-                NodeType = _nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master ? Nodes.NodeType.Master : Nodes.NodeType.Worker,
+                NodeType = _nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master ? LPS.Protos.Shared.NodeType.Master : LPS.Protos.Shared.NodeType.Worker,
                 Os = _nodeMetadata.OS,
                 Architecture = _nodeMetadata.Architecture,
                 Framework = _nodeMetadata.Framework,
                 Cpu = _nodeMetadata.CPU,
                 LogicalProcessors = _nodeMetadata.LogicalProcessors,
                 TotalRam = _nodeMetadata.TotalRAM,
-                Disks = { diskList }, // ✅ Assign mapped Disks
-                NetworkInterfaces = { networkList } // ✅ Assign mapped NetworkInterfaces
+                Disks = { diskList }, // Assign mapped Disks
+                NetworkInterfaces = { networkList } // Assign mapped NetworkInterfaces
             };
 
-            // ✅ Call the gRPC Service
+            // Call the gRPC Service
             RegisterNodeResponse response = await client.RegisterNodeAsync(request);
             Console.WriteLine(response.ToString());
         }

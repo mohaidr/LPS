@@ -1,0 +1,13 @@
+NExt important
+1- Test Rounds
+ - Functionality is ready
+ -complete The command side and work on json/yaml normalization and add reference feature
+ -UI to categorize runs based on rounds
+2- Network bytes, engin health and error rate charts
+3- number of clients chart
+4- Variables
+5- Coditional Termination of the test and success criteria
+6- DevOps/Contanarize 
+7- Think of how watchdog and cooldown periods impact the throughput calculation
+8- Should the iteration be referenced bey multiple rounds or just be copied
+

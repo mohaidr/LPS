@@ -7,7 +7,6 @@ using Microsoft.Extensions.DependencyInjection;
 using LPS.UI.Core.LPSValidators;
 using LPS.Infrastructure.Nodes;
 using Grpc.Net.Client;
-using Nodes;
 
 namespace LPS
 {
