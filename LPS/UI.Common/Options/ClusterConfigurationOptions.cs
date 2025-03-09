@@ -10,7 +10,7 @@ namespace LPS.UI.Common.Options
     public class ClusterConfigurationOptions
     {
         public string? MasterNodeIP { get; set; }
-        public int? WorkerRegistrationPort { get; set; }
+        public int? GRPCPort { get; set; }
         public int? ExpectedNumberOfWorkers { get; set; }
     }
 }

@@ -22,21 +22,26 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new();
         private readonly IMetricsQueryService _metricsQueryService;
         private readonly INodeMetadata _nodeMetaData;
+        private readonly IEntityDiscoveryService _entityDiscoveryService;
         private readonly MetricsProtoServiceClient _grpcClient;
-
+        private readonly IClusterConfiguration _clusterConfiguration;
         public MetricsService(ILogger logger,
             INodeMetadata nodeMetaData,
+            IEntityDiscoveryService entityDiscoveryService,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricsQueryService metricsQueryService)
+            IMetricsQueryService metricsQueryService,
+            IClusterConfiguration clusterConfiguration)
         {
             _logger = logger;
+            _entityDiscoveryService = entityDiscoveryService;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _metricsQueryService = metricsQueryService;
             _nodeMetaData = nodeMetaData;
+            _clusterConfiguration = clusterConfiguration;
 
             if (_nodeMetaData.NodeType != NodeType.Master)
             {
-                var channel = GrpcChannel.ForAddress("https://your-grpc-server");
+                var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
                 _grpcClient = new MetricsProtoServiceClient(channel);
             }
         }
@@ -51,6 +56,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     Increase = true
                 });
                 return response.Success;
+            }
+            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            if (requestId == Guid.Empty)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to increase connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
+                return false;
             }
             await QueryMetricsAsync(requestId);
             var throughputMetrics = _metrics[requestId.ToString()]
@@ -74,6 +85,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 return response.Success;
             }
+            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            if (requestId == Guid.Empty)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to decrease connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
+                return false;
+            }
             await QueryMetricsAsync(requestId);
             var throughputMetrics = _metrics[requestId.ToString()]
                 .Where(metric => metric.MetricType == LPSMetricType.Throughput);
@@ -82,6 +99,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 ((IThroughputMetricCollector)metric).DecreseConnectionsCount(isSuccessful);
             }
             return true;
+
         }
 
         public async ValueTask<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse.SetupCommand lpsResponse, CancellationToken token)
@@ -95,6 +113,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     ResponseTime = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(lpsResponse.TotalTime)
                 });
                 return response.Success;
+            }
+            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            if (requestId == Guid.Empty)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update response metrics because the requestId was empty", LPSLoggingLevel.Warning, token);
+                return false;
             }
             await QueryMetricsAsync(requestId);
             var responseMetrics = _metrics[requestId.ToString()]
@@ -115,6 +139,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     IsSent = true
                 });
                 return response.Success;
+            }
+            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            if (requestId == Guid.Empty)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data sent because the requestId was empty", LPSLoggingLevel.Warning, token);
+                return false;
             }
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
             foreach (var metric in dataTransmissionMetrics)
@@ -137,6 +167,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 return response.Success;
             }
+            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            if (requestId == Guid.Empty)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data received because the requestId was empty", LPSLoggingLevel.Warning, token);
+                return false;
+            }
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
             foreach (var metric in dataTransmissionMetrics)
             {
@@ -156,6 +192,24 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             _metrics.TryAdd(requestId.ToString(),
                 await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
+        }
+        private async Task<Guid> GetRequestIdOnMasterNode(Guid requestId, CancellationToken token)
+        {
+            var entityDiscoveryRecord = _entityDiscoveryService.Discover(r => r.RequestId == requestId).FirstOrDefault();
+            if (entityDiscoveryRecord != null)
+            {
+                if (entityDiscoveryRecord.Node.Metadata.NodeType != NodeType.Master)
+                {
+                    var fullyQualifiedName = entityDiscoveryRecord.FullyQualifiedName;
+                    var matchingRequestId = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == NodeType.Master && r.FullyQualifiedName == fullyQualifiedName).First().RequestId;
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Found a matching HTTP request for '{requestId}' on the master node (ID: {matchingRequestId})", LPSLoggingLevel.Warning, token);
+
+                    return matchingRequestId;
+                }
+                return requestId;
+            }
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"No matching HTTP request found for '{requestId}' on the master node", LPSLoggingLevel.Warning, token);
+            return Guid.Empty;
         }
     }
 }

@@ -9,7 +9,7 @@ namespace LPS.Infrastructure.Nodes
     public interface IClusterConfiguration
     {
         string MasterNodeIP {  get;}
-        public int WorkerRegistrationPort { get; }
+        public int GRPCPort { get; }
         public int ExpectedNumberOfWorkers { get;}
     }
 }

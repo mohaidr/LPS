@@ -29,15 +29,16 @@ message NetworkInfo {
 // Node Metadata
 message NodeMetadata {
     string node_name = 1;
-    NodeType node_type = 2;
-    string os = 3;
-    string architecture = 4;
-    string framework = 5;
-    string cpu = 6;
-    int32 logical_processors = 7;
-    string total_ram = 8;
-    repeated DiskInfo disks = 9;
-    repeated NetworkInfo network_interfaces = 10;
+    string node_ip = 2;
+    NodeType node_type = 3;
+    string os = 4;
+    string architecture = 5;
+    string framework = 6;
+    string cpu = 7;
+    int32 logical_processors = 8;
+    string total_ram = 9;
+    repeated DiskInfo disks = 10;
+    repeated NetworkInfo network_interfaces = 11;
 }
 
 // Response Message

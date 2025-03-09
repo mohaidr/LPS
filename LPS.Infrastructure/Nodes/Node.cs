@@ -8,16 +8,17 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Nodes
 {
-    public class Node: INode
+
+    public record Node: INode
     {
         public Node(INodeMetadata metadata) 
         { 
             Metadata = metadata;
-            IsNodeReady = false;
+            NodeStatus = NodeStatus.Waiting;
         }
 
         public INodeMetadata Metadata { get; }
-
-        public bool IsNodeReady { get; set; }
+        
+        public NodeStatus NodeStatus { get; set; }
     }
 }

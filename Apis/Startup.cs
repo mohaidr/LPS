@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Metrics;
+using LPS.GrpcServices;
 
 namespace LPS.Apis
 {
@@ -41,6 +42,7 @@ namespace LPS.Apis
                 // Register gRPC service
                 endpoints.MapGrpcService<NodeGRPCService>();
                 endpoints.MapGrpcService<MetricsGrpcService>();
+                endpoints.MapGrpcService<EntityDiscoveryGrpcService>();
 
                 // Register MVC routes
                 endpoints.MapControllerRoute(

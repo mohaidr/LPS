@@ -22,13 +22,18 @@ using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.UI.Common.Options;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 using LPS.Domain.Domain.Common.Exceptions;
+using LPS.Infrastructure.Nodes;
+using Nodes;
+using Grpc.Net.Client;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
     internal class RunCliCommand : ICliCommand
     {
         private readonly Command _rootLpsCliCommand;
+        private readonly IClusterConfiguration _clusterConfiguration;
         private readonly ILogger _logger;
+        private readonly INodeMetadata _nodeMetaData;
         private readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
         private readonly IClientConfiguration<HttpRequest> _config;
         private readonly IVariableManager _variableManager;
@@ -46,6 +51,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
 
         internal RunCliCommand(
             Command rootCLICommandLine,
+            IClusterConfiguration clusterConfiguration,
+            INodeMetadata nodeMetaData,
             ILogger logger,
             IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
             IClientConfiguration<HttpRequest> config,
@@ -60,6 +67,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             CancellationTokenSource cts) // Injected AutoMapper
         {
             _rootLpsCliCommand = rootCLICommandLine;
+            _clusterConfiguration = clusterConfiguration;
+            _nodeMetaData = nodeMetaData;
             _logger = logger;
             _httpClientManager = httpClientManager;
             _config = config;
@@ -176,6 +185,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     // Run the Plan
                     if (plan.GetReadOnlyRounds().Any())
                     {
+                        RegisterEntities(plan);
                         await new LPSManager(
                             _logger,
                             _httpClientManager,
@@ -256,6 +266,13 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 return iterationEntity;
             }
             throw new InvalidLPSEntityException($"Invalid Iteration {iterationDto.Name}, Please fix the validation errors and try again");
+        }
+
+
+        public void RegisterEntities(Plan plan)
+        {
+            var entityRegisterer = new EntityRegisterer(_clusterConfiguration, _nodeMetaData);
+            entityRegisterer.RegisterEntities(plan);
         }
     }
 }

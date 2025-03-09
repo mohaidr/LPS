@@ -18,6 +18,7 @@
 		<Protobuf Include="Protos\*.proto" GrpcServices="both" />
 	</ItemGroup>
 	<ItemGroup>
+	  <None Remove="Protos\entityservice.proto" />
 	  <None Remove="Protos\metrics.proto" />
 	</ItemGroup>
 </Project>

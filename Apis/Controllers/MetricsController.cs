@@ -22,14 +22,12 @@ namespace Apis.Controllers
         LPS.Domain.Common.Interfaces.ILogger logger,
         ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationCommandStatusMonitor,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMetricsQueryService metricsQueryService,
-        INodeRegistry nodeRegistry) : ControllerBase
+        IMetricsQueryService metricsQueryService) : ControllerBase
     {
         readonly LPS.Domain.Common.Interfaces.ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider? _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>? _httpIterationCommandStatusMonitor = httpIterationCommandStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
-        readonly INodeRegistry _nodeRegistry = nodeRegistry;
 
         // MetricData class extended to hold Data Transmission metrics
         private class MetricData

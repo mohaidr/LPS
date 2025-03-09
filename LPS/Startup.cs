@@ -94,6 +94,7 @@ namespace LPS
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    services.AddSingleton<IEntityDiscoveryService, EntityDiscoveryService>();
                     services.AddSingleton<IMetricsRepository, MetricsRepository>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddSingleton<IMetricsQueryService, MetricsQueryService>();

@@ -13,6 +13,13 @@ namespace LPS.Infrastructure.Nodes
         Master,
         Worker
     }
+    public enum NodeStatus
+    {
+        Waiting,
+        Running,
+        Stale,
+        Finished
+    }
     public interface INode
     {
         public static string NodeIP => GetLocalIPAddress();
@@ -24,6 +31,6 @@ namespace LPS.Infrastructure.Nodes
         }
         INodeMetadata Metadata { get; }
 
-        bool IsNodeReady { get; set; }
+        NodeStatus NodeStatus { get; set; }
     }
 }

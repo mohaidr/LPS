@@ -17,7 +17,7 @@ namespace LPS.UI.Core.LPSValidators
                 .NotEmpty()
                 .WithMessage("MasterNodeIP is required.");
 
-            RuleFor(config => config.WorkerRegistrationPort)
+            RuleFor(config => config.GRPCPort)
                 .NotNull()
                 .GreaterThan(0)
                 .WithMessage("WorkerRegistrationPort must be a positive integer.");

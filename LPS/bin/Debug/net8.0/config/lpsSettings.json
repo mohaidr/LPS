@@ -34,7 +34,7 @@
     "Cluster": {
       "MasterNodeIP": "192.168.1.10",
       "MasterNodeIsWorker": true,
-      "WorkerRegistrationPort": 9009,
+      "GRPCPort": 5001,
       "ExpectedNumberOfWorkers": 2
     }
   }

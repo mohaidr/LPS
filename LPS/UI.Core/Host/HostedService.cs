@@ -27,6 +27,7 @@ namespace LPS.UI.Core.Host
     internal class HostedService(
         dynamic command_args,
         IClusterConfiguration clusterConfiguration,
+        IEntityDiscoveryService entityDiscoveryService,
         INodeMetadata nodeMetadata,
         ILogger logger,
         IClientConfiguration<HttpRequest> config,
@@ -44,6 +45,7 @@ namespace LPS.UI.Core.Host
         readonly IClusterConfiguration _clusterConfiguration = clusterConfiguration;
         readonly INodeMetadata _nodeMetadata = nodeMetadata;
         readonly ILogger _logger = logger;
+        readonly IEntityDiscoveryService _entityDiscoveryService = entityDiscoveryService;
         readonly IClientConfiguration<HttpRequest> _config = config;
         readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager = httpClientManager;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -69,7 +71,7 @@ namespace LPS.UI.Core.Host
 
             if (_command_args != null && _command_args.Length > 0)
             {
-                var commandLineManager = new CommandLineManager(_command_args, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
+                var commandLineManager = new CommandLineManager(_command_args, _nodeMetadata, _clusterConfiguration, _entityDiscoveryService, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
                 await commandLineManager.RunAsync(_cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
             }
@@ -79,7 +81,6 @@ namespace LPS.UI.Core.Host
                 var manualBuild = new ManualBuild(new PlanValidator(planDto), _logger, _runtimeOperationIdProvider, _placeholderResolverService);
                 var plan = manualBuild.Build(ref planDto);
                 SavePlanToDisk(planDto);
-
                 AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run {planDto.Name}.yaml[/] to execute the Plan[/]");
             }
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
@@ -89,7 +90,7 @@ namespace LPS.UI.Core.Host
         private async Task RegisterNodeAsync()
         {
             // Create a gRPC Channel to the Server
-            var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:5001");
+            var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
 
             // Create the gRPC Client
             var client = new NodeService.NodeServiceClient(channel);
@@ -128,7 +129,6 @@ namespace LPS.UI.Core.Host
 
             // Call the gRPC Service
             RegisterNodeResponse response = await client.RegisterNodeAsync(request);
-            Console.WriteLine(response.ToString());
         }
 
         private static void SavePlanToDisk(PlanDto planDto)

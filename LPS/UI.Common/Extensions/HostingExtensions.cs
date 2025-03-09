@@ -254,7 +254,7 @@ namespace LPS.UI.Common.Extensions
 
         private static ClusterConfiguration MapToClusterConfiguration(ClusterConfigurationOptions options)
         {
-            return new ClusterConfiguration(options.MasterNodeIP, options.WorkerRegistrationPort.Value, options.ExpectedNumberOfWorkers.Value);
+            return new ClusterConfiguration(options.MasterNodeIP, options.GRPCPort.Value, options.ExpectedNumberOfWorkers.Value);
         }
 
         private static Watchdog MapToWatchdog(

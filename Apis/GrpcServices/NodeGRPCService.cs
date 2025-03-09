@@ -21,32 +21,37 @@ namespace Apis.Services
             _clusterConfig = clusterConfig;
         }
 
-        public override Task<RegisterNodeResponse> RegisterNode(LPS.Protos.Shared.NodeMetadata request, ServerCallContext context)
+        public override Task<RegisterNodeResponse> RegisterNode(LPS.Protos.Shared.NodeMetadata metadata, ServerCallContext context)
         {
-            var disks = request.Disks.Select(d => new LPS.Infrastructure.Nodes.DiskInfo(d.Name, d.TotalSize, d.FreeSpace)).ToList<IDiskInfo>();
-            var networkInterfaces = request.NetworkInterfaces.Select(n => new LPS.Infrastructure.Nodes.NetworkInfo(n.InterfaceName, n.Type, n.Status, n.IpAddresses.ToList())).ToList<INetworkInfo>();
+            if (string.IsNullOrWhiteSpace(metadata.NodeName) || string.IsNullOrWhiteSpace(metadata.NodeIp))
+            {
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "NodeName and NodeIp must be provided."));
+            }
+            var disks = metadata.Disks.Select(d => new LPS.Infrastructure.Nodes.DiskInfo(d.Name, d.TotalSize, d.FreeSpace)).ToList<IDiskInfo>();
+            var networkInterfaces = metadata.NetworkInterfaces.Select(n => new LPS.Infrastructure.Nodes.NetworkInfo(n.InterfaceName, n.Type, n.Status, n.IpAddresses.ToList())).ToList<INetworkInfo>();
 
             var nodeMetadata = new LPS.Infrastructure.Nodes.NodeMetadata(
                 _clusterConfig,
-                request.NodeName,
-                request.Os,
-                request.Architecture,
-                request.Framework,
-                request.Cpu,
-                request.LogicalProcessors,
-                request.TotalRam,
+                metadata.NodeName,
+                metadata.NodeIp,
+                metadata.Os,
+                metadata.Architecture,
+                metadata.Framework,
+                metadata.Cpu,
+                metadata.LogicalProcessors,
+                metadata.TotalRam,
                 disks,
                 networkInterfaces
             );
 
-            var node = new Node(nodeMetadata); // Assuming `Node` implements `INode`
+            var node = new Node(nodeMetadata);
             _nodeRegistry.RegisterNode(node);
 
             _logger.LogInformation($"Registered Node: {node.Metadata.NodeName} as {node.Metadata.NodeType}");
 
             return Task.FromResult(new RegisterNodeResponse
             {
-                Message = $"Node {request.NodeName} registered successfully as {request.NodeType}"
+                Message = $"Node {metadata.NodeName} registered successfully as {metadata.NodeType}"
             });
         }
     }

@@ -10,11 +10,12 @@ using System.Runtime.InteropServices;
 
 namespace LPS.Infrastructure.Nodes
 {
-    public class NodeMetadata : INodeMetadata
+    public record NodeMetadata : INodeMetadata
     {
         private readonly IClusterConfiguration _clusterConfiguration;
 
         public string NodeName { get; }
+        public string NodeIP { get; }
         public NodeType NodeType => INode.NodeIP == _clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker;
         public string OS { get; }
         public string Architecture { get; }
@@ -29,19 +30,21 @@ namespace LPS.Infrastructure.Nodes
         {
             _clusterConfiguration = clusterConfiguration;
             NodeName = Environment.MachineName;
+            NodeIP = INode.NodeIP;
             OS = RuntimeInformation.OSDescription;
             Architecture = RuntimeInformation.OSArchitecture.ToString();
             Framework = RuntimeInformation.FrameworkDescription;
             CPU = GetCpuInfo();
             LogicalProcessors = Environment.ProcessorCount;
             TotalRAM = GetMemoryInfo();
-            Disks = new List<IDiskInfo>();
-            NetworkInterfaces = new List<INetworkInfo>();
+            Disks = GetDiskInfo();
+            NetworkInterfaces = GetNetworkInfo();
         }
 
         public NodeMetadata(
             IClusterConfiguration clusterConfiguration,
             string nodeName,
+            string nodeIP,
             string os,
             string architecture,
             string framework,
@@ -53,6 +56,7 @@ namespace LPS.Infrastructure.Nodes
         {
             _clusterConfiguration = clusterConfiguration;
             NodeName = nodeName;
+            NodeIP = nodeIP;
             OS = os;
             Architecture = architecture;
             Framework = framework;
@@ -87,9 +91,55 @@ namespace LPS.Infrastructure.Nodes
             }
             return "Unknown RAM";
         }
+
+        private static List<IDiskInfo> GetDiskInfo()
+        {
+            var disks = new List<IDiskInfo>();
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                foreach (var drive in DriveInfo.GetDrives().Where(d => d.IsReady))
+                {
+                    disks.Add(new DiskInfo(drive.Name, drive.TotalSize.ToString(), drive.AvailableFreeSpace.ToString()));
+                }
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                var output = File.ReadAllLines("/proc/partitions")
+                    .Skip(2) // Skip headers
+                    .Select(line => line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))
+                    .Where(parts => parts.Length == 4)
+                    .Select(parts => new DiskInfo(parts[3], "Unknown Size", "Unknown Free Space"))
+                    .ToList();
+
+                disks.AddRange(output);
+            }
+
+            return disks;
+        }
+        private static List<INetworkInfo> GetNetworkInfo()
+        {
+            var networkInterfaces = new List<INetworkInfo>();
+
+            foreach (var netInterface in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                var addresses = netInterface.GetIPProperties().UnicastAddresses
+                    .Select(ip => ip.Address.ToString())
+                    .ToList();
+
+                networkInterfaces.Add(new NetworkInfo(
+                    netInterface.Name,
+                    netInterface.NetworkInterfaceType.ToString(),
+                    netInterface.OperationalStatus.ToString(),
+                    addresses));
+            }
+
+            return networkInterfaces;
+        }
+
     }
 
-    public class DiskInfo : IDiskInfo
+    public record DiskInfo : IDiskInfo
     {
         public string Name { get; }
         public string TotalSize { get; }
@@ -103,7 +153,7 @@ namespace LPS.Infrastructure.Nodes
         }
     }
 
-    public class NetworkInfo : INetworkInfo
+    public record NetworkInfo : INetworkInfo
     {
         public string InterfaceName { get; }
         public string Type { get; }

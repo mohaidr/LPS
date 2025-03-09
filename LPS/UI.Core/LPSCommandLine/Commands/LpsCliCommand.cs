@@ -13,6 +13,7 @@ using LPS.DTOs;
 using AutoMapper;
 using LPS.Domain.Domain.Common.Interfaces;
 using System.CommandLine;
+using LPS.Infrastructure.Nodes;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
@@ -32,9 +33,12 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private readonly CancellationTokenSource _cts;
         private readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
         private readonly IMapper _mapper; // AutoMapper instance
-
+        private readonly IClusterConfiguration _clusterConfiguration;
+        private readonly INodeMetadata _nodeMetaData;
         public LpsCliCommand(
             Command rootCliCommand,
+            IClusterConfiguration clusterConfiguration,
+            INodeMetadata nodeMetaData,
             ILogger logger,
             IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
             IClientConfiguration<HttpRequest> config,
@@ -49,6 +53,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             string[] args) // Inject AutoMapper
         {
             _rootCliCommand = rootCliCommand;
+            _nodeMetaData = nodeMetaData;
+            _clusterConfiguration = clusterConfiguration;
             _logger = logger;
             _args = args;
             _config = config;
@@ -127,7 +133,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             ConfigurationService.SaveConfiguration($"{planDto.Name}.yaml", planDto);
                             ConfigurationService.SaveConfiguration($"{planDto.Name}.json", planDto);
                         }
-
+                        RegisterEntities(plan);
                         await manager.RunAsync(plan);
                     }
                     else
@@ -149,6 +155,11 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             },
             new CommandBinder(),
             CommandLineOptions.LPSCommandOptions.SaveOption);
+        }
+        public void RegisterEntities(Plan plan)
+        {
+            var entityRegisterer = new EntityRegisterer(_clusterConfiguration, _nodeMetaData);
+            entityRegisterer.RegisterEntities(plan);
         }
     }
 }
