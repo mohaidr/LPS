@@ -14,7 +14,7 @@ namespace LPS.Infrastructure.Nodes
 
         public void RegisterNode(INode node)
         {
-            if (!_nodes.Contains(node))
+            if (!_nodes.Any(n=> n.Metadata == node.Metadata))
             {
                 _nodes.Add(node);
 

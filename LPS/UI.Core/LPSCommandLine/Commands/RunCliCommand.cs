@@ -181,9 +181,10 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             }
                         }
                     }
-
-                    // Run the Plan
-                    if (plan.GetReadOnlyRounds().Any())
+                    Console.WriteLine(_clusterConfiguration.MasterNodeIsWorker);
+                    //TODO: Run the Plan if the master is ready
+                    // If the node is the master node, then run if the master has to be part of the test (MasterNodeIsWorker)
+                    if (plan.GetReadOnlyRounds().Any() && (_clusterConfiguration.MasterNodeIP != _nodeMetaData.NodeIP || _clusterConfiguration.MasterNodeIsWorker))
                     {
                         RegisterEntities(plan);
                         await new LPSManager(

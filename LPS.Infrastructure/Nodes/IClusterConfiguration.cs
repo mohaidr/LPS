@@ -11,5 +11,7 @@ namespace LPS.Infrastructure.Nodes
         string MasterNodeIP {  get;}
         public int GRPCPort { get; }
         public int ExpectedNumberOfWorkers { get;}
+
+        public bool MasterNodeIsWorker { get; }
     }
 }

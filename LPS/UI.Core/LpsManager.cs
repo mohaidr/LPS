@@ -52,7 +52,7 @@ namespace LPS.UI.Core
                 {
                     if (_dashboardConfig.Value.BuiltInDashboard.HasValue && _dashboardConfig.Value.BuiltInDashboard.Value)
                     {
-                        var port = _dashboardConfig.Value?.Port ?? GlobalSettings.Port;
+                        var port = _dashboardConfig.Value?.Port ?? GlobalSettings.DefaultDashboardPort;
                         var queryParams = $"refreshrate={_dashboardConfig.Value?.RefreshRate ?? 5}";
                         Host.Dashboard.Start(port, queryParams);
                     }

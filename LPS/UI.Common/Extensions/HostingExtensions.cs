@@ -18,6 +18,8 @@ using System.Text;
 using System.Text.Json;
 using LPS.Infrastructure.Nodes;
 using FluentValidation;
+using Apis.Common;
+using LPS.Infrastructure.Common;
 
 namespace LPS.UI.Common.Extensions
 {
@@ -62,7 +64,7 @@ namespace LPS.UI.Common.Extensions
                             serviceProvider.GetRequiredService<ILogFormatter>());
                     }
 
-                    LogAppliedConfiguration(fileLogger, !isValid || validOptions == null, "Logger Options");
+                    LogAppliedConfiguration(fileLogger, !isValid || validOptions == null, "Logger Options", fileLogger);
                     return fileLogger;
                 });
             });
@@ -85,21 +87,20 @@ namespace LPS.UI.Common.Extensions
                         HttpClientConfigSection);
 
                     var fileLogger = serviceProvider.GetRequiredService<ILogger>();
-                    HttpClientConfiguration instance;
+                    HttpClientConfiguration instance = HttpClientConfiguration.GetDefaultInstance();
 
                     if (!isValid)
                     {
-                        instance = HttpClientConfiguration.GetDefaultInstance();
                         LogConfigurationIssue(fileLogger, "Http Client", HttpClientConfigSection, validOptions == null);
                     }
                     else
                     {
                         instance = validOptions != null
                             ? MapToHttpClientConfiguration(validOptions)
-                            : HttpClientConfiguration.GetDefaultInstance();
+                            : instance;
                     }
 
-                    LogAppliedConfiguration(instance, !isValid || validOptions ==null, "LPS Http Client");
+                    LogAppliedConfiguration(instance, !isValid || validOptions ==null, "LPS Http Client", fileLogger);
                     return instance;
                 });
             });
@@ -125,21 +126,20 @@ namespace LPS.UI.Common.Extensions
                     var metricsService = serviceProvider.GetRequiredService<IMetricsQueryService>();
                     var operationIdProvider = serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>();
 
-                    Watchdog watchdog;
+                    Watchdog watchdog= Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, metricsService);
 
                     if (!isValid)
                     {
-                        watchdog = Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, metricsService);
                         LogConfigurationIssue(fileLogger, "Watchdog", WatchdogConfigSection, validOptions == null);
                     }
                     else
                     {
                         watchdog = validOptions != null
                             ? MapToWatchdog(validOptions, fileLogger, operationIdProvider, metricsService)
-                            : Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, metricsService);
+                            : watchdog;
                     }
 
-                    LogAppliedConfiguration(watchdog, !isValid || validOptions == null, "Watchdog Configuration");
+                    LogAppliedConfiguration(watchdog, !isValid || validOptions == null, "Watchdog Configuration", fileLogger);
                     return watchdog;
                 });
             });
@@ -162,21 +162,22 @@ namespace LPS.UI.Common.Extensions
                         ClusterConfigSection);
 
                     var logger = serviceProvider.GetRequiredService<ILogger>();
-                    ClusterConfiguration instance;
 
+                    //In case the cluster options were not provided, we assume that this is a single node test.
+                    ClusterConfiguration instance = ClusterConfiguration.GetDefaultInstance(INode.NodeIP, GlobalSettings.DefaultGRPCPort);
                     if (!isValid)
                     {
-                        instance = ClusterConfiguration.GetDefaultInstance();
                         LogConfigurationIssue(logger, "Cluster", ClusterConfigSection, validOptions == null);
                     }
                     else
                     {
                         instance = validOptions!=null 
                         ? MapToClusterConfiguration(validOptions)
-                        : ClusterConfiguration.GetDefaultInstance();
+                        : instance;
                     }
 
-                    LogAppliedConfiguration(instance, !isValid || validOptions == null, "LPS Cluster Configuration");
+                    LogAppliedConfiguration(instance, !isValid || validOptions == null, "LPS Cluster Configuration", logger);
+
                     return instance;
                 });
             });
@@ -211,12 +212,13 @@ namespace LPS.UI.Common.Extensions
             logger.Log(DefaultLogEventId, message, LPSLoggingLevel.Warning);
         }
 
-        private static void LogAppliedConfiguration<T>(T configuration, bool isDefault, string configName)
+        private static void LogAppliedConfiguration<T>(T configuration, bool isDefault, string configName, ILogger _logger)
         {
             if (isDefault)
             {
                 string jsonString = JsonSerializer.Serialize(configuration);
-                AnsiConsole.MarkupLine($"[Magenta]Applied {configName}: {jsonString}[/]");
+                AnsiConsole.MarkupLine($"[Magenta]Applied Default {configName}: {jsonString}[/]");
+                _logger.Log(AppConstants.emptyLogId, $"Applied Default {configName}: {jsonString}", LPSLoggingLevel.Warning);
             }
         }
 
@@ -254,7 +256,9 @@ namespace LPS.UI.Common.Extensions
 
         private static ClusterConfiguration MapToClusterConfiguration(ClusterConfigurationOptions options)
         {
-            return new ClusterConfiguration(options.MasterNodeIP, options.GRPCPort.Value, options.ExpectedNumberOfWorkers.Value);
+            var GrpcPort = options.GRPCPort ?? GlobalSettings.DefaultGRPCPort;
+            var masterIsWorker = options.MasterNodeIsWorker ?? true;
+            return new ClusterConfiguration(options.MasterNodeIP, GrpcPort, masterIsWorker, options.ExpectedNumberOfWorkers.Value);
         }
 
         private static Watchdog MapToWatchdog(

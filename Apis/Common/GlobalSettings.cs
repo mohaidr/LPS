@@ -14,7 +14,8 @@ namespace Apis.Common
             _port = GenerateRandomPort();
         }
 
-        public static int Port => 59444;
+        public static int DefaultDashboardPort => 59444;
+        public static int DefaultGRPCPort => 5001;
 
         private static int GenerateRandomPort()
         {

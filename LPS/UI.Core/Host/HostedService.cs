@@ -113,9 +113,10 @@ namespace LPS.UI.Core.Host
             }).ToList();
 
             // Construct gRPC Request
-            var request = new LPS.Protos.Shared.NodeMetadata
+            var nodeMetadata = new LPS.Protos.Shared.NodeMetadata
             {
                 NodeName = _nodeMetadata.NodeName,
+                NodeIp  = _nodeMetadata.NodeIP,
                 NodeType = _nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master ? LPS.Protos.Shared.NodeType.Master : LPS.Protos.Shared.NodeType.Worker,
                 Os = _nodeMetadata.OS,
                 Architecture = _nodeMetadata.Architecture,
@@ -128,7 +129,7 @@ namespace LPS.UI.Core.Host
             };
 
             // Call the gRPC Service
-            RegisterNodeResponse response = await client.RegisterNodeAsync(request);
+            RegisterNodeResponse response = await client.RegisterNodeAsync(nodeMetadata);
         }
 
         private static void SavePlanToDisk(PlanDto planDto)

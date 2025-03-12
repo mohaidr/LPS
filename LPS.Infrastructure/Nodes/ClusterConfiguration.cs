@@ -11,24 +11,27 @@ namespace LPS.Infrastructure.Nodes
         public string MasterNodeIP { get; }
         public int GRPCPort { get;}
         public int ExpectedNumberOfWorkers { get;}
+        public bool MasterNodeIsWorker { get; }
 
-        private ClusterConfiguration()
+        private ClusterConfiguration(string masterNodeIp, int defaultGrpcPort)
         {
-            MasterNodeIP = "127.0.0.1";
-            GRPCPort = 9009;
+            MasterNodeIP = masterNodeIp;
+            GRPCPort = defaultGrpcPort;
             ExpectedNumberOfWorkers = 1;
+            MasterNodeIsWorker = true;
         }
 
-        public ClusterConfiguration(string masterNodeIP, int gRPCPort, int expectedNumberOfWorkers)
+        public ClusterConfiguration(string masterNodeIP, int gRPCPort, bool masterIsWorker, int expectedNumberOfWorkers)
         {
             MasterNodeIP = masterNodeIP;
             GRPCPort = gRPCPort;
             ExpectedNumberOfWorkers = expectedNumberOfWorkers;
+            MasterNodeIsWorker = masterIsWorker;
         }
 
-        public static ClusterConfiguration GetDefaultInstance()
+        public static ClusterConfiguration GetDefaultInstance(string masterNodeIp, int defaultGrpcPort)
         {
-            return new ClusterConfiguration();
+            return new ClusterConfiguration(masterNodeIp, defaultGrpcPort);
         }
     }
 }

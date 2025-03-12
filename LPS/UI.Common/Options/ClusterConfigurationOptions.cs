@@ -12,5 +12,6 @@ namespace LPS.UI.Common.Options
         public string? MasterNodeIP { get; set; }
         public int? GRPCPort { get; set; }
         public int? ExpectedNumberOfWorkers { get; set; }
+        public bool? MasterNodeIsWorker { get; set; }
     }
 }

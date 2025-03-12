@@ -37,6 +37,9 @@ using LPS.Infrastructure.Monitoring.MetricsServices;
 using LPS.Infrastructure.Nodes;
 using Microsoft.Extensions.Options;
 using Google.Protobuf.WellKnownTypes;
+using System.Diagnostics.Metrics;
+using LPS.UI.Core.LPSValidators;
+using FluentValidation;
 
 
 namespace LPS
@@ -48,6 +51,10 @@ namespace LPS
             var host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
+                    webBuilder
+                      .UseStartup<Apis.Startup>()
+                      .UseStaticWebAssets();
+
                     var contentRoot = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
                     ArgumentNullException.ThrowIfNull(contentRoot);
                     webBuilder.UseContentRoot(contentRoot);
@@ -63,15 +70,17 @@ namespace LPS
                         .GetSection("LPSAppSettings:Dashboard")
                         .Get<DashboardConfigurationOptions>();
 
-                    var port = dashboardOptions?.Port ?? GlobalSettings.Port;
+                    var port =  dashboardOptions?.Port ?? GlobalSettings.DefaultDashboardPort;
 
-                    webBuilder.UseSetting("http_port", port.ToString())
-                              .UseStartup<LPS.Apis.Startup>()
-                              .UseStaticWebAssets();
+                    var clusterOptions = configuration
+                        .GetSection("LPSAppSettings:Cluster")
+                        .Get<ClusterConfigurationOptions>();
+
+                    var gRPCPort = (clusterOptions!=null && new ClusteredConfigurationValidator().Validate(clusterOptions).IsValid) ? clusterOptions.GRPCPort.Value : GlobalSettings.DefaultGRPCPort ;
 
                     webBuilder.ConfigureKestrel(serverOptions =>
                     {
-                        serverOptions.ListenAnyIP(5001, listenOptions =>
+                        serverOptions.ListenAnyIP(gRPCPort, listenOptions =>
                         {
                             listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2;
                         });
@@ -147,7 +156,6 @@ namespace LPS
 
             return host;
         }
-
         private static void CreateDefaultAppSettings(string filePath)
         {
             // Get the directory path

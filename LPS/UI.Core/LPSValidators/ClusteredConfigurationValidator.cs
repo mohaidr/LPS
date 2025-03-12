@@ -16,6 +16,10 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(config => config.MasterNodeIP)
                 .NotEmpty()
                 .WithMessage("MasterNodeIP is required.");
+           
+            RuleFor(config => config.MasterNodeIsWorker)
+            .NotNull()
+            .WithMessage("MasterIsWorker is required.");
 
             RuleFor(config => config.GRPCPort)
                 .NotNull()

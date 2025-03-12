@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 namespace LPS.Infrastructure.Nodes
 {
 
-    public record Node: INode
+    public class Node: INode
     {
         public Node(INodeMetadata metadata) 
         { 

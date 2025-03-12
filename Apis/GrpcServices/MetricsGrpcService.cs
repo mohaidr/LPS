@@ -6,17 +6,15 @@ using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using ILogger = Microsoft.Extensions.Logging.ILogger;
-
 namespace Apis.Services
 {
     public class MetricsGrpcService : MetricsProtoService.MetricsProtoServiceBase
     {
-        private readonly ILogger _logger;
+        private readonly LPS.Domain.Common.Interfaces.ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IMetricsService _metricsService;
 
-        public MetricsGrpcService(ILogger logger,
+        public MetricsGrpcService(LPS.Domain.Common.Interfaces.ILogger logger,
                                   IRuntimeOperationIdProvider runtimeOperationIdProvider,
                                   IMetricsService metricsService)
         {
