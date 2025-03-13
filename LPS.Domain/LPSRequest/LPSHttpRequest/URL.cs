@@ -60,7 +60,6 @@ namespace LPS.Domain.LPSRequest.LPSHttpRequest
                     host = hostPart.Substring(0, colonIndex);
                     port = hostPart.Substring(colonIndex + 1);
                 }
-                Console.WriteLine(host);
                 // Validate host (without port)
                 bool isValidHost = IsPlaceholder(host) || IsValidHostname(host);
                 bool isValidPort = port == null || int.TryParse(port, out _);
