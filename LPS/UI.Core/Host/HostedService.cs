@@ -29,6 +29,7 @@ namespace LPS.UI.Core.Host
         IClusterConfiguration clusterConfiguration,
         IEntityDiscoveryService entityDiscoveryService,
         INodeMetadata nodeMetadata,
+        INodeRegistry nodeRegistry,
         ILogger logger,
         IClientConfiguration<HttpRequest> config,
         IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
@@ -44,6 +45,7 @@ namespace LPS.UI.Core.Host
     {
         readonly IClusterConfiguration _clusterConfiguration = clusterConfiguration;
         readonly INodeMetadata _nodeMetadata = nodeMetadata;
+        readonly INodeRegistry _nodeRegistry = nodeRegistry;
         readonly ILogger _logger = logger;
         readonly IEntityDiscoveryService _entityDiscoveryService = entityDiscoveryService;
         readonly IClientConfiguration<HttpRequest> _config = config;
@@ -71,7 +73,7 @@ namespace LPS.UI.Core.Host
 
             if (_command_args != null && _command_args.Length > 0)
             {
-                var commandLineManager = new CommandLineManager(_command_args, _nodeMetadata, _clusterConfiguration, _entityDiscoveryService, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
+                var commandLineManager = new CommandLineManager(_command_args, _nodeMetadata, _nodeRegistry, _clusterConfiguration, _entityDiscoveryService, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
                 await commandLineManager.RunAsync(_cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
             }

@@ -34,6 +34,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
         private readonly IClusterConfiguration _clusterConfiguration;
         private readonly ILogger _logger;
         private readonly INodeMetadata _nodeMetaData;
+        private readonly INodeRegistry _nodeRegistry;
         private readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
         private readonly IClientConfiguration<HttpRequest> _config;
         private readonly IVariableManager _variableManager;
@@ -53,6 +54,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             Command rootCLICommandLine,
             IClusterConfiguration clusterConfiguration,
             INodeMetadata nodeMetaData,
+            INodeRegistry nodeRegistry,
             ILogger logger,
             IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
             IClientConfiguration<HttpRequest> config,
@@ -69,6 +71,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             _rootLpsCliCommand = rootCLICommandLine;
             _clusterConfiguration = clusterConfiguration;
             _nodeMetaData = nodeMetaData;
+            _nodeRegistry = nodeRegistry;
             _logger = logger;
             _httpClientManager = httpClientManager;
             _config = config;
@@ -181,12 +184,18 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             }
                         }
                     }
-                    Console.WriteLine(_clusterConfiguration.MasterNodeIsWorker);
                     //TODO: Run the Plan if the master is ready
                     // If the node is the master node, then run if the master has to be part of the test (MasterNodeIsWorker)
-                    if (plan.GetReadOnlyRounds().Any() && (_clusterConfiguration.MasterNodeIP != _nodeMetaData.NodeIP || _clusterConfiguration.MasterNodeIsWorker))
+                    if (plan.GetReadOnlyRounds().Any() && (_nodeMetaData.NodeType != NodeType.Master || _clusterConfiguration.MasterNodeIsWorker))
                     {
                         RegisterEntities(plan);
+                        var node = _nodeRegistry.FetchLocalNode();
+                        node.NodeStatus = NodeStatus.Running;
+                        if (node.Metadata.NodeType == NodeType.Master)
+                        {
+                            TriggerSlveNodesToStart();
+                        }
+
                         await new LPSManager(
                             _logger,
                             _httpClientManager,
@@ -213,6 +222,11 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             LPSRunCommandOptions.RoundNameOption,
             LPSRunCommandOptions.TagOption,
             LPSRunCommandOptions.EnvironmentOption);
+        }
+
+        private void TriggerSlveNodesToStart()
+        {
+            Console.WriteLine("Mocking ... triggered");
         }
 
         private async Task<VariableHolder> BuildVariableHolder(VariableDto variableDto, bool isGlobal, CancellationToken cancellationToken)
