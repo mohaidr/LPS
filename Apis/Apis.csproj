@@ -7,6 +7,7 @@
   </PropertyGroup>
 
     <ItemGroup>
+    <ProjectReference Include="..\LPS.Common\LPS.Common.csproj" />
     <ProjectReference Include="..\LPS.Domain\LPS.Domain.csproj" />
     <ProjectReference Include="..\LPS.Infrastructure\LPS.Infrastructure.csproj" />
     <ProjectReference Include="..\LPS.Protos.Shared\LPS.Protos.Shared.csproj" />

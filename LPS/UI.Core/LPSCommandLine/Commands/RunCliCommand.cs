@@ -25,75 +25,50 @@ using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Infrastructure.Nodes;
 using Nodes;
 using Grpc.Net.Client;
+using Microsoft.Extensions.Hosting;
+using LPS.Protos.Shared;
+using NodeType = LPS.Infrastructure.Nodes.NodeType;
+using System.Xml.Linq;
+using Apis.Common;
+using LPS.Common.Interfaces;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {
     internal class RunCliCommand : ICliCommand
     {
+        TestRunParameters _args;
+
         private readonly Command _rootLpsCliCommand;
-        private readonly IClusterConfiguration _clusterConfiguration;
         private readonly ILogger _logger;
-        private readonly INodeMetadata _nodeMetaData;
-        private readonly INodeRegistry _nodeRegistry;
-        private readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
-        private readonly IClientConfiguration<HttpRequest> _config;
-        private readonly IVariableManager _variableManager;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly IWatchdog _watchdog;
-        private readonly IPlaceholderResolverService _placeholderResolverService;
-        private readonly IMetricsDataMonitor _lpsMonitoringEnroller;
-        private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
-        private readonly IOptions<DashboardConfigurationOptions> _dashboardConfig;
-        private readonly CancellationTokenSource _cts;
-        private readonly IMapper _mapper; // AutoMapper instance
+        private readonly ITestOrchestratorService _testOrchestratorService;
+
         private Command _runCommand;
 
         public Command Command => _runCommand;
-
+#pragma warning disable CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
         internal RunCliCommand(
+#pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
             Command rootCLICommandLine,
-            IClusterConfiguration clusterConfiguration,
-            INodeMetadata nodeMetaData,
-            INodeRegistry nodeRegistry,
             ILogger logger,
-            IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
-            IClientConfiguration<HttpRequest> config,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IWatchdog watchdog,
-            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
-            IMetricsDataMonitor lpsMonitoringEnroller,
-            IOptions<DashboardConfigurationOptions> dashboardConfig,
-            IMapper mapper,
-            IVariableManager variableManager,
-            IPlaceholderResolverService placeholderResolverService,
-            CancellationTokenSource cts) // Injected AutoMapper
+            ITestOrchestratorService testOrchestratorService) // Injected AutoMapper
         {
             _rootLpsCliCommand = rootCLICommandLine;
-            _clusterConfiguration = clusterConfiguration;
-            _nodeMetaData = nodeMetaData;
-            _nodeRegistry = nodeRegistry;
-            _logger = logger;
-            _httpClientManager = httpClientManager;
-            _config = config;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _watchdog = watchdog;
-            _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
-            _lpsMonitoringEnroller = lpsMonitoringEnroller;
-            _dashboardConfig = dashboardConfig;
-            _cts = cts;
-            _variableManager = variableManager;
-            _placeholderResolverService = placeholderResolverService;
-            _mapper = mapper; // Assign mapper
+            _testOrchestratorService = testOrchestratorService;
+            _logger = logger;
             Setup();
         }
 
         private void Setup()
         {
             _runCommand = new Command("run", "Run existing test");
-            CommandLineOptions.AddOptionsToCommand(_runCommand, typeof(CommandLineOptions.LPSRunCommandOptions));
+            AddOptionsToCommand(_runCommand, typeof(LPSRunCommandOptions));
             _runCommand.AddArgument(LPSRunCommandOptions.ConfigFileArgument);
             _rootLpsCliCommand.AddCommand(_runCommand);
         }
+
 
         public void SetHandler(CancellationToken cancellationToken)
         {
@@ -101,117 +76,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             {
                 try
                 {
-                    var planDto = ConfigurationService.FetchConfiguration<PlanDto>(configFile, _placeholderResolverService);
-                    new PlanValidator(planDto).ValidateAndThrow(planDto);
-                    var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
-                    var plan = new Plan(planCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
-                    if (plan.IsValid)
-                    {
-                        var variableValidator = new VariableValidator();
-                        var environmentValidator = new EnvironmentValidator();
+                    var parameters = new TestRunParameters(configFile, roundNames, tags, environments, cancellationToken);
+                    await _testOrchestratorService.RunAsync(parameters);
 
-                        // Global Variables
-                        foreach (var variableDto in planDto.Variables)
-                        {
-                            variableValidator.ValidateAndThrow(variableDto);
-                            var variableHolder = await BuildVariableHolder(variableDto, true, cancellationToken);
-                            _variableManager.AddVariableAsync(variableDto.Name, variableHolder, cancellationToken).Wait();
-                        }
-
-                        // Environment-Specific Variables
-                        foreach (var environmentName in environments)
-                        {
-                            var environmentDto = planDto.Environments
-                                .FirstOrDefault(env => env.Name.Equals(environmentName, StringComparison.OrdinalIgnoreCase));
-
-                            if (environmentDto != null)
-                            {
-                                environmentValidator.ValidateAndThrow(environmentDto);
-
-                                foreach (var variableDto in environmentDto.Variables)
-                                {
-                                    variableValidator.ValidateAndThrow(variableDto);
-                                    var variableHolder = await BuildVariableHolder(variableDto, false, cancellationToken);
-
-                                    _variableManager.AddVariableAsync(variableDto.Name, variableHolder, cancellationToken).Wait();
-                                }
-                            }
-                            else
-                            {
-                                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Environment '{environmentName}' not found.", LPSLoggingLevel.Warning);
-                            }
-                        }
-
-                        // Rounds and Iterations
-                        foreach (var roundDto in planDto.Rounds.Where(round =>
-                            roundNames.Count == 0 && tags.Count == 0 ||
-                            roundNames.Contains(round.Name, StringComparer.OrdinalIgnoreCase) ||
-                            round.Tags.Any(tag => tags.Contains(tag, StringComparer.OrdinalIgnoreCase))))
-                        {
-                            var roundCommand = _mapper.Map<Round.SetupCommand>(roundDto);
-                            var roundEntity = new Round(roundCommand, _logger, _lpsMonitoringEnroller, _runtimeOperationIdProvider);
-
-                            if (roundEntity.IsValid)
-                            {
-                                foreach (var iterationDto in roundDto.Iterations)
-                                {
-                                    var iterationEntity = ProcessIteration(roundDto, iterationDto);
-                                    if (iterationEntity.IsValid)
-                                    {
-                                        roundEntity.AddIteration(iterationEntity);
-                                    }
-                                }
-
-
-                                foreach (var referencedIteration in roundDto.ReferencedIterations)
-                                {
-                                    // Find the referenced iteration by name in the global iterations list
-                                    var globalIteration = planDto.Iterations.FirstOrDefault(i => i.Name.Equals(referencedIteration, StringComparison.OrdinalIgnoreCase));
-                                    if (globalIteration != null)
-                                    {
-                                        var iterationEntity = ProcessIteration(roundDto, globalIteration);
-                                        if (iterationEntity.IsValid)
-                                        {
-                                            roundEntity.AddIteration(iterationEntity);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"Referenced iteration '{referencedIteration}' not found.", LPSLoggingLevel.Warning);
-                                    }
-                                }
-                                plan.AddRound(roundEntity);
-                            }
-                        }
-                    }
-                    //TODO: Run the Plan if the master is ready
-                    // If the node is the master node, then run if the master has to be part of the test (MasterNodeIsWorker)
-                    if (plan.GetReadOnlyRounds().Any() && (_nodeMetaData.NodeType != NodeType.Master || _clusterConfiguration.MasterNodeIsWorker))
-                    {
-                        RegisterEntities(plan);
-                        var node = _nodeRegistry.FetchLocalNode();
-                        node.NodeStatus = NodeStatus.Running;
-                        if (node.Metadata.NodeType == NodeType.Master)
-                        {
-                            TriggerSlveNodesToStart();
-                        }
-
-                        await new LPSManager(
-                            _logger,
-                            _httpClientManager,
-                            _config,
-                            _watchdog,
-                            _runtimeOperationIdProvider,
-                            _httpIterationExecutionCommandStatusMonitor,
-                            _lpsMonitoringEnroller,
-                            _dashboardConfig,
-                            _cts
-                        ).RunAsync(plan);
-                    }
-                    else
-                    {
-                        _logger.Log(_runtimeOperationIdProvider.OperationId, "No rounds to execute", LPSLoggingLevel.Information);
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -224,70 +91,5 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
             LPSRunCommandOptions.EnvironmentOption);
         }
 
-        private void TriggerSlveNodesToStart()
-        {
-            Console.WriteLine("Mocking ... triggered");
-        }
-
-        private async Task<VariableHolder> BuildVariableHolder(VariableDto variableDto, bool isGlobal, CancellationToken cancellationToken)
-        {
-            var mimeType = MimeTypeExtensions.FromKeyword(variableDto.As);
-            var builder = new VariableHolder.Builder(_placeholderResolverService);
-            return await builder
-                .WithFormat(mimeType)
-                .WithPattern(variableDto.Regex)
-                .WithRawValue(variableDto.Value)
-                .SetGlobal(isGlobal)
-                .BuildAsync(cancellationToken);
-        }
-
-        private HttpIteration ProcessIteration(RoundDto roundDto, HttpIterationDto iterationDto)
-        {
-            if (iterationDto.HttpRequest?.URL != null && roundDto?.BaseUrl != null && !iterationDto.HttpRequest.URL.StartsWith("http://") && !iterationDto.HttpRequest.URL.StartsWith("https://"))
-            {
-                if (iterationDto.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
-                {
-                    throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
-                }
-                iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
-            }
-            var iterationCommand = _mapper.Map<HttpIteration.SetupCommand>(iterationDto);
-            var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
-            if (iterationEntity.IsValid)
-            {
-                var requestCommand = _mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest);
-                var request = new HttpRequest(requestCommand, _logger, _runtimeOperationIdProvider);
-                if (request.IsValid)
-                {
-                    if (iterationDto?.HttpRequest?.Capture != null)
-                    {
-                        var captureCommand = _mapper.Map<CaptureHandler.SetupCommand>(iterationDto.HttpRequest.Capture);
-                        var capture = new CaptureHandler(captureCommand, _logger, _runtimeOperationIdProvider);
-                        if (capture.IsValid)
-                        {
-                            request.SetCapture(capture);
-                        }
-                        else
-                        {
-                            throw new InvalidLPSEntityException($"Invalid Capture handler defined in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
-                        }
-                    }
-                    iterationEntity.SetHttpRequest(request);
-                }
-                else
-                {
-                    throw new InvalidLPSEntityException($"Invalid HttpRequest in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
-                }
-                return iterationEntity;
-            }
-            throw new InvalidLPSEntityException($"Invalid Iteration {iterationDto.Name}, Please fix the validation errors and try again");
-        }
-
-
-        public void RegisterEntities(Plan plan)
-        {
-            var entityRegisterer = new EntityRegisterer(_clusterConfiguration, _nodeMetaData);
-            entityRegisterer.RegisterEntities(plan);
-        }
     }
 }

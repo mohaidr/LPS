@@ -1,10 +1,4 @@
 ﻿using Apis.Services;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Metrics;
 using LPS.GrpcServices;
 
 namespace LPS.Apis
@@ -15,7 +9,6 @@ namespace LPS.Apis
         {
             // Register gRPC
             services.AddGrpc();
-
             // Register MVC Controllers
             services.AddControllersWithViews();
             services.AddControllers().AddJsonOptions(options =>

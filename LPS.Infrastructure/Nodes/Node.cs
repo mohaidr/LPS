@@ -14,11 +14,16 @@ namespace LPS.Infrastructure.Nodes
         public Node(INodeMetadata metadata) 
         { 
             Metadata = metadata;
-            NodeStatus = NodeStatus.Waiting;
+            NodeStatus = NodeStatus.Pending;
         }
 
         public INodeMetadata Metadata { get; }
         
         public NodeStatus NodeStatus { get; set; }
+
+        public void SetNodeStatus(NodeStatus nodeStatus)
+        {
+            NodeStatus = nodeStatus;
+        }
     }
 }

@@ -15,10 +15,11 @@ namespace LPS.Infrastructure.Nodes
     }
     public enum NodeStatus
     {
-        Waiting,
+        Pending,
+        Ready,
         Running,
-        Stale,
-        Finished
+        Failed,
+        Stopped
     }
     public interface INode
     {
@@ -32,5 +33,7 @@ namespace LPS.Infrastructure.Nodes
         INodeMetadata Metadata { get; }
 
         NodeStatus NodeStatus { get; set; }
+        public void SetNodeStatus(NodeStatus nodeStatus);
+
     }
 }

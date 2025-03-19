@@ -40,6 +40,10 @@ using Google.Protobuf.WellKnownTypes;
 using System.Diagnostics.Metrics;
 using LPS.UI.Core.LPSValidators;
 using FluentValidation;
+using LPS.UI.Core.Services;
+using LPS.Common.Services;
+using LPS.Common.Interfaces;
+
 
 
 namespace LPS
@@ -120,6 +124,7 @@ namespace LPS
                         SizeLimit = 1024
                     }));
                     services.AddSingleton<INodeRegistry, NodeRegistry>();
+                    services.AddSingleton<ITestTriggerNotifier, TestTriggerNotifier>();
                     services.AddSingleton<INodeMetadata, NodeMetadata>();
                     services.AddSingleton<INode, Node>();
                     services.AddSingleton<IClientManager<Domain.HttpRequest, Domain.HttpResponse, IClientService<Domain.HttpRequest, Domain.HttpResponse>>, HttpClientManager>();
@@ -133,6 +138,9 @@ namespace LPS
                     services.AddSingleton<IPlaceholderResolverService, PlaceholderResolverService>();
                     services.AddSingleton<ISessionManager, SessionManager>();
                     services.AddSingleton<IVariableManager, VariableManager>();
+                    services.AddSingleton<ITestExecutionService, TestExecutionService>();
+                    services.AddSingleton<ITestOrchestratorService, TestOrchestratorService>();
+                    services.AddSingleton<IDashboardService, DashboardService>();
                     services.ConfigureWritable<DashboardConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Dashboard"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:FileLogger"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Watchdog"), AppConstants.AppSettingsFileLocation);
