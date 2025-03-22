@@ -66,42 +66,51 @@ namespace LPS.UI.Core.Host
         readonly IVariableManager _variableManager = variableManager;
         readonly IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
         readonly ITestExecutionService _testExecutionService = testExecutionService;
-        readonly ITestOrchestratorService _testOrchestratorService= testOrchestratorService;
+        readonly ITestOrchestratorService _testOrchestratorService = testOrchestratorService;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
         static bool _cancelRequested;
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
-            await RegisterNodeAsync();
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this iteration", LPSLoggingLevel.Information);
-
-#pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
-            Console.CancelKeyPress += CancelKeyPressHandler;
-            _ = WatchForCancellationAsync();
-
-            if (_command_args != null && _command_args.Length > 0)
+            try
             {
-                var commandLineManager = new CommandLineManager(_command_args, _testOrchestratorService, _testExecutionService, _nodeRegistry, _clusterConfiguration, _entityDiscoveryService, _testTriggerNotifier, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
-                await commandLineManager.RunAsync(_cts.Token);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
-            }
-            else
-            {
-                PlanDto planDto = new();
-                var manualBuild = new ManualBuild(new PlanValidator(planDto), _logger, _runtimeOperationIdProvider, _placeholderResolverService);
-                var plan = manualBuild.Build(ref planDto);
-                SavePlanToDisk(planDto);
-                AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run {planDto.Name}.yaml[/] to execute the Plan[/]");
+                await RegisterNodeAsync();
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this iteration", LPSLoggingLevel.Information);
 
+                #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
+                Console.CancelKeyPress += CancelKeyPressHandler;
+                _ = WatchForCancellationAsync();
+
+                if (_command_args != null && _command_args.Length > 0)
+                {
+                    var commandLineManager = new CommandLineManager(_command_args, _testOrchestratorService, _testExecutionService, _nodeRegistry, _clusterConfiguration, _entityDiscoveryService, _testTriggerNotifier, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
+                    await commandLineManager.RunAsync(_cts.Token);
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
+                }
+                else
+                {
+                    PlanDto planDto = new();
+                    var manualBuild = new ManualBuild(new PlanValidator(planDto), _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+                    var plan = manualBuild.Build(ref planDto);
+                    SavePlanToDisk(planDto);
+                    AnsiConsole.MarkupLine($"[bold italic]You can use the command [blue]lps run {planDto.Name}.yaml[/] to execute the Plan[/]");
+
+                }
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
+                await _logger.FlushAsync();
             }
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
-            await _logger.FlushAsync();
+            catch
+            {
+                await _nodeRegistry.FetchLocalNode()
+                .SetNodeStatus(Infrastructure.Nodes.NodeStatus.Failed);
+            }
         }
 
         private async Task RegisterNodeAsync()
         {
+            _nodeRegistry.RegisterNode(new Node(_nodeMetadata, _clusterConfiguration, _nodeRegistry)); // register locally
             // Create a gRPC Channel to the Server
             var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
 
@@ -142,7 +151,7 @@ namespace LPS.UI.Core.Host
             };
 
             // Call the gRPC Service
-            RegisterNodeResponse response = await client.RegisterNodeAsync(nodeMetadata);
+            RegisterNodeResponse response = await client.RegisterNodeAsync(nodeMetadata); // register on the master node
 
         }
 
@@ -161,15 +170,29 @@ namespace LPS.UI.Core.Host
             await _logger.FlushAsync();
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
+            await _nodeRegistry.FetchLocalNode()
+                .SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
         }
 
         private void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
         {
-            if (e.SpecialKey == ConsoleSpecialKey.ControlC || e.SpecialKey == ConsoleSpecialKey.ControlBreak)
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC 
+                || e.SpecialKey == ConsoleSpecialKey.ControlBreak)
             {
                 e.Cancel = true; // Prevent default process termination.
                 AnsiConsole.MarkupLine("[yellow]Graceful shutdown requested (Ctrl+C/Break).[/]");
                 RequestCancellation(); // Cancel the CancellationTokenSource.
+                if (_nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master)
+                {
+
+                    foreach (var node in _nodeRegistry.FetchAllNodes(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
+                    {
+                        var channel = GrpcChannel.ForAddress($"http://{node.Metadata.NodeIP}:{_clusterConfiguration.GRPCPort}");
+                        var client = new NodeService.NodeServiceClient(channel);
+                        client.CancelTest(new CancelTestRequest());
+
+                    }
+                }
             }
         }
         static bool _programCompleted;

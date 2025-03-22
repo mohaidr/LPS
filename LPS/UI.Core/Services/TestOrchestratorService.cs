@@ -50,7 +50,7 @@ namespace LPS.UI.Core.Services
                 }
                 else
                 {
-                    localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
+                    await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
                 }
                 // notify slave nodes to run
                 foreach (var node in _nodeRegistry.FetchAllNodes(node => node.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
@@ -78,6 +78,7 @@ namespace LPS.UI.Core.Services
                 }
                 else
                 {
+                    await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
                     _testTriggerNotifier.RegisterObserver(this);
                 }
             }

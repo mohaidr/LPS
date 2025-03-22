@@ -64,13 +64,13 @@ message TriggerTestResponse {
 }
 
 // Worker to Master: Report Test Status
-message ReportTestStatusRequest {
+message SetNodeStatusRequest {
     string node_name = 1;   // Worker identifies itself
     string node_ip = 2;     // Worker’s IP for master’s reference
     NodeStatus status = 3;  // Current node status (e.g., STOPPED, CANCELLED)
 }
 
-message ReportTestStatusResponse {
+message SetNodeStatusResponse {
     bool success = 1;       // True if master processed the update, false if not
     string message = 2;     // Optional detail, e.g., "Status updated" or "Invalid node"
 }
@@ -104,7 +104,7 @@ service NodeService {
     rpc TriggerTest(TriggerTestRequest) returns (TriggerTestResponse);
 
     // Worker reports node status to master
-    rpc ReportTestStatus(ReportTestStatusRequest) returns (ReportTestStatusResponse);
+    rpc SetNodeStatus(SetNodeStatusRequest) returns (SetNodeStatusResponse);
 
     // Master cancels test on worker
     rpc CancelTest(CancelTestRequest) returns (CancelTestResponse);

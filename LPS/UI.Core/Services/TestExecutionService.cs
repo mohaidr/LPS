@@ -80,6 +80,7 @@ namespace LPS.UI.Core.Services
 
         public async Task ExecuteAsync(TestRunParameters parameters)
         {
+            var node = _nodeRegistry.FetchLocalNode();
             var planDto = parameters.IsInline ? parameters.PlanDto : ConfigurationService.FetchConfiguration<PlanDto>(parameters.ConfigFile, _placeholderResolverService);
             new PlanValidator(planDto).ValidateAndThrow(planDto);
             var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
@@ -167,15 +168,13 @@ namespace LPS.UI.Core.Services
             if (plan.GetReadOnlyRounds().Any())
             {
                 RegisterEntities(plan);
-                var node = _nodeRegistry.FetchLocalNode();
-                node.SetNodeStatus(NodeStatus.Running);
+                await node.SetNodeStatus(NodeStatus.Running);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
                 _dashboardService.Start();
                 await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
                     .ExecuteAsync(plan);
                 await _dashboardService.WaitForDashboardRefreshAsync();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
-
             }
             else
             {

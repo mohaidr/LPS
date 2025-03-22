@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using LPS.Protos.Shared;
 
 namespace LPS.Infrastructure.Nodes
 {
@@ -32,8 +33,8 @@ namespace LPS.Infrastructure.Nodes
         }
         INodeMetadata Metadata { get; }
 
-        NodeStatus NodeStatus { get; set; }
-        public void SetNodeStatus(NodeStatus nodeStatus);
+        NodeStatus NodeStatus { get; }
+        public ValueTask<SetNodeStatusResponse> SetNodeStatus(NodeStatus nodeStatus);
 
     }
 }

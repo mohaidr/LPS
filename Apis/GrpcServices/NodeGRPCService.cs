@@ -4,6 +4,7 @@ using LPS.Protos.Shared;
 using static LPS.Protos.Shared.NodeService;
 using Apis.Common;
 using LPS.Common.Interfaces;
+using LPS.Domain.Common.Interfaces;
 namespace Apis.Services
 {
     public class NodeGRPCService : NodeServiceBase
@@ -11,21 +12,26 @@ namespace Apis.Services
         
         private readonly INodeRegistry _nodeRegistry;
         private readonly LPS.Domain.Common.Interfaces.ILogger _logger;
+        private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IClusterConfiguration _clusterConfig;
         private readonly ITestTriggerNotifier _testTriggerNotifier;
-
+        private readonly CancellationTokenSource _cts;
         // Assuming we’ll need a way to call workers; could be injected or built from registry
 
         public NodeGRPCService(
             INodeRegistry nodeRegistry,
             IClusterConfiguration clusterConfig,
             ITestTriggerNotifier testTriggerNotifier,
-            LPS.Domain.Common.Interfaces.ILogger logger)
+            LPS.Domain.Common.Interfaces.ILogger logger, 
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            CancellationTokenSource cts)
         {
             _nodeRegistry = nodeRegistry ?? throw new ArgumentNullException(nameof(nodeRegistry));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _clusterConfig = clusterConfig ?? throw new ArgumentNullException(nameof(clusterConfig));
             _testTriggerNotifier = testTriggerNotifier;
+            _cts = cts ?? throw new ArgumentNullException(nameof(_cts));
         }
 
         public override Task<RegisterNodeResponse> RegisterNode(LPS.Protos.Shared.NodeMetadata metadata, ServerCallContext context)
@@ -52,10 +58,10 @@ namespace Apis.Services
                 networkInterfaces
             );
 
-            var node = new Node(nodeMetadata);
+            var node = new Node(nodeMetadata, _clusterConfig, _nodeRegistry);
             _nodeRegistry.RegisterNode(node);
 
-            //_logger.LogInformation($"Registered Node: {node.Metadata.NodeName} as {node.Metadata.NodeType}");
+            _logger.Log(_runtimeOperationIdProvider.OperationId, $"Registered Node: {node.Metadata.NodeName} as {node.Metadata.NodeType}", LPSLoggingLevel.Information);
 
             return Task.FromResult(new RegisterNodeResponse
             {
@@ -105,7 +111,7 @@ namespace Apis.Services
         }
 
         // Worker reports status to master
-        public override async Task<ReportTestStatusResponse> ReportTestStatus(ReportTestStatusRequest request, ServerCallContext context)
+        public override async Task<SetNodeStatusResponse> SetNodeStatus(SetNodeStatusRequest request, ServerCallContext context)
         {
             try
             {
@@ -120,7 +126,7 @@ namespace Apis.Services
                 var node = _nodeRegistry.FetchAllNodes(n => n.Metadata.NodeName == request.NodeName && n.Metadata.NodeIP == request.NodeIp).Single();
                 if (node == null)
                 {
-                    return new ReportTestStatusResponse
+                    return new SetNodeStatusResponse
                     {
                         Success = false,
                         Message = $"Node {request.NodeName} not found in registry."
@@ -128,9 +134,9 @@ namespace Apis.Services
                 }
 
                 // Update node status (you might need to adjust INodeRegistry/Node to support this)
-                node.NodeStatus = ConvertToInternalNodeStatus(request.Status);
+                node.SetNodeStatus(ConvertToInternalNodeStatus(request.Status));
 
-                return new ReportTestStatusResponse
+                return new SetNodeStatusResponse
                 {
                     Success = true,
                     Message = $"Status updated for {request.NodeName} to {request.Status}"
@@ -139,7 +145,7 @@ namespace Apis.Services
             catch (Exception ex)
             {
                 //_logger.LogError(ex, "Failed to process status report from {NodeName}.", request.NodeName);
-                return new ReportTestStatusResponse
+                return new SetNodeStatusResponse
                 {
                     Success = false,
                     Message = $"Failed to update status: {ex.Message}"
@@ -175,10 +181,10 @@ namespace Apis.Services
             }
         }
 
-
         private bool CancelLocalTest()
         {
-            // Replace with your logic to cancel the load test on the worker
+            // Replace with your logic to cancel the load test on the worker'
+            _cts.Cancel();
             return true; // Simulate success
         }
 
