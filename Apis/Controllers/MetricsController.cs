@@ -44,7 +44,7 @@ namespace Apis.Controllers
             public object ResponseBreakDownMetrics { get; set; }
             public object ResponseTimeMetrics { get; set; }
             public object ConnectionMetrics { get; set; }
-            public object DataTransmissionMetrics { get; set; } 
+            public object DataTransmissionMetrics { get; set; }
         }
 
         [HttpGet]
@@ -69,10 +69,10 @@ namespace Apis.Controllers
                 var dataTransmissionMetrics = await dataTransmissionMetricsTask; // Get data transmission metrics
 
                 // Populate the metrics list
-                AddToList(responseTimeMetrics, "ResponseTime");
-                AddToList(responseBreakDownMetrics, "ResponseCode");
-                AddToList(connectionsMetrics, "ConnectionsCount");
-                AddToList(dataTransmissionMetrics, "DataTransmission"); // Add DataTransmission to the list
+                await AddToList(responseTimeMetrics, "ResponseTime");
+                await AddToList(responseBreakDownMetrics, "ResponseCode");
+                await AddToList(connectionsMetrics, "ConnectionsCount");
+                await AddToList(dataTransmissionMetrics, "DataTransmission"); // Add DataTransmission to the list
             }
             catch (Exception ex)
             {
@@ -91,7 +91,7 @@ namespace Apis.Controllers
             return Ok(metricsList);
 
             // Helper action to add metrics to the list
-            async void AddToList(IEnumerable<dynamic> metrics, string type)
+            async ValueTask AddToList(IEnumerable<dynamic> metrics, string type)
             {
                 foreach (var metric in metrics)
                 {

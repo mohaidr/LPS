@@ -22,7 +22,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Apis", "..\Apis\Apis.csproj
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LPS.Protos.Shared", "..\LPS.Protos.Shared\LPS.Protos.Shared.csproj", "{2CF80B16-7C1C-4E6D-A14A-7874FA7DB3C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LPS.Common", "..\LPS.Common\LPS.Common.csproj", "{3D73A88C-7FA0-4D60-B899-4158BB2CBF28}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LPS.Common", "..\LPS.Common\LPS.Common.csproj", "{3D73A88C-7FA0-4D60-B899-4158BB2CBF28}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
