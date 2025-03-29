@@ -37,7 +37,7 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _cts);
             try
             {
-                _httpIterationExecutionCommandStatusMonitor.RegisterCommand(httpIterationCommand, httpIteration);
+                _httpIterationExecutionCommandStatusMonitor.Register(httpIterationCommand, httpIteration);
 
                 var delayTime = (scheduledTime - DateTime.Now) + TimeSpan.FromSeconds(httpIteration.StartupDelay);
                 if (delayTime > TimeSpan.Zero)

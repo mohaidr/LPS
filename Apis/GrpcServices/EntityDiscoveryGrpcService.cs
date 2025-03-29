@@ -3,8 +3,8 @@ using Google.Protobuf.WellKnownTypes;
 using System;
 using System.Threading.Tasks;
 using LPS.Infrastructure.Nodes;
-using Nodes;
-using Node = Nodes.Node;
+using LPS.Protos.Shared;
+using Node = LPS.Protos.Shared.Node;
 
 namespace LPS.GrpcServices
 {
@@ -18,9 +18,9 @@ namespace LPS.GrpcServices
             _nodeRegistry = nodeRegistry;
         }
 
-        public override Task<Empty> AddEntityDiscoveryRecord(Nodes.EntityDiscoveryRecord record, ServerCallContext context)
+        public override Task<Empty> AddEntityDiscoveryRecord(Protos.Shared.EntityDiscoveryRecord record, ServerCallContext context)
         {
-            var node = _nodeRegistry.FetchAllNodes(n => n.Metadata.NodeName == record.Node.Name && n.Metadata.NodeIP == record.Node.NodeIP).FirstOrDefault();
+            var node = _nodeRegistry.Query(n => n.Metadata.NodeName == record.Node.Name && n.Metadata.NodeIP == record.Node.NodeIP).FirstOrDefault();
             if (node == null) {
                 throw new RpcException(new Status(StatusCode.NotFound, "Node does not exist"));
             }

@@ -41,7 +41,7 @@ namespace LPS.UI.Core.Services
         public async Task RunAsync(TestRunParameters parameters)
         {
             _parameters = parameters;
-            var localNode = _nodeRegistry.FetchLocalNode();
+            var localNode = _nodeRegistry.GetLocalNode();
             if (localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
             {
                 if (_clusterConfiguration.MasterNodeIsWorker)
@@ -53,7 +53,7 @@ namespace LPS.UI.Core.Services
                     await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
                 }
                 // notify slave nodes to run
-                foreach (var node in _nodeRegistry.FetchAllNodes(node => node.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
+                foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
                 {
                     // Create a gRPC Channel to the Server
                     var channel = GrpcChannel.ForAddress($"http://{node.Metadata.NodeIP}:{_clusterConfiguration.GRPCPort}");

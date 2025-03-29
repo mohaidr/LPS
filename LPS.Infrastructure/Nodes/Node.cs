@@ -30,7 +30,7 @@ namespace LPS.Infrastructure.Nodes
         public async ValueTask<SetNodeStatusResponse> SetNodeStatus(NodeStatus nodeStatus)
         {
             NodeStatus = nodeStatus;
-            var localNode = _nodeRegistry.FetchLocalNode();
+            var localNode = _nodeRegistry.GetLocalNode();
             if (localNode.Metadata.NodeType != NodeType.Master)
             {
                 var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");

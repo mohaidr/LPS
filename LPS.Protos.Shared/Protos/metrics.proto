@@ -1,6 +1,8 @@
 ﻿syntax = "proto3";
 import "google/protobuf/duration.proto";
 
+option csharp_namespace = "LPS.Protos.Shared";
+
 package metrics;
 
 service MetricsProtoService {

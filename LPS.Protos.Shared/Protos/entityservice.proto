@@ -2,6 +2,9 @@
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/empty.proto";
 
+option csharp_namespace = "LPS.Protos.Shared";
+
+
 package nodes;
 
 

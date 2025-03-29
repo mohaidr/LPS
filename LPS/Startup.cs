@@ -43,6 +43,7 @@ using FluentValidation;
 using LPS.UI.Core.Services;
 using LPS.Common.Services;
 using LPS.Common.Interfaces;
+using LPS.Infrastructure.GRPCClients.Factory;
 
 
 
@@ -107,6 +108,7 @@ namespace LPS
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    services.AddSingleton<ICustomGrpcClientFactory, CustomGrpcClientFactory>();
                     services.AddSingleton<IEntityDiscoveryService, EntityDiscoveryService>();
                     services.AddSingleton<IMetricsRepository, MetricsRepository>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();

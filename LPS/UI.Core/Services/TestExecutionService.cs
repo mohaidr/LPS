@@ -25,6 +25,7 @@ namespace LPS.UI.Core.Services
         private readonly ILogger _logger;
         private readonly IClusterConfiguration _clusterConfiguration;
         private readonly INodeRegistry _nodeRegistry;
+        private readonly IEntityDiscoveryService _entityDiscoveryService;
         private readonly IMapper _mapper;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IPlaceholderResolverService _placeholderResolverService;
@@ -42,6 +43,7 @@ namespace LPS.UI.Core.Services
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IClusterConfiguration clusterConfiguration,
             INodeRegistry nodeRegistry,
+            IEntityDiscoveryService entityDiscoveryService,
             IPlaceholderResolverService placeholderResolverService,
             IVariableManager variableManager,
             IMetricsDataMonitor lpsMonitoringEnroller,
@@ -55,6 +57,7 @@ namespace LPS.UI.Core.Services
             _logger = logger;
             _clusterConfiguration = clusterConfiguration;
             _nodeRegistry = nodeRegistry;
+            _entityDiscoveryService = entityDiscoveryService;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _placeholderResolverService = placeholderResolverService;
             _variableManager = variableManager;
@@ -80,7 +83,7 @@ namespace LPS.UI.Core.Services
 
         public async Task ExecuteAsync(TestRunParameters parameters)
         {
-            var node = _nodeRegistry.FetchLocalNode();
+            var node = _nodeRegistry.GetLocalNode();
             var planDto = parameters.IsInline ? parameters.PlanDto : ConfigurationService.FetchConfiguration<PlanDto>(parameters.ConfigFile, _placeholderResolverService);
             new PlanValidator(planDto).ValidateAndThrow(planDto);
             var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
@@ -240,7 +243,10 @@ namespace LPS.UI.Core.Services
 
         public void RegisterEntities(Plan plan)
         {
-            var entityRegisterer = new EntityRegisterer(_clusterConfiguration, _nodeRegistry.FetchLocalNode().Metadata);
+            var entityRegisterer = new EntityRegisterer(_clusterConfiguration, 
+                _nodeRegistry.GetLocalNode().Metadata,
+                _entityDiscoveryService, 
+                _nodeRegistry);
             entityRegisterer.RegisterEntities(plan);
         }
     }

@@ -36,6 +36,7 @@ namespace LPS.Apis
                 endpoints.MapGrpcService<NodeGRPCService>();
                 endpoints.MapGrpcService<MetricsGrpcService>();
                 endpoints.MapGrpcService<EntityDiscoveryGrpcService>();
+                endpoints.MapGrpcService<StatusMonitorGRPCService>();
 
                 // Register MVC routes
                 endpoints.MapControllerRoute(

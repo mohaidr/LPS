@@ -10,8 +10,8 @@ using LPS.Domain;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Nodes;
-using Metrics;
-using static Metrics.MetricsProtoService;
+using static LPS.Protos.Shared.MetricsProtoService;
+using LPS.Protos.Shared;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             _nodeMetaData = nodeMetaData;
             _clusterConfiguration = clusterConfiguration;
 
-            if (_nodeMetaData.NodeType != NodeType.Master)
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
                 _grpcClient = new MetricsProtoServiceClient(channel);
@@ -48,7 +48,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
-            if (_nodeMetaData.NodeType != NodeType.Master)
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateConnectionsAsync(new UpdateConnectionsRequest
                 {
@@ -75,7 +75,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
         {
-            if (_nodeMetaData.NodeType != NodeType.Master)
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateConnectionsAsync(new UpdateConnectionsRequest
                 {
@@ -104,7 +104,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse.SetupCommand lpsResponse, CancellationToken token)
         {
-            if (_nodeMetaData.NodeType != NodeType.Master)
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateResponseMetricsAsync(new UpdateResponseMetricsRequest
                 {
@@ -129,7 +129,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
         {
-            if (_nodeMetaData.NodeType != NodeType.Master)
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
                 {
@@ -156,7 +156,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token)
         {
-            if (_nodeMetaData.NodeType != NodeType.Master)
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
                 {
@@ -198,10 +198,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var entityDiscoveryRecord = _entityDiscoveryService.Discover(r => r.RequestId == requestId).FirstOrDefault();
             if (entityDiscoveryRecord != null)
             {
-                if (entityDiscoveryRecord.Node.Metadata.NodeType != NodeType.Master)
+                if (entityDiscoveryRecord.Node.Metadata.NodeType != Nodes.NodeType.Master)
                 {
                     var fullyQualifiedName = entityDiscoveryRecord.FullyQualifiedName;
-                    var matchingRequestId = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == NodeType.Master && r.FullyQualifiedName == fullyQualifiedName).First().RequestId;
+                    var matchingRequestId = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == Nodes.NodeType.Master && r.FullyQualifiedName == fullyQualifiedName).First().RequestId;
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Found a matching HTTP request for '{requestId}' on the master node (ID: {matchingRequestId})", LPSLoggingLevel.Warning, token);
 
                     return matchingRequestId;

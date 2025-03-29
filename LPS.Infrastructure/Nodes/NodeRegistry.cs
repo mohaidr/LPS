@@ -34,23 +34,23 @@ namespace LPS.Infrastructure.Nodes
             }
         }
 
-        public IList<INode> FetchAllNodes(Func<INode, bool> predicate)
+        public IList<INode> Query(Func<INode, bool> predicate)
         {
             return _nodes.Where(predicate).ToList();
         }
 
-        public INode FetchMasterNode()
+        public INode GetMasterNode()
         {
             return _masterNode ?? throw new InvalidOperationException("No master node registered.");
         }
 
-        public INode FetchLocalNode()
+        public INode GetLocalNode()
         {
             _localNode ??= _nodes.FirstOrDefault(n => IsLocalNode(n));
             return _localNode ?? throw new InvalidOperationException("No local node found.");
         }
 
-        public ICollection<INode> FetchNeighborNodes()
+        public ICollection<INode> GetNeighborNodes()
         {
             return _nodes.Where(n => !IsLocalNode(n)).ToList();
         }

@@ -10,9 +10,9 @@ namespace LPS.Infrastructure.Nodes
     {
         public void RegisterNode(INode node);
         public void UnregisterNode(INode node);
-        public IList<INode> FetchAllNodes(Func<INode, bool> predicate);
-        public INode FetchMasterNode();
-        public INode FetchLocalNode();
-        public ICollection<INode> FetchNeighborNodes();
+        public IList<INode> Query(Func<INode, bool> predicate);
+        public INode GetMasterNode();
+        public INode GetLocalNode();
+        public ICollection<INode> GetNeighborNodes();
     }
 }

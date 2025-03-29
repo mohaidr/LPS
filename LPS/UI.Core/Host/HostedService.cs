@@ -103,14 +103,14 @@ namespace LPS.UI.Core.Host
             }
             catch
             {
-                await _nodeRegistry.FetchLocalNode()
+                await _nodeRegistry.GetLocalNode()
                 .SetNodeStatus(Infrastructure.Nodes.NodeStatus.Failed);
             }
         }
 
         private async Task RegisterNodeAsync()
         {
-            _nodeRegistry.RegisterNode(new Node(_nodeMetadata, _clusterConfiguration, _nodeRegistry)); // register locally
+            _nodeRegistry.RegisterNode(new Infrastructure.Nodes.Node(_nodeMetadata, _clusterConfiguration, _nodeRegistry)); // register locally
             // Create a gRPC Channel to the Server
             var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
 
@@ -170,7 +170,7 @@ namespace LPS.UI.Core.Host
             await _logger.FlushAsync();
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
-            await _nodeRegistry.FetchLocalNode()
+            await _nodeRegistry.GetLocalNode()
                 .SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
         }
 
@@ -185,7 +185,7 @@ namespace LPS.UI.Core.Host
                 if (_nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master)
                 {
 
-                    foreach (var node in _nodeRegistry.FetchAllNodes(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
+                    foreach (var node in _nodeRegistry.Query(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
                     {
                         var channel = GrpcChannel.ForAddress($"http://{node.Metadata.NodeIP}:{_clusterConfiguration.GRPCPort}");
                         var client = new NodeService.NodeServiceClient(channel);
@@ -212,7 +212,6 @@ namespace LPS.UI.Core.Host
                 }
                 await Task.Delay(1000); // Poll every second
             }
-
         }
 
         private void RequestCancellation()

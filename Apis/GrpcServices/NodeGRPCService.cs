@@ -5,6 +5,7 @@ using static LPS.Protos.Shared.NodeService;
 using Apis.Common;
 using LPS.Common.Interfaces;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common.GRPCExtensions;
 namespace Apis.Services
 {
     public class NodeGRPCService : NodeServiceBase
@@ -58,7 +59,7 @@ namespace Apis.Services
                 networkInterfaces
             );
 
-            var node = new Node(nodeMetadata, _clusterConfig, _nodeRegistry);
+            var node = new LPS.Infrastructure.Nodes.Node(nodeMetadata, _clusterConfig, _nodeRegistry);
             _nodeRegistry.RegisterNode(node);
 
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Registered Node: {node.Metadata.NodeName} as {node.Metadata.NodeType}", LPSLoggingLevel.Information);
@@ -73,11 +74,11 @@ namespace Apis.Services
         {
             try
             {
-                var node = _nodeRegistry.FetchLocalNode();
+                var node = _nodeRegistry.GetLocalNode();
 
                 return new GetNodeStatusResponse
                 {
-                    Status = ConvertToProtoNodeStatus(node.NodeStatus)
+                    Status = node.NodeStatus.ToGrpc()
                 };
             }
             catch (Exception ex)
@@ -123,7 +124,7 @@ namespace Apis.Services
                 //_logger.LogInformation($"Received status update from {request.NodeName}: {request.Status}");
 
                 // Update the node status in the registry (assuming INodeRegistry supports this)
-                var node = _nodeRegistry.FetchAllNodes(n => n.Metadata.NodeName == request.NodeName && n.Metadata.NodeIP == request.NodeIp).Single();
+                var node = _nodeRegistry.Query(n => n.Metadata.NodeName == request.NodeName && n.Metadata.NodeIP == request.NodeIp).Single();
                 if (node == null)
                 {
                     return new SetNodeStatusResponse
@@ -134,7 +135,7 @@ namespace Apis.Services
                 }
 
                 // Update node status (you might need to adjust INodeRegistry/Node to support this)
-                node.SetNodeStatus(ConvertToInternalNodeStatus(request.Status));
+                await node.SetNodeStatus(request.Status.ToLocal());
 
                 return new SetNodeStatusResponse
                 {
@@ -186,32 +187,6 @@ namespace Apis.Services
             // Replace with your logic to cancel the load test on the worker'
             _cts.Cancel();
             return true; // Simulate success
-        }
-
-        private LPS.Infrastructure.Nodes.NodeStatus ConvertToInternalNodeStatus(LPS.Protos.Shared.NodeStatus protoStatus)
-        {
-            // Assuming LPS.Infrastructure.Nodes has its own NodeStatus enum
-            return protoStatus switch
-            {
-                LPS.Protos.Shared.NodeStatus.Running => LPS.Infrastructure.Nodes.NodeStatus.Running,
-                LPS.Protos.Shared.NodeStatus.Ready => LPS.Infrastructure.Nodes.NodeStatus.Ready,
-                LPS.Protos.Shared.NodeStatus.Stopped => LPS.Infrastructure.Nodes.NodeStatus.Stopped,
-                LPS.Protos.Shared.NodeStatus.Failed => LPS.Infrastructure.Nodes.NodeStatus.Failed,
-                LPS.Protos.Shared.NodeStatus.Pending => LPS.Infrastructure.Nodes.NodeStatus.Pending,
-                _ => throw new NotImplementedException()
-            };
-        }
-        private LPS.Protos.Shared.NodeStatus ConvertToProtoNodeStatus(LPS.Infrastructure.Nodes.NodeStatus internalStatus)
-        {
-            return internalStatus switch
-            {
-                LPS.Infrastructure.Nodes.NodeStatus.Running => LPS.Protos.Shared.NodeStatus.Running,
-                LPS.Infrastructure.Nodes.NodeStatus.Ready => LPS.Protos.Shared.NodeStatus.Ready,
-                LPS.Infrastructure.Nodes.NodeStatus.Stopped => LPS.Protos.Shared.NodeStatus.Stopped,
-                LPS.Infrastructure.Nodes.NodeStatus.Failed => LPS.Protos.Shared.NodeStatus.Failed,
-                LPS.Infrastructure.Nodes.NodeStatus.Pending => LPS.Protos.Shared.NodeStatus.Pending,
-                _ => throw new NotImplementedException()
-            };
         }
     }
 }

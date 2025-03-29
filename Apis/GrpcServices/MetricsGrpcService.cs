@@ -1,7 +1,7 @@
 ﻿using Grpc.Core;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
-using Metrics;
+using LPS.Protos.Shared;
 using System;
 using System.Net;
 using System.Threading;
