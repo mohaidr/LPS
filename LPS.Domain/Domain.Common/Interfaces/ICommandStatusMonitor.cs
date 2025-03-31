@@ -28,7 +28,7 @@ namespace LPS.Domain.Domain.Common.Interfaces
         /// </summary>
         /// <param name="entity">The entity to check.</param>
         /// <returns>True if any command is in an ongoing state; otherwise, false.</returns>
-        public bool IsAnyCommandOngoing(TEntity entity);
+        public ValueTask<bool> IsAnyCommandOngoing(TEntity entity);
         /// <summary>
         /// Retrieves the list of execution statuses for all commands associated with the given entity.
         /// </summary>

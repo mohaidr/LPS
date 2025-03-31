@@ -70,11 +70,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        public void Stop(HttpIteration httpIteration, string executionId)
+        public async void Stop(HttpIteration httpIteration, string executionId)
         {
             if (_metricsRepository.Data.TryGetValue(httpIteration, out var metricsContainer))
             {
-                if (!_commandStatusMonitor.IsAnyCommandOngoing(httpIteration))
+                bool isAnyCommandOngoing = await _commandStatusMonitor.IsAnyCommandOngoing(httpIteration);
+                if (!isAnyCommandOngoing)
                 {
                     foreach (var metric in metricsContainer.Metrics)
                     {

@@ -17,7 +17,6 @@ namespace Apis.Services
         private readonly IClusterConfiguration _clusterConfig;
         private readonly ITestTriggerNotifier _testTriggerNotifier;
         private readonly CancellationTokenSource _cts;
-        // Assuming we’ll need a way to call workers; could be injected or built from registry
 
         public NodeGRPCService(
             INodeRegistry nodeRegistry,
@@ -83,7 +82,7 @@ namespace Apis.Services
             }
             catch (Exception ex)
             {
-                //_logger.LogError(ex, "Failed to fetch node status.");
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to fetch node status.\n{ex.Message}\n{ex.InnerException}.", LPSLoggingLevel.Error, _cts.Token);
                 throw new RpcException(new Status(StatusCode.Internal, "Failed to retrieve node status."));
             }
         }
@@ -94,11 +93,7 @@ namespace Apis.Services
             // This method might be called on the worker’s gRPC server
             try
             {
-                // Assume the worker starts its local test here
-                //_logger.LogInformation("Received TriggerTest request. Starting local test...");
-
-                // Simulate starting the test (replace with actual test logic)
-                //_logger.LogInformation("Received TriggerTest request. Notifying CLI to start the test...");
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Received TriggerTest request. Notifying CLI to start the test...", LPSLoggingLevel.Information, _cts.Token);
 
                 _testTriggerNotifier.NotifyObservers();
 
@@ -106,7 +101,8 @@ namespace Apis.Services
             }
             catch (Exception ex)
             {
-                //_logger.LogError(ex, "Failed to start test.");
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,  $"Failed to start test\n{ex.Message}\n{ex.InnerException}.", LPSLoggingLevel.Error, _cts.Token);
+
                 return new TriggerTestResponse { Status = LPS.Protos.Shared.NodeStatus.Failed };
             }
         }
@@ -120,8 +116,7 @@ namespace Apis.Services
                 {
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "NodeName and NodeIp must be provided."));
                 }
-
-                //_logger.LogInformation($"Received status update from {request.NodeName}: {request.Status}");
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Received status update from {request.NodeName}: {request.Status}", LPSLoggingLevel.Information, _cts.Token);
 
                 // Update the node status in the registry (assuming INodeRegistry supports this)
                 var node = _nodeRegistry.Query(n => n.Metadata.NodeName == request.NodeName && n.Metadata.NodeIP == request.NodeIp).Single();
@@ -134,7 +129,6 @@ namespace Apis.Services
                     };
                 }
 
-                // Update node status (you might need to adjust INodeRegistry/Node to support this)
                 await node.SetNodeStatus(request.Status.ToLocal());
 
                 return new SetNodeStatusResponse
@@ -145,7 +139,7 @@ namespace Apis.Services
             }
             catch (Exception ex)
             {
-                //_logger.LogError(ex, "Failed to process status report from {NodeName}.", request.NodeName);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to process status report from {request.NodeIp}\\{request.NodeName}.\n{ex.Message}\n{ex.InnerException}.", LPSLoggingLevel.Error, _cts.Token);
                 return new SetNodeStatusResponse
                 {
                     Success = false,
@@ -159,10 +153,9 @@ namespace Apis.Services
         {
             try
             {
-                //_logger.LogInformation("Received CancelTest request. Cancelling local test...");
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,"Received CancelTest request. Cancelling local test...", LPSLoggingLevel.Warning, _cts.Token);
 
-                // Simulate cancelling the test (replace with actual cancellation logic)
-                bool testCancelled = CancelLocalTest(); // Hypothetical method
+                bool testCancelled = CancelLocalTest();
 
                 var status = testCancelled ? LPS.Protos.Shared.NodeStatus.Stopped : LPS.Protos.Shared.NodeStatus.Failed;
                 return new CancelTestResponse
@@ -173,7 +166,8 @@ namespace Apis.Services
             }
             catch (Exception ex)
             {
-                //_logger.LogError(ex, "Failed to cancel test.");
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to cancel test.. {ex.Message}\n{ex.InnerException}", LPSLoggingLevel.Warning, _cts.Token);
+
                 return new CancelTestResponse
                 {
                     Success = false,

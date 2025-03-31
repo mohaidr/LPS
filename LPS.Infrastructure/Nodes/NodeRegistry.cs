@@ -14,10 +14,10 @@ namespace LPS.Infrastructure.Nodes
 
         public void RegisterNode(INode node)
         {
-            if (!_nodes.Any(n=> n.Metadata == node.Metadata))
+            // Do not compare as records becuase the recode contains reference based comparison types
+            if (!_nodes.Any(n=> n.Metadata.NodeIP == node.Metadata.NodeIP && n.Metadata.NodeName == node.Metadata.NodeName))
             {
                 _nodes.Add(node);
-
                 // Assign master node if it is the first node or explicitly marked
                 if (_masterNode == null && node.Metadata.NodeType == NodeType.Master)
                 {
@@ -34,9 +34,9 @@ namespace LPS.Infrastructure.Nodes
             }
         }
 
-        public IList<INode> Query(Func<INode, bool> predicate)
+        public IEnumerable<INode> Query(Func<INode, bool> predicate)
         {
-            return _nodes.Where(predicate).ToList();
+            return _nodes.Where(predicate);
         }
 
         public INode GetMasterNode()
@@ -50,9 +50,9 @@ namespace LPS.Infrastructure.Nodes
             return _localNode ?? throw new InvalidOperationException("No local node found.");
         }
 
-        public ICollection<INode> GetNeighborNodes()
+        public IEnumerable<INode> GetNeighborNodes()
         {
-            return _nodes.Where(n => !IsLocalNode(n)).ToList();
+            return _nodes.Where(n => !IsLocalNode(n));
         }
 
         private bool IsLocalNode(INode node)

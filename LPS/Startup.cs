@@ -128,7 +128,6 @@ namespace LPS
                     services.AddSingleton<INodeRegistry, NodeRegistry>();
                     services.AddSingleton<ITestTriggerNotifier, TestTriggerNotifier>();
                     services.AddSingleton<INodeMetadata, NodeMetadata>();
-                    services.AddSingleton<INode, Node>();
                     services.AddSingleton<IClientManager<Domain.HttpRequest, Domain.HttpResponse, IClientService<Domain.HttpRequest, Domain.HttpResponse>>, HttpClientManager>();
                     services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                     services.AddSingleton<IHttpHeadersService, HttpHeadersService>();

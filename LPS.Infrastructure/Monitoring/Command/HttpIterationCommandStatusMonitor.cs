@@ -59,11 +59,12 @@ namespace LPS.Infrastructure.Monitoring.Command
             }
         }
 
-        public bool IsAnyCommandOngoing(TEntity entity)
+        public async ValueTask<bool> IsAnyCommandOngoing(TEntity entity)
         {
             if (_commandRegistry.TryGetValue(entity, out var commands))
             {
-                return commands.Any(command => command.Status == ExecutionStatus.Ongoing);
+                List<ExecutionStatus> remoteCommandsStatuses = await GetRemoteStatusesAsync(entity);
+                return (commands.Any(command => command.Status == ExecutionStatus.Ongoing) || remoteCommandsStatuses.Any(status => status== ExecutionStatus.Ongoing));
             }
             return false;
         }
@@ -101,7 +102,7 @@ namespace LPS.Infrastructure.Monitoring.Command
                 var fullyQualifiedName = _entityDiscoveryService.Discover(record => record.IterationId == entity.Id).Single().FullyQualifiedName;
                 if (_nodeMetadata.NodeType == NodeType.Master)
                 {
-                    foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == NodeType.Worker))
+                    foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == NodeType.Worker && (node.NodeStatus == NodeStatus.Running|| node.NodeStatus == NodeStatus.Pending)))
                     {
                         var client = _grpcClientFactory.GetClient<GrpcStatusClient>(node.Metadata.NodeIP);
                         remoteCommandsStatuses = await client.QueryStatusesAsync(fullyQualifiedName);

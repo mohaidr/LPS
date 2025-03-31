@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Grpc.Net.Client;
 using LPS.Protos.Shared;
+using LPS.Infrastructure.Common.GRPCExtensions;
 
 namespace LPS.Infrastructure.Nodes
 {
@@ -38,7 +39,7 @@ namespace LPS.Infrastructure.Nodes
                 // Create the gRPC Client
                 var client = new NodeService.NodeServiceClient(channel);
 
-                var response = await client.SetNodeStatusAsync(new SetNodeStatusRequest() { NodeIp = this.Metadata.NodeIP, NodeName = this.Metadata.NodeName });
+                var response = await client.SetNodeStatusAsync(new SetNodeStatusRequest() { NodeIp = this.Metadata.NodeIP, NodeName = this.Metadata.NodeName, Status = nodeStatus.ToGrpc() });
 
                 return response;
 

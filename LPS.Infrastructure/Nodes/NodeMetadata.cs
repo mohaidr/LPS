@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Management;
@@ -12,11 +13,9 @@ namespace LPS.Infrastructure.Nodes
 {
     public record NodeMetadata : INodeMetadata
     {
-        private readonly IClusterConfiguration _clusterConfiguration;
-
         public string NodeName { get; }
         public string NodeIP { get; }
-        public NodeType NodeType => INode.NodeIP == _clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker;
+        public NodeType NodeType { get; private set; }
         public string OS { get; }
         public string Architecture { get; }
         public string Framework { get; }
@@ -28,7 +27,8 @@ namespace LPS.Infrastructure.Nodes
 
         public NodeMetadata(IClusterConfiguration clusterConfiguration)
         {
-            _clusterConfiguration = clusterConfiguration;
+            ArgumentNullException.ThrowIfNull(clusterConfiguration);
+            NodeType = INode.NodeIP == clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker;
             NodeName = Environment.MachineName;
             NodeIP = INode.NodeIP;
             OS = RuntimeInformation.OSDescription;
@@ -54,7 +54,8 @@ namespace LPS.Infrastructure.Nodes
             List<IDiskInfo> disks,
             List<INetworkInfo> networkInterfaces)
         {
-            _clusterConfiguration = clusterConfiguration;
+            ArgumentNullException.ThrowIfNull(clusterConfiguration);
+            NodeType = nodeIP == clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker;
             NodeName = nodeName;
             NodeIP = nodeIP;
             OS = os;

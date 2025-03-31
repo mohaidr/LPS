@@ -1,29 +1,19 @@
 ﻿using LPS.UI.Common;
-using System.Threading;
-using System.Threading.Tasks;
 using LPS.UI.Core.Build.Services;
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
-using System.IO;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;
 using LPS.Infrastructure.Common;
 using Spectre.Console;
 using LPS.UI.Core.LPSCommandLine;
 using LPS.Domain.Domain.Common.Interfaces;
-using LPS.Infrastructure.Monitoring.Metrics;
-using Microsoft.Extensions.Options;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 using LPS.DTOs;
 using LPS.Infrastructure.LPSClients.GlobalVariableManager;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.Nodes;
 using Grpc.Net.Client;
 using LPS.Protos.Shared;
-using Apis.Common;
 using LPS.Common.Interfaces;
-using LPS.UI.Core.Services;
 
 namespace LPS.UI.Core.Host
 {
@@ -69,7 +59,6 @@ namespace LPS.UI.Core.Host
         readonly ITestOrchestratorService _testOrchestratorService = testOrchestratorService;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
-        static bool _cancelRequested;
 
         public async Task StartAsync(CancellationToken cancellationToken)
         {
@@ -110,6 +99,7 @@ namespace LPS.UI.Core.Host
 
         private async Task RegisterNodeAsync()
         {
+            // keep this line for the worker nodes to register the nodes locally
             _nodeRegistry.RegisterNode(new Infrastructure.Nodes.Node(_nodeMetadata, _clusterConfiguration, _nodeRegistry)); // register locally
             // Create a gRPC Channel to the Server
             var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
@@ -170,13 +160,25 @@ namespace LPS.UI.Core.Host
             await _logger.FlushAsync();
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
-            await _nodeRegistry.GetLocalNode()
-                .SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
+
+            var localNode = _nodeRegistry.GetLocalNode();
+            await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
+
+            if (!_cts.IsCancellationRequested 
+                || localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
+            {
+                //TODO: Think about this approach
+                while (_nodeRegistry.Query(n => n.NodeStatus == Infrastructure.Nodes.NodeStatus.Running
+                || n.NodeStatus == Infrastructure.Nodes.NodeStatus.Pending).Count() > 0)
+                {
+                    await Task.Delay(1000);
+                }
+            }
         }
 
         private void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
         {
-            if (e.SpecialKey == ConsoleSpecialKey.ControlC 
+            if (e.SpecialKey == ConsoleSpecialKey.ControlC
                 || e.SpecialKey == ConsoleSpecialKey.ControlBreak)
             {
                 e.Cancel = true; // Prevent default process termination.
@@ -198,7 +200,7 @@ namespace LPS.UI.Core.Host
         static bool _programCompleted;
         private async Task WatchForCancellationAsync()
         {
-            while (!_cancelRequested && !_programCompleted)
+            while (!_cts.IsCancellationRequested && !_programCompleted)
             {
                 if (Console.KeyAvailable) // Check for the Escape key
                 {
@@ -216,12 +218,8 @@ namespace LPS.UI.Core.Host
 
         private void RequestCancellation()
         {
-            if (!_cancelRequested)
-            {
-                _cancelRequested = true;
-                AnsiConsole.MarkupLine("[yellow]Gracefully shutting down the LPS local server[/]");
-                _cts.Cancel();
-            }
+            AnsiConsole.MarkupLine("[yellow]Gracefully shutting down the LPS local server[/]");
+            _cts.Cancel();
         }
 
     }
