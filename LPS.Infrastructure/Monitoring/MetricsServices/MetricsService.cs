@@ -57,7 +57,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 return response.Success;
             }
-            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to increase connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -85,7 +85,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 return response.Success;
             }
-            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to decrease connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -114,7 +114,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 return response.Success;
             }
-            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update response metrics because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -140,7 +140,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 return response.Success;
             }
-            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data sent because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -156,7 +156,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token)
         {
-            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
+            if (_nodeMetaData.NodeType == Nodes.NodeType.Worker)
             {
                 var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
                 {
@@ -167,7 +167,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 return response.Success;
             }
-            requestId = await GetRequestIdOnMasterNode(requestId, token);
+            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data received because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -193,7 +193,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             _metrics.TryAdd(requestId.ToString(),
                 await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
         }
-        private async Task<Guid> GetRequestIdOnMasterNode(Guid requestId, CancellationToken token)
+        private async Task<Guid> DiscoverRequestIdOnLocalNode(Guid requestId, CancellationToken token)
         {
             var entityDiscoveryRecord = _entityDiscoveryService.Discover(r => r.RequestId == requestId).FirstOrDefault();
             if (entityDiscoveryRecord != null)

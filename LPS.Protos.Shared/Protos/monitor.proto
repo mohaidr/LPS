@@ -26,7 +26,18 @@ message StatusQueryResponse {
   repeated ExecutionStatus statuses = 1;
 }
 
+message MonitorRequest {
+  string fully_qualified_name = 1;
+}
+
+message MonitorResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+
 // Service definition
-service StatusMonitorService {
-  rpc QueryIterationStatuses (StatusQueryRequest) returns (StatusQueryResponse);
+service MonitorService {
+	rpc QueryIterationStatuses (StatusQueryRequest) returns (StatusQueryResponse);
+	rpc Monitor (MonitorRequest) returns (MonitorResponse);
 }

@@ -104,7 +104,7 @@ namespace LPS.Infrastructure.Monitoring.Command
                 {
                     foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == NodeType.Worker && (node.NodeStatus == NodeStatus.Running|| node.NodeStatus == NodeStatus.Pending)))
                     {
-                        var client = _grpcClientFactory.GetClient<GrpcStatusClient>(node.Metadata.NodeIP);
+                        var client = _grpcClientFactory.GetClient<GrpcMonitorClient>(node.Metadata.NodeIP);
                         remoteCommandsStatuses = await client.QueryStatusesAsync(fullyQualifiedName);
                     }
                 }

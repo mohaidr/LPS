@@ -8,17 +8,20 @@ using LPS.Protos.Shared;
 using LPS.Infrastructure.Common.GRPCExtensions;
 namespace Apis.Services
 {
-    public class StatusMonitorGRPCService : StatusMonitorService.StatusMonitorServiceBase
+    public class MonitorGRPCService : MonitorService.MonitorServiceBase
     {
         private readonly IEntityDiscoveryService _discoveryService;
         private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _statusMonitor;
+        private readonly IMetricsDataMonitor _metricsMonitor;
 
-        public StatusMonitorGRPCService(
+        public MonitorGRPCService(
             IEntityDiscoveryService discoveryService,
-            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> statusMonitor)
+            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> statusMonitor,
+             IMetricsDataMonitor metricsMonitor)
         {
             _discoveryService = discoveryService;
             _statusMonitor = statusMonitor;
+            _metricsMonitor = metricsMonitor;
         }
 
         public override async Task<StatusQueryResponse> QueryIterationStatuses(StatusQueryRequest request, ServerCallContext context)
@@ -49,7 +52,26 @@ namespace Apis.Services
 
             return response;
         }
+        public override Task<MonitorResponse> Monitor(MonitorRequest request, ServerCallContext context)
+        {
+            var record = _discoveryService
+                .Discover(r => r.FullyQualifiedName == request.FullyQualifiedName)
+                ?.FirstOrDefault();
 
+            if (record == null)
+            {
+                throw new RpcException(new Status(StatusCode.NotFound, $"No entity found for FQDN: {request.FullyQualifiedName}"));
+            }
+
+
+            _metricsMonitor.Monitor(iteration=> iteration.Id == record.IterationId);
+
+            return Task.FromResult(new MonitorResponse
+            {
+                Success = true,
+                Message = $"Monitoring started for: {record.FullyQualifiedName}"
+            });
+        }
     }
 
 }

@@ -20,6 +20,6 @@
 	<ItemGroup>
 	  <None Remove="Protos\entityservice.proto" />
 	  <None Remove="Protos\metrics.proto" />
-	  <None Remove="Protos\status_monitor.proto" />
+	  <None Remove="Protos\monitor.proto" />
 	</ItemGroup>
 </Project>
