@@ -62,3 +62,5 @@ net8.0
 /LPS/publish/coverlet.collector.targets
 /LPS/publish/coverlet.core.xml
 /LPS/publish/web.config
+/LPS/obj/Debug/net6.0/.NETCoreApp,Version=v6.0.AssemblyAttributes.cs
+/LPS/obj/Debug/net6.0/LPS.AssemblyInfo.cs
