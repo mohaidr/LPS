@@ -3,10 +3,10 @@ https://www.linkedin.com/feed/update/urn:li:activity:7313644642816716801?utm_sou
 
 1- Complete the distributed Version
 2- Add Automatic Termination Rules
-3- Server Metrics
-4- Reporting and Analysis
-5- Comparisons with other tools.
-
+3- The status for the multiple clients is broken
+4- Server Metrics
+5- Reporting and Analysis
+6- Comparisons with other tools.
 ======== Urgent List ========
 
 correctly calculate the time taken to start and complete a request
