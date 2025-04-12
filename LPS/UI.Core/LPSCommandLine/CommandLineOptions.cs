@@ -70,6 +70,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
                 SaveResponse.AddAlias("-sr");
                 SupportH2C.AddAlias("-sh2c");
+                SupportH2C.AddAlias("-h2c");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
@@ -623,6 +624,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 MaximizeThroughputOption.AddAlias("-mt");
                 DownloadHtmlEmbeddedResources.AddAlias("-dhtmler");
                 SaveResponse.AddAlias("-sr");
+                SupportH2C.AddAlias("-sh2c");
                 SupportH2C.AddAlias("-h2c");
 
                 // Add case-insensitive aliases
