@@ -107,7 +107,7 @@ namespace LPS.UI.Core.Host
             _nodeRegistry.RegisterNode(new Infrastructure.Nodes.Node(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory)); // register locally
             // Create a gRPC Channel to the Server
             // Create the gRPC Client
-            var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
+            var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
             // Map Disks from `_nodeMetadata`
             var diskList = _nodeMetadata.Disks.Select(d => new LPS.Protos.Shared.DiskInfo
             {
@@ -190,7 +190,7 @@ namespace LPS.UI.Core.Host
 
                     foreach (var node in _nodeRegistry.Query(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
                     {
-                        var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>($"http://{node.Metadata.NodeIP}:{_clusterConfiguration.GRPCPort}");
+                        var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
                         client.CancelTest(new CancelTestRequest());
 
                     }

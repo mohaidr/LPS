@@ -42,7 +42,7 @@ namespace LPS.Infrastructure.Nodes
             if (localNode.Metadata.NodeType != NodeType.Master)
             {
                 // Create the gRPC Client
-                var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
+                var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
                 var response = await client.SetNodeStatusAsync(new SetNodeStatusRequest() { NodeIp = this.Metadata.NodeIP, NodeName = this.Metadata.NodeName, Status = nodeStatus.ToGrpc() });
 
                 return response;

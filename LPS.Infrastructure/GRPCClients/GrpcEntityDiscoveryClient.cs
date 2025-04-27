@@ -16,11 +16,10 @@ namespace LPS.Infrastructure.GRPCClients
     public class GrpcEntityDiscoveryClient : EntityDiscoveryProtoService.EntityDiscoveryProtoServiceClient, IGRPCClient, ISelfGRPCClient
     {
         private readonly EntityDiscoveryProtoService.EntityDiscoveryProtoServiceClient _client;
-
         public GrpcEntityDiscoveryClient() 
         {
         }
-        private GrpcEntityDiscoveryClient(string grpcAddress)
+        private GrpcEntityDiscoveryClient(string grpcAddress) : base(GrpcChannel.ForAddress(grpcAddress))
         {
             var channel = Grpc.Net.Client.GrpcChannel.ForAddress(grpcAddress);
             _client = new EntityDiscoveryProtoService.EntityDiscoveryProtoServiceClient(channel);

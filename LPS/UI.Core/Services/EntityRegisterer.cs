@@ -36,7 +36,7 @@ namespace LPS.UI.Core.Services
             // The service is used to register and retrieve entities during execution, particularly for resolving local entities 
             // For example, when operating in distributed mode.
             _entityRepositoryService.Add(plan);
-            var grpcClient = _customGrpcClientFactory.GetClient<GrpcEntityDiscoveryClient>($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
+            var grpcClient = _customGrpcClientFactory.GetClient<GrpcEntityDiscoveryClient>(_clusterConfiguration.MasterNodeIP);
             foreach (var round in plan.GetReadOnlyRounds())
             {
                 _entityRepositoryService.Add(round);

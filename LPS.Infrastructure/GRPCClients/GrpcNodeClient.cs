@@ -10,17 +10,17 @@ using LPS.Infrastructure.GRPCClients.Factory;
 using System.Net.Sockets;
 using System;
 using Grpc.Core;
+using LPS.Infrastructure.Nodes;
 
 namespace LPS.Infrastructure.GRPCClients
 {
     public class GrpcNodeClient : NodeService.NodeServiceClient, IGRPCClient, ISelfGRPCClient
     {
         private readonly NodeService.NodeServiceClient _client;
-
-        public GrpcNodeClient() 
+        public GrpcNodeClient()
         {
         }
-        private GrpcNodeClient(string grpcAddress)
+        private GrpcNodeClient(string grpcAddress): base(GrpcChannel.ForAddress(grpcAddress))
         {
             var channel = Grpc.Net.Client.GrpcChannel.ForAddress(grpcAddress);
             _client = new NodeService.NodeServiceClient(channel);

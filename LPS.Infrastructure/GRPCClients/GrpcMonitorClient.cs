@@ -16,11 +16,10 @@ namespace LPS.Infrastructure.GRPCClients
     public class GrpcMonitorClient : MonitorService.MonitorServiceClient, IGRPCClient, ISelfGRPCClient
     {
         private readonly MonitorService.MonitorServiceClient _client;
-
         public GrpcMonitorClient() 
         {
         }
-        private GrpcMonitorClient(string grpcAddress)
+        private GrpcMonitorClient(string grpcAddress) : base(GrpcChannel.ForAddress(grpcAddress))
         {
             var channel = Grpc.Net.Client.GrpcChannel.ForAddress(grpcAddress);
             _client = new MonitorService.MonitorServiceClient(channel);
@@ -34,7 +33,7 @@ namespace LPS.Infrastructure.GRPCClients
             return response.Statuses.Select(s => s.ToLocal()).ToList();
         }
 
-        public async Task<bool> MonitorAsync(string fqdn, CancellationToken token = default) // Optional overloaded method if that adds a benefit like removing code redunduncy 
+        public async Task<bool> MonitorAsync(string fqdn, CancellationToken token = default) // Optional overloaded method if that adds a benefit like removing code redunduncy. This approach is also composition over inheritance
         {
             try
             {

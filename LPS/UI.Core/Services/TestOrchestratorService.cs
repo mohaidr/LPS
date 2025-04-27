@@ -62,7 +62,7 @@ namespace LPS.UI.Core.Services
                 foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
                 {
                     // Create the gRPC Client
-                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>($"http://{node.Metadata.NodeIP}:{_clusterConfiguration.GRPCPort}");
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
                     var response = await client.TriggerTestAsync(new TriggerTestRequest());
                 }
             }
@@ -70,7 +70,7 @@ namespace LPS.UI.Core.Services
             {
 
                 // Create the gRPC Client
-                var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
+                var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
                 var masterNodeStatus = await client.GetNodeStatusAsync(new GetNodeStatusRequest() { });
 
                 if (masterNodeStatus.Status == Protos.Shared.NodeStatus.Running || masterNodeStatus.Status == Protos.Shared.NodeStatus.Ready)

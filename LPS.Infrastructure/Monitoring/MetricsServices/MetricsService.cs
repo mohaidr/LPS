@@ -46,7 +46,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
-                _grpcClient = _customGrpcClientFactory.GetClient<GrpcMetricsClient>($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
+                _grpcClient = _customGrpcClientFactory.GetClient<GrpcMetricsClient>(_clusterConfiguration.MasterNodeIP);
             }
         }
 
