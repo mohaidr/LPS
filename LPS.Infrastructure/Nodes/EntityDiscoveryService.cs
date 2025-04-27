@@ -35,13 +35,13 @@ namespace LPS.Infrastructure.Nodes
                 _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' already exists", LPSLoggingLevel.Verbose);
             }
         }
-        public ICollection<EntityDiscoveryRecord>? Discover(Func<EntityDiscoveryRecord, bool> predict)
+        public ICollection<IEntityDiscoveryRecord>? Discover(Func<IEntityDiscoveryRecord, bool> predict)
         {
             return _entityDiscoveryRecords.Where(predict).ToList();
         }
     }
 
-    public record EntityDiscoveryRecord
+    public record EntityDiscoveryRecord: IEntityDiscoveryRecord
     {
         public EntityDiscoveryRecord(string fullyQualifiedName, Guid roundId, Guid iterationId, Guid requestId, INode node)
         {

@@ -8,5 +8,6 @@ namespace LPS.Domain.Common.Interfaces
 {
     public interface IDomainEntity
     {
+        public Guid Id { get; }
     }
 }

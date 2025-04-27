@@ -1,30 +1,22 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using System.IO;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Caching.Memory;
 using LPS.Infrastructure.Logger;
 using LPS.Domain;
 using LPS.UI.Common.Extensions;
 using LPS.UI.Common;
 using LPS.UI.Common.Options;
-using Newtonsoft.Json;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common;
 using LPS.UI.Core.Host;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Command;
-using System.CommandLine;
 using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.LPSClients;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using LPS.UI.Core;
-using Apis.Common;
-using System.Reflection;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Caching;
-using Microsoft.Extensions.Caching.Memory;
 using LPS.Infrastructure.LPSClients.HeaderServices;
 using LPS.Infrastructure.LPSClients.URLServices;
 using LPS.Infrastructure.LPSClients.MessageServices;
@@ -35,17 +27,15 @@ using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.Monitoring.MetricsServices;
 using LPS.Infrastructure.Nodes;
-using Microsoft.Extensions.Options;
-using Google.Protobuf.WellKnownTypes;
-using System.Diagnostics.Metrics;
 using LPS.UI.Core.LPSValidators;
-using FluentValidation;
 using LPS.UI.Core.Services;
 using LPS.Common.Services;
 using LPS.Common.Interfaces;
 using LPS.Infrastructure.GRPCClients.Factory;
-
-
+using LPS.Infrastructure.Entity;
+using Apis.Common;
+using System.Reflection;
+using Newtonsoft.Json;
 
 namespace LPS
 {
@@ -109,6 +99,7 @@ namespace LPS
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddSingleton<ICustomGrpcClientFactory, CustomGrpcClientFactory>();
+                    services.AddSingleton<IEntityRepositoryService, EntityRepositoryService>();
                     services.AddSingleton<IEntityDiscoveryService, EntityDiscoveryService>();
                     services.AddSingleton<IMetricsRepository, MetricsRepository>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();

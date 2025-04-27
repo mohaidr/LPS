@@ -12,6 +12,8 @@ using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Nodes;
 using static LPS.Protos.Shared.MetricsProtoService;
 using LPS.Protos.Shared;
+using LPS.Infrastructure.GRPCClients.Factory;
+using LPS.Infrastructure.GRPCClients;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
@@ -25,12 +27,14 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly IEntityDiscoveryService _entityDiscoveryService;
         private readonly MetricsProtoServiceClient _grpcClient;
         private readonly IClusterConfiguration _clusterConfiguration;
+        private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         public MetricsService(ILogger logger,
             INodeMetadata nodeMetaData,
             IEntityDiscoveryService entityDiscoveryService,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsQueryService metricsQueryService,
-            IClusterConfiguration clusterConfiguration)
+            IClusterConfiguration clusterConfiguration,
+            ICustomGrpcClientFactory customGrpcClientFactory)
         {
             _logger = logger;
             _entityDiscoveryService = entityDiscoveryService;
@@ -38,11 +42,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             _metricsQueryService = metricsQueryService;
             _nodeMetaData = nodeMetaData;
             _clusterConfiguration = clusterConfiguration;
+            _customGrpcClientFactory = customGrpcClientFactory;
 
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
-                var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
-                _grpcClient = new MetricsProtoServiceClient(channel);
+                _grpcClient = _customGrpcClientFactory.GetClient<GrpcMetricsClient>($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
             }
         }
 

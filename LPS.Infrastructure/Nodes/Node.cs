@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Grpc.Net.Client;
 using LPS.Protos.Shared;
 using LPS.Infrastructure.Common.GRPCExtensions;
+using LPS.Infrastructure.GRPCClients.Factory;
+using LPS.Infrastructure.GRPCClients;
 
 namespace LPS.Infrastructure.Nodes
 {
@@ -16,12 +18,17 @@ namespace LPS.Infrastructure.Nodes
     {
         IClusterConfiguration _clusterConfiguration;
         INodeRegistry _nodeRegistry;
-        public Node(INodeMetadata metadata, IClusterConfiguration clusterConfiguration, INodeRegistry nodeRegistry)
+        ICustomGrpcClientFactory _customGrpcClientFactory;
+        public Node(INodeMetadata metadata, 
+            IClusterConfiguration clusterConfiguration, 
+            INodeRegistry nodeRegistry,
+            ICustomGrpcClientFactory customGrpcClientFactory)
         {
             Metadata = metadata;
             NodeStatus = NodeStatus.Pending;
             _nodeRegistry = nodeRegistry;
             _clusterConfiguration = clusterConfiguration;
+            _customGrpcClientFactory = customGrpcClientFactory;
         }
 
         public INodeMetadata Metadata { get; }
@@ -34,11 +41,8 @@ namespace LPS.Infrastructure.Nodes
             var localNode = _nodeRegistry.GetLocalNode();
             if (localNode.Metadata.NodeType != NodeType.Master)
             {
-                var channel = GrpcChannel.ForAddress($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
-
                 // Create the gRPC Client
-                var client = new NodeService.NodeServiceClient(channel);
-
+                var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>($"http://{_clusterConfiguration.MasterNodeIP}:{_clusterConfiguration.GRPCPort}");
                 var response = await client.SetNodeStatusAsync(new SetNodeStatusRequest() { NodeIp = this.Metadata.NodeIP, NodeName = this.Metadata.NodeName, Status = nodeStatus.ToGrpc() });
 
                 return response;

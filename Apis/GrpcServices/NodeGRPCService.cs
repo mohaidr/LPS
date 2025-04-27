@@ -6,6 +6,7 @@ using Apis.Common;
 using LPS.Common.Interfaces;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.GRPCExtensions;
+using LPS.Infrastructure.GRPCClients.Factory;
 namespace Apis.Services
 {
     public class NodeGRPCService : NodeServiceBase
@@ -16,6 +17,7 @@ namespace Apis.Services
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IClusterConfiguration _clusterConfig;
         private readonly ITestTriggerNotifier _testTriggerNotifier;
+        ICustomGrpcClientFactory _customGrpcClientFactory;
         private readonly CancellationTokenSource _cts;
 
         public NodeGRPCService(
@@ -24,6 +26,7 @@ namespace Apis.Services
             ITestTriggerNotifier testTriggerNotifier,
             LPS.Domain.Common.Interfaces.ILogger logger, 
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            ICustomGrpcClientFactory customGrpcClientFactory,
             CancellationTokenSource cts)
         {
             _nodeRegistry = nodeRegistry ?? throw new ArgumentNullException(nameof(nodeRegistry));
@@ -31,6 +34,7 @@ namespace Apis.Services
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _clusterConfig = clusterConfig ?? throw new ArgumentNullException(nameof(clusterConfig));
             _testTriggerNotifier = testTriggerNotifier;
+            _customGrpcClientFactory = customGrpcClientFactory;
             _cts = cts ?? throw new ArgumentNullException(nameof(_cts));
         }
 
@@ -58,7 +62,7 @@ namespace Apis.Services
                 networkInterfaces
             );
 
-            var node = new LPS.Infrastructure.Nodes.Node(nodeMetadata, _clusterConfig, _nodeRegistry);
+            var node = new LPS.Infrastructure.Nodes.Node(nodeMetadata, _clusterConfig, _nodeRegistry, _customGrpcClientFactory);
             _nodeRegistry.RegisterNode(node);
 
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Registered Node: {node.Metadata.NodeName} as {node.Metadata.NodeType}", LPSLoggingLevel.Information);

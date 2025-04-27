@@ -17,6 +17,8 @@ using LPS.UI.Core.LPSCommandLine;
 using LPS.AutoMapper;
 using LPS.UI.Core.Host;
 using LPS.UI.Common;
+using LPS.Infrastructure.Entity;
+using LPS.Infrastructure.GRPCClients.Factory;
 
 namespace LPS.UI.Core.Services
 {
@@ -37,7 +39,8 @@ namespace LPS.UI.Core.Services
         private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         private readonly IDashboardService _dashboardService;
         private readonly CancellationTokenSource _cts;
-
+        private readonly IEntityRepositoryService _entityRepositoryService;
+        private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -52,6 +55,8 @@ namespace LPS.UI.Core.Services
             IWatchdog watchdog,
             IDashboardService dashboardService,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
+            IEntityRepositoryService entityRepositoryService,
+            ICustomGrpcClientFactory customGrpcClientFactory,
             CancellationTokenSource cts)
         {
             _logger = logger;
@@ -68,6 +73,8 @@ namespace LPS.UI.Core.Services
             _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
             _dashboardService = dashboardService;
             _cts = cts;
+            _entityRepositoryService = entityRepositoryService;
+            _customGrpcClientFactory = customGrpcClientFactory;
             // Create the AutoMapper configuration
             var mapperConfig = new MapperConfiguration(cfg =>
             {
@@ -246,7 +253,9 @@ namespace LPS.UI.Core.Services
             var entityRegisterer = new EntityRegisterer(_clusterConfiguration, 
                 _nodeRegistry.GetLocalNode().Metadata,
                 _entityDiscoveryService, 
-                _nodeRegistry);
+                _nodeRegistry, 
+                _entityRepositoryService, 
+                _customGrpcClientFactory);
             entityRegisterer.RegisterEntities(plan);
         }
     }

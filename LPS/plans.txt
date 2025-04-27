@@ -2,11 +2,23 @@ Top priority
 https://www.linkedin.com/feed/update/urn:li:activity:7313644642816716801?utm_source=share&utm_medium=member_desktop&rcm=ACoAAE-ts5YBpZtgyWjgiIP5AwlxSHLA5P7OctU
 
 1- Complete the distributed Version
+    1.1- Think of the registration process in the Discovery entity (should we add the iterations of the local node to the discovery record?)
+        - I created an entity repository service to acheive that without touching the discovery process
+    1.2- Unify the client creation process to use the new factory
+    1.3- Should we add predicate overload to every queryable service?
+    1.4- Test the metrics on distributed environment thoroughly
+    1.5- Currently the metrics are not updated on the local nodes
+    1.6- Review Logging for all the new services related to the GRPC Implementation
+    1.7- **Should the discovery on the local call the discovery on the primary? if yes, what is the benefit and the use cases?**
+    1.8- Documentation for the services and the GRPC implementation
 2- Add Automatic Termination Rules
 3- The status for the multiple clients is broken
 4- Server Metrics
 5- Reporting and Analysis
 6- Comparisons with other tools.
+7- Methods
+    - SetIf
+    - Jumb (like 5 and then 15 and )
 ======== Urgent List ========
 
 correctly calculate the time taken to start and complete a request

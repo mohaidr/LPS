@@ -73,9 +73,13 @@ namespace LPS.Domain.Common.Interfaces
                 "timestamp" => true,
                 "guid" => true,
                 "base64encode" => true,
+                "base64decode" => true,
+                "urlencode" => true,
+                "urldecode" => true,
                 "hash" => true,
                 "read" => true,
                 "loopcounter" => true,
+                "iterate" => true,
                 _ => false // Unsupported method
             };
         }

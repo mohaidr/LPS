@@ -249,10 +249,13 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 "randomnumber" => await GenerateRandomNumberAsync(parameters, sessionId, token),
                 "timestamp" => await GenerateTimestampAsync(parameters, sessionId, token),
                 "guid" => Guid.NewGuid().ToString(),
+                "urlencode" => await UrlEncodeAsync(parameters, sessionId, token),
+                "urldecode" => await UrlDecodeAsync(parameters, sessionId, token),       // <-- added
                 "base64encode" => await Base64EncodeAsync(parameters, sessionId, token),
+                "base64decode" => await Base64DecodeAsync(parameters, sessionId, token), // <-- added
                 "hash" => await GenerateHashAsync(parameters, sessionId, token),
                 "read" => await ReadFileAsync(parameters, sessionId, token),
-                "loopcounter" => await LoopCounterAsync(parameters, sessionId, token),
+                "loopcounter" or "iterate" => await IterateAsync(parameters, sessionId, token),
                 _ => throw new InvalidOperationException($"Unknown function: {functionName}")
             };
         }
@@ -337,11 +340,6 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             return DateTime.UtcNow.ToString(format);
         }
 
-        private async Task<string> Base64EncodeAsync(string parameters, string sessionId, CancellationToken token)
-        {
-            string value = await _paramService.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
-            return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
-        }
         private async Task<string> GenerateHashAsync(string parameters, string sessionId, CancellationToken token)
         {
             string value = await _paramService.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
@@ -398,13 +396,13 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         }
 
         private readonly SemaphoreSlim _semaphore = new(1, 1);
-
-        public async Task<string> LoopCounterAsync(string parameters, string sessionId, CancellationToken token)
+        private async Task<string> IterateAsync(string parameters, string sessionId, CancellationToken token)
         {
             // Extract parameters for start and end values
             var startValue = await _paramService.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
             var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100000, sessionId, token);
             var counterName =  await _paramService.ExtractStringAsync(parameters, "counter", string.Empty, sessionId, token);
+            var step =  await _paramService.ExtractNumberAsync(parameters, "step", 1, sessionId, token);
             var counterNameCachePart = !string.IsNullOrEmpty(counterName) ? $"_{counterName.Trim()}" : string.Empty;
             if (startValue >= endValue)
             {
@@ -426,7 +424,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 }
                 else
                 {
-                    currentValue++;
+                    currentValue+= step;
                     if (currentValue > endValue || currentValue < startValue)
                     {
                         currentValue = startValue; // Restart counter
@@ -449,6 +447,44 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 _semaphore.Release(); // Release the lock
             }
         }
+        private async Task<string> UrlEncodeAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string value = await _paramService.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            return Uri.EscapeDataString(value);
+        }
+        private async Task<string> Base64EncodeAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string value = await _paramService.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+        }
+        private async Task<string> Base64DecodeAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string value = await _paramService.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            try
+            {
+                byte[] decodedBytes = Convert.FromBase64String(value);
+                return Encoding.UTF8.GetString(decodedBytes);
+            }
+            catch (FormatException)
+            {
+                throw new InvalidOperationException("Invalid Base64 string provided for decoding.");
+            }
+        }
+        private async Task<string> UrlDecodeAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string value = await _paramService.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
+
+            return Uri.UnescapeDataString(value);
+        }
+
     }
 
     public class ParameterExtractorService
@@ -507,5 +543,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
             return defaultValue;
         }
+
+
     }
 }

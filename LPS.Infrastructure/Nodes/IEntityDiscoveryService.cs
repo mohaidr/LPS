@@ -11,7 +11,17 @@ namespace LPS.Infrastructure.Nodes
     public interface IEntityDiscoveryService
     {
         void AddEntityDiscoveryRecord(string fullyQualifiedName, Guid roundId, Guid iterationId, Guid requestId, INode node);
-        ICollection<EntityDiscoveryRecord>? Discover(Func<EntityDiscoveryRecord, bool> predict);
+        ICollection<IEntityDiscoveryRecord>? Discover(Func<IEntityDiscoveryRecord, bool> predict);
+
+    }
+
+    public interface IEntityDiscoveryRecord
+    {
+        public string FullyQualifiedName { get; }
+        public Guid RoundId { get; }
+        public Guid IterationId { get; }
+        public Guid RequestId { get; }
+        public INode Node { get; }
     }
 
 }
