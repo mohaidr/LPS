@@ -16,17 +16,14 @@ namespace LPS.Infrastructure.GRPCClients
 {
     public class GrpcNodeClient : NodeService.NodeServiceClient, IGRPCClient, ISelfGRPCClient
     {
-        private readonly NodeService.NodeServiceClient _client;
         public GrpcNodeClient()
         {
         }
         private GrpcNodeClient(string grpcAddress): base(GrpcChannel.ForAddress(grpcAddress))
         {
-            var channel = Grpc.Net.Client.GrpcChannel.ForAddress(grpcAddress);
-            _client = new NodeService.NodeServiceClient(channel);
         }
 
-        public ISelfGRPCClient GetClient(string grpcAddress)
+        public static IGRPCClient Create(string grpcAddress)
         {
            return new GrpcNodeClient(grpcAddress);
         }

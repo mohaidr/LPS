@@ -13,21 +13,15 @@ using Grpc.Core;
 
 namespace LPS.Infrastructure.GRPCClients
 {
-    public class GrpcEntityDiscoveryClient : EntityDiscoveryProtoService.EntityDiscoveryProtoServiceClient, IGRPCClient, ISelfGRPCClient
+    public class GrpcEntityDiscoveryClient : EntityDiscoveryProtoService.EntityDiscoveryProtoServiceClient, ISelfGRPCClient, IGRPCClient
     {
-        private readonly EntityDiscoveryProtoService.EntityDiscoveryProtoServiceClient _client;
-        public GrpcEntityDiscoveryClient() 
+        private GrpcEntityDiscoveryClient(string grpcAddress)
         {
-        }
-        private GrpcEntityDiscoveryClient(string grpcAddress) : base(GrpcChannel.ForAddress(grpcAddress))
-        {
-            var channel = Grpc.Net.Client.GrpcChannel.ForAddress(grpcAddress);
-            _client = new EntityDiscoveryProtoService.EntityDiscoveryProtoServiceClient(channel);
         }
 
-        public ISelfGRPCClient GetClient(string grpcAddress)
+        public static IGRPCClient Create(string grpcAddress)
         {
-           return new GrpcEntityDiscoveryClient(grpcAddress);
+            return new GrpcEntityDiscoveryClient(grpcAddress);
         }
     }
 }

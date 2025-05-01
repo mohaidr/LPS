@@ -15,17 +15,14 @@ namespace LPS.Infrastructure.GRPCClients
 {
     public class GrpcMetricsClient : MetricsProtoService.MetricsProtoServiceClient, IGRPCClient, ISelfGRPCClient
     {
-        private readonly MetricsProtoService.MetricsProtoServiceClient _client;
         public GrpcMetricsClient() 
         {
         }
         private GrpcMetricsClient(string grpcAddress) : base(GrpcChannel.ForAddress(grpcAddress))
         {
-            var channel = Grpc.Net.Client.GrpcChannel.ForAddress(grpcAddress);
-            _client = new MetricsProtoService.MetricsProtoServiceClient(channel);
         }
 
-        public ISelfGRPCClient GetClient(string grpcAddress)
+        public static IGRPCClient Create(string grpcAddress)
         {
            return new GrpcMetricsClient(grpcAddress);
         }

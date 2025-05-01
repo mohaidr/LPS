@@ -8,7 +8,10 @@ namespace LPS.Infrastructure.GRPCClients.Factory
 {
     public interface ICustomGrpcClientFactory
     {
-        TClient GetClient<TClient>(string grpcAddress) where TClient :  ISelfGRPCClient, new();
+        TClient GetClient<TClient>(string grpcAddress) where TClient : ISelfGRPCClient, IGRPCClient;
+        TClient GetClient<TClient>(string grpcAddress, Func<string, TClient> factory)
+    where TClient : IGRPCClient;
+
     }
 
 }

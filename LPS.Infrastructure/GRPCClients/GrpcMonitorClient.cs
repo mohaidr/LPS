@@ -15,21 +15,18 @@ namespace LPS.Infrastructure.GRPCClients
 {
     public class GrpcMonitorClient : MonitorService.MonitorServiceClient, IGRPCClient, ISelfGRPCClient
     {
-        private readonly MonitorService.MonitorServiceClient _client;
-        public GrpcMonitorClient() 
+        public GrpcMonitorClient() // This is going to be used by the factory to instantiale an instance which can call GetClient
         {
         }
         private GrpcMonitorClient(string grpcAddress) : base(GrpcChannel.ForAddress(grpcAddress))
         {
-            var channel = Grpc.Net.Client.GrpcChannel.ForAddress(grpcAddress);
-            _client = new MonitorService.MonitorServiceClient(channel);
         }
 
         public async Task<List<Domain.Domain.Common.Enums.ExecutionStatus>> QueryStatusesAsync(string fqdn, CancellationToken token = default)
         {
 
             var request = new StatusQueryRequest { FullyQualifiedName = fqdn };
-            var response = await _client.QueryIterationStatusesAsync(request, cancellationToken: token);
+            var response = await base.QueryIterationStatusesAsync(request, cancellationToken: token);
             return response.Statuses.Select(s => s.ToLocal()).ToList();
         }
 
@@ -38,7 +35,7 @@ namespace LPS.Infrastructure.GRPCClients
             try
             {
                 var request = new MonitorRequest { FullyQualifiedName = fqdn };
-                var response = await _client.MonitorAsync(request, cancellationToken: token);
+                var response = await base.MonitorAsync(request, cancellationToken: token);
 
                 if (!response.Success)
                 {
@@ -54,7 +51,7 @@ namespace LPS.Infrastructure.GRPCClients
             }
         }
 
-        public ISelfGRPCClient GetClient(string grpcAddress)
+        public static IGRPCClient Create(string grpcAddress)
         {
            return new GrpcMonitorClient(grpcAddress);
         }

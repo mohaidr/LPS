@@ -8,7 +8,7 @@ namespace LPS.Infrastructure.GRPCClients.Factory
 {
     public interface ISelfGRPCClient
     {
-       public ISelfGRPCClient GetClient (string grpcAddress);
+        static abstract IGRPCClient Create(string grpcAddress);
     }
 
 }
