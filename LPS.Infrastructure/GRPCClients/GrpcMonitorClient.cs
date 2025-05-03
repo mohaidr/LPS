@@ -15,16 +15,21 @@ namespace LPS.Infrastructure.GRPCClients
 {
     public class GrpcMonitorClient : MonitorService.MonitorServiceClient, IGRPCClient, ISelfGRPCClient
     {
-        public GrpcMonitorClient() // This is going to be used by the factory to instantiale an instance which can call GetClient
+        private readonly GrpcChannel _channel;
+
+        private static GrpcChannel CreateChannel(string address, out GrpcChannel channel)
         {
+            channel = GrpcChannel.ForAddress(address);
+            return channel;
         }
-        private GrpcMonitorClient(string grpcAddress) : base(GrpcChannel.ForAddress(grpcAddress))
+
+        private GrpcMonitorClient(string grpcAddress) : base(CreateChannel(grpcAddress, out var ch))
         {
+            _channel = ch;
         }
 
         public async Task<List<Domain.Domain.Common.Enums.ExecutionStatus>> QueryStatusesAsync(string fqdn, CancellationToken token = default)
         {
-
             var request = new StatusQueryRequest { FullyQualifiedName = fqdn };
             var response = await base.QueryIterationStatusesAsync(request, cancellationToken: token);
             return response.Statuses.Select(s => s.ToLocal()).ToList();
