@@ -39,16 +39,16 @@ namespace Apis.Services
             // Get statuses from status monitor
             var internalStatuses = (await _statusMonitor
                 .Query(iteration => iteration.Id == record.IterationId))
-                .Single()                
+                .SingleOrDefault()
                 .Value;
 
             // Map to gRPC-compatible enum
-            var grpcStatuses = internalStatuses
+            var grpcStatuses = internalStatuses?
                 .Select(status=> status.ToGrpc())
                 .ToList();
 
             var response = new StatusQueryResponse();
-            response.Statuses.AddRange(grpcStatuses);
+            response.Statuses.AddRange(grpcStatuses?? new List<LPS.Protos.Shared.ExecutionStatus>());
 
             return response;
         }
@@ -73,5 +73,4 @@ namespace Apis.Services
             });
         }
     }
-
 }
