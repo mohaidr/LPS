@@ -2,12 +2,28 @@
 https://www.linkedin.com/feed/update/urn:li:activity:7313644642816716801?utm_source=share&utm_medium=member_desktop&rcm=ACoAAE-ts5YBpZtgyWjgiIP5AwlxSHLA5P7OctU
 
 🐞 Potential Bugs
-1. The status for the multiple clients is broken
+1. The status for the multiple clients is broken 
+    - I cant reproduce
 2. Currently the metrics are not updated on the local nodes
+    - Done with fragile logic
 3. Test the metrics on distributed environment thoroughly
 4. Review Logging for all the new services related to the GRPC Implementation
 
 🚀 Enhancements
+
+10. Add Automatic Termination Rules
+
+11. Server Metrics
+
+12. Reporting and Analysis
+
+13. Comparisons with other tools
+
+14. Methods
+  14.1. SetIf
+  14.2. Jumb (like 5 and then 15) – done
+
+
 5. Think of the registration process in the Discovery entity
   5.1. Should we add the iterations of the local node to the discovery record?
     - I created an entity repository service to achieve that without touching the discovery process
@@ -22,17 +38,6 @@ https://www.linkedin.com/feed/update/urn:li:activity:7313644642816716801?utm_sou
 
 9. Documentation for the services and the GRPC implementation
 
-10. Add Automatic Termination Rules
-
-11. Server Metrics
-
-12. Reporting and Analysis
-
-13. Comparisons with other tools
-
-14. Methods
-  14.1. SetIf
-  14.2. Jumb (like 5 and then 15) – done
 
 ======== Urgent List ========
 

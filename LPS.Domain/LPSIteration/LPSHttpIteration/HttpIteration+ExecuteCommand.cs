@@ -45,7 +45,7 @@ namespace LPS.Domain
                 _executionStatus = ExecutionStatus.Scheduled;
             }
             private ExecutionStatus _executionStatus;
-            private ExecutionStatus _finalStatus;
+            private ExecutionStatus _aggregateStatus;
             public ExecutionStatus Status => _executionStatus;
 
             public async Task ExecuteAsync(HttpIteration entity)
@@ -65,7 +65,7 @@ namespace LPS.Domain
                 {
                     _executionStatus = ExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this);
-                    _executionStatus = _finalStatus;
+                    _executionStatus = _aggregateStatus;
                 }
                 catch (OperationCanceledException) when (_cts.IsCancellationRequested)
                 {
@@ -77,13 +77,13 @@ namespace LPS.Domain
                     _executionStatus = ExecutionStatus.Failed;
                 }
                 finally {
-                    if (_finalStatus > _executionStatus)
-                        _executionStatus = _finalStatus;
+                    if (_aggregateStatus > _executionStatus)
+                        _executionStatus = _aggregateStatus;
                 }
             }
             public void NotifyMe(ExecutionStatus status)
             {
-                _finalStatus = status;
+                _aggregateStatus = status;
             }
 
             public void CancellIfScheduled()

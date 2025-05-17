@@ -52,6 +52,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
+            bool? updated = null;
+
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateConnectionsAsync(new UpdateConnectionsRequest
@@ -59,26 +61,26 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     RequestId = requestId.ToString(),
                     Increase = true
                 });
-                return response.Success;
+                updated = response.Success;
             }
             requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to increase connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
-                return false;
+                updated ??= false;
+                return updated.Value;
             }
             await QueryMetricsAsync(requestId);
-            var throughputMetrics = _metrics[requestId.ToString()]
-                .Where(metric => metric.MetricType == LPSMetricType.Throughput);
-            foreach (var metric in throughputMetrics)
-            {
-                ((IThroughputMetricCollector)metric).IncreaseConnectionsCount();
-            }
-            return true;
+            var throughputMetric = _metrics[requestId.ToString()]
+                .Single(metric => metric.MetricType == LPSMetricType.Throughput);
+
+            updated ??= ((IThroughputMetricCollector)throughputMetric).IncreaseConnectionsCount();
+            return updated.Value;
         }
 
         public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
         {
+            bool? updated = null;
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateConnectionsAsync(new UpdateConnectionsRequest
@@ -87,27 +89,26 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     Increase = false,
                     IsSuccessful = isSuccessful
                 });
-                return response.Success;
+                updated = response.Success;
             }
             requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to decrease connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
-                return false;
+                updated ??= false;
+                return updated.Value;
             }
             await QueryMetricsAsync(requestId);
-            var throughputMetrics = _metrics[requestId.ToString()]
-                .Where(metric => metric.MetricType == LPSMetricType.Throughput);
-            foreach (var metric in throughputMetrics)
-            {
-                ((IThroughputMetricCollector)metric).DecreseConnectionsCount(isSuccessful);
-            }
-            return true;
+            var throughputMetric = _metrics[requestId.ToString()]
+                .Single(metric => metric.MetricType == LPSMetricType.Throughput);
 
+            updated ??= ((IThroughputMetricCollector)throughputMetric).DecreseConnectionsCount(isSuccessful);
+            return updated.Value;
         }
 
         public async ValueTask<bool> TryUpdateResponseMetricsAsync(Guid requestId, HttpResponse.SetupCommand lpsResponse, CancellationToken token)
         {
+            bool? updated = null;
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateResponseMetricsAsync(new UpdateResponseMetricsRequest
@@ -116,23 +117,27 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     ResponseCode = (int)lpsResponse.StatusCode,
                     ResponseTime = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(lpsResponse.TotalTime)
                 });
-                return response.Success;
+                updated= response.Success;
             }
             requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update response metrics because the requestId was empty", LPSLoggingLevel.Warning, token);
-                return false;
+                updated ??= false;
+                return updated.Value;
             }
+
             await QueryMetricsAsync(requestId);
             var responseMetrics = _metrics[requestId.ToString()]
                 .Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
-            await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse)));
-            return true;
+            var result= await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse)));
+            updated ??= true;
+            return updated.Value;
         }
 
         public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
         {
+            bool? updated = null;
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
             {
                 var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
@@ -142,24 +147,28 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     TimeTaken = uploadTime,
                     IsSent = true
                 });
-                return response.Success;
+                updated = response.Success;
             }
             requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data sent because the requestId was empty", LPSLoggingLevel.Warning, token);
-                return false;
+                updated ??= false;
+                return updated.Value;
             }
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
             foreach (var metric in dataTransmissionMetrics)
             {
                 ((IDataTransmissionMetricCollector)metric).UpdateDataSent(dataSize, uploadTime, token);
             }
-            return true;
+            updated ??= true;
+            return updated.Value;
         }
 
         public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token)
         {
+            bool? updated = null;
+
             if (_nodeMetaData.NodeType == Nodes.NodeType.Worker)
             {
                 var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
@@ -169,20 +178,22 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     TimeTaken = downloadTime,
                     IsSent = false
                 });
-                return response.Success;
+                updated = response.Success;
             }
             requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data received because the requestId was empty", LPSLoggingLevel.Warning, token);
-                return false;
+                updated ??= false;
+                return updated.Value;
             }
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
             foreach (var metric in dataTransmissionMetrics)
             {
                 ((IDataTransmissionMetricCollector)metric).UpdateDataReceived(dataSize, downloadTime, token);
             }
-            return true;
+            updated ??= false;
+            return updated.Value;
         }
 
         private async ValueTask<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId)
