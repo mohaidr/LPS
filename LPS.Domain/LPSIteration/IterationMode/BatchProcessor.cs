@@ -1,4 +1,6 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,13 +13,15 @@ namespace LPS.Domain.LPSRun.IterationMode
     internal class BatchProcessor: IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest>
     {
         readonly HttpRequest _request;
+        readonly HttpIteration _httpIteration;
         readonly IWatchdog _watchdog;
         readonly string _hostName;
-        public BatchProcessor(HttpRequest request,
-            IWatchdog watchdog ) 
+        public BatchProcessor(HttpIteration httpIteration, HttpRequest request,
+            IWatchdog watchdog) 
         {
             _request = request;
             _watchdog = watchdog;
+            _httpIteration = httpIteration;
             _hostName = _request.Url.HostName;
         }
         public async Task<int> SendBatchAsync(HttpRequest.ExecuteCommand command, int batchSize, Func<bool> batchCondition, CancellationToken token)

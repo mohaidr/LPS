@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Threading;
@@ -8,15 +9,25 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class RMode : IIterationModeService
     {
-        private HttpRequest.ExecuteCommand _command;
-        private int _requestCount;
-        private IWatchdog _watchdog;
+        private readonly HttpRequest.ExecuteCommand _command;
+        private readonly int _requestCount;
+        private readonly IWatchdog _watchdog;
+        private readonly HttpRequest _request;
+        private readonly HttpIteration _httpIteration;
         private readonly string _hostName;
-        private HttpRequest _request;
 
-        private RMode(HttpRequest request)
+        public RMode(
+            HttpIteration httpIteration,
+            HttpRequest request,
+            HttpRequest.ExecuteCommand command,
+            int requestCount,
+            IWatchdog watchdog)
         {
-            _request = request;
+            _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
+            _request = request ?? throw new ArgumentNullException(nameof(request));
+            _command = command ?? throw new ArgumentNullException(nameof(command));
+            _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
+            _requestCount = requestCount;
             _hostName = _request.Url.HostName;
         }
 
@@ -33,56 +44,9 @@ namespace LPS.Domain.LPSRun.IterationMode
                 }
                 return numberOfSentRequests;
             }
-            catch 
+            catch
             {
                 throw;
-            }
-        }
-        public class Builder : IBuilder<RMode>
-        {
-            private HttpRequest.ExecuteCommand _command;
-            private int _requestCount;
-            private IWatchdog _watchdog;
-            private HttpRequest _request;
-
-            public Builder SetCommand(HttpRequest.ExecuteCommand command)
-            {
-                _command = command;
-                return this;
-            }
-
-            public Builder SetRequestCount(int requestCount)
-            {
-                _requestCount = requestCount;
-                return this;
-            }
-
-            public Builder SetWatchdog(IWatchdog watchdog)
-            {
-                _watchdog = watchdog;
-                return this;
-            }
-
-            public Builder SetRequest(HttpRequest request)
-            {
-                _request = request;
-                return this;
-            }
-
-            public RMode Build()
-            {
-                // Validate required fields
-                if (_request == null)
-                    throw new InvalidOperationException("Request must be provided.");
-
-                var rMode = new RMode(_request)
-                {
-                    _command = _command,
-                    _requestCount = _requestCount,
-                    _watchdog = _watchdog,
-                    _request = _request
-                };
-                return rMode;
             }
         }
     }

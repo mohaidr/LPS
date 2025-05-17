@@ -1,4 +1,5 @@
-﻿using LPS.Domain.Domain.Common.Interfaces;
+﻿using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,14 +11,28 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class DCBMode : IIterationModeService
     {
-        private HttpRequest.ExecuteCommand _command;
-        private int _duration;
-        private int _coolDownTime;
-        private int _batchSize;
-        private bool _maximizeThroughput;
-        private IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
+        private readonly HttpRequest.ExecuteCommand _command;
+        private readonly int _duration;
+        private readonly int _coolDownTime;
+        private readonly int _batchSize;
+        private readonly bool _maximizeThroughput;
+        private readonly IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
 
-        private DCBMode() { }
+        public DCBMode(
+            HttpRequest.ExecuteCommand command,
+            int duration,
+            int coolDownTime,
+            int batchSize,
+            bool maximizeThroughput,
+            IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor)
+        {
+            _command = command ?? throw new ArgumentNullException(nameof(command));
+            _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
+            _duration = duration;
+            _coolDownTime = coolDownTime;
+            _batchSize = batchSize;
+            _maximizeThroughput = maximizeThroughput;
+        }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
@@ -29,6 +44,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             bool continueCondition() => stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested;
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
+
             while (continueCondition())
             {
                 if (_maximizeThroughput)
@@ -58,69 +74,9 @@ namespace LPS.Domain.LPSRun.IterationMode
                 var results = await Task.WhenAll(awaitableTasks);
                 return results.Sum();
             }
-            catch (Exception ex)
+            catch
             {
                 throw;
-            }
-        }
-
-        public class Builder : IBuilder<DCBMode>
-        {
-            private HttpRequest.ExecuteCommand _command;
-            private int _duration;
-            private int _coolDownTime;
-            private int _batchSize;
-            private bool _maximizeThroughput;
-            private IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
-
-            public Builder SetCommand(HttpRequest.ExecuteCommand command)
-            {
-                _command = command;
-                return this;
-            }
-
-            public Builder SetDuration(int duration)
-            {
-                _duration = duration;
-                return this;
-            }
-
-            public Builder SetCoolDownTime(int coolDownTime)
-            {
-                _coolDownTime = coolDownTime;
-                return this;
-            }
-
-            public Builder SetBatchSize(int batchSize)
-            {
-                _batchSize = batchSize;
-                return this;
-            }
-
-            public Builder SetMaximizeThroughput(bool maximizeThroughput)
-            {
-                _maximizeThroughput = maximizeThroughput;
-                return this;
-            }
-
-            public Builder SetBatchProcessor(IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor)
-            {
-                _batchProcessor = batchProcessor;
-                return this;
-            }
-
-            public DCBMode Build()
-            {
-                var dcbMode = new DCBMode
-                {
-                    _command = _command,
-                    _duration = _duration,
-                    _coolDownTime = _coolDownTime,
-                    _batchSize = _batchSize,
-                    _maximizeThroughput = _maximizeThroughput,
-                    _batchProcessor = _batchProcessor
-                };
-                return dcbMode;
             }
         }
     }

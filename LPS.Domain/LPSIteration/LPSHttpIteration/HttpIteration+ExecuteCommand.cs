@@ -24,7 +24,6 @@ namespace LPS.Domain
             readonly IMetricsDataMonitor _lpsMonitoringEnroller;
             readonly CancellationTokenSource _cts;
 
-
             protected ExecuteCommand()
             {
             }
@@ -147,87 +146,82 @@ namespace LPS.Domain
         private async Task ExecuteAsync(ExecuteCommand command)
         {
             if (!this.IsValid)
-            {
                 return;
-            }
+
             var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
             httpRequestExecuteCommand.RegisterObserver(command);
             try
             {
-
                 await LogRequestDetails();
 
                 IIterationModeService iterationModeService;
-                // Create a batch processor if needed
                 IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor;
+
                 switch (this.Mode)
                 {
                     case IterationMode.DCB:
-                        batchProcessor = new BatchProcessor(HttpRequest, _watchdog);
-                        iterationModeService = new DCBMode.Builder()
-                            .SetCommand(httpRequestExecuteCommand)
-                            .SetDuration(this.Duration.Value)
-                            .SetCoolDownTime(this.CoolDownTime.Value)
-                            .SetBatchSize(this.BatchSize.Value)
-                            .SetMaximizeThroughput(this.MaximizeThroughput)
-                            .SetBatchProcessor(batchProcessor)
-                            .Build();
+                        batchProcessor = new BatchProcessor(this, HttpRequest, _watchdog);
+                        iterationModeService = new DCBMode(
+                            httpRequestExecuteCommand,
+                            duration: this.Duration.Value,
+                            coolDownTime: this.CoolDownTime.Value,
+                            batchSize: this.BatchSize.Value,
+                            maximizeThroughput: this.MaximizeThroughput,
+                            batchProcessor: batchProcessor
+                        );
                         break;
 
                     case IterationMode.CRB:
-                        batchProcessor = new BatchProcessor(HttpRequest, _watchdog);
-                        iterationModeService = new CRBMode.Builder()
-                            .SetCommand(httpRequestExecuteCommand)
-                            .SetRequestCount(this.RequestCount.Value)
-                            .SetCoolDownTime(this.CoolDownTime.Value)
-                            .SetBatchSize(this.BatchSize.Value)
-                            .SetMaximizeThroughput(this.MaximizeThroughput)
-                            .SetBatchProcessor(batchProcessor)
-                            .Build();
+                        batchProcessor = new BatchProcessor(this, HttpRequest, _watchdog);
+                        iterationModeService = new CRBMode(
+                            httpRequestExecuteCommand,
+                            requestCount: this.RequestCount.Value,
+                            coolDownTime: this.CoolDownTime.Value,
+                            batchSize: this.BatchSize.Value,
+                            maximizeThroughput: this.MaximizeThroughput,
+                            batchProcessor: batchProcessor
+                        );
                         break;
 
                     case IterationMode.CB:
-                        batchProcessor = new BatchProcessor(HttpRequest, _watchdog);
-                        iterationModeService = new CBMode.Builder()
-                            .SetCommand(httpRequestExecuteCommand)
-                            .SetCoolDownTime(this.CoolDownTime.Value)
-                            .SetBatchSize(this.BatchSize.Value)
-                            .SetMaximizeThroughput(this.MaximizeThroughput)
-                            .SetBatchProcessor(batchProcessor)
-                            .Build();
+                        batchProcessor = new BatchProcessor(this, HttpRequest, _watchdog);
+                        iterationModeService = new CBMode(
+                            httpRequestExecuteCommand,
+                            coolDownTime: this.CoolDownTime.Value,
+                            batchSize: this.BatchSize.Value,
+                            maximizeThroughput: this.MaximizeThroughput,
+                            batchProcessor: batchProcessor
+                        );
                         break;
 
                     case IterationMode.R:
-                        iterationModeService = new RMode.Builder()
-                            .SetCommand(httpRequestExecuteCommand)
-                            .SetRequestCount(this.RequestCount.Value)
-                            .SetWatchdog(_watchdog)
-                            .SetRequest(HttpRequest)
-                            .Build();
+                        iterationModeService = new RMode(
+                            httpIteration: this,
+                            request: this.HttpRequest,
+                            command: httpRequestExecuteCommand,
+                            requestCount: this.RequestCount.Value,
+                            watchdog: _watchdog
+                        );
                         break;
 
                     case IterationMode.D:
-                        iterationModeService = new DMode.Builder()
-                            .SetCommand(httpRequestExecuteCommand)
-                            .SetDuration(this.Duration.Value)
-                            .SetWatchdog(_watchdog)
-                            .SetRequest(HttpRequest)
-                            .Build();
+                        iterationModeService = new DMode(
+                            httpIteration: this,
+                            request: this.HttpRequest,
+                            command: httpRequestExecuteCommand,
+                            duration: this.Duration.Value,
+                            watchdog: _watchdog
+                        );
                         break;
 
                     default:
                         throw new ArgumentException("Invalid iteration mode was chosen");
                 }
 
-                // Execute the iteration mode service
-                if (iterationModeService != null)
-                {
-                    _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
-                }
+                _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {command.HttpClientService.SessionId} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.Url.Url}", LPSLoggingLevel.Verbose, _cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {command.HttpClientService.SessionId} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
-
             }
             catch (OperationCanceledException) when (_cts.IsCancellationRequested)
             {

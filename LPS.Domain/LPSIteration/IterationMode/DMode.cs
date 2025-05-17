@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Diagnostics;
@@ -9,15 +10,25 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class DMode : IIterationModeService
     {
-        private HttpRequest.ExecuteCommand _command;
-        private int _duration;
-        private IWatchdog _watchdog;
+        private readonly HttpRequest.ExecuteCommand _command;
+        private readonly int _duration;
+        private readonly IWatchdog _watchdog;
+        private readonly HttpRequest _request;
         private readonly string _hostName;
-        private HttpRequest _request;
+        private readonly HttpIteration _httpIteration;
 
-        private DMode(HttpRequest request)
+        public DMode(
+            HttpIteration httpIteration,
+            HttpRequest request,
+            HttpRequest.ExecuteCommand command,
+            int duration,
+            IWatchdog watchdog)
         {
-            _request = request;
+            _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
+            _request = request ?? throw new ArgumentNullException(nameof(request));
+            _command = command ?? throw new ArgumentNullException(nameof(command));
+            _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
+            _duration = duration;
             _hostName = _request.Url.HostName;
         }
 
@@ -27,65 +38,20 @@ namespace LPS.Domain.LPSRun.IterationMode
             {
                 int numberOfSentRequests = 0;
                 var stopwatch = Stopwatch.StartNew();
+
                 while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested)
                 {
                     await _watchdog.BalanceAsync(_hostName, cancellationToken);
                     await _command.ExecuteAsync(_request);
                     numberOfSentRequests++;
                 }
+
                 stopwatch.Stop();
                 return numberOfSentRequests;
             }
             catch
             {
                 throw;
-            }
-        }
-
-        public class Builder : IBuilder<DMode>
-        {
-            private HttpRequest.ExecuteCommand _command;
-            private int _duration;
-            private IWatchdog _watchdog;
-            private HttpRequest _request;
-
-            public Builder SetCommand(HttpRequest.ExecuteCommand command)
-            {
-                _command = command;
-                return this;
-            }
-
-            public Builder SetDuration(int duration)
-            {
-                _duration = duration;
-                return this;
-            }
-
-            public Builder SetWatchdog(IWatchdog watchdog)
-            {
-                _watchdog = watchdog;
-                return this;
-            }
-
-            public Builder SetRequest(HttpRequest request)
-            {
-                _request = request;
-                return this;
-            }
-
-            public DMode Build()
-            {
-                if (_request == null)
-                    throw new InvalidOperationException("Request must be provided.");
-
-                var dMode = new DMode(_request)
-                {
-                    _command = _command,
-                    _duration = _duration,
-                    _watchdog = _watchdog,
-                    _request = _request
-                };
-                return dMode;
             }
         }
     }

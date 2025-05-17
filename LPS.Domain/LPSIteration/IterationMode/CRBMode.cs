@@ -1,4 +1,5 @@
-﻿using LPS.Domain.Domain.Common.Interfaces;
+﻿using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,13 +11,28 @@ namespace LPS.Domain.LPSRun.IterationMode
 {
     internal class CRBMode : IIterationModeService
     {
-        private HttpRequest.ExecuteCommand _command;
         private int _requestCount;
-        private int _coolDownTime;
-        private int _batchSize;
-        private bool _maximizeThroughput;
-        private IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
-        private CRBMode() { }
+        private readonly HttpRequest.ExecuteCommand _command;
+        private readonly int _coolDownTime;
+        private readonly int _batchSize;
+        private readonly bool _maximizeThroughput;
+        private readonly IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
+
+        public CRBMode(
+            HttpRequest.ExecuteCommand command,
+            int requestCount,
+            int coolDownTime,
+            int batchSize,
+            bool maximizeThroughput,
+            IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor)
+        {
+            _command = command ?? throw new ArgumentNullException(nameof(command));
+            _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
+            _requestCount = requestCount;
+            _coolDownTime = coolDownTime;
+            _batchSize = batchSize;
+            _maximizeThroughput = maximizeThroughput;
+        }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
@@ -24,11 +40,13 @@ namespace LPS.Domain.LPSRun.IterationMode
             var coolDownWatch = Stopwatch.StartNew();
 
             bool continueCondition() => _requestCount > 0 && !cancellationToken.IsCancellationRequested;
-            Func<bool> batchCondition = ()=> !cancellationToken.IsCancellationRequested;
+            Func<bool> batchCondition = () => !cancellationToken.IsCancellationRequested;
             bool newBatch = true;
+
             while (continueCondition())
             {
-                int batchSize = _batchSize < _requestCount ? _batchSize : _requestCount;
+                int batchSize = Math.Min(_batchSize, _requestCount);
+
                 if (_maximizeThroughput)
                 {
                     if (newBatch)
@@ -45,80 +63,25 @@ namespace LPS.Domain.LPSRun.IterationMode
                     coolDownWatch.Restart();
                     awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, batchSize, batchCondition, cancellationToken));
                     _requestCount -= batchSize;
-                    if(continueCondition())
-                        await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
+
+                    if (continueCondition())
+                    {
+                        var delay = Math.Max(_coolDownTime, _coolDownTime - (int)coolDownWatch.ElapsedMilliseconds);
+                        await Task.Delay(delay, cancellationToken);
+                    }
                 }
             }
 
             coolDownWatch.Stop();
+
             try
             {
                 var results = await Task.WhenAll(awaitableTasks);
                 return results.Sum();
             }
-            catch (Exception ex)
+            catch
             {
                 throw;
-            }
-        }
-
-        public class Builder : IBuilder<CRBMode>
-        {
-            private HttpRequest.ExecuteCommand _command;
-            private int _requestCount;
-            private int _coolDownTime;
-            private int _batchSize;
-            private bool _maximizeThroughput;
-            private IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
-
-            public Builder SetCommand(HttpRequest.ExecuteCommand command)
-            {
-                _command = command;
-                return this;
-            }
-
-            public Builder SetRequestCount(int requestCount)
-            {
-                _requestCount = requestCount;
-                return this;
-            }
-
-            public Builder SetCoolDownTime(int coolDownTime)
-            {
-                _coolDownTime = coolDownTime;
-                return this;
-            }
-
-            public Builder SetBatchSize(int batchSize)
-            {
-                _batchSize = batchSize;
-                return this;
-            }
-
-            public Builder SetMaximizeThroughput(bool maximizeThroughput)
-            {
-                _maximizeThroughput = maximizeThroughput;
-                return this;
-            }
-
-            public Builder SetBatchProcessor(IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor)
-            {
-                _batchProcessor = batchProcessor;
-                return this;
-            }
-
-            public CRBMode Build()
-            {
-                var crbMode = new CRBMode
-                {
-                    _command = _command,
-                    _requestCount = _requestCount,
-                    _coolDownTime = _coolDownTime,
-                    _batchSize = _batchSize,
-                    _maximizeThroughput = _maximizeThroughput,
-                    _batchProcessor = _batchProcessor
-                };
-                return crbMode;
             }
         }
     }
