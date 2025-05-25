@@ -7,6 +7,8 @@ using LPS.Common.Interfaces;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.GRPCExtensions;
 using LPS.Infrastructure.GRPCClients.Factory;
+using LPS.Domain;
+using System.Xml.Linq;
 namespace Apis.Services
 {
     public class NodeGRPCService : NodeServiceBase
@@ -42,6 +44,7 @@ namespace Apis.Services
         {
             if (string.IsNullOrWhiteSpace(metadata.NodeName) || string.IsNullOrWhiteSpace(metadata.NodeIp))
             {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, "NodeName and NodeIp must be provided.", LPSLoggingLevel.Error);
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "NodeName and NodeIp must be provided."));
             }
 
@@ -79,10 +82,13 @@ namespace Apis.Services
             {
                 var node = _nodeRegistry.GetLocalNode();
 
-                return new GetNodeStatusResponse
+                var response = new GetNodeStatusResponse
                 {
                     Status = node.NodeStatus.ToGrpc()
                 };
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Node Status Request Was Completed Successfully {node.Metadata.NodeName}", LPSLoggingLevel.Verbose, _cts.Token);
+
+                return response;
             }
             catch (Exception ex)
             {
@@ -91,33 +97,32 @@ namespace Apis.Services
             }
         }
 
-        // Master triggers test on worker
+        // Call the worker (by the master) to trigger the registered tests
         public override async Task<TriggerTestResponse> TriggerTest(TriggerTestRequest request, ServerCallContext context)
         {
-            // This method might be called on the worker’s gRPC server
             try
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Received TriggerTest request. Notifying CLI to start the test...", LPSLoggingLevel.Information, _cts.Token);
 
                 _testTriggerNotifier.NotifyObservers();
-
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Trigger Test Request Was Completed Successfully", LPSLoggingLevel.Verbose, _cts.Token);
                 return new TriggerTestResponse { Status = LPS.Protos.Shared.NodeStatus.Running };
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,  $"Failed to start test\n{ex.Message}\n{ex.InnerException}.", LPSLoggingLevel.Error, _cts.Token);
-
                 return new TriggerTestResponse { Status = LPS.Protos.Shared.NodeStatus.Failed };
             }
         }
 
-        // Worker reports status to master
+        // Worker updates the master with its status
         public override async Task<SetNodeStatusResponse> SetNodeStatus(SetNodeStatusRequest request, ServerCallContext context)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(request.NodeName) || string.IsNullOrWhiteSpace(request.NodeIp))
                 {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "NodeName and NodeIp must be provided.", LPSLoggingLevel.Error, _cts.Token);
                     throw new RpcException(new Status(StatusCode.InvalidArgument, "NodeName and NodeIp must be provided."));
                 }
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Received status update from {request.NodeName}: {request.Status}", LPSLoggingLevel.Information, _cts.Token);
@@ -126,6 +131,8 @@ namespace Apis.Services
                 var node = _nodeRegistry.Query(n => n.Metadata.NodeName == request.NodeName && n.Metadata.NodeIP == request.NodeIp).Single();
                 if (node == null)
                 {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Node {request.NodeName} not found in registry.", LPSLoggingLevel.Warning, _cts.Token);
+
                     return new SetNodeStatusResponse
                     {
                         Success = false,
@@ -134,6 +141,7 @@ namespace Apis.Services
                 }
 
                 await node.SetNodeStatus(request.Status.ToLocal());
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Node status was updated for {request.NodeIp}\\{request.NodeName}", LPSLoggingLevel.Verbose, _cts.Token);
 
                 return new SetNodeStatusResponse
                 {
@@ -157,9 +165,10 @@ namespace Apis.Services
         {
             try
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,"Received CancelTest request. Cancelling local test...", LPSLoggingLevel.Warning, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,"Received CancelTest request. Cancelling local test...", LPSLoggingLevel.Verbose, _cts.Token);
 
                 bool testCancelled = CancelLocalTest();
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Cancellation was signaled", LPSLoggingLevel.Verbose, _cts.Token);
 
                 var status = testCancelled ? LPS.Protos.Shared.NodeStatus.Stopped : LPS.Protos.Shared.NodeStatus.Failed;
                 return new CancelTestResponse
@@ -170,7 +179,7 @@ namespace Apis.Services
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to cancel test.. {ex.Message}\n{ex.InnerException}", LPSLoggingLevel.Warning, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to cancel test.. {ex.Message}\n{ex.InnerException}", LPSLoggingLevel.Error, _cts.Token);
 
                 return new CancelTestResponse
                 {

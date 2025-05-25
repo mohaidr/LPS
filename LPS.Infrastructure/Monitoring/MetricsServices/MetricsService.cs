@@ -63,7 +63,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 updated = response.Success;
             }
-            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
+            else {
+                requestId = await DiscoverRequestIdOnMaster(requestId, token);
+            }
+
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to increase connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -91,7 +94,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 updated = response.Success;
             }
-            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
+            else
+            {
+                requestId = await DiscoverRequestIdOnMaster(requestId, token);
+            }
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to decrease connections count because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -115,11 +121,16 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 {
                     RequestId = requestId.ToString(),
                     ResponseCode = (int)lpsResponse.StatusCode,
+                    StatusReason = lpsResponse.StatusMessage,
                     ResponseTime = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(lpsResponse.TotalTime)
                 });
                 updated= response.Success;
             }
-            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
+            else
+            {
+                requestId = await DiscoverRequestIdOnMaster(requestId, token);
+            }
+
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update response metrics because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -149,7 +160,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 updated = response.Success;
             }
-            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
+            else
+            {
+                requestId = await DiscoverRequestIdOnMaster(requestId, token);
+            }
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data sent because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -180,7 +194,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 updated = response.Success;
             }
-            requestId = await DiscoverRequestIdOnLocalNode(requestId, token);
+            else
+            {
+                requestId = await DiscoverRequestIdOnMaster(requestId, token);
+            }
             if (requestId == Guid.Empty)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update data received because the requestId was empty", LPSLoggingLevel.Warning, token);
@@ -203,27 +220,41 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
         }
 
-        private async Task QueryMetricsAsync(Guid requestId)
+        private async Task QueryMetricsAsync(Guid requestId) // call this so in case the request id was sent by the worker to be translated to the matching one on the master
         {
             _metrics.TryAdd(requestId.ToString(),
                 await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
         }
-        private async Task<Guid> DiscoverRequestIdOnLocalNode(Guid requestId, CancellationToken token)
+        private async Task<Guid> DiscoverRequestIdOnMaster(Guid requestId, CancellationToken token)
         {
-            var entityDiscoveryRecord = _entityDiscoveryService.Discover(r => r.RequestId == requestId).FirstOrDefault();
+            var entityDiscoveryRecord = _entityDiscoveryService.Discover(r => r.RequestId == requestId).FirstOrDefault(); // There is no record for such request Id
             if (entityDiscoveryRecord != null)
             {
+                // if this is worker, there is no need to translate as this is the local requestId
+                if (_nodeMetaData.NodeType == Nodes.NodeType.Worker)
+                {
+                    return requestId;
+                }
+
+                // if this is master and the record does not belong to master, then get the matching on the master so the metrics are properly updated
                 if (entityDiscoveryRecord.Node.Metadata.NodeType != Nodes.NodeType.Master)
                 {
                     var fullyQualifiedName = entityDiscoveryRecord.FullyQualifiedName;
-                    var matchingRequestId = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == Nodes.NodeType.Master && r.FullyQualifiedName == fullyQualifiedName).First().RequestId;
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Found a matching HTTP request for '{requestId}' on the master node (ID: {matchingRequestId})", LPSLoggingLevel.Warning, token);
-
+                    var record = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == Nodes.NodeType.Master && r.FullyQualifiedName == fullyQualifiedName).FirstOrDefault();
+                    var matchingRequestId = record?.RequestId?? Guid.Empty; // Empty means it was registered by the worker but was not defined in the plan executing on the master
+                    if (record != null)
+                    {
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Found a matching HTTP request for '{requestId}' on the master node (ID: {matchingRequestId})", LPSLoggingLevel.Warning, token);
+                    }
+                    else 
+                    {
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"No matching HTTP request for '{requestId}' on the master node (ID: {matchingRequestId})", LPSLoggingLevel.Warning, token);
+                    }
                     return matchingRequestId;
                 }
                 return requestId;
             }
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"No matching HTTP request found for '{requestId}' on the master node", LPSLoggingLevel.Warning, token);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"No matching HTTP request found for '{requestId}'", LPSLoggingLevel.Warning, token);
             return Guid.Empty;
         }
     }

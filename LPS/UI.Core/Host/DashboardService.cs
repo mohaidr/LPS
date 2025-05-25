@@ -15,11 +15,7 @@ using System.Threading.Tasks;
 
 namespace LPS.UI.Core.Host
 {
-    public interface IDashboardService
-    {
-        public void Start();
-        public Task WaitForDashboardRefreshAsync();
-    }
+
     internal class DashboardService : IDashboardService
     {
         readonly ILogger _logger;
@@ -47,10 +43,10 @@ namespace LPS.UI.Core.Host
                 OpenBrowser($"http://{_clusterConfiguration?.MasterNodeIP ?? "127.0.0.1"}:{port}?{queryParams}");
             }
         }
-        public async Task WaitForDashboardRefreshAsync()
+        public async Task EnsureDashboardUpdateBeforeExitAsync()
         {
             var refreshInterval = _dashboardConfig.Value.RefreshRate.HasValue ? _dashboardConfig.Value.RefreshRate.Value + 1 : 6;
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Please wait while the client refreshes its metrics. The program will shut down in approximately {refreshInterval} seconds.", LPSLoggingLevel.Information);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Looks like the test is done — hang tight while we finalize things before exiting!", LPSLoggingLevel.Information);
             await Task.Delay(TimeSpan.FromSeconds(refreshInterval));
         }
         private static void OpenBrowser(string url)

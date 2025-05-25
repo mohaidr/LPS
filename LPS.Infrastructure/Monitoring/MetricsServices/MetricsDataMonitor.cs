@@ -1,4 +1,5 @@
 ﻿// MetricsDataMonitor.cs
+using Grpc.Core;
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
@@ -7,9 +8,12 @@ using LPS.Infrastructure.GRPCClients;
 using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.Nodes;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
@@ -66,7 +70,16 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                new DataTransmissionMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider)
             };
         }
+        
+        public void Monitor(Func<HttpIteration, bool> predicate)
+        {
+            var matchingIterations = _metricsRepository.Data.Keys.Where(predicate).ToList();
 
+            foreach (var iteration in matchingIterations)
+            {
+                Monitor(iteration);
+            }
+        }
         public void Monitor(HttpIteration httpIteration)
         {
             bool iterationRegistered = _metricsRepository.Data.TryGetValue(httpIteration, out MetricsContainer metricsContainer);
@@ -81,7 +94,30 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             {
                 var monitorClient = _customGrpcClientFactory.GetClient<GrpcMonitorClient>(_clusterConfiguration.MasterNodeIP);
                 var fqdn = _entityDiscoveryService.Discover(record => record.IterationId == httpIteration.Id).Single().FullyQualifiedName;
-                monitorClient.MonitorAsync(fqdn).Wait();
+                try
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"Sending a Monior Request for {fqdn}", LPSLoggingLevel.Information);
+                    monitorClient.MonitorAsync(fqdn).GetAwaiter().GetResult();
+                }
+                catch (InvalidOperationException invalidOpEx)
+                {
+                    if (invalidOpEx.InnerException is RpcException rpcEx)
+                    {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"{rpcEx.Status}\n{rpcEx.Message}\n{rpcEx.InnerException} {rpcEx.StackTrace}", LPSLoggingLevel.Error);
+                        AnsiConsole.MarkupLine($"[Red][[Error]] {DateTime.Now} {rpcEx.Status}\n{rpcEx.Message}[/]");
+                    }
+                    else
+                    {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"{invalidOpEx.Message}\n\t{invalidOpEx.InnerException}", LPSLoggingLevel.Error);
+                        throw;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\n\t{ex.InnerException}", LPSLoggingLevel.Error);
+                    throw;
+                }
+
             }
 
             foreach (var metric in metricsContainer.Metrics)
@@ -89,7 +125,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 metric.Start();
             }
         }
-
         public async void Stop(HttpIteration httpIteration)
         {
             if (_metricsRepository.Data.TryGetValue(httpIteration, out var metricsContainer))
@@ -104,17 +139,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 }
             }
         }
-
-        public void Monitor(Func<HttpIteration, bool> predicate)
-        {
-            var matchingIterations = _metricsRepository.Data.Keys.Where(predicate).ToList();
-
-            foreach (var iteration in matchingIterations)
-            {
-                Monitor(iteration);
-            }
-        }
-
         public async void Stop(Func<HttpIteration, bool> predicate)
         {
             var matchingIterations = _metricsRepository.Data.Keys.Where(predicate).ToList();

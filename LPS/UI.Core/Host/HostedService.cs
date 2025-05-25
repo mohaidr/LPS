@@ -16,11 +16,13 @@ using LPS.Protos.Shared;
 using LPS.Common.Interfaces;
 using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Infrastructure.GRPCClients;
+using Grpc.Core;
 
 namespace LPS.UI.Core.Host
 {
     internal class HostedService(
         dynamic command_args,
+        IDashboardService dashboardService,
         ICustomGrpcClientFactory customGrpcClientFactory,
         IClusterConfiguration clusterConfiguration,
         ITestOrchestratorService testOrchestratorService,
@@ -44,6 +46,7 @@ namespace LPS.UI.Core.Host
         CancellationTokenSource cts) : IHostedService
     {
         readonly ICustomGrpcClientFactory _customGrpcClientFactory= customGrpcClientFactory;
+        private readonly IDashboardService _dashboardService = dashboardService;
         readonly IClusterConfiguration _clusterConfiguration = clusterConfiguration;
         readonly INodeMetadata _nodeMetadata = nodeMetadata;
         readonly ITestTriggerNotifier _testTriggerNotifier = testTriggerNotifier;
@@ -175,6 +178,7 @@ namespace LPS.UI.Core.Host
                     await Task.Delay(1000);
                 }
             }
+            await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
         }
 
         private void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
@@ -185,18 +189,48 @@ namespace LPS.UI.Core.Host
                 e.Cancel = true; // Prevent default process termination.
                 AnsiConsole.MarkupLine("[yellow]Graceful shutdown requested (Ctrl+C/Break).[/]");
                 RequestCancellation(); // Cancel the CancellationTokenSource.
+
                 if (_nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master)
                 {
-
                     foreach (var node in _nodeRegistry.Query(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
                     {
                         var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
-                        client.CancelTest(new CancelTestRequest());
+                        int maxRetries = 3;
+                        int delayMs = 1000;
 
+                        for (int attempt = 1; attempt <= maxRetries; attempt++)
+                        {
+                            try
+                            {
+                                AnsiConsole.MarkupLine($"[yellow]Graceful shutdown requested from {node.Metadata.NodeIP}(Ctrl+C/Break).[/]");
+
+                                client.CancelTest(new CancelTestRequest());
+                                break; // success, exit retry loop
+                            }
+                            catch (RpcException ex) when (ex.StatusCode == StatusCode.Unavailable)
+                            {
+                                if (attempt == maxRetries)
+                                {
+                                    AnsiConsole.MarkupLine($"[red]Failed to send CancelTest to node {node.Metadata.NodeIP} after {maxRetries} attempts.[/]");
+                                }
+                                else
+                                {
+                                    AnsiConsole.MarkupLine($"[yellow]Retry {attempt} failed for node {node.Metadata.NodeIP}. Retrying in {delayMs} ms...[/]");
+                                    Thread.Sleep(delayMs);
+                                    delayMs *= 2; // optional: exponential backoff
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                AnsiConsole.MarkupLine($"[red]Unexpected error when sending CancelTest to node {node.Metadata.NodeIP}: {ex.Message}[/]");
+                                break; // Do not retry on unknown exceptions
+                            }
+                        }
                     }
                 }
             }
         }
+
         static bool _programCompleted;
         private async Task WatchForCancellationAsync()
         {

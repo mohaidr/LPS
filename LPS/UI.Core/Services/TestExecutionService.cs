@@ -183,7 +183,6 @@ namespace LPS.UI.Core.Services
                 _dashboardService.Start();
                 await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
                     .ExecuteAsync(plan);
-                await _dashboardService.WaitForDashboardRefreshAsync();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
             }
             else

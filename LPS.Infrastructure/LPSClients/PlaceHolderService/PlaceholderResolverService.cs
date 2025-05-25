@@ -431,7 +431,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                         await _logger.LogAsync(
                             _runtimeOperationIdProvider.OperationId,
                             $"Cache key '{cacheKey}': Counter reset to start value '{startValue}' because current value '{currentValue}' exceeded end value '{endValue}' or fell below start value.",
-                            LPSLoggingLevel.Information,
+                            LPSLoggingLevel.Verbose,
                             token
                         );
                     }

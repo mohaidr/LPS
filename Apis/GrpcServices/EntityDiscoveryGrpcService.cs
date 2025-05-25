@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using LPS.Infrastructure.Nodes;
 using LPS.Protos.Shared;
 using Node = LPS.Protos.Shared.Node;
+using LPS.Domain.Common.Interfaces;
+using ILogger = LPS.Domain.Common.Interfaces.ILogger;
 
 namespace LPS.GrpcServices
 {
@@ -12,24 +14,31 @@ namespace LPS.GrpcServices
     {
         private readonly IEntityDiscoveryService _entityDiscoveryService;
         private readonly INodeRegistry _nodeRegistry;
-        public EntityDiscoveryGrpcService(IEntityDiscoveryService entityDiscoveryService, INodeRegistry nodeRegistry)
+        ILogger _logger;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        public EntityDiscoveryGrpcService(IEntityDiscoveryService entityDiscoveryService, 
+            INodeRegistry nodeRegistry, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _entityDiscoveryService = entityDiscoveryService;
             _nodeRegistry = nodeRegistry;
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
         public override Task<Empty> AddEntityDiscoveryRecord(Protos.Shared.EntityDiscoveryRecord record, ServerCallContext context)
         {
             var node = _nodeRegistry.Query(n => n.Metadata.NodeName == record.Node.Name && n.Metadata.NodeIP == record.Node.NodeIP).FirstOrDefault();
             if (node == null) {
-                throw new RpcException(new Status(StatusCode.NotFound, "Node does not exist"));
+                _logger.Log(_runtimeOperationIdProvider.OperationId, "Node is not registered", LPSLoggingLevel.Error);
+                throw new RpcException(new Status(StatusCode.NotFound, "Node is not registered"));
             }
             if (string.IsNullOrWhiteSpace(record.FullyQualifiedName) ||
                 string.IsNullOrWhiteSpace(record.RoundId) ||
                 string.IsNullOrWhiteSpace(record.IterationId) ||
                 string.IsNullOrWhiteSpace(record.RequestId))
             {
-                throw new RpcException(new Status(StatusCode.InvalidArgument, "FullyQualifiedName and all Ids (RoundId, IterationId, RequestId) must be provided."));
+                _logger.Log(_runtimeOperationIdProvider.OperationId, "FullyQualifiedName and entities Ids (RoundId, IterationId, RequestId) must be provided.", LPSLoggingLevel.Error);
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "FullyQualifiedName and entities Ids (RoundId, IterationId, RequestId) must be provided."));
             }
 
             _entityDiscoveryService.AddEntityDiscoveryRecord(
@@ -44,12 +53,14 @@ namespace LPS.GrpcServices
         {
             if (string.IsNullOrWhiteSpace(query.FullyQualifiedName))
             {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, "FullyQualifiedName must be provided.", LPSLoggingLevel.Error);
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "FullyQualifiedName must be provided."));
             }
             var record = _entityDiscoveryService.Discover(r=> r.FullyQualifiedName == query.FullyQualifiedName)?.FirstOrDefault();
 
             if (record == null)
             {
+                _logger.Log(_runtimeOperationIdProvider.OperationId, "Entity not found", LPSLoggingLevel.Error);
                 throw new RpcException(new Status(StatusCode.NotFound, "Entity not found"));
             }
 

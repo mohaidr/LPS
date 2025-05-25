@@ -13,11 +13,16 @@ namespace LPS.Infrastructure.Nodes
     {
         ILogger _logger;
         IRuntimeOperationIdProvider _operationIdProvider;
-        public EntityDiscoveryService(ILogger logger, IRuntimeOperationIdProvider operationIdProvider = null)
+        INodeMetadata _nodeMetaData;
+        public EntityDiscoveryService(
+            INodeMetadata nodeMetaData,
+            ILogger logger, 
+            IRuntimeOperationIdProvider operationIdProvider = null)
         {
             _entityDiscoveryRecords = new List<EntityDiscoveryRecord>();
             _logger = logger;
             _operationIdProvider = operationIdProvider;
+            _nodeMetaData = nodeMetaData;
         }
 
         private readonly ICollection<EntityDiscoveryRecord> _entityDiscoveryRecords;
@@ -26,13 +31,21 @@ namespace LPS.Infrastructure.Nodes
         {
             var record = new EntityDiscoveryRecord(fullyQualifiedName, roundId, iterationId, requestId, node);
 
-            if (!_entityDiscoveryRecords.Contains(record))
+            if (!_entityDiscoveryRecords.Any(record=> record.FullyQualifiedName == fullyQualifiedName && record.Node.Metadata.NodeName == node.Metadata.NodeName))
             {
+                if (node.Metadata.NodeType != NodeType.Master && _entityDiscoveryRecords.Any(record => record.FullyQualifiedName == fullyQualifiedName && record.Node.Metadata.NodeType == NodeType.Master))
+                {
+                    _entityDiscoveryRecords.Add(record);
+                }
+                else if(node.Metadata.NodeName == _nodeMetaData.NodeName)
+                {
+                    _entityDiscoveryRecords.Add(record);
+                }
+
                 _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' has been added to discovery record", LPSLoggingLevel.Verbose);
-                _entityDiscoveryRecords.Add(record);
             }
             else {
-                _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' already exists", LPSLoggingLevel.Verbose);
+                _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' already exists", LPSLoggingLevel.Warning);
             }
         }
         public ICollection<IEntityDiscoveryRecord>? Discover(Func<IEntityDiscoveryRecord, bool> predict)

@@ -1,15 +1,19 @@
-﻿using LPS.Domain;
+﻿using Grpc.Core;
+using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.GRPCClients;
 using LPS.Infrastructure.GRPCClients.Factory;
+using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Nodes;
+using Spectre.Console;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Command
@@ -23,16 +27,22 @@ namespace LPS.Infrastructure.Monitoring.Command
         INodeRegistry _nodeRegistry;
         INodeMetadata _nodeMetadata;
         ICustomGrpcClientFactory _grpcClientFactory;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        ILogger _logger;
         public HttpIterationCommandStatusMonitor(
             IEntityDiscoveryService entityDiscoveryService,
             INodeRegistry nodeRegistry,
             INodeMetadata nodeMetadata,
-            ICustomGrpcClientFactory grpcClientFactory)
+            ICustomGrpcClientFactory grpcClientFactory,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            ILogger logger)
         {
             _entityDiscoveryService = entityDiscoveryService;
             _nodeRegistry = nodeRegistry;
             _nodeMetadata = nodeMetadata;
             _grpcClientFactory = grpcClientFactory;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _logger = logger;
         }
 
         private readonly ConcurrentDictionary<TEntity, ConcurrentBag<TCommand>> _commandRegistry = new ConcurrentDictionary<TEntity, ConcurrentBag<TCommand>>();
@@ -102,10 +112,21 @@ namespace LPS.Infrastructure.Monitoring.Command
                 var fullyQualifiedName = _entityDiscoveryService.Discover(record => record.IterationId == entity.Id).Single().FullyQualifiedName;
                 if (_nodeMetadata.NodeType == NodeType.Master)
                 {
-                    foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == NodeType.Worker && (node.NodeStatus == NodeStatus.Running|| node.NodeStatus == NodeStatus.Pending)))
+                    foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == NodeType.Worker && (node.NodeStatus == NodeStatus.Running || node.NodeStatus == NodeStatus.Pending)))
                     {
-                        var client = _grpcClientFactory.GetClient<GrpcMonitorClient>(node.Metadata.NodeIP);
-                        remoteCommandsStatuses = await client.QueryStatusesAsync(fullyQualifiedName);
+                        try
+                        {
+                            var client = _grpcClientFactory.GetClient<GrpcMonitorClient>(node.Metadata.NodeIP);
+                            remoteCommandsStatuses = await client.QueryStatusesAsync(fullyQualifiedName);
+                        }
+                        catch (RpcException rpcEx)
+                        {
+                            _logger.Log(_runtimeOperationIdProvider.OperationId, $"{rpcEx.Status}\n{rpcEx.Message}\n{rpcEx.InnerException} {rpcEx.StackTrace}", LPSLoggingLevel.Error);
+                            AnsiConsole.MarkupLine($"[Red][[Error]] {DateTime.Now} {rpcEx.Status}\n{rpcEx.Message}[/]");
+                        }
+                        catch {
+                            throw;
+                        }
                     }
                 }
             }

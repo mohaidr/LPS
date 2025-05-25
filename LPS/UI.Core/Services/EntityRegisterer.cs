@@ -46,13 +46,13 @@ namespace LPS.UI.Core.Services
 
                     if (((HttpIteration)iteration).HttpRequest != null)
                     {
-                        var entityName = $"plan/{plan.Name}/round/{round.Name}/Iteration/{iteration.Name}";
-                        _entityDiscoveryService.AddEntityDiscoveryRecord(entityName, round.Id, iteration.Id, ((HttpIteration)iteration).HttpRequest.Id, _nodeRegistry.GetLocalNode()); // register locally
+                        var fqdn = $"plan/{plan.Name}/round/{round.Name}/Iteration/{iteration.Name}";
+                        _entityDiscoveryService.AddEntityDiscoveryRecord(fqdn, round.Id, iteration.Id, ((HttpIteration)iteration).HttpRequest.Id, _nodeRegistry.GetLocalNode()); // register locally
                         if (_nodeMetaData.NodeType != Infrastructure.Nodes.NodeType.Master)
                         {
                             var request = new Protos.Shared.EntityDiscoveryRecord
                             {
-                                FullyQualifiedName = entityName,
+                                FullyQualifiedName = fqdn,
                                 RoundId = round.Id.ToString(),
                                 IterationId = iteration.Id.ToString(),
                                 RequestId = ((HttpIteration)iteration).HttpRequest.Id.ToString(),

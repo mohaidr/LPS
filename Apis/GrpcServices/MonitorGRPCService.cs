@@ -6,6 +6,8 @@ using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain;
 using LPS.Protos.Shared;
 using LPS.Infrastructure.Common.GRPCExtensions;
+using LPS.Infrastructure.Logger;
+using ILogger = LPS.Domain.Common.Interfaces.ILogger;
 namespace Apis.Services
 {
     public class MonitorGRPCService : MonitorService.MonitorServiceBase
@@ -13,15 +15,19 @@ namespace Apis.Services
         private readonly IEntityDiscoveryService _discoveryService;
         private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _statusMonitor;
         private readonly IMetricsDataMonitor _metricsMonitor;
-
+        ILogger _logger;
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         public MonitorGRPCService(
             IEntityDiscoveryService discoveryService,
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> statusMonitor,
-             IMetricsDataMonitor metricsMonitor)
+             IMetricsDataMonitor metricsMonitor, 
+             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _discoveryService = discoveryService;
             _statusMonitor = statusMonitor;
             _metricsMonitor = metricsMonitor;
+            _logger = logger;
+            _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
         public override async Task<StatusQueryResponse> QueryIterationStatuses(StatusQueryRequest request, ServerCallContext context)
@@ -33,6 +39,7 @@ namespace Apis.Services
 
             if (record == null)
             {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"No entity found for FQDN: {request.FullyQualifiedName}", LPSLoggingLevel.Error);
                 throw new RpcException(new Status(StatusCode.NotFound, $"No entity found for FQDN: {request.FullyQualifiedName}"));
             }
 
@@ -49,6 +56,7 @@ namespace Apis.Services
 
             var response = new StatusQueryResponse();
             response.Statuses.AddRange(grpcStatuses?? new List<LPS.Protos.Shared.ExecutionStatus>());
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Status Request Completed Successfully: {request.FullyQualifiedName}", LPSLoggingLevel.Verbose);
 
             return response;
         }
@@ -60,11 +68,13 @@ namespace Apis.Services
 
             if (record == null)
             {
-                throw new RpcException(new Status(StatusCode.NotFound, $"No entity found for FQDN: {request.FullyQualifiedName}"));
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Can't Monitor {request.FullyQualifiedName} - No entity found for FQDN: {request.FullyQualifiedName}", LPSLoggingLevel.Error);
+                throw new RpcException(new Status(StatusCode.NotFound, $"Can't Monitor {request.FullyQualifiedName} - No entity found for FQDN: {request.FullyQualifiedName}"));
             }
 
 
             _metricsMonitor.Monitor(iteration=> iteration.Id == record.IterationId);
+            _logger.Log(_runtimeOperationIdProvider.OperationId, $"gRPC monitor request completed successfully: {request.FullyQualifiedName}", LPSLoggingLevel.Verbose);
 
             return Task.FromResult(new MonitorResponse
             {

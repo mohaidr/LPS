@@ -13,14 +13,17 @@ namespace Apis.Services
         private readonly LPS.Domain.Common.Interfaces.ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IMetricsService _metricsService;
+        private readonly CancellationTokenSource _cts;
 
         public MetricsGrpcService(LPS.Domain.Common.Interfaces.ILogger logger,
                                   IRuntimeOperationIdProvider runtimeOperationIdProvider,
-                                  IMetricsService metricsService)
+                                  IMetricsService metricsService,
+                                  CancellationTokenSource cts)
         {
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _metricsService = metricsService;
+            _cts = cts;
         }
 
         public override async Task<UpdateConnectionsResponse> UpdateConnections(UpdateConnectionsRequest request, ServerCallContext context)
@@ -28,6 +31,7 @@ namespace Apis.Services
             var success = request.Increase
                 ? await _metricsService.TryIncreaseConnectionsCountAsync(Guid.Parse(request.RequestId), context.CancellationToken)
                 : await _metricsService.TryDecreaseConnectionsCountAsync(Guid.Parse(request.RequestId), request.IsSuccessful, context.CancellationToken);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update connections count request completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
 
             return new UpdateConnectionsResponse { Success = success };
         }
@@ -36,17 +40,20 @@ namespace Apis.Services
         {
             var success = await _metricsService.TryUpdateResponseMetricsAsync(
                 Guid.Parse(request.RequestId),
-                new LPS.Domain.HttpResponse.SetupCommand { StatusCode = (HttpStatusCode)request.ResponseCode, TotalTime =  request.ResponseTime.ToTimeSpan() },
-                context.CancellationToken);
+                new LPS.Domain.HttpResponse.SetupCommand { StatusCode = (HttpStatusCode)request.ResponseCode, StatusMessage = request.StatusReason, TotalTime = request.ResponseTime.ToTimeSpan() },
+                _cts.Token)  ;
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update response metrics completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
 
             return new UpdateResponseMetricsResponse { Success = success };
         }
 
         public override async Task<UpdateDataTransmissionResponse> UpdateDataTransmission(UpdateDataTransmissionRequest request, ServerCallContext context)
         {
+
             var success = request.IsSent
-                ? await _metricsService.TryUpdateDataSentAsync(Guid.Parse(request.RequestId), request.DataSize, request.TimeTaken, context.CancellationToken)
-                : await _metricsService.TryUpdateDataReceivedAsync(Guid.Parse(request.RequestId), request.DataSize, request.TimeTaken, context.CancellationToken);
+                ? await _metricsService.TryUpdateDataSentAsync(Guid.Parse(request.RequestId), request.DataSize, request.TimeTaken, _cts.Token)
+                : await _metricsService.TryUpdateDataReceivedAsync(Guid.Parse(request.RequestId), request.DataSize, request.TimeTaken, _cts.Token);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update data transmission metrics completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
 
             return new UpdateDataTransmissionResponse { Success = success };
         }
