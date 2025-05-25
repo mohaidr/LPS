@@ -11,6 +11,7 @@ using System.Net.Sockets;
 using System;
 using Grpc.Core;
 using LPS.Infrastructure.Nodes;
+using Grpc.Net.Client.Configuration;
 
 namespace LPS.Infrastructure.GRPCClients
 {
@@ -20,7 +21,28 @@ namespace LPS.Infrastructure.GRPCClients
 
         private static GrpcChannel CreateChannel(string address, out GrpcChannel channel)
         {
-            channel = GrpcChannel.ForAddress(address);
+            var defaultServiceConfig = new ServiceConfig
+            {
+                MethodConfigs =
+                {
+                    new MethodConfig
+                    {
+                        Names = { MethodName.Default }, // Applies to all methods
+                        RetryPolicy = new RetryPolicy
+                        {
+                            MaxAttempts = 2,
+                            InitialBackoff = TimeSpan.FromSeconds(1),
+                            MaxBackoff = TimeSpan.FromSeconds(5),
+                            BackoffMultiplier = 1.5,
+                            RetryableStatusCodes = { StatusCode.Unavailable }
+                        }
+                    }
+                }
+            };
+            channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions 
+            { 
+                ServiceConfig = defaultServiceConfig
+            });
             return channel;
         }
 
@@ -31,7 +53,7 @@ namespace LPS.Infrastructure.GRPCClients
 
         public static IGRPCClient Create(string grpcAddress)
         {
-           return new GrpcNodeClient(grpcAddress);
+            return new GrpcNodeClient(grpcAddress);
         }
     }
 }
