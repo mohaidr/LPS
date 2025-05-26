@@ -117,7 +117,7 @@ namespace LPS.Infrastructure.Monitoring.Command
                         try
                         {
                             var client = _grpcClientFactory.GetClient<GrpcMonitorClient>(node.Metadata.NodeIP);
-                            remoteCommandsStatuses = await client.QueryStatusesAsync(fullyQualifiedName);
+                            remoteCommandsStatuses = await client.QueryIterationStatusesAsync(fullyQualifiedName);
                         }
                         catch (RpcException rpcEx)
                         {

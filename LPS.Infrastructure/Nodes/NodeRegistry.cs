@@ -1,4 +1,9 @@
-﻿using System;
+﻿using LPS.Infrastructure.Common.GRPCExtensions;
+using LPS.Infrastructure.Grpc;
+using LPS.Infrastructure.GRPCClients;
+using LPS.Infrastructure.GRPCClients.Factory;
+using LPS.Protos.Shared;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,7 +16,16 @@ namespace LPS.Infrastructure.Nodes
         private readonly List<INode> _nodes = new();
         private INode? _masterNode;
         private INode? _localNode;
-
+        readonly IClusterConfiguration _clusterConfiguration;
+        ICustomGrpcClientFactory _customGrpcClientFactory;
+        INodeMetadata _nodeMetadata;
+        public NodeRegistry(ICustomGrpcClientFactory customGrpcClientFactory,
+        IClusterConfiguration clusterConfiguration, INodeMetadata nodeMetadata) 
+        {
+            _clusterConfiguration = clusterConfiguration;
+            _customGrpcClientFactory = customGrpcClientFactory;
+            _nodeMetadata = nodeMetadata;
+        }
         public void RegisterNode(INode node)
         {
             // Do not compare as records becuase the recode contains reference based comparison types
@@ -23,12 +37,26 @@ namespace LPS.Infrastructure.Nodes
                 {
                     _masterNode = node;
                 }
+                if (_nodeMetadata.NodeType == NodeType.Worker && _nodeMetadata.NodeIP == node.Metadata.NodeIP) // worker registering itself to master
+                {
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
+                    // Call the gRPC Service
+                    client.RegisterNode(node.Metadata.ToProto()); // register on the master node
+                }
+                else
+                if (_nodeMetadata.NodeType == NodeType.Master && node.Metadata.NodeType == NodeType.Worker)// master regestering itself to worker
+                {
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
+                    // Call the gRPC Service
+                    client.RegisterNode(_nodeMetadata.ToProto()); // register the master on the local node
+                    client.SetNodeStatus(new SetNodeStatusRequest { NodeIp = _nodeMetadata.NodeIP, NodeName = _nodeMetadata.NodeName, Status =  _masterNode?.NodeStatus.ToGrpc()?? NodeStatus.Pending.ToGrpc() });
+                }
             }
         }
 
         public void UnregisterNode(INode node)
         {
-            if (_nodes.Remove(node) && node == _masterNode)
+            if (_nodes.Remove(node) && node.Metadata.NodeType == NodeType.Master)
             {
                 _masterNode = _nodes.FirstOrDefault(n => n.Metadata.NodeType == NodeType.Master);
             }
@@ -57,9 +85,7 @@ namespace LPS.Infrastructure.Nodes
 
         private bool IsLocalNode(INode node)
         {
-            return node.Metadata.NetworkInterfaces
-                .SelectMany(n => n.IpAddresses)
-                .Contains(INode.GetLocalIPAddress());
+            return node.Metadata.NodeIP == INode.GetLocalIPAddress();
         }
     }
 

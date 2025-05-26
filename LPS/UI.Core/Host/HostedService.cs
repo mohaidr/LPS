@@ -19,11 +19,14 @@ using LPS.Infrastructure.GRPCClients;
 using Grpc.Core;
 using System.Diagnostics;
 using System.Text.RegularExpressions;
+using LPS.Infrastructure.Grpc;
+using LPS.Infrastructure.Services;
 
 namespace LPS.UI.Core.Host
 {
     internal class HostedService(
         dynamic command_args,
+        NodeHealthMonitorBackgroundService nodeHealthMonitorBackgroundService,
         IDashboardService dashboardService,
         ICustomGrpcClientFactory customGrpcClientFactory,
         IClusterConfiguration clusterConfiguration,
@@ -47,6 +50,7 @@ namespace LPS.UI.Core.Host
 
         CancellationTokenSource cts) : IHostedService
     {
+        readonly NodeHealthMonitorBackgroundService _nodeHealthMonitorBackgroundService = nodeHealthMonitorBackgroundService;
         readonly ICustomGrpcClientFactory _customGrpcClientFactory= customGrpcClientFactory;
         private readonly IDashboardService _dashboardService = dashboardService;
         readonly IClusterConfiguration _clusterConfiguration = clusterConfiguration;
@@ -73,7 +77,9 @@ namespace LPS.UI.Core.Host
         {
             try
             {
-                await RegisterNodeAsync();
+                RegisterNodeAsync();
+                _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(cancellationToken); });
+
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this iteration", LPSLoggingLevel.Information);
 
@@ -106,49 +112,10 @@ namespace LPS.UI.Core.Host
             }
         }
 
-        private async Task RegisterNodeAsync()
+        private void RegisterNodeAsync()
         {
             // keep this line for the worker nodes to register the nodes locally
             _nodeRegistry.RegisterNode(new Infrastructure.Nodes.Node(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory)); // register locally
-            // Create a gRPC Channel to the Server
-            // Create the gRPC Client
-            var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
-            // Map Disks from `_nodeMetadata`
-            var diskList = _nodeMetadata.Disks.Select(d => new LPS.Protos.Shared.DiskInfo
-            {
-                Name = d.Name,
-                TotalSize = d.TotalSize,
-                FreeSpace = d.FreeSpace
-            }).ToList();
-
-            // Map Network Interfaces from `_nodeMetadata`
-            var networkList = _nodeMetadata.NetworkInterfaces.Select(n => new LPS.Protos.Shared.NetworkInfo
-            {
-                InterfaceName = n.InterfaceName,
-                Type = n.Type,
-                Status = n.Status,
-                IpAddresses = { n.IpAddresses } // Converts List<string> to repeated field
-            }).ToList();
-
-            // Construct gRPC Request
-            var nodeMetadata = new LPS.Protos.Shared.NodeMetadata
-            {
-                NodeName = _nodeMetadata.NodeName,
-                NodeIp = _nodeMetadata.NodeIP,
-                NodeType = _nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master ? LPS.Protos.Shared.NodeType.Master : LPS.Protos.Shared.NodeType.Worker,
-                Os = _nodeMetadata.OS,
-                Architecture = _nodeMetadata.Architecture,
-                Framework = _nodeMetadata.Framework,
-                Cpu = _nodeMetadata.CPU,
-                LogicalProcessors = _nodeMetadata.LogicalProcessors,
-                TotalRam = _nodeMetadata.TotalRAM,
-                Disks = { diskList }, // Assign mapped Disks
-                NetworkInterfaces = { networkList } // Assign mapped NetworkInterfaces
-            };
-
-            // Call the gRPC Service
-            RegisterNodeResponse response = await client.RegisterNodeAsync(nodeMetadata); // register on the master node
-
         }
 
         private static void SavePlanToDisk(PlanDto planDto)
@@ -168,18 +135,19 @@ namespace LPS.UI.Core.Host
             _programCompleted = true;
 
             var localNode = _nodeRegistry.GetLocalNode();
-            await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
 
-            if (!_cts.IsCancellationRequested 
-                || localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
+            if (localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
             {
                 //TODO: Think about this approach
-                while (_nodeRegistry.Query(n => n.NodeStatus == Infrastructure.Nodes.NodeStatus.Running
+                while (_nodeRegistry.GetNeighborNodes().Where(n => n.NodeStatus == Infrastructure.Nodes.NodeStatus.Running
                 || n.NodeStatus == Infrastructure.Nodes.NodeStatus.Pending).Count() > 0)
                 {
                     await Task.Delay(1000);
                 }
             }
+            await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
+            _nodeHealthMonitorBackgroundService.Stop();
+
             await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
         }
 
@@ -202,7 +170,7 @@ namespace LPS.UI.Core.Host
                         }
                         catch (RpcException ex)
                         {
-                            node.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Failed);
+                         //   node.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Failed);
                             AnsiConsole.MarkupLine($"[red]Unexpected error when sending CancelTest to node {node.Metadata.NodeIP}: {ex.Message}[/]");
                             break;
                         }

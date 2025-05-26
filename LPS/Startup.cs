@@ -36,6 +36,7 @@ using LPS.Infrastructure.Entity;
 using Apis.Common;
 using System.Reflection;
 using Newtonsoft.Json;
+using LPS.Infrastructure.Services;
 
 namespace LPS
 {
@@ -133,11 +134,13 @@ namespace LPS
                     services.AddSingleton<ITestExecutionService, TestExecutionService>();
                     services.AddSingleton<ITestOrchestratorService, TestOrchestratorService>();
                     services.AddSingleton<IDashboardService, DashboardService>();
+                    services.AddSingleton<NodeHealthMonitorBackgroundService>();
                     services.ConfigureWritable<DashboardConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Dashboard"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:FileLogger"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Watchdog"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<HttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:HttpClient"), AppConstants.AppSettingsFileLocation);
                     services.AddHostedService(isp => isp.ResolveWith<HostedService>(new { args }));
+
                     if (hostContext.HostingEnvironment.IsProduction())
                     {
                         //add production dependencies

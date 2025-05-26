@@ -27,12 +27,25 @@ namespace LPS.Infrastructure.Nodes
         public static string NodeIP => GetLocalIPAddress();
         static string GetLocalIPAddress()
         {
-            return Dns.GetHostAddresses(Dns.GetHostName())
-                      .FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)?
-                      .ToString() ?? "No IPv4 Address Found";
+            try
+            {
+                using (var socket = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, 0))
+                {
+                    // Use a dummy public IP and port. No data will actually be sent.
+                    socket.Connect("8.8.8.8", 65530);
+                    var endPoint = socket.LocalEndPoint as IPEndPoint;
+                    return endPoint?.Address.ToString() ?? throw new InvalidOperationException("No IPv4 address could be determined for this host.");
+                }
+            }
+            catch
+            {
+                return Dns.GetHostAddresses(Dns.GetHostName())
+                    .FirstOrDefault(ip =>
+                        ip.AddressFamily == AddressFamily.InterNetwork &&
+                        !IPAddress.IsLoopback(ip))?.ToString() ?? throw new InvalidOperationException("No IPv4 address could be determined for this host.");
+            }
         }
         INodeMetadata Metadata { get; }
-
         NodeStatus NodeStatus { get; }
         public ValueTask<SetNodeStatusResponse> SetNodeStatus(NodeStatus nodeStatus);
 

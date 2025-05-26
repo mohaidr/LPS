@@ -19,8 +19,8 @@ namespace LPS.Infrastructure.Nodes
         IClusterConfiguration _clusterConfiguration;
         INodeRegistry _nodeRegistry;
         ICustomGrpcClientFactory _customGrpcClientFactory;
-        public Node(INodeMetadata metadata, 
-            IClusterConfiguration clusterConfiguration, 
+        public Node(INodeMetadata metadata,
+            IClusterConfiguration clusterConfiguration,
             INodeRegistry nodeRegistry,
             ICustomGrpcClientFactory customGrpcClientFactory)
         {
@@ -39,14 +39,20 @@ namespace LPS.Infrastructure.Nodes
         {
             NodeStatus = nodeStatus;
             var localNode = _nodeRegistry.GetLocalNode();
-            if (localNode.Metadata.NodeType != NodeType.Master)
+            if (localNode.Metadata.NodeType == NodeType.Worker && this.Metadata.NodeType == NodeType.Worker)
             {
                 // Create the gRPC Client
                 var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
                 var response = await client.SetNodeStatusAsync(new SetNodeStatusRequest() { NodeIp = this.Metadata.NodeIP, NodeName = this.Metadata.NodeName, Status = nodeStatus.ToGrpc() });
-
                 return response;
-
+            }
+            else if(this.Metadata.NodeType == NodeType.Master && localNode.Metadata.NodeType == NodeType.Master)
+            {
+                foreach (var node in _nodeRegistry.GetNeighborNodes().Where(node=>node.NodeStatus == NodeStatus.Running))
+                {
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
+                    await client.SetNodeStatusAsync(new SetNodeStatusRequest() { NodeIp = this.Metadata.NodeIP, NodeName = this.Metadata.NodeName, Status = nodeStatus.ToGrpc() });
+                }
             }
             return new SetNodeStatusResponse() { Success = true, Message = "Master Node Status has been updated" };
         }
