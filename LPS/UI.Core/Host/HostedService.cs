@@ -21,6 +21,8 @@ using System.Diagnostics;
 using System.Text.RegularExpressions;
 using LPS.Infrastructure.Grpc;
 using LPS.Infrastructure.Services;
+using NodeType = LPS.Infrastructure.Nodes.NodeType;
+using Node = LPS.Infrastructure.Nodes.Node;
 
 namespace LPS.UI.Core.Host
 {
@@ -77,7 +79,7 @@ namespace LPS.UI.Core.Host
         {
             try
             {
-                RegisterNodeAsync();
+                RegisterLocalNodeAsync();
                 _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(cancellationToken); });
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
@@ -112,10 +114,11 @@ namespace LPS.UI.Core.Host
             }
         }
 
-        private void RegisterNodeAsync()
+        private void RegisterLocalNodeAsync()
         {
+            Node node = _nodeMetadata.NodeType == NodeType.Master ? new MasterNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory) : new WorkerNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory);
             // keep this line for the worker nodes to register the nodes locally
-            _nodeRegistry.RegisterNode(new Infrastructure.Nodes.Node(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory)); // register locally
+            _nodeRegistry.RegisterNode(node); // register locally
         }
 
         private static void SavePlanToDisk(PlanDto planDto)
@@ -161,7 +164,8 @@ namespace LPS.UI.Core.Host
                 RequestCancellation(); // Cancel the CancellationTokenSource.
                 if (_nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master)
                 {
-                    foreach (var node in _nodeRegistry.Query(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
+                    foreach (var node in _nodeRegistry.Query(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker 
+                    && n.NodeStatus != Infrastructure.Nodes.NodeStatus.Failed && n.NodeStatus != Infrastructure.Nodes.NodeStatus.Stopped))
                     {
                         try
                         {

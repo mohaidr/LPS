@@ -9,6 +9,8 @@ using LPS.Infrastructure.Common.GRPCExtensions;
 using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Domain;
 using System.Xml.Linq;
+using LPS.Infrastructure.Grpc;
+using NodeType = LPS.Infrastructure.Nodes.NodeType;
 namespace Apis.Services
 {
     public class NodeGRPCService : NodeServiceBase
@@ -48,24 +50,10 @@ namespace Apis.Services
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "NodeName and NodeIp must be provided."));
             }
 
-            var disks = metadata.Disks.Select(d => new LPS.Infrastructure.Nodes.DiskInfo(d.Name, d.TotalSize, d.FreeSpace)).ToList<IDiskInfo>();
-            var networkInterfaces = metadata.NetworkInterfaces.Select(n => new LPS.Infrastructure.Nodes.NetworkInfo(n.InterfaceName, n.Type, n.Status, n.IpAddresses.ToList())).ToList<INetworkInfo>();
 
-            var nodeMetadata = new LPS.Infrastructure.Nodes.NodeMetadata(
-                _clusterConfig,
-                metadata.NodeName,
-                metadata.NodeIp,
-                metadata.Os,
-                metadata.Architecture,
-                metadata.Framework,
-                metadata.Cpu,
-                metadata.LogicalProcessors,
-                metadata.TotalRam,
-                disks,
-                networkInterfaces
-            );
+            var nodeMetadata = metadata.FromProto(_clusterConfig);
 
-            var node = new LPS.Infrastructure.Nodes.Node(nodeMetadata, _clusterConfig, _nodeRegistry, _customGrpcClientFactory);
+            INode node = nodeMetadata.NodeType ==  NodeType.Master  ? new MasterNode(nodeMetadata, _clusterConfig, _nodeRegistry, _customGrpcClientFactory): new WorkerNode(nodeMetadata, _clusterConfig, _nodeRegistry, _customGrpcClientFactory);
             _nodeRegistry.RegisterNode(node);
 
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Registered Node: {node.Metadata.NodeName} as {node.Metadata.NodeType}", LPSLoggingLevel.Information);

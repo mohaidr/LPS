@@ -101,6 +101,7 @@ namespace LPS.Infrastructure.Services
             catch
             {
                 _logger.Log(_opIdProvider.OperationId, "Master is unreachable. Cancelling local test.", LPSLoggingLevel.Error);
+                await master.SetNodeStatus(Nodes.NodeStatus.Failed);
                 _cts.Cancel(); // trigger local cancellation
             }
         }
