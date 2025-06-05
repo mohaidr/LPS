@@ -29,7 +29,7 @@ namespace LPS.Infrastructure.Nodes
             ICustomGrpcClientFactory customGrpcClientFactory)
         {
             Metadata = metadata;
-            NodeStatus = NodeStatus.Pending;
+            NodeStatus = NodeStatus.Created;
             _nodeRegistry = nodeRegistry;
             _clusterConfiguration = clusterConfiguration;
             _customGrpcClientFactory = customGrpcClientFactory;
@@ -40,6 +40,12 @@ namespace LPS.Infrastructure.Nodes
         public NodeStatus NodeStatus { get; protected set; }
 
         public abstract ValueTask<SetNodeStatusResponse> SetNodeStatus(NodeStatus nodeStatus);
+
+        public bool IsActive() => NodeStatus == NodeStatus.Running || NodeStatus == NodeStatus.Ready || NodeStatus == NodeStatus.Created;
+
+        public bool IsInActive() => NodeStatus == NodeStatus.Failed || NodeStatus == NodeStatus.Stopped;
+
+
     }
 
 }

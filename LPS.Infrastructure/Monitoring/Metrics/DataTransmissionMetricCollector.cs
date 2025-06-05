@@ -16,8 +16,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private double _totalDataSent = 0;
         private double _totalDataReceived = 0;
         private int _requestsCount = 0;
-        private double _totalDataUploadTime = 0;
-        private double _totalDataDownloadTime = 0;
+        private double _totalDataUploadTimeSeconds = 0;
+        private double _totalDataTransmissionSeconds = 0;
+        private double _totalDataDownloadTimeSeconds = 0;
         private LPSDurationMetricDimensionSetProtected _dimensionSet;
         IMetricsQueryService _metricsQueryService;
         internal DataTransmissionMetricCollector(HttpIteration httpIteration, string roundName, IMetricsQueryService metricsQueryService, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
@@ -56,20 +57,20 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public void UpdateDataSent(double dataSize, double uploadTime, CancellationToken token = default)
+        public void UpdateDataSent(double totalBytes, double elapsedTicks, CancellationToken token = default)
         {
             bool lockTaken = false;
             try
             {
                 _spinLock.Enter(ref lockTaken);
-                _totalDataUploadTime += uploadTime;
+                _totalDataUploadTimeSeconds += elapsedTicks / Stopwatch.Frequency; //(elapsedTicks/Stopwatch.Frequency) => gives the time in second
                 if (!IsStarted)
                 {
                     throw new InvalidOperationException("Metric collector is stopped.");
                 }
 
                 // Update the total and count, then calculate the average
-                _totalDataSent += dataSize;
+                _totalDataSent += totalBytes;
                 _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
                     .Single()
                     .GetDimensionSetAsync<ThroughputDimensionSet>().Result
@@ -83,8 +84,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public void UpdateDataReceived(double dataSize, double downloadTime, CancellationToken token = default)
+        public void UpdateDataReceived(double totalBytes, double elapsedTicks, CancellationToken token = default)
         {
+
             bool lockTaken = false;
             try
             {
@@ -96,8 +98,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 }
 
                 // Update the total and count, then calculate the average
-                _totalDataDownloadTime += downloadTime;
-                _totalDataReceived += dataSize;
+                _totalDataDownloadTimeSeconds += elapsedTicks / Stopwatch.Frequency; // (elapsedTicks/Stopwatch.Frequency) => gives the time in second
+                _totalDataReceived += totalBytes;
                 _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
                     .Single()
                     .GetDimensionSetAsync<ThroughputDimensionSet>().Result
@@ -120,13 +122,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 lock (lockObject)
                 {
-                    var totalDownloadSeconds = _totalDataDownloadTime / 1000;
-                    var totalUploadSeconds = _totalDataUploadTime / 1000;
-                    var totalSeconds = totalDownloadSeconds + totalUploadSeconds;
-
-                    _dimensionSet.UpdateDataSent(_totalDataSent, (_requestsCount > 0 ? _totalDataSent / _requestsCount : 0), totalUploadSeconds > 0 ? _totalDataSent / totalUploadSeconds : 0, totalSeconds * 1000);
-                    _dimensionSet.UpdateDataReceived(_totalDataReceived, _requestsCount > 0 ? _totalDataReceived / _requestsCount : 0, totalDownloadSeconds > 0 ? _totalDataReceived / totalDownloadSeconds : 0, totalSeconds * 1000);
-                    _dimensionSet.UpdateAverageBytes(totalSeconds > 0 ? (_totalDataReceived + _totalDataSent) / totalSeconds : 0, totalSeconds * 1000);
+                    _totalDataTransmissionSeconds = _totalDataDownloadTimeSeconds + _totalDataUploadTimeSeconds;
+                    _dimensionSet.UpdateDataSent(_totalDataSent, _requestsCount > 0 ? _totalDataSent / _requestsCount : 0, _totalDataUploadTimeSeconds > 0 ? _totalDataSent / _totalDataUploadTimeSeconds : 0, _totalDataTransmissionSeconds * 1000);
+                    _dimensionSet.UpdateDataReceived(_totalDataReceived, _requestsCount > 0 ? _totalDataReceived / _requestsCount : 0, _totalDataDownloadTimeSeconds > 0 ? _totalDataReceived / _totalDataDownloadTimeSeconds : 0, _totalDataTransmissionSeconds * 1000);
+                    _dimensionSet.UpdateAverageBytes(_totalDataTransmissionSeconds > 0 ? (_totalDataReceived + _totalDataSent) / _totalDataTransmissionSeconds : 0, _totalDataTransmissionSeconds * 1000);
                 }
             }
             finally
@@ -135,7 +134,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        private class LPSDurationMetricDimensionSetProtected : LPSDataTransmissionMetricDimensionSet
+        private class LPSDurationMetricDimensionSetProtected : DataTransmissionMetricDimensionSet
         {
             public LPSDurationMetricDimensionSetProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
@@ -152,7 +151,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 TimeStamp = DateTime.UtcNow;
                 DataSent = totalDataSent;
                 AverageDataSent = averageDataSentPerRequest;
-                AverageDataSentPerSecond = averageDataSentPerSecond;
+                UpstreamThroughputBps = averageDataSentPerSecond;
                 TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
             }
 
@@ -161,21 +160,21 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 TimeStamp = DateTime.UtcNow;
                 DataReceived = totalDataReceived;
                 AverageDataReceived = averageDataReceivedPerRequest;
-                AverageDataReceivedPerSecond = averageDataReceivedPerSecond;
+                DownstreamThroughputBps = averageDataReceivedPerSecond;
                 TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
             }
 
             public void UpdateAverageBytes(double averageBytesPerSecond, double totalDataTransmissionTimeInMilliseconds)
             {
                 TimeStamp = DateTime.UtcNow;
-                AverageBytesPerSecond = averageBytesPerSecond;
+                ThroughputBps = averageBytesPerSecond;
                 TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
             }
 
         }
     }
 
-    public class LPSDataTransmissionMetricDimensionSet : IHttpDimensionSet
+    public class DataTransmissionMetricDimensionSet : IHttpDimensionSet
     {
 
         [JsonIgnore]
@@ -197,8 +196,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public double DataReceived { get; protected set; }
         public double AverageDataSent { get; protected set; }
         public double AverageDataReceived { get; protected set; }
-        public double AverageDataSentPerSecond { get; protected set; }
-        public double AverageDataReceivedPerSecond { get; protected set; }
-        public double AverageBytesPerSecond { get; protected set; }
+        public double UpstreamThroughputBps { get; protected set; }
+        public double DownstreamThroughputBps { get; protected set; }
+        public double ThroughputBps { get; protected set; }
     }
 }

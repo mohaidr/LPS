@@ -86,7 +86,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                             while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), token)) > 0)
                             {
                                 transferredSize += bytesRead;
-                                await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, streamStopwatch.ElapsedMilliseconds, token);
+                                await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, streamStopwatch.ElapsedTicks, token);
 
                                 // Write to memoryStream for caching
                                 if (memoryStream != null)

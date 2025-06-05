@@ -14,7 +14,7 @@ enum NodeType {
 // Node Status Enum
 enum NodeStatus {
     STATUS_UNKNOWN = 0;
-    PENDING = 1; 
+    CREATED = 1; 
     Ready = 2;
     RUNNING = 3;
     STOPPED = 4;

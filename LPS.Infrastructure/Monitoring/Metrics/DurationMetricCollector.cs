@@ -63,7 +63,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        private class LPSDurationMetricDimensionSetProtected : LPSDurationMetricDimensionSet
+        private class LPSDurationMetricDimensionSetProtected : DurationMetricDimensionSet
         {
             public LPSDurationMetricDimensionSetProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion) {
                 IterationId = iterationId;
@@ -89,7 +89,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public class LPSDurationMetricDimensionSet: IHttpDimensionSet
+    public class DurationMetricDimensionSet: IHttpDimensionSet
     {
         [JsonIgnore]
         public DateTime TimeStamp { get; protected set; }

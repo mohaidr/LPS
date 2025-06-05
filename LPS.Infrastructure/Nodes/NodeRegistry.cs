@@ -49,7 +49,7 @@ namespace LPS.Infrastructure.Nodes
                     var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
                     // Call the gRPC Service
                     client.RegisterNode(_nodeMetadata.ToProto()); // register the master on the local node
-                    client.SetNodeStatus(new SetNodeStatusRequest { NodeIp = _nodeMetadata.NodeIP, NodeName = _nodeMetadata.NodeName, Status =  _masterNode?.NodeStatus.ToGrpc()?? NodeStatus.Pending.ToGrpc() });
+                    client.SetNodeStatus(new SetNodeStatusRequest { NodeIp = _nodeMetadata.NodeIP, NodeName = _nodeMetadata.NodeName, Status =  _masterNode?.NodeStatus.ToGrpc()?? NodeStatus.Created.ToGrpc() });
                 }
             }
         }
@@ -83,9 +83,17 @@ namespace LPS.Infrastructure.Nodes
             return _nodes.Where(n => !IsLocalNode(n));
         }
 
+        public IEnumerable<INode> GetActiveNodes()
+        {
+            return _nodes.Where(node => node.IsActive());
+        }
+        public IEnumerable<INode> GetInActiveNodes()
+        {
+            return _nodes.Where(node => node.IsInActive());
+        }
         private bool IsLocalNode(INode node)
         {
-            return node.Metadata.NodeIP == INode.GetLocalIPAddress();
+            return node.Metadata.NodeIP == INode.NodeIP;
         }
     }
 

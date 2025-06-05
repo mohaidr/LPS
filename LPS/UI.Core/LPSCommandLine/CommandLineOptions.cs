@@ -46,6 +46,10 @@ namespace LPS.UI.Core.LPSCommandLine
         {
             static LPSCommandOptions()
             {
+                // Set default values for non string types (types to be parsed) if needed
+                SupportH2C.SetDefaultValue("false");
+
+
                 // Shortcut aliases
                 PlanNameOption.AddAlias("-n");
                 RoundNameOption.AddAlias("-rn");
@@ -131,8 +135,8 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> DelayClientCreationOption { get; } = new Option<string>(
-                name:"--delayclientcreation",
-                description:"Delay client creation until needed",
+                name: "--delayclientcreation",
+                description: "Delay client creation until needed",
                 parseArgument: ParseBoolOptionArgument)
             {
                 IsRequired = false,
@@ -140,8 +144,8 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> RunInParallelOption { get; } = new Option<string>(
-                name:"--runinparallel", 
-                description:"Execute your iterations in parallel",
+                name: "--runinparallel",
+                description: "Execute your iterations in parallel",
                 parseArgument: ParseBoolOptionArgument)
             {
                 IsRequired = false,
@@ -186,7 +190,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> MaximizeThroughputOption { get; } = new Option<string>(
-                name:"--maximizethroughput",
+                name: "--maximizethroughput",
                 description: "Maximize test throughput. Maximizing test throughput may lead to significantly higher CPU and memory usage.",
                 parseArgument: ParseBoolOptionArgument)
             {
@@ -242,14 +246,14 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<string?> SupportH2C { get; } = new Option<string?>(
-                name: "--supporth2c", 
-                description: "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.", 
+                name: "--supporth2c",
+                description: "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.",
                 parseArgument: ParseBoolOptionArgument)
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
-
+            
             public static Option<string> PayloadOption { get; } = new Option<string>(
                 "--payload", () => string.Empty, "Request payload")
             {

@@ -174,7 +174,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                                 // Process bytes if needed
                             }
                             timeToDownloadWatch.Stop();
-                            await _metricsService.TryUpdateDataReceivedAsync(requestId, totalBytes, timeToDownloadWatch.ElapsedMilliseconds, cancellationToken);
+                            await _metricsService.TryUpdateDataReceivedAsync(requestId, totalBytes, timeToDownloadWatch.ElapsedTicks, cancellationToken);
                         }
                         finally
                         {

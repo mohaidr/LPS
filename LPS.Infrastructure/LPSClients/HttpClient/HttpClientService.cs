@@ -265,10 +265,9 @@ namespace LPS.Infrastructure.LPSClients
             }
 
             Stopwatch uploadWatch = new();
-
             var progress = new Progress<long>(async (bytesRead) =>
             {
-                await _metricsService.TryUpdateDataSentAsync(request.Id, bytesRead, uploadWatch.ElapsedMilliseconds, token);
+                await _metricsService.TryUpdateDataSentAsync(request.Id, bytesRead, uploadWatch.ElapsedTicks, token);
                 uploadWatch.Restart();
                 // TODO: We Need to log the number of read bytes to a different log file (stream.log)
             });

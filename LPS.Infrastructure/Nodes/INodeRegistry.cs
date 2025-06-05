@@ -14,5 +14,8 @@ namespace LPS.Infrastructure.Nodes
         public INode GetMasterNode();
         public INode GetLocalNode();
         public IEnumerable<INode> GetNeighborNodes();
+
+        public IEnumerable<INode> GetActiveNodes();
+        public IEnumerable<INode> GetInActiveNodes();
     }
 }

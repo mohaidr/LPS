@@ -112,7 +112,7 @@ namespace LPS.Infrastructure.Monitoring.Command
                 var fullyQualifiedName = _entityDiscoveryService.Discover(record => record.IterationId == entity.Id).Single().FullyQualifiedName;
                 if (_nodeMetadata.NodeType == NodeType.Master)
                 {
-                    foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == NodeType.Worker && (node.NodeStatus == NodeStatus.Running || node.NodeStatus == NodeStatus.Pending)))
+                    foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == NodeType.Worker && (node.IsActive())))
                     {
                         try
                         {

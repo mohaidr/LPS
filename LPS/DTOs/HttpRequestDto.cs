@@ -21,6 +21,7 @@ namespace LPS.DTOs
         {
             HttpHeaders = [];
             HttpVersion = "2.0";
+            SupportH2C = "false";
         }
 
         // URL for the HTTP request (supports placeholders)

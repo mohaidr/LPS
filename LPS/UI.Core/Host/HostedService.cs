@@ -142,8 +142,7 @@ namespace LPS.UI.Core.Host
             if (localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
             {
                 //TODO: Think about this approach
-                while (_nodeRegistry.GetNeighborNodes().Where(n => n.NodeStatus == Infrastructure.Nodes.NodeStatus.Running
-                || n.NodeStatus == Infrastructure.Nodes.NodeStatus.Pending).Count() > 0)
+                while (_nodeRegistry.GetNeighborNodes().Where(n => n.IsActive()).Count() > 0)
                 {
                     await Task.Delay(1000);
                 }
@@ -165,7 +164,7 @@ namespace LPS.UI.Core.Host
                 if (_nodeMetadata.NodeType == Infrastructure.Nodes.NodeType.Master)
                 {
                     foreach (var node in _nodeRegistry.Query(n => n.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker 
-                    && n.NodeStatus != Infrastructure.Nodes.NodeStatus.Failed && n.NodeStatus != Infrastructure.Nodes.NodeStatus.Stopped))
+                    && n.IsActive()))
                     {
                         try
                         {

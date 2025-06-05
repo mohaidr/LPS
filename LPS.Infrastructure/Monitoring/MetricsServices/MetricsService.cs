@@ -146,7 +146,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             return updated.Value;
         }
 
-        public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double dataSize, double uploadTime, CancellationToken token)
+        public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double totalBytes, double elapsedTicks, CancellationToken token)
         {
             bool? updated = null;
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
@@ -154,8 +154,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
                 {
                     RequestId = requestId.ToString(),
-                    DataSize = dataSize,
-                    TimeTaken = uploadTime,
+                    DataSize = totalBytes,
+                    TimeTaken = elapsedTicks,
                     IsSent = true
                 });
                 updated = response.Success;
@@ -173,13 +173,13 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
             foreach (var metric in dataTransmissionMetrics)
             {
-                ((IDataTransmissionMetricCollector)metric).UpdateDataSent(dataSize, uploadTime, token);
+                ((IDataTransmissionMetricCollector)metric).UpdateDataSent(totalBytes, elapsedTicks, token);
             }
             updated ??= true;
             return updated.Value;
         }
 
-        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double dataSize, double downloadTime, CancellationToken token)
+        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double totalBytes, double elapsedTicks, CancellationToken token)
         {
             bool? updated = null;
 
@@ -188,8 +188,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 var response = await _grpcClient.UpdateDataTransmissionAsync(new UpdateDataTransmissionRequest
                 {
                     RequestId = requestId.ToString(),
-                    DataSize = dataSize,
-                    TimeTaken = downloadTime,
+                    DataSize = totalBytes,
+                    TimeTaken = elapsedTicks,
                     IsSent = false
                 });
                 updated = response.Success;
@@ -207,7 +207,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
             foreach (var metric in dataTransmissionMetrics)
             {
-                ((IDataTransmissionMetricCollector)metric).UpdateDataReceived(dataSize, downloadTime, token);
+                ((IDataTransmissionMetricCollector)metric).UpdateDataReceived(totalBytes, elapsedTicks, token);
             }
             updated ??= false;
             return updated.Value;

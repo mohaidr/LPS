@@ -19,11 +19,11 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
         private readonly IProgress<long> _progress;
         private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
         CancellationToken _token;
-        Stopwatch _stopwatch;
+        Stopwatch _uploadWatch;
         public ProgressContent(HttpContent content, IProgress<long> progress, Stopwatch stopwatch, CancellationToken token)
         {
             _token = token;
-            _stopwatch = stopwatch;
+            _uploadWatch = stopwatch;
             _originalContent = content ?? throw new ArgumentNullException(nameof(content));
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
             foreach (var header in _originalContent.Headers)
@@ -37,7 +37,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             var buffer = _bufferPool.Rent(64000); // Rent 64 KB buffer
             try
             {
-                _stopwatch.Start();
+                _uploadWatch.Start();
                 using var contentStream = await _originalContent.ReadAsStreamAsync(_token);
                 long totalBytesRead = 0;
                 int bytesRead;
@@ -47,7 +47,7 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                     totalBytesRead += bytesRead;
                     _progress.Report(bytesRead);
                 }
-                _stopwatch.Stop();
+                _uploadWatch.Stop();
             }
             finally
             {

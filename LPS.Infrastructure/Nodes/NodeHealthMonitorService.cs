@@ -109,7 +109,7 @@ namespace LPS.Infrastructure.Services
         private async Task CheckWorkersAsync(CancellationToken token)
         {
             var neighbors = _nodeRegistry.GetNeighborNodes()
-                .Where(n => n.NodeStatus == NodeStatus.Running.ToLocal() || n.NodeStatus == NodeStatus.Ready.ToLocal() || n.NodeStatus == NodeStatus.Pending.ToLocal());
+                .Where(n => n.NodeStatus == NodeStatus.Running.ToLocal() || n.NodeStatus == NodeStatus.Ready.ToLocal() || n.NodeStatus == NodeStatus.Created.ToLocal());
 
             foreach (var worker in neighbors)
             {

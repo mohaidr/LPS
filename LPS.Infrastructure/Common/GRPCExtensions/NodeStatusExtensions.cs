@@ -17,7 +17,7 @@ namespace LPS.Infrastructure.Common.GRPCExtensions
                 GrpcNodeStatus.Ready => LocalNodeStatus.Ready,
                 GrpcNodeStatus.Stopped => LocalNodeStatus.Stopped,
                 GrpcNodeStatus.Failed => LocalNodeStatus.Failed,
-                GrpcNodeStatus.Pending => LocalNodeStatus.Pending,
+                GrpcNodeStatus.Created => LocalNodeStatus.Created,
                 _ => throw new NotImplementedException($"Unhandled proto NodeStatus: {protoStatus}")
             };
         }
@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.Common.GRPCExtensions
                 LocalNodeStatus.Ready => GrpcNodeStatus.Ready,
                 LocalNodeStatus.Stopped => GrpcNodeStatus.Stopped,
                 LocalNodeStatus.Failed => GrpcNodeStatus.Failed,
-                LocalNodeStatus.Pending => GrpcNodeStatus.Pending,
+                LocalNodeStatus.Created => GrpcNodeStatus.Created,
                 _ => throw new NotImplementedException($"Unhandled internal NodeStatus: {internalStatus}")
             };
         }
