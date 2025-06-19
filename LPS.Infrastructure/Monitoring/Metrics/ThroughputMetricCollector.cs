@@ -163,7 +163,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        private class ProtectedConnectionDimensionSet : ThroughputDimensionSet
+        private class ProtectedConnectionDimensionSet : ThroughputMetricDimensionSet
         {
             [JsonIgnore]
             public bool StopUpdate { get; set; }
@@ -223,25 +223,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return $"RequestsRate: Every = {Every}, Value = {Value}";
         }
     }
-    public class ThroughputDimensionSet : IHttpDimensionSet
+    public class ThroughputMetricDimensionSet : HttpMetricDimensionSet
     {
-        [JsonIgnore]
-        public DateTime TimeStamp { get; protected set; }
         public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
-        [JsonIgnore]
-        public string RoundName { get; protected set; }
-        [JsonIgnore]
-        public Guid IterationId { get; protected set; }
-        [JsonIgnore]
-        public string IterationName { get; protected set; }
-        [JsonIgnore]
-        public string URL { get; protected set; }
-        [JsonIgnore]
-        public string HttpMethod { get; protected set; }
-        [JsonIgnore]
-        public string HttpVersion { get; protected set; }
         public int RequestsCount { get; protected set; }
         public int ActiveRequestsCount { get; protected set; }
         public int SuccessfulRequestCount { get; protected set; }

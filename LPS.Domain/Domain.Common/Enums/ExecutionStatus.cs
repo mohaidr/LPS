@@ -17,6 +17,7 @@ namespace LPS.Domain.Domain.Common.Enums
         Paused = 4,
         Cancelled = 5,
         Failed = 6,
+        Terminated = 7,
         Unkown = -7,
     }
 }

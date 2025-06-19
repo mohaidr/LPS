@@ -12,19 +12,13 @@ namespace LPS.Domain
     public partial class Round : IValidEntity, IDomainEntity, IBusinessEntity
     {
 
-        private ILogger _logger;
         private Round()
         {
             Iterations = [];
             Tags = [];
         }
-
-        IClientManager<HttpRequest,HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
-        IClientConfiguration<HttpRequest> _lpsClientConfig;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        IWatchdog _watchdog;
+        private ILogger _logger;
         IMetricsDataMonitor _lpsMetricsDataMonitor;
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         CancellationTokenSource _cts;
         public Round(SetupCommand command, 
             ILogger logger,

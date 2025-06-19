@@ -8,6 +8,8 @@ using LPS.Domain.LPSRequest.LPSHttpRequest;
 using LPS.Domain.LPSSession;
 using LPS.DTOs;
 using LPS.Infrastructure.Common;
+using System.Linq;
+using System.Net;
 
 
 namespace LPS.AutoMapper
@@ -58,6 +60,10 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.Duration, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.Duration).Result))
                 .ForMember(dest => dest.BatchSize, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.BatchSize).Result))
                 .ForMember(dest => dest.CoolDownTime, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.CoolDownTime).Result))
+                .ForMember(dest => dest.MaxErrorRate, opt => opt.MapFrom(src => ResolvePlaceholderAsync<double?>(src.MaxErrorRate).Result))
+                .ForMember(dest => dest.TerminationRules, opt => opt.MapFrom(src => src.TerminationRules.Select(tr => 
+                    new TerminationRule(ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result).ToList(), 
+                                        ResolvePlaceholderAsync<double?>(tr.MaxErrorRate).Result, ResolvePlaceholderAsync<TimeSpan?>(tr.GracePeriod).Result))))
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
                 .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -17,10 +18,10 @@ namespace LPS.Domain
 {
     public partial class HttpIteration : Iteration, IBusinessEntity, ICloneable
     {
-
         private HttpIteration()
         {
             Type = IterationType.Http;
+            TerminationRules = [];
         }
         private HttpIteration(
             ILogger logger,
@@ -68,7 +69,6 @@ namespace LPS.Domain
             }
         }
         public int StartupDelay { get; private set; }
-
         public int? RequestCount { get; private set; }
         public int? Duration { get; private set; }
         public int? BatchSize { get; private set; }
@@ -77,5 +77,28 @@ namespace LPS.Domain
         public bool MaximizeThroughput { get; private set; }
         public ExecutionStatus Status { get; private set; }
         public HttpRequest HttpRequest { get; protected set; }
+        public ICollection<HttpStatusCode> ErrorStatusCodes { get; private set; }
+
+        public ICollection<TerminationRule> TerminationRules { get; private set; }
+    }
+    public readonly struct TerminationRule(
+        ICollection<HttpStatusCode> errorStatusCodes,
+        double? maxErrorRate,
+        TimeSpan? gracePeriod)
+    {
+        /// <summary>
+        /// Represents the status codes to consider as erroneous status codes
+        /// </summary>
+        public ICollection<HttpStatusCode> ErrorStatusCodes { get; } = errorStatusCodes;
+        /// <summary>
+        /// Represents the maximum error rate for a given grace period before the test is terminated
+        /// </summary>
+        public double? MaxErrorRate { get; } = maxErrorRate;
+        /// <summary>
+        /// The duration for which the error rate must remain above the threshold
+        /// before terminating the test. If the error rate recovers during this period,
+        /// termination is aborted.
+        /// </summary>
+        public TimeSpan? GracePeriod { get; } = gracePeriod;
     }
 }

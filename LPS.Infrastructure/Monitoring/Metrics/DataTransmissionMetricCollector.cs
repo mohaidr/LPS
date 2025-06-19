@@ -73,7 +73,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _totalDataSent += totalBytes;
                 _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
                     .Single()
-                    .GetDimensionSetAsync<ThroughputDimensionSet>().Result
+                    .GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result
                     .RequestsCount;
                 UpdateMetrics();
             }
@@ -102,7 +102,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _totalDataReceived += totalBytes;
                 _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
                     .Single()
-                    .GetDimensionSetAsync<ThroughputDimensionSet>().Result
+                    .GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result
                     .RequestsCount;
 
                 UpdateMetrics();
@@ -174,24 +174,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public class DataTransmissionMetricDimensionSet : IHttpDimensionSet
+    public class DataTransmissionMetricDimensionSet : HttpMetricDimensionSet
     {
-
-        [JsonIgnore]
-        public DateTime TimeStamp { get; protected set; }
         public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
-        [JsonIgnore]
-        public string RoundName { get; protected set; }
-        [JsonIgnore]
-        public Guid IterationId { get; protected set; }
-        [JsonIgnore]
-        public string IterationName { get; protected set; }
-        [JsonIgnore]
-        public string URL { get; protected set; }
-        [JsonIgnore]
-        public string HttpMethod { get; protected set; }
-        [JsonIgnore]
-        public string HttpVersion { get; protected set; }
         public double DataSent { get; protected set; }
         public double DataReceived { get; protected set; }
         public double AverageDataSent { get; protected set; }

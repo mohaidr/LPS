@@ -16,13 +16,15 @@ namespace LPS.Domain.LPSRun.IterationMode
         private readonly HttpRequest _request;
         private readonly string _hostName;
         private readonly HttpIteration _httpIteration;
+        ITerminationCheckerService _terminationCheckerService;
 
         public DMode(
             HttpIteration httpIteration,
             HttpRequest request,
             HttpRequest.ExecuteCommand command,
             int duration,
-            IWatchdog watchdog)
+            IWatchdog watchdog,
+            ITerminationCheckerService terminationCheckerService)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _request = request ?? throw new ArgumentNullException(nameof(request));
@@ -30,6 +32,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
             _duration = duration;
             _hostName = _request.Url.HostName;
+            _terminationCheckerService = terminationCheckerService;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -39,7 +42,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 int numberOfSentRequests = 0;
                 var stopwatch = Stopwatch.StartNew();
 
-                while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested)
+                while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested && !(await _terminationCheckerService.Check(_httpIteration)))
                 {
                     await _watchdog.BalanceAsync(_hostName, cancellationToken);
                     await _command.ExecuteAsync(_request);

@@ -17,11 +17,13 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly CancellationTokenSource _cts;
         readonly ILogger _logger;
+        readonly ITerminationCheckerService _terminationCheckerService;
         public HttpIterationSchedulerService(ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
+                ITerminationCheckerService terminationCheckerService,
                 CancellationTokenSource cts)
         {
             _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
@@ -29,12 +31,13 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             _watchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
+            _terminationCheckerService = terminationCheckerService;
             _logger = logger;
         }
 
         public async Task ScheduleHttpIterationExecutionAsync(DateTime scheduledTime, HttpIteration httpIteration, IClientService<HttpRequest, HttpResponse> httpClient)
         {
-            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _cts);
+            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _terminationCheckerService, _cts);
             try
             {
                 _httpIterationExecutionCommandStatusMonitor.Register(httpIterationCommand, httpIteration);

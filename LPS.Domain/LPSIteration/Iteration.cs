@@ -24,6 +24,7 @@ namespace LPS.Domain
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected IWatchdog _watchdog;
         protected IMetricsDataMonitor _lpsMonitoringEnroller;
+        protected ITerminationCheckerService _terminationCheckerService;
         protected CancellationTokenSource _cts;
         protected Iteration()
         {
@@ -44,5 +45,7 @@ namespace LPS.Domain
         public string Name { get; protected set; }
         public bool IsValid { get; protected set; }
         public IterationType Type { get; protected set; }
+        public double? MaxErrorRate { get; protected set; }
+
     }
 }

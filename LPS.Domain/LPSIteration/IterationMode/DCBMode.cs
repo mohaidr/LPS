@@ -1,4 +1,5 @@
-﻿using LPS.Domain.Domain.Common.Enums;
+﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
@@ -17,6 +18,8 @@ namespace LPS.Domain.LPSRun.IterationMode
         private readonly int _batchSize;
         private readonly bool _maximizeThroughput;
         private readonly IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
+        readonly HttpIteration _httpIteration;
+        readonly ITerminationCheckerService _terminationCheckerService;
 
         public DCBMode(
             HttpRequest.ExecuteCommand command,
@@ -24,7 +27,9 @@ namespace LPS.Domain.LPSRun.IterationMode
             int coolDownTime,
             int batchSize,
             bool maximizeThroughput,
-            IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor)
+            IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor,
+            HttpIteration httpIteration,
+            ITerminationCheckerService terminationCheckerService)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
@@ -32,6 +37,8 @@ namespace LPS.Domain.LPSRun.IterationMode
             _coolDownTime = coolDownTime;
             _batchSize = batchSize;
             _maximizeThroughput = maximizeThroughput;
+            _httpIteration = httpIteration;
+            _terminationCheckerService = terminationCheckerService;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -45,7 +52,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
 
-            while (continueCondition())
+            while (continueCondition() && !await _terminationCheckerService.Check(_httpIteration))
             {
                 if (_maximizeThroughput)
                 {

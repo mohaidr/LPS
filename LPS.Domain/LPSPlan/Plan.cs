@@ -13,18 +13,12 @@ namespace LPS.Domain
     public partial class Plan : IAggregateRoot, IValidEntity, IDomainEntity, IBusinessEntity
     {
 
-        private ILogger _logger;
         private Plan()
         {
             Rounds = new List<Round>();
         }
-
-        IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
-        IClientConfiguration<HttpRequest> _lpsClientConfig;
+        private ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        IWatchdog _watchdog;
-        IMetricsDataMonitor _lpsMetricsDataMonitor;
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         IPlaceholderResolverService _placeholderResolverService;
         CancellationTokenSource _cts;
         public Plan(SetupCommand command,

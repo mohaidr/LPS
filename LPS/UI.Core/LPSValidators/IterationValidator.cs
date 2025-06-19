@@ -10,6 +10,7 @@ using Newtonsoft.Json.Linq;
 using System.Threading.Tasks.Dataflow;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.DTOs;
+using System.Net;
 
 namespace LPS.UI.Core.LPSValidators
 {
@@ -40,8 +41,8 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(dto => dto.StartupDelay)
                 .Must(startupDelay =>
                 {
-                    return (int.TryParse(startupDelay, out int parsedValue) && parsedValue >= 0) 
-                    || string.IsNullOrEmpty(startupDelay) 
+                    return (int.TryParse(startupDelay, out int parsedValue) && parsedValue >= 0)
+                    || string.IsNullOrEmpty(startupDelay)
                     || startupDelay.StartsWith("$");
                 }).
                 WithMessage("The 'StartupDelay' must be greater than or equal to 0 or a placeholder variable");
@@ -57,15 +58,6 @@ namespace LPS.UI.Core.LPSValidators
                     return Enum.TryParse<IterationMode>(mode, out _);
                 })
                 .WithMessage("The 'Mode' must be a valid IterationMode (e.g., DCB, CRB, CB, R, D) or start with '$'.");
-
-
-            RuleFor(dto => dto.MaximizeThroughput)
-                 .Must(maximizeThroughput =>
-                 {
-                     return bool.TryParse(maximizeThroughput, out _) || string.IsNullOrEmpty(maximizeThroughput) || maximizeThroughput.StartsWith("$");
-                 })
-                 .WithMessage("The 'MaximizeThroughput' must be a valid boolean");
-
 
             RuleFor(dto => dto.RequestCount)
                 .Must(requestCount =>
@@ -171,7 +163,7 @@ namespace LPS.UI.Core.LPSValidators
                 .Must(coolDownTime =>
                 {
                     // Ensure the value is null or a placeholder when the mode does not require CoolDownTime
-                    return coolDownTime == null ||  coolDownTime.StartsWith("$");
+                    return coolDownTime == null || coolDownTime.StartsWith("$");
                 })
                 .When(dto => dto.Mode != IterationMode.DCB.ToString() && dto.Mode != IterationMode.CRB.ToString() && dto.Mode != IterationMode.CB.ToString(), ApplyConditionTo.CurrentValidator)
                 .Must((dto, coolDownTime) =>
@@ -190,10 +182,56 @@ namespace LPS.UI.Core.LPSValidators
                 })
                 .WithMessage("The 'CoolDownTime' must be less than the 'Duration * 1000'")
                 .When(dto => dto.Mode == IterationMode.DCB.ToString() && !string.IsNullOrWhiteSpace(dto.Duration), ApplyConditionTo.CurrentValidator);
-            
+
+            RuleFor(dto => dto.MaximizeThroughput)
+             .Must(maximizeThroughput =>
+             {
+                 return bool.TryParse(maximizeThroughput, out _) || string.IsNullOrEmpty(maximizeThroughput) || maximizeThroughput.StartsWith("$");
+             })
+             .WithMessage("The 'MaximizeThroughput' must be a valid boolean");
+
+
+            RuleFor(dto => dto.MaxErrorRate)
+             .Must(maxErrorRate =>
+             {
+                 return (int.TryParse(maxErrorRate, out int parsedValue) && parsedValue > 0) || string.IsNullOrEmpty(maxErrorRate) || maxErrorRate.StartsWith("$");
+             })
+             .WithMessage("The 'MaxErrorRate' must be a greater than 0");
+
             RuleFor(dto => dto.HttpRequest)
                 .SetValidator(new RequestValidator(new HttpRequestDto()));
-        
+
+        }
+        private bool BeValidTerminationRules(IEnumerable<TerminationRuleDto> rules)
+        {
+            if (rules == null) return false;
+            if (!rules.Any()) return true;
+
+            return rules.All
+            (
+                rule =>
+                {
+
+                    if (rule.ErrorStatusCodes == null || rule.MaxErrorRate == null || rule.GracePeriod == null)
+                        return false;
+
+                    if (rule.ErrorStatusCodes.StartsWith("$") || rule.MaxErrorRate.StartsWith("$") || rule.GracePeriod.StartsWith("$"))
+                        return true;
+
+                    var codes = rule.ErrorStatusCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList();
+                    var validCodes = codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _));
+                    var validRate = int.TryParse(rule.MaxErrorRate, out var parsedValue);
+                    var validGrace = TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod);
+
+                    // Inactive rule (all zero/empty) OR active rule (all valid and > 0)
+                    return
+                        validCodes && validRate && validGrace &&
+                        (
+                            (codes.Count > 0 && parsedValue > 0 && gracePeriod > TimeSpan.Zero) ||
+                            (codes.Count == 0 && parsedValue == 0 && gracePeriod == TimeSpan.Zero)
+                        );
+                }
+            );
         }
 
         public override HttpIterationDto Dto { get { return _iterationDto; } }

@@ -41,6 +41,7 @@ namespace LPS.UI.Core.Services
         private readonly CancellationTokenSource _cts;
         private readonly IEntityRepositoryService _entityRepositoryService;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
+        private readonly ITerminationCheckerService _terminationCheckerService;
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -57,6 +58,7 @@ namespace LPS.UI.Core.Services
             ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
             IEntityRepositoryService entityRepositoryService,
             ICustomGrpcClientFactory customGrpcClientFactory,
+            ITerminationCheckerService terminationCheckerService,
             CancellationTokenSource cts)
         {
             _logger = logger;
@@ -75,6 +77,7 @@ namespace LPS.UI.Core.Services
             _cts = cts;
             _entityRepositoryService = entityRepositoryService;
             _customGrpcClientFactory = customGrpcClientFactory;
+            _terminationCheckerService = terminationCheckerService;
             // Create the AutoMapper configuration
             var mapperConfig = new MapperConfiguration(cfg =>
             {
@@ -181,7 +184,7 @@ namespace LPS.UI.Core.Services
                 await localNode.SetNodeStatus(NodeStatus.Running);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
                 _dashboardService.Start();
-                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _cts)
+                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _terminationCheckerService, _cts)
                     .ExecuteAsync(plan);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
             }

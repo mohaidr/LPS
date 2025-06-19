@@ -69,7 +69,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        private class ProtectedResponseCodeDimensionSet : ResponseCodeDimensionSet
+        private class ProtectedResponseCodeDimensionSet : ResponseCodeMetricDimensionSet
         {
             public ProtectedResponseCodeDimensionSet(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
@@ -83,54 +83,40 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             public void Update(HttpResponse.SetupCommand response)
             {
-                var existingSummary = _responseSummaries.FirstOrDefault(rs => rs.HttpStatusCode == ((int)response.StatusCode).ToString() && rs.HttpStatusReason == response.StatusMessage);
-                if (existingSummary != null)
+                var summary = _responseSummaries.FirstOrDefault(rs => rs.HttpStatusCode == ((int)response.StatusCode).ToString() && rs.HttpStatusReason == response.StatusMessage);
+                if (summary!=null)
                 {
-                    existingSummary.Count += 1;
+                    summary.Count += 1;
                 }
                 else
                 {
-                    var summary = new ResponseSummary(
+                    var instance = new HttpResponseSummary(
                         ((int)response.StatusCode).ToString(),
                         response.StatusMessage,
                         1
                     );
-                    _responseSummaries.Add(summary);
+                    _responseSummaries.Add(instance);
                 }
 
                 TimeStamp = DateTime.UtcNow;
             }
         }
     }
-    public class ResponseSummary(string httpStatusCode, string httpStatusReason, int count)
+    public class HttpResponseSummary(string httpStatusCode, string httpStatusReason, int count)
     {
         public string HttpStatusCode { get; private set; } = httpStatusCode;
         public string HttpStatusReason { get; private set; } = httpStatusReason;
         public int Count { get; set; } = count;
     }
-    public class ResponseCodeDimensionSet : IHttpDimensionSet
+    public class ResponseCodeMetricDimensionSet : HttpMetricDimensionSet
     {
-
-        public ResponseCodeDimensionSet()
+        public ResponseCodeMetricDimensionSet()
         {
-            _responseSummaries = new ConcurrentBag<ResponseSummary>();
+            _responseSummaries = new ConcurrentBag<HttpResponseSummary>();
         }
-        [JsonIgnore]
-        public string RoundName { get; protected set; }
-        [JsonIgnore]
-        public DateTime TimeStamp { get; protected set; }
-        [JsonIgnore]
-        public Guid IterationId { get; protected set; }
-        [JsonIgnore]
-        public string IterationName { get; protected set; }
-        [JsonIgnore]
-        public string URL { get; protected set; }
-        [JsonIgnore]
-        public string HttpMethod { get; protected set; }
-        [JsonIgnore]
-        public string HttpVersion { get; protected set; }
-        protected ConcurrentBag<ResponseSummary> _responseSummaries { get; set; }
 
-        public IList<ResponseSummary> ResponseSummary => _responseSummaries.ToList();
+        protected ConcurrentBag<HttpResponseSummary> _responseSummaries { get; set; }
+
+        public IList<HttpResponseSummary> ResponseSummaries => _responseSummaries.ToList();
     }
 }

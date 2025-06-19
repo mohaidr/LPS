@@ -176,8 +176,8 @@ namespace LPS.Infrastructure.Watchdog
             try
             {
                 var data = await _metricsQueryService
-                    .GetAsync<ThroughputMetricCollector>(metric => metric.GetDimensionSetAsync<ThroughputDimensionSet>().Result?.URL?.Contains(hostName) == true);
-                    return data.Sum(metric => metric.GetDimensionSetAsync<ThroughputDimensionSet>().Result?.ActiveRequestsCount ?? 0);
+                    .GetAsync<ThroughputMetricCollector>(metric => metric.GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result?.URL?.Contains(hostName) == true);
+                    return data.Sum(metric => metric.GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result?.ActiveRequestsCount ?? 0);
             }
             catch (Exception ex)
             {

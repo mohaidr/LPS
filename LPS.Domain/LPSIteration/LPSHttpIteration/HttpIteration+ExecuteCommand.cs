@@ -22,6 +22,7 @@ namespace LPS.Domain
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             readonly IMetricsDataMonitor _lpsMonitoringEnroller;
+            ITerminationCheckerService _terminationCheckerService;
             readonly CancellationTokenSource _cts;
 
             protected ExecuteCommand()
@@ -34,6 +35,7 @@ namespace LPS.Domain
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IMetricsDataMonitor lpsMonitoringEnroller,
+                ITerminationCheckerService terminationCheckerService,
                 CancellationTokenSource cts)
             {
                 _httpClientService = httpClientService;
@@ -42,6 +44,7 @@ namespace LPS.Domain
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
                 _cts = cts;
+                _terminationCheckerService = terminationCheckerService;
                 _executionStatus = ExecutionStatus.Scheduled;
             }
             private ExecutionStatus _executionStatus;
@@ -59,6 +62,7 @@ namespace LPS.Domain
                 entity._watchdog = _watchdog;
                 entity._runtimeOperationIdProvider = _runtimeOperationIdProvider;
                 entity._lpsMonitoringEnroller = _lpsMonitoringEnroller;
+                entity._terminationCheckerService = _terminationCheckerService;
                 entity._cts = _cts;
 
                 try
@@ -167,7 +171,8 @@ namespace LPS.Domain
                             coolDownTime: this.CoolDownTime.Value,
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
-                            batchProcessor: batchProcessor
+                            batchProcessor: batchProcessor,
+                            this, _terminationCheckerService
                         );
                         break;
 
@@ -179,7 +184,8 @@ namespace LPS.Domain
                             coolDownTime: this.CoolDownTime.Value,
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
-                            batchProcessor: batchProcessor
+                            batchProcessor: batchProcessor,
+                            this, _terminationCheckerService
                         );
                         break;
 
@@ -190,7 +196,8 @@ namespace LPS.Domain
                             coolDownTime: this.CoolDownTime.Value,
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
-                            batchProcessor: batchProcessor
+                            batchProcessor: batchProcessor,
+                            this,_terminationCheckerService
                         );
                         break;
 
@@ -200,7 +207,7 @@ namespace LPS.Domain
                             request: this.HttpRequest,
                             command: httpRequestExecuteCommand,
                             requestCount: this.RequestCount.Value,
-                            watchdog: _watchdog
+                            watchdog: _watchdog, _terminationCheckerService
                         );
                         break;
 
@@ -210,7 +217,7 @@ namespace LPS.Domain
                             request: this.HttpRequest,
                             command: httpRequestExecuteCommand,
                             duration: this.Duration.Value,
-                            watchdog: _watchdog
+                            watchdog: _watchdog, _terminationCheckerService
                         );
                         break;
 

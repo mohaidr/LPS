@@ -17,6 +17,8 @@ namespace LPS.Domain.LPSRun.IterationMode
         private readonly int _batchSize;
         private readonly bool _maximizeThroughput;
         private readonly IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
+        readonly HttpIteration _httpIteration;
+        readonly ITerminationCheckerService _terminationCheckerService;
 
         public CRBMode(
             HttpRequest.ExecuteCommand command,
@@ -24,7 +26,9 @@ namespace LPS.Domain.LPSRun.IterationMode
             int coolDownTime,
             int batchSize,
             bool maximizeThroughput,
-            IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor)
+            IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor,
+            HttpIteration httpIteration,
+            ITerminationCheckerService terminationCheckerService)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
@@ -32,6 +36,9 @@ namespace LPS.Domain.LPSRun.IterationMode
             _coolDownTime = coolDownTime;
             _batchSize = batchSize;
             _maximizeThroughput = maximizeThroughput;
+            _httpIteration = httpIteration ?? throw new ArgumentNullException();
+            _terminationCheckerService = terminationCheckerService ?? throw new ArgumentNullException();
+
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -43,7 +50,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = () => !cancellationToken.IsCancellationRequested;
             bool newBatch = true;
 
-            while (continueCondition())
+            while (continueCondition() && !await _terminationCheckerService.Check(_httpIteration))
             {
                 int batchSize = Math.Min(_batchSize, _requestCount);
 

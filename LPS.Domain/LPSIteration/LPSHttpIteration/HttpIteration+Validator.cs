@@ -1,13 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
+using System.Net;
 using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
 using FluentValidation;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
@@ -15,18 +10,17 @@ using LPS.Domain.Domain.Common.Validation;
 
 namespace LPS.Domain
 {
-
     public partial class HttpIteration
     {
-
-        new public class Validator : CommandBaseValidator<HttpIteration, HttpIteration.SetupCommand>
+        public new class Validator : CommandBaseValidator<HttpIteration, HttpIteration.SetupCommand>
         {
             public override SetupCommand Command => _command;
             public override HttpIteration Entity => _entity;
-            ILogger _logger;
-            IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            SetupCommand _command;
-            HttpIteration _entity;
+            private readonly ILogger _logger;
+            private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            private readonly SetupCommand _command;
+            private readonly HttpIteration _entity;
+
             public Validator(HttpIteration entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
@@ -35,74 +29,119 @@ namespace LPS.Domain
                 _entity = entity;
 
                 #region Validation Rules
-                RuleFor(command => command.Name)
-               .NotNull().WithMessage("The 'Name' must be a non-null value")
-               .NotEmpty().WithMessage("The 'Name' must not be empty")
-                .Matches("^[a-zA-Z0-9 _.-]+$")
-               .WithMessage("The 'Name' does not accept special charachters")
-               .Length(1, 60)
-               .WithMessage("The 'Name' should be between 1 and 60 characters");
+                RuleFor(c => c.Name)
+                    .Must(BeValidName)
+                    .WithMessage("The 'Name' must be non-null, non-empty, 1-60 characters, and contain only letters, numbers, spaces, or _.-");
 
-                RuleFor(command => command.StartupDelay).GreaterThanOrEqualTo(0).
-                    WithMessage("The 'StartupDelay' must be greater than or equal to 0");
+                RuleFor(c => c.StartupDelay)
+                    .GreaterThanOrEqualTo(0)
+                    .WithMessage("The 'StartupDelay' must be greater than or equal to 0");
 
-                RuleFor(command => command.Mode)
-                .NotNull()
-                .WithMessage("The accepted 'Mode' Values are (DCB,CRB,CB,R,D)");
+                RuleFor(c => c.Mode)
+                    .NotNull()
+                    .WithMessage("The 'Mode' must be one of: DCB, CRB, CB, R, D");
 
-                RuleFor(command => command.MaximizeThroughput)
-               .NotNull()
-               .WithMessage("The 'MaximizeThroughput' property must be a non-null value");
+                RuleFor(c => c.MaximizeThroughput)
+                    .NotNull()
+                    .WithMessage("The 'MaximizeThroughput' property must be non-null");
 
-                RuleFor(command => command.RequestCount)
-                .NotNull()
-                .WithMessage("The 'Request Count' must be a non-null value and greater than 0")
-                .GreaterThan(0).WithMessage("The 'Request Count' must be greater than 0")
-                .When(command => command.Mode == IterationMode.CRB || command.Mode == IterationMode.R)
-                .Null()
-                .When(command => command.Mode != IterationMode.CRB && command.Mode != IterationMode.R, ApplyConditionTo.CurrentValidator)
-                .GreaterThan(command => command.BatchSize)
-                .WithMessage("The 'Request Count' Must Be Greater Than The BatchSize")
-                .When(command => command.Mode == IterationMode.CRB && command.BatchSize.HasValue, ApplyConditionTo.CurrentValidator);
+                RuleFor(c => c.RequestCount)
+                .Must(BeValidRequestCount)
+                .WithMessage(c => $"The 'RequestCount' {(c.Mode == IterationMode.CRB || c.Mode == IterationMode.R ? $"must be specified and greater than 0{(c.Mode == IterationMode.CRB && c.BatchSize.HasValue ? ", it must greater than BatchSize as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
 
-                RuleFor(command => command.Duration)
-                .NotNull().WithMessage("The 'Duration' must be a non-null value and greater than 0")
-                .GreaterThan(0).WithMessage("The 'Duration' must be greater than 0")
-                .When(command => command.Mode == IterationMode.D || command.Mode == IterationMode.DCB)
-                .Null()
-                .When(command => command.Mode != IterationMode.D && command.Mode != IterationMode.DCB, ApplyConditionTo.CurrentValidator)
-                .GreaterThan(command => command.CoolDownTime/1000)
-                    .WithMessage("The 'Duration*1000' Must Be Greater Than The Cool Down Time")
-                .When(command => command.Mode == IterationMode.DCB && command.CoolDownTime.HasValue, ApplyConditionTo.CurrentValidator);
+                RuleFor(c => c.Duration)
+                    .Must(BeValidDuration)
+                    .WithMessage(c => $"The 'Duration' {(c.Mode == IterationMode.D || c.Mode == IterationMode.DCB ? $"must be specified and greater than 0{(c.Mode == IterationMode.DCB && c.CoolDownTime.HasValue ? ", it must greater than CoolDownTime/1000 as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
 
-                RuleFor(command => command.BatchSize)
-                .NotNull().WithMessage("The 'Batch Size' must be a non-null value and greater than 0")
-                .GreaterThan(0).WithMessage("The 'Batch Size' must be greater than 0")
-                .When(command => command.Mode == IterationMode.DCB || command.Mode == IterationMode.CRB || command.Mode == IterationMode.CB)
-                .Null()
-                .When(command => command.Mode != IterationMode.DCB && command.Mode != IterationMode.CRB && command.Mode != IterationMode.CB, ApplyConditionTo.CurrentValidator)
-                .LessThan(command => command.RequestCount)
-                .WithMessage("The 'Batch Size' Must Be Less Than The Request Count")
-                .When(command => command.Mode == IterationMode.CRB && command.RequestCount.HasValue, ApplyConditionTo.CurrentValidator);
+                RuleFor(c => c.BatchSize)
+                    .Must(BeValidBatchSize)
+                    .WithMessage(c => $"The 'BatchSize' {(c.Mode == IterationMode.DCB || c.Mode == IterationMode.CRB || c.Mode == IterationMode.CB ? $"must be specified and greater than 0{(c.Mode == IterationMode.CRB && c.RequestCount.HasValue ? ", it must be less than RequestCount as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
 
-                RuleFor(command => command.CoolDownTime)
-                .NotNull().WithMessage("The 'Cool Down Time' must be a non-null value and greater than 0")
-                .GreaterThan(0).WithMessage("The 'Cool Down Time' must be greater than 0")
-                .When(command => command.Mode == IterationMode.DCB || command.Mode == IterationMode.CRB || command.Mode == IterationMode.CB)
-                .Null()
-                .When(command => command.Mode != IterationMode.DCB && command.Mode != IterationMode.CRB && command.Mode != IterationMode.CB, ApplyConditionTo.CurrentValidator)
-                .LessThan(command => command.Duration*1000)
-                .WithMessage("The 'CoolDownTime/1000' Must Be Less Than The Duration")
-                .When(command => command.Mode == IterationMode.DCB && command.Duration.HasValue, ApplyConditionTo.CurrentValidator);
+                RuleFor(c => c.CoolDownTime)
+                    .Must(BeValidCoolDownTime)
+                    .WithMessage(c => $"The 'CoolDownTime' {(c.Mode == IterationMode.DCB || c.Mode == IterationMode.CRB || c.Mode == IterationMode.CB ? $"must be specified and greater than 0{(c.Mode == IterationMode.DCB && c.Duration.HasValue ? ", it must be less than Duration*1000 as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
+
+                RuleFor(c => c.MaxErrorRate)
+                    .Must(maxErrorRate=> !maxErrorRate.HasValue || maxErrorRate.Value>0)
+                    .WithMessage("The 'MaxErrorRate' must be greater than 0");
+
+                RuleFor(c => c.TerminationRules)
+                    .Must(BeValidTerminationRules)
+                    .WithMessage("Termination rules must have valid HTTP status codes and a MaxErrorRate greater than 0.");
                 #endregion
 
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
                 {
                     _logger.Log(_runtimeOperationIdProvider.OperationId, "LPS Http Run: Entity Id Can't be Changed, The Id value will be ignored", LPSLoggingLevel.Warning);
                 }
-                command.IsValid = base.Validate();  
+                command.IsValid = base.Validate();
             }
+
+            #region Validation Methods
+            private bool BeValidName(string name)
+            {
+                return name != null &&
+                       !string.IsNullOrEmpty(name) &&
+                       name.Length >= 1 && name.Length <= 60 &&
+                       Regex.IsMatch(name, @"^[a-zA-Z0-9 _.-]+$");
+            }
+
+            private bool BeValidRequestCount(SetupCommand command, int? requestCount)
+            {
+                if (command.Mode == IterationMode.CRB || command.Mode == IterationMode.R)
+                {
+                    return requestCount.HasValue &&
+                           requestCount > 0 &&
+                           (command.Mode != IterationMode.CRB || !command.BatchSize.HasValue || requestCount > command.BatchSize);
+                }
+                return !requestCount.HasValue;
+            }
+
+            private bool BeValidDuration(SetupCommand command, int? duration)
+            {
+                if (command.Mode == IterationMode.D || command.Mode == IterationMode.DCB)
+                {
+                    return duration.HasValue &&
+                           duration > 0 &&
+                           (command.Mode != IterationMode.DCB || !command.CoolDownTime.HasValue || duration * 1000 > command.CoolDownTime);
+                }
+                return !duration.HasValue;
+            }
+
+            private bool BeValidBatchSize(SetupCommand command, int? batchSize)
+            {
+                if (command.Mode == IterationMode.DCB || command.Mode == IterationMode.CRB || command.Mode == IterationMode.CB)
+                {
+                    return batchSize.HasValue &&
+                           batchSize > 0 &&
+                           (command.Mode != IterationMode.CRB || !command.RequestCount.HasValue || batchSize < command.RequestCount);
+                }
+                return !batchSize.HasValue;
+            }
+
+            private bool BeValidCoolDownTime(SetupCommand command, int? coolDownTime)
+            {
+                if (command.Mode == IterationMode.DCB || command.Mode == IterationMode.CRB || command.Mode == IterationMode.CB)
+                {
+                    return coolDownTime.HasValue &&
+                           coolDownTime > 0 &&
+                           (command.Mode != IterationMode.DCB || !command.Duration.HasValue || coolDownTime < command.Duration * 1000);
+                }
+                return !coolDownTime.HasValue;
+            }
+
+            private bool BeValidTerminationRules(IEnumerable<TerminationRule> rules)
+            {
+                if (rules == null ) return false;
+                if (!rules.Any()) return true;
+
+                return rules.All(rule =>
+                    rule.ErrorStatusCodes != null && rule.MaxErrorRate != null && rule.GracePeriod != null &&
+                    ((rule.ErrorStatusCodes.Count == 0 && rule.MaxErrorRate == 0 && rule.GracePeriod == TimeSpan.Zero) ||
+                     (rule.MaxErrorRate > 0 &&  rule.GracePeriod> TimeSpan.Zero && rule.ErrorStatusCodes.Count > 0 &&
+                     rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code)))));
+            }
+            #endregion
         }
     }
 }
-

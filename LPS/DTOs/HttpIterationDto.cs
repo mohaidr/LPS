@@ -39,7 +39,10 @@ namespace LPS.DTOs
 
         // Cooldown time (can be a variable)
         public string CoolDownTime { get; set; }
+        public string MaxErrorRate { get; set; }
+        public string ErrorStatusCodes { get; set; } // The user should provide them as comma separated to make it easier to define variables and reslove them
 
+        public List<TerminationRuleDto> TerminationRules { get; set; }
         // Deep copy method to create a new instance with the same data
         public void DeepCopy(out HttpIterationDto targetDto)
         {
@@ -53,12 +56,19 @@ namespace LPS.DTOs
                 Duration = this.Duration,
                 BatchSize = this.BatchSize,
                 CoolDownTime = this.CoolDownTime,
+                MaxErrorRate = this.MaxErrorRate,
+                TerminationRules = [.. this.TerminationRules]
             };
 
             // Deep copy HttpRequest
-            var copiedHttpRequest = new HttpRequestDto();
-            HttpRequest.DeepCopy(out copiedHttpRequest);
+            HttpRequest.DeepCopy(out HttpRequestDto? copiedHttpRequest);
             targetDto.HttpRequest = copiedHttpRequest;
         }
+    }
+    public struct TerminationRuleDto
+    {
+        public string ErrorStatusCodes { get; set; } // The user should provide them as comma separated to make it easier to define variables and reslove them
+        public string MaxErrorRate { get; set; }
+        public string GracePeriod { get; set; }
     }
 }
