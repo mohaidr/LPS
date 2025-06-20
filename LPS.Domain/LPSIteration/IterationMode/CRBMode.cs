@@ -50,7 +50,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = () => !cancellationToken.IsCancellationRequested;
             bool newBatch = true;
 
-            while (continueCondition() && !await _terminationCheckerService.Check(_httpIteration))
+            while (continueCondition() && !await _terminationCheckerService.IsTerminationRequiredAsync(_httpIteration))
             {
                 int batchSize = Math.Min(_batchSize, _requestCount);
 

@@ -52,7 +52,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
 
-            while (continueCondition() && !await _terminationCheckerService.Check(_httpIteration))
+            while (continueCondition() && !await _terminationCheckerService.IsTerminationRequiredAsync(_httpIteration))
             {
                 if (_maximizeThroughput)
                 {

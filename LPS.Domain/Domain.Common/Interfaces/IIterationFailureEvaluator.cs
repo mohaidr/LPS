@@ -6,8 +6,8 @@ using System.Threading.Tasks;
 
 namespace LPS.Domain.Domain.Common.Interfaces
 {
-    public interface ITerminationCheckerService
+    public interface IIterationFailureEvaluator
     {
-        public Task<bool> IsTerminationRequiredAsync(Iteration iteration); 
+        Task<bool> IsErrorRateExceededAsync(HttpIteration iteration);
     }
 }

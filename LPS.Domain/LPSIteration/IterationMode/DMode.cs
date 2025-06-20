@@ -42,7 +42,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 int numberOfSentRequests = 0;
                 var stopwatch = Stopwatch.StartNew();
 
-                while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested && !(await _terminationCheckerService.Check(_httpIteration)))
+                while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested && !(await _terminationCheckerService.IsTerminationRequiredAsync(_httpIteration)))
                 {
                     await _watchdog.BalanceAsync(_hostName, cancellationToken);
                     await _command.ExecuteAsync(_request);

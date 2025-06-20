@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             _metricsQueryService = metricsQueryService;
         }
 
-        public async Task<bool> Check(Iteration iteration)
+        public async Task<bool> IsTerminationRequiredAsync(Iteration iteration)
         {
             if (iteration is not HttpIteration httpIteration)
                 throw new ArgumentException("Expected HttpIteration", nameof(iteration));

@@ -39,7 +39,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             try
             {
                 int numberOfSentRequests = 0;
-                for (int i = 0; i < _requestCount && !cancellationToken.IsCancellationRequested&& !(await _terminationCheckerService.Check(_httpIteration)); i++)
+                for (int i = 0; i < _requestCount && !cancellationToken.IsCancellationRequested&& !(await _terminationCheckerService.IsTerminationRequiredAsync(_httpIteration)); i++)
                 {
                     await _watchdog.BalanceAsync(_hostName, cancellationToken);
                     await _command.ExecuteAsync(_request);
