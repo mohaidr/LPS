@@ -11,6 +11,7 @@ namespace LPS.DTOs
         {
             Name = string.Empty;
             HttpRequest = new HttpRequestDto();
+            TerminationRules = [];
         }
 
         // Name of the iteration
@@ -64,7 +65,42 @@ namespace LPS.DTOs
             HttpRequest.DeepCopy(out HttpRequestDto? copiedHttpRequest);
             targetDto.HttpRequest = copiedHttpRequest;
         }
+
+        public static List<TerminationRuleDto> ParseTerminationRules(IEnumerable<string> ruleInputs)
+        {
+            var parsedRules = new List<TerminationRuleDto>();
+
+            foreach (var input in ruleInputs)
+            {
+                var rule = new TerminationRuleDto();
+                var segments = input.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var segment in segments)
+                {
+                    var parts = segment.Split('=', 2, StringSplitOptions.TrimEntries);
+                    if (parts.Length != 2) continue;
+
+                    switch (parts[0].ToLower())
+                    {
+                        case "codes":
+                            rule.ErrorStatusCodes = parts[1];
+                            break;
+                        case "rate":
+                            rule.MaxErrorRate = parts[1];
+                            break;
+                        case "grace":
+                            rule.GracePeriod = parts[1];
+                            break;
+                    }
+                }
+
+                parsedRules.Add(rule);
+            }
+
+            return parsedRules;
+        }
     }
+
     public struct TerminationRuleDto
     {
         public string ErrorStatusCodes { get; set; } // The user should provide them as comma separated to make it easier to define variables and reslove them

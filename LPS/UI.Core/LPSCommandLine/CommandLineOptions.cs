@@ -75,9 +75,15 @@ namespace LPS.UI.Core.LPSCommandLine
                 SaveResponse.AddAlias("-sr");
                 SupportH2C.AddAlias("-sh2c");
                 SupportH2C.AddAlias("-h2c");
+                MaxErrorRateOption.AddAlias("mer");
+                ErrorStatusCodesOption.AddAlias("esc");
+                TerminationRuleOption.AddAlias("-tr");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
+                AddCaseInsensitiveAliases(MaxErrorRateOption, "--maxerrorrate");
+                AddCaseInsensitiveAliases(MaxErrorRateOption, "--errorstatuscodes");
+                AddCaseInsensitiveAliases(TerminationRuleOption, "--terminationrule");
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
                 AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
                 AddCaseInsensitiveAliases(DelayClientCreationOption, "--delayclientcreation");
@@ -108,6 +114,27 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
+            };
+
+            public static Option<string> MaxErrorRateOption { get; } = new Option<string>(
+            "--maxErrorRate", "Max Error Rate")
+            {
+                IsRequired = false,
+                Arity = ArgumentArity.ExactlyOne
+            };
+
+            public static Option<string> ErrorStatusCodesOption { get; } = new Option<string>(
+                "--errorStatusCodesOption", "Error status codes to be used to calculate the max error rate")
+            {
+                IsRequired = false,
+                Arity = ArgumentArity.ExactlyOne
+            };
+            public static Option<IList<string>> TerminationRuleOption { get; } = new(
+                "--terminationRule",
+                description: "Termination rule in the format 'codes=500,502;rate=0.3;grace=10s'. Repeat this option to define multiple rules.")
+                        {
+                            AllowMultipleArgumentsPerToken = true,
+                            IsRequired = false
             };
 
             public static Option<string> RoundNameOption { get; } = new Option<string>(

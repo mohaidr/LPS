@@ -190,13 +190,45 @@ namespace LPS.UI.Core.LPSValidators
              })
              .WithMessage("The 'MaximizeThroughput' must be a valid boolean");
 
+            RuleFor(dto => dto.TerminationRules)
+                .Must(BeValidTerminationRules).WithMessage("Ivalid Termination Rule");
 
-            RuleFor(dto => dto.MaxErrorRate)
-             .Must(maxErrorRate =>
-             {
-                 return (int.TryParse(maxErrorRate, out int parsedValue) && parsedValue > 0) || string.IsNullOrEmpty(maxErrorRate) || maxErrorRate.StartsWith("$");
-             })
-             .WithMessage("The 'MaxErrorRate' must be a greater than 0");
+            RuleFor(dto => dto)
+                .Must(dto =>
+                {
+                    var rate = dto.MaxErrorRate;
+                    var codes = dto.ErrorStatusCodes;
+
+
+                    // Case 1: Both start with `$` — valid (placeholder case)
+                    if (!string.IsNullOrEmpty(rate) && rate.StartsWith("$") &&
+                        !string.IsNullOrEmpty(codes) && codes.StartsWith("$"))
+                        return true;
+
+                    // Case 2: If maxErrorRate > 0, errorStatusCodes must contain at least one valid HTTP status code and vice versa
+                    if (double.TryParse(rate, out var parsedRate) && parsedRate > 0)
+                    {
+                        if (string.IsNullOrWhiteSpace(codes))
+                            return false;
+
+                        var parts = codes.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                         .Select(p => p.Trim());
+
+                        return parts.Any(code =>
+                            int.TryParse(code, out var statusCode) &&
+                            Enum.IsDefined(typeof(HttpStatusCode), statusCode));
+                    }
+                    else if (!string.IsNullOrWhiteSpace(codes) && codes.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                         .Select(p => p.Trim()).Count() > 0)
+                    {
+                        return double.TryParse(rate, out parsedRate) && parsedRate > 0;
+                    }
+
+                    return true; // All other cases are valid
+                })
+                .WithMessage("If one of 'MaxErrorRate' or 'ErrorStatusCodes' is null, the other must be null. " +
+                             "If both start with '$', it's valid. If 'MaxErrorRate' > 0, then 'ErrorStatusCodes' must include at least one valid HTTP status code.");
+
 
             RuleFor(dto => dto.HttpRequest)
                 .SetValidator(new RequestValidator(new HttpRequestDto()));
@@ -208,30 +240,32 @@ namespace LPS.UI.Core.LPSValidators
             if (!rules.Any()) return true;
 
             return rules.All
-            (
-                rule =>
-                {
+             (
+                 rule =>
+                 {
+                     if (rule.ErrorStatusCodes == null || rule.MaxErrorRate == null || rule.GracePeriod == null)
+                         return false;
 
-                    if (rule.ErrorStatusCodes == null || rule.MaxErrorRate == null || rule.GracePeriod == null)
-                        return false;
+                     if (rule.ErrorStatusCodes.StartsWith("$") || rule.MaxErrorRate.StartsWith("$") || rule.GracePeriod.StartsWith("$"))
+                         return true;
 
-                    if (rule.ErrorStatusCodes.StartsWith("$") || rule.MaxErrorRate.StartsWith("$") || rule.GracePeriod.StartsWith("$"))
-                        return true;
+                     var codes = rule.ErrorStatusCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList();
+                     var validCodes = codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _));
+                     var validRate = double.TryParse(rule.MaxErrorRate, out var parsedValue);
+                     var validGrace = TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod);
 
-                    var codes = rule.ErrorStatusCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList();
-                    var validCodes = codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _));
-                    var validRate = int.TryParse(rule.MaxErrorRate, out var parsedValue);
-                    var validGrace = TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod);
+                     // Inactive rule (all zero/empty) OR active rule (all valid and > 0)
+                     return
+                         validCodes && validRate && validGrace &&
+                         (
+                             (codes.Count > 0 && parsedValue > 0 && gracePeriod > TimeSpan.Zero) ||
+                             (codes.Count == 0 && parsedValue == 0 && gracePeriod == TimeSpan.Zero)
+                         );
 
-                    // Inactive rule (all zero/empty) OR active rule (all valid and > 0)
-                    return
-                        validCodes && validRate && validGrace &&
-                        (
-                            (codes.Count > 0 && parsedValue > 0 && gracePeriod > TimeSpan.Zero) ||
-                            (codes.Count == 0 && parsedValue == 0 && gracePeriod == TimeSpan.Zero)
-                        );
-                }
-            );
+                 }
+             );
+
+
         }
 
         public override HttpIterationDto Dto { get { return _iterationDto; } }

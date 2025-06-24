@@ -35,6 +35,7 @@ namespace LPS.Domain
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
             readonly ITerminationCheckerService _terminationCheckerService;
+            readonly IIterationFailureEvaluator _iterationFailureEvaluator;
             readonly CancellationTokenSource _cts;
             protected ExecuteCommand()
             {
@@ -47,6 +48,7 @@ namespace LPS.Domain
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 ITerminationCheckerService terminationCheckerService,
+                IIterationFailureEvaluator iterationFailureEvaluator,
                 CancellationTokenSource cts)
             {
                 _logger = logger;
@@ -57,6 +59,7 @@ namespace LPS.Domain
                 _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _terminationCheckerService = terminationCheckerService;
+                _iterationFailureEvaluator = iterationFailureEvaluator;
                 _cts = cts;
             }
             private ExecutionStatus _executionStatus;
@@ -76,7 +79,7 @@ namespace LPS.Domain
                 entity._lpsMetricsDataMonitor = this._lpsMetricsDataMonitor;
                 entity._httpIterationExecutionCommandStatusMonitor = this._httpIterationExecutionCommandStatusMonitor;
                 entity._cts = this._cts;
-                entity._httpIterationSchedulerService = new HttpIterationSchedulerService(_logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _httpIterationExecutionCommandStatusMonitor, _terminationCheckerService, _cts);
+                entity._httpIterationSchedulerService = new HttpIterationSchedulerService(_logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _httpIterationExecutionCommandStatusMonitor, _terminationCheckerService,_iterationFailureEvaluator, _cts);
                 await entity.ExecuteAsync(this);
             }
 

@@ -61,9 +61,26 @@ namespace LPS.Domain
                     .Must(BeValidCoolDownTime)
                     .WithMessage(c => $"The 'CoolDownTime' {(c.Mode == IterationMode.DCB || c.Mode == IterationMode.CRB || c.Mode == IterationMode.CB ? $"must be specified and greater than 0{(c.Mode == IterationMode.DCB && c.Duration.HasValue ? ", it must be less than Duration*1000 as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
 
-                RuleFor(c => c.MaxErrorRate)
-                    .Must(maxErrorRate=> !maxErrorRate.HasValue || maxErrorRate.Value>0)
-                    .WithMessage("The 'MaxErrorRate' must be greater than 0");
+                RuleFor(c => c)
+                    .Must(c =>
+                    {
+                        var rate = c.MaxErrorRate;
+                        var codes = c.ErrorStatusCodes;
+
+                        // If MaxErrorRate is set and > 0, ensure ErrorStatusCodes has at least one entry
+                        if (rate.HasValue && rate.Value > 0)
+                        {
+                            return codes != null && codes.Count > 0;
+                        }
+                        else if (codes != null && codes.Count > 0)
+                        {
+                            return rate.HasValue && rate.Value > 0;
+                        }
+
+                        return true; // Valid if both are null or MaxErrorRate is 0
+                    })
+                    .WithMessage("If 'MaxErrorRate' is greater than 0, then 'ErrorStatusCodes' must have at least one value. If one is null, the other must be null.");
+
 
                 RuleFor(c => c.TerminationRules)
                     .Must(BeValidTerminationRules)

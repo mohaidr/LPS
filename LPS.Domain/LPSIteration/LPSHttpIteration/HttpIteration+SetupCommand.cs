@@ -75,6 +75,7 @@ namespace LPS.Domain
                 targetCommand.IsValid = this.IsValid;
                 targetCommand.TerminationRules = [.. this.TerminationRules];
                 targetCommand.MaxErrorRate = this.MaxErrorRate;
+                targetCommand.ErrorStatusCodes = this.ErrorStatusCodes;
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
@@ -99,6 +100,7 @@ namespace LPS.Domain
                 this.CoolDownTime = command.CoolDownTime; ;
                 this.BatchSize = command.BatchSize;
                 this.MaxErrorRate = command.MaxErrorRate;
+                this.ErrorStatusCodes = command.ErrorStatusCodes;
                 this.TerminationRules = command.TerminationRules.ToList();
                 this.IsValid = true;
             }
@@ -126,6 +128,7 @@ namespace LPS.Domain
                 clone.MaximizeThroughput = this.MaximizeThroughput;
                 clone.TerminationRules = [.. this.TerminationRules];
                 clone.MaxErrorRate = this.MaxErrorRate;
+                clone.ErrorStatusCodes = this.ErrorStatusCodes;
                 clone.IsValid = true;
             }
             return clone;

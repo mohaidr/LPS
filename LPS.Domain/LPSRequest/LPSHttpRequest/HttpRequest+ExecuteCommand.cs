@@ -22,7 +22,7 @@ namespace LPS.Domain
             ILogger logger,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            CancellationTokenSource cts) : IAsyncCommand<HttpRequest>, IStateSubject
+            CancellationTokenSource cts) : IAsyncCommand<HttpRequest>
         {
             private IClientService<HttpRequest, HttpResponse> _httpClientService { get; set; } = httpClientService;
             public IClientService<HttpRequest, HttpResponse> HttpClientService => _httpClientService;
@@ -31,10 +31,7 @@ namespace LPS.Domain
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
             readonly CancellationTokenSource _cts = cts;
             private ExecutionStatus _executionStatus;
-            private ExecutionStatus _aggregateStatus;
             public ExecutionStatus Status => _executionStatus;
-            public ExecutionStatus AggregateStatus => _aggregateStatus;
-            readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
             //and need to clean it up and use clear contracts as any change in the logic here will break
             //the system 
@@ -68,38 +65,7 @@ namespace LPS.Domain
                 {
                     _executionStatus = ExecutionStatus.Failed;
                 }
-                finally
-                {
-                    await _semaphoreSlim.WaitAsync();
-                    if (_aggregateStatus < _executionStatus)
-                    {
-                        _aggregateStatus = _executionStatus;
-                        NotifyObservers();
-                    }
-                    _semaphoreSlim.Release();
-                }
             }
-
-            private List<IStateObserver> _observers = new();
-
-            public void RegisterObserver(IStateObserver observer)
-            {
-                _observers.Add(observer);
-            }
-
-            public void RemoveObserver(IStateObserver observer)
-            {
-                _observers.Remove(observer);
-            }
-
-            public void NotifyObservers()
-            {
-                foreach (var observer in _observers)
-                {
-                    observer.NotifyMe(_aggregateStatus);
-                }
-            }
-
         }
 
         async private Task ExecuteAsync(ExecuteCommand command)

@@ -1,4 +1,5 @@
-﻿using LPS.Domain;
+﻿// File: CommandBinder.cs
+using LPS.Domain;
 using LPS.UI.Core.Build.Services;
 using System;
 using System.Collections.Generic;
@@ -9,6 +10,7 @@ using System.Text;
 using System.CommandLine.Parsing;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.DTOs;
+using LPS.UI.Common.Options;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {
@@ -31,11 +33,14 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string> _urlOption;
         private Option<IList<string>> _headerOption;
         private Option<string> _payloadOption;
-        readonly Option<string> _iterationModeOption;
+        private Option<string> _iterationModeOption;
         private Option<string> _numberOfClientsOption;
         private Option<string?> _arrivalDelayOption;
         private Option<string> _delayClientCreationOption;
         private Option<string> _runInParallerOption;
+        private Option<string> _maxErrorRateOption = CommandLineOptions.LPSCommandOptions.MaxErrorRateOption;
+        private Option<string> _errorStatusCodesOption = CommandLineOptions.LPSCommandOptions.ErrorStatusCodesOption;
+        private Option<IList<string>> _terminationRuleOption = CommandLineOptions.LPSCommandOptions.TerminationRuleOption;
 
         public CommandBinder(
             Option<string>? nameOption = null,
@@ -63,7 +68,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         {
             _nameOption = nameOption ?? CommandLineOptions.LPSCommandOptions.PlanNameOption;
             _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.RoundNameOption;
-            _startupDelayOption = startupDelayOption?? CommandLineOptions.LPSCommandOptions.StartupDelayOption;
+            _startupDelayOption = startupDelayOption ?? CommandLineOptions.LPSCommandOptions.StartupDelayOption;
             _numberOfClientsOption = numberOfClientsOption ?? CommandLineOptions.LPSCommandOptions.NumberOfClientsOption;
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreationOption;
@@ -87,8 +92,12 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
 
         protected override PlanDto GetBoundValue(BindingContext bindingContext)
         {
+            var terminationRulesRaw = bindingContext.ParseResult.GetValueForOption(_terminationRuleOption);
+            var terminationRules = terminationRulesRaw != null
+                ? HttpIterationDto.ParseTerminationRules(terminationRulesRaw)
+                : new List<TerminationRuleDto>();
+
             #pragma warning disable CS8601 // Possible null reference assignment.
-            #pragma warning disable CS8604 // Possible null reference argument.
             return new PlanDto()
             {
                 Name = bindingContext.ParseResult.GetValueForOption(_nameOption),
@@ -113,6 +122,9 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                                 CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                                 BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
+                                MaxErrorRate = bindingContext.ParseResult.GetValueForOption(_maxErrorRateOption),
+                                ErrorStatusCodes = bindingContext.ParseResult.GetValueForOption(_errorStatusCodesOption),
+                                TerminationRules = terminationRules,
                                 HttpRequest = new HttpRequestDto()
                                 {
                                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
@@ -121,15 +133,14 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                     SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
                                     SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),
                                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
-                                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? new PayloadDto(){ Raw= InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) } : new PayloadDto(){ Raw= string.Empty },
+                                    Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? new PayloadDto(){ Raw = InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) } : new PayloadDto(){ Raw = string.Empty },
                                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),
                                 },
                             }
-                        }   
-                    } 
+                        }
+                    }
                 }
             };
-            #pragma warning restore CS8604 // Possible null reference argument.
             #pragma warning restore CS8601 // Possible null reference assignment.
         }
     }

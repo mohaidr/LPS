@@ -14,7 +14,7 @@ namespace LPS.Domain
 {
     public partial class HttpIteration
     {
-        public class ExecuteCommand : IAsyncCommand<HttpIteration>, IStateObserver
+        public class ExecuteCommand : IAsyncCommand<HttpIteration>
         {
             readonly IClientService<HttpRequest, HttpResponse> _httpClientService;
             public IClientService<HttpRequest, HttpResponse> HttpClientService => _httpClientService;
@@ -23,6 +23,7 @@ namespace LPS.Domain
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             readonly IMetricsDataMonitor _lpsMonitoringEnroller;
             ITerminationCheckerService _terminationCheckerService;
+            IIterationFailureEvaluator _iterationFailureEvaluator;
             readonly CancellationTokenSource _cts;
 
             protected ExecuteCommand()
@@ -36,6 +37,7 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IMetricsDataMonitor lpsMonitoringEnroller,
                 ITerminationCheckerService terminationCheckerService,
+                IIterationFailureEvaluator iterationFailureEvaluator,
                 CancellationTokenSource cts)
             {
                 _httpClientService = httpClientService;
@@ -45,10 +47,10 @@ namespace LPS.Domain
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
                 _cts = cts;
                 _terminationCheckerService = terminationCheckerService;
+                _iterationFailureEvaluator = iterationFailureEvaluator;
                 _executionStatus = ExecutionStatus.Scheduled;
             }
             private ExecutionStatus _executionStatus;
-            private ExecutionStatus _aggregateStatus;
             public ExecutionStatus Status => _executionStatus;
 
             public async Task ExecuteAsync(HttpIteration entity)
@@ -69,25 +71,30 @@ namespace LPS.Domain
                 {
                     _executionStatus = ExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this);
-                    _executionStatus = _aggregateStatus;
                 }
                 catch (OperationCanceledException) when (_cts.IsCancellationRequested)
                 {
                     _executionStatus = ExecutionStatus.Cancelled;
                     throw;
-                }
-                catch
-                {
-                    _executionStatus = ExecutionStatus.Failed;
-                }
+                }  
+                catch {  } // No exception should stop the iteration execution, termination rules and cancellations are the ways to stop ongoing execution
                 finally {
-                    if (_aggregateStatus > _executionStatus)
-                        _executionStatus = _aggregateStatus;
+                    if (_executionStatus != ExecutionStatus.Cancelled)
+                    {
+                        if (await _terminationCheckerService.IsTerminationRequiredAsync(entity))
+                        {
+                            _executionStatus = ExecutionStatus.Terminated;
+                        }
+                        else if (await _iterationFailureEvaluator.IsErrorRateExceededAsync(entity))
+                        {
+                            _executionStatus = ExecutionStatus.Failed;
+                        }
+                        else
+                        {
+                            _executionStatus = ExecutionStatus.Completed;
+                        }
+                    }
                 }
-            }
-            public void NotifyMe(ExecutionStatus status)
-            {
-                _aggregateStatus = status;
             }
 
             public void CancellIfScheduled()
@@ -153,7 +160,6 @@ namespace LPS.Domain
                 return;
 
             var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
-            httpRequestExecuteCommand.RegisterObserver(command);
             try
             {
                 await LogRequestDetails();
@@ -233,10 +239,6 @@ namespace LPS.Domain
             catch (OperationCanceledException) when (_cts.IsCancellationRequested)
             {
                 throw;
-            }
-            finally
-            {
-                httpRequestExecuteCommand.RemoveObserver(command);
             }
         }
     }

@@ -151,6 +151,8 @@ namespace Apis.Controllers
                 return "Ongoing";
             if (statuses.Any(status => status == ExecutionStatus.Failed))
                 return "Failed";
+            if (statuses.Any(status => status == ExecutionStatus.Terminated))
+                return "Terminated";
             if (statuses.Any(status => status == ExecutionStatus.Cancelled) && !statuses.Any(status => status == ExecutionStatus.Failed))
                 return "Cancelled";
             if (statuses.All(status => status == ExecutionStatus.Completed))

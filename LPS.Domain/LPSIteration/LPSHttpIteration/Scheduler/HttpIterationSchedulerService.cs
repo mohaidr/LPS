@@ -18,12 +18,14 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
         readonly CancellationTokenSource _cts;
         readonly ILogger _logger;
         readonly ITerminationCheckerService _terminationCheckerService;
+        readonly IIterationFailureEvaluator _iterationFailureEvaluator;
         public HttpIterationSchedulerService(ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 ITerminationCheckerService terminationCheckerService,
+                IIterationFailureEvaluator iterationFailureEvaluator,
                 CancellationTokenSource cts)
         {
             _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
@@ -32,12 +34,13 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
             _terminationCheckerService = terminationCheckerService;
+            _iterationFailureEvaluator = iterationFailureEvaluator;
             _logger = logger;
         }
 
         public async Task ScheduleHttpIterationExecutionAsync(DateTime scheduledTime, HttpIteration httpIteration, IClientService<HttpRequest, HttpResponse> httpClient)
         {
-            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _terminationCheckerService, _cts);
+            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _terminationCheckerService, _iterationFailureEvaluator, _cts);
             try
             {
                 _httpIterationExecutionCommandStatusMonitor.Register(httpIterationCommand, httpIteration);
