@@ -45,7 +45,7 @@ namespace Apis.Services
 
             // Get statuses from status monitor
             var internalStatuses = (await _statusMonitor
-                .Query(iteration => iteration.Id == record.IterationId))
+                .QueryAsync(iteration => iteration.Id == record.IterationId))
                 .SingleOrDefault()
                 .Value;
 

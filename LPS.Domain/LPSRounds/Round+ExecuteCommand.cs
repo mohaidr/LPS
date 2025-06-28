@@ -36,7 +36,6 @@ namespace LPS.Domain
             readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
             readonly ITerminationCheckerService _terminationCheckerService;
             readonly IIterationFailureEvaluator _iterationFailureEvaluator;
-            readonly CancellationTokenSource _cts;
             protected ExecuteCommand()
             {
             }
@@ -48,8 +47,7 @@ namespace LPS.Domain
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 ITerminationCheckerService terminationCheckerService,
-                IIterationFailureEvaluator iterationFailureEvaluator,
-                CancellationTokenSource cts)
+                IIterationFailureEvaluator iterationFailureEvaluator)
             {
                 _logger = logger;
                 _watchdog = watchdog;
@@ -60,11 +58,10 @@ namespace LPS.Domain
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _terminationCheckerService = terminationCheckerService;
                 _iterationFailureEvaluator = iterationFailureEvaluator;
-                _cts = cts;
             }
             private ExecutionStatus _executionStatus;
             public ExecutionStatus Status => _executionStatus;
-            async public Task ExecuteAsync(Round entity)
+            async public Task ExecuteAsync(Round entity, CancellationToken token)
             {
                 if (entity == null)
                 {
@@ -78,29 +75,28 @@ namespace LPS.Domain
                 entity._lpsClientManager = this._lpsClientManager;
                 entity._lpsMetricsDataMonitor = this._lpsMetricsDataMonitor;
                 entity._httpIterationExecutionCommandStatusMonitor = this._httpIterationExecutionCommandStatusMonitor;
-                entity._cts = this._cts;
-                entity._httpIterationSchedulerService = new HttpIterationSchedulerService(_logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _httpIterationExecutionCommandStatusMonitor, _terminationCheckerService,_iterationFailureEvaluator, _cts);
-                await entity.ExecuteAsync(this);
+                entity._httpIterationSchedulerService = new HttpIterationSchedulerService(_logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _httpIterationExecutionCommandStatusMonitor, _terminationCheckerService,_iterationFailureEvaluator, _lpsClientManager, _lpsClientConfig);
+                await entity.ExecuteAsync(this, token);
             }
 
             //TODO:: When implementing IQueryable repository so you can run a subset of the defined Runs
             public IList<Guid> SelectedRuns { get { throw new NotImplementedException(); } set { throw new NotImplementedException(); } }
         }
-        async private Task ExecuteAsync(ExecuteCommand command)
+        async private Task ExecuteAsync(ExecuteCommand command, CancellationToken token)
         {
             if (this.IsValid && this.Iterations.Count > 0)
             {
                 if (this.StartupDelay > 0)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(this.StartupDelay), _cts.Token);
+                    await Task.Delay(TimeSpan.FromSeconds(this.StartupDelay), token);
                 }
 
                 List<Task> awaitableTasks = new();
                 #region Loggin Round Details
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Details", LPSLoggingLevel.Verbose, _cts.Token));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Name:  {this.Name}", LPSLoggingLevel.Verbose, _cts.Token));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbose, _cts.Token));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbose, _cts.Token));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Details", LPSLoggingLevel.Verbose, token));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Name:  {this.Name}", LPSLoggingLevel.Verbose, token));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbose, token));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbose, token));
                 #endregion
 
                 if (!this.DelayClientCreationUntilIsNeeded.Value)
@@ -111,25 +107,16 @@ namespace LPS.Domain
                     }
                 }
 
-                for (int i = 0; i < this.NumberOfClients && !_cts.Token.IsCancellationRequested; i++)
+                for (int i = 0; i < this.NumberOfClients && !token.IsCancellationRequested; i++)
                 {
-                    IClientService<HttpRequest, HttpResponse> httpClient;
-                    if (!this.DelayClientCreationUntilIsNeeded.Value)
-                    {
-                        httpClient = _lpsClientManager.DequeueClient();
-                    }
-                    else
-                    {
-                        httpClient = _lpsClientManager.CreateInstance(_lpsClientConfig);
-                    }
                     int delayTime = i * (this.ArrivalDelay?? 0);
-                    awaitableTasks.Add(SchedualHttpIterationForExecution(httpClient, DateTime.Now.AddMilliseconds(delayTime)));
+                    awaitableTasks.Add(SchedualHttpIterationForExecutionAsync(DateTime.Now.AddMilliseconds(delayTime), token));
                 }
                 await Task.WhenAll([..awaitableTasks]);
             }
         }
 
-        private async Task SchedualHttpIterationForExecution(IClientService<HttpRequest, HttpResponse> httpClient, DateTime executionTime)
+        private async Task SchedualHttpIterationForExecutionAsync(DateTime executionTime, CancellationToken token)
         {
             List<Task> awaitableTasks = [];
             foreach (var httpIteration in this.Iterations.Where(iteration=> iteration.Type == IterationType.Http))
@@ -140,11 +127,11 @@ namespace LPS.Domain
                 }
                 if (this.RunInParallel.HasValue && this.RunInParallel.Value)
                 {
-                    awaitableTasks.Add(_httpIterationSchedulerService.ScheduleHttpIterationExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient));
+                    awaitableTasks.Add(_httpIterationSchedulerService.ScheduleAsync(executionTime, (HttpIteration)httpIteration, token));
                 }
                 else
                 {
-                    await _httpIterationSchedulerService.ScheduleHttpIterationExecutionAsync(executionTime, (HttpIteration)httpIteration, httpClient);
+                    await _httpIterationSchedulerService.ScheduleAsync(executionTime, (HttpIteration)httpIteration, token);
                 }
             }
             await Task.WhenAll(awaitableTasks);

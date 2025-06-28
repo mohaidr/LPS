@@ -21,21 +21,19 @@ namespace LPS.Domain
         public class ExecuteCommand(IClientService<HttpRequest,HttpResponse> httpClientService,
             ILogger logger,
             IWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            CancellationTokenSource cts) : IAsyncCommand<HttpRequest>
+            IRuntimeOperationIdProvider runtimeOperationIdProvider ) : IAsyncCommand<HttpRequest>
         {
             private IClientService<HttpRequest, HttpResponse> _httpClientService { get; set; } = httpClientService;
             public IClientService<HttpRequest, HttpResponse> HttpClientService => _httpClientService;
             readonly ILogger _logger = logger;
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            readonly CancellationTokenSource _cts = cts;
             private ExecutionStatus _executionStatus;
             public ExecutionStatus Status => _executionStatus;
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
             //and need to clean it up and use clear contracts as any change in the logic here will break
             //the system 
-            async public Task ExecuteAsync(HttpRequest entity)
+            async public Task ExecuteAsync(HttpRequest entity, CancellationToken token)
             {
                 try
                 {
@@ -47,16 +45,15 @@ namespace LPS.Domain
                     entity._logger = this._logger;
                     entity._watchdog = this._watchdog;
                     entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
-                    entity._cts = this._cts;
                     _executionStatus = ExecutionStatus.Ongoing;
-                    await entity.ExecuteAsync(this);
+                    await entity.ExecuteAsync(this, token);
 
                     if (!entity.HasFailed)
                         _executionStatus = ExecutionStatus.Completed;
                     else
                         _executionStatus = ExecutionStatus.Failed;
                 }
-                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
                     _executionStatus = ExecutionStatus.Cancelled;
                     throw;
@@ -68,12 +65,12 @@ namespace LPS.Domain
             }
         }
 
-        async private Task ExecuteAsync(ExecuteCommand command)
+        async private Task ExecuteAsync(ExecuteCommand command, CancellationToken token)
         {
             if (this.IsValid)
             {
                 string hostName = this.Url.HostName;
-                await _watchdog.BalanceAsync(hostName, _cts.Token);
+                await _watchdog.BalanceAsync(hostName, token);
                 try
                 {
                     if (command.HttpClientService == null)
@@ -81,7 +78,7 @@ namespace LPS.Domain
                         throw new InvalidOperationException("Http Client Is Not Defined");
                     }
 
-                    var response = await command.HttpClientService.SendAsync(this, _cts.Token);
+                    var response = await command.HttpClientService.SendAsync(this, token);
                     if (response.IsSuccessStatusCode)
                         this.HasFailed = false; // HasFailed is not valid property here, think of this as an entity you just fetch from DB to execute, so this has to change
                     else

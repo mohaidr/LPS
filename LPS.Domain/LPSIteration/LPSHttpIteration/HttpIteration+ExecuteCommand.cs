@@ -24,7 +24,6 @@ namespace LPS.Domain
             readonly IMetricsDataMonitor _lpsMonitoringEnroller;
             ITerminationCheckerService _terminationCheckerService;
             IIterationFailureEvaluator _iterationFailureEvaluator;
-            readonly CancellationTokenSource _cts;
 
             protected ExecuteCommand()
             {
@@ -37,15 +36,13 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IMetricsDataMonitor lpsMonitoringEnroller,
                 ITerminationCheckerService terminationCheckerService,
-                IIterationFailureEvaluator iterationFailureEvaluator,
-                CancellationTokenSource cts)
+                IIterationFailureEvaluator iterationFailureEvaluator)
             {
                 _httpClientService = httpClientService;
                 _logger = logger;
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
-                _cts = cts;
                 _terminationCheckerService = terminationCheckerService;
                 _iterationFailureEvaluator = iterationFailureEvaluator;
                 _executionStatus = ExecutionStatus.Scheduled;
@@ -53,7 +50,7 @@ namespace LPS.Domain
             private ExecutionStatus _executionStatus;
             public ExecutionStatus Status => _executionStatus;
 
-            public async Task ExecuteAsync(HttpIteration entity)
+            public async Task ExecuteAsync(HttpIteration entity, CancellationToken token)
             {
                 if (entity == null)
                 {
@@ -65,27 +62,28 @@ namespace LPS.Domain
                 entity._runtimeOperationIdProvider = _runtimeOperationIdProvider;
                 entity._lpsMonitoringEnroller = _lpsMonitoringEnroller;
                 entity._terminationCheckerService = _terminationCheckerService;
-                entity._cts = _cts;
-
                 try
                 {
                     _executionStatus = ExecutionStatus.Ongoing;
-                    await entity.ExecuteAsync(this);
+                    await entity.ExecuteAsync(this, token);
                 }
-                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
                     _executionStatus = ExecutionStatus.Cancelled;
                     throw;
                 }  
-                catch {  } // No exception should stop the iteration execution, termination rules and cancellations are the ways to stop ongoing execution
-                finally {
+                catch 
+                {  
+                } // No exception should stop the iteration execution, termination rules and cancellations are the ways to stop ongoing execution
+                finally 
+                {
                     if (_executionStatus != ExecutionStatus.Cancelled)
                     {
-                        if (await _terminationCheckerService.IsTerminationRequiredAsync(entity))
+                        if (await _terminationCheckerService.IsTerminationRequiredAsync(entity)) //Update to adopt -> // cancel all the scheduled operations
                         {
                             _executionStatus = ExecutionStatus.Terminated;
                         }
-                        else if (await _iterationFailureEvaluator.IsErrorRateExceededAsync(entity))
+                        else if (await _iterationFailureEvaluator.IsErrorRateExceededAsync(entity)) //Update to adopt -> // and no ongoing commands running
                         {
                             _executionStatus = ExecutionStatus.Failed;
                         }
@@ -106,7 +104,7 @@ namespace LPS.Domain
             }
         }
 
-        private async Task LogRequestDetails()
+        private async Task LogRequestDetailsAsync(CancellationToken token)
         {
             var logEntry = new System.Text.StringBuilder();
 
@@ -149,20 +147,18 @@ namespace LPS.Domain
                 logEntry.AppendLine("...No Headers Were Provided...");
             }
 
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, logEntry.ToString(), LPSLoggingLevel.Verbose, _cts.Token);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, logEntry.ToString(), LPSLoggingLevel.Verbose, token);
         }
 
-        private int _numberOfSentRequests = 0;
-
-        private async Task ExecuteAsync(ExecuteCommand command)
+        private async Task ExecuteAsync(ExecuteCommand command, CancellationToken token)
         {
             if (!this.IsValid)
                 return;
 
-            var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, _logger, _watchdog, _runtimeOperationIdProvider, _cts);
+            var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, _logger, _watchdog, _runtimeOperationIdProvider);
             try
             {
-                await LogRequestDetails();
+                await LogRequestDetailsAsync(token);
 
                 IIterationModeService iterationModeService;
                 IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor;
@@ -231,12 +227,12 @@ namespace LPS.Domain
                         throw new ArgumentException("Invalid iteration mode was chosen");
                 }
 
-                _numberOfSentRequests = await iterationModeService.ExecuteAsync(_cts.Token);
+                int _numberOfSentRequests = await iterationModeService.ExecuteAsync(token);
 
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {command.HttpClientService.SessionId} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.Url.Url}", LPSLoggingLevel.Verbose, _cts.Token);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {command.HttpClientService.SessionId} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, _cts.Token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {command.HttpClientService.SessionId} has sent {_numberOfSentRequests} request(s) to {this.HttpRequest.Url.Url}", LPSLoggingLevel.Verbose, token);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"The client {command.HttpClientService.SessionId} is waiting for the {_numberOfSentRequests} request(s) to complete", LPSLoggingLevel.Verbose, token);
             }
-            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
                 throw;
             }

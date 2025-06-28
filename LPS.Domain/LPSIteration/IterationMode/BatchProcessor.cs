@@ -33,7 +33,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 for (int b = 0; b < batchSize && batchCondition(); b++)
                 {
                     await _watchdog.BalanceAsync(_hostName, token);
-                    awaitableTasks.Add(command.ExecuteAsync(_request));
+                    awaitableTasks.Add(command.ExecuteAsync(_request, token));
                     _numberOfSentRequests++;
                 }
                 await Task.WhenAll(awaitableTasks);

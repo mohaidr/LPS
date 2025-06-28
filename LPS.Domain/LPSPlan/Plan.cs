@@ -20,7 +20,6 @@ namespace LPS.Domain
         private ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         IPlaceholderResolverService _placeholderResolverService;
-        CancellationTokenSource _cts;
         public Plan(SetupCommand command,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,

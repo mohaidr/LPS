@@ -37,12 +37,12 @@ namespace LPS.Domain.LPSRun.IterationMode
             _terminationCheckerService = terminationCheckerService ?? throw new ArgumentNullException();
         }
 
-        public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
+        public async Task<int> ExecuteAsync(CancellationToken token)
         {
             var coolDownWatch = Stopwatch.StartNew();
             List<Task<int>> awaitableTasks = new();
 
-            bool continueCondition() => !cancellationToken.IsCancellationRequested;
+            bool continueCondition() => !token.IsCancellationRequested;
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
 
@@ -54,15 +54,15 @@ namespace LPS.Domain.LPSRun.IterationMode
                     {
                         coolDownWatch.Restart();
                         await Task.Yield();
-                        awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
+                        awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
                     }
                     newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                 }
                 else
                 {
                     coolDownWatch.Restart();
-                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
-                    await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
+                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
+                    await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), token);
                 }
             }
 

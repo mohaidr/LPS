@@ -36,7 +36,6 @@ namespace LPS.Domain
             readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
-            readonly CancellationTokenSource _cts;
             readonly ITerminationCheckerService _terminationCheckerService;
             readonly IIterationFailureEvaluator _iterationFailureEvaluator;
             protected ExecuteCommand()
@@ -50,8 +49,7 @@ namespace LPS.Domain
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 ITerminationCheckerService terminationCheckerService,
-                IIterationFailureEvaluator  iterationFailureEvaluator,
-                CancellationTokenSource cts)
+                IIterationFailureEvaluator  iterationFailureEvaluator)
             {
                 _logger = logger;
                 _watchdog = watchdog;
@@ -62,11 +60,10 @@ namespace LPS.Domain
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _terminationCheckerService = terminationCheckerService;
                 _iterationFailureEvaluator = iterationFailureEvaluator;
-                _cts = cts;
             }
             private ExecutionStatus _executionStatus;
             public ExecutionStatus Status => _executionStatus;
-            async public Task ExecuteAsync(Plan entity)
+            async public Task ExecuteAsync(Plan entity, CancellationToken token)
             {
                 if (entity == null)
                 {
@@ -82,14 +79,13 @@ namespace LPS.Domain
                 entity._httpIterationExecutionCommandStatusMonitor = this._httpIterationExecutionCommandStatusMonitor;
                 entity._terminationCheckerService = this._terminationCheckerService;
                 entity._iterationFailureEvaluator = this._iterationFailureEvaluator;
-                entity._cts = this._cts;
-                await entity.ExecuteAsync(this);
+                await entity.ExecuteAsync(this, token);
             }
 
             //TODO:: When implementing IQueryable repository so you can run a subset of the defined Rounds
             public IList<Guid> SelectedRounds { get { throw new NotImplementedException(); } set { throw new NotImplementedException(); } }
         }
-        async private Task ExecuteAsync(ExecuteCommand command)
+        async private Task ExecuteAsync(ExecuteCommand command, CancellationToken token)
         {
             if (this.IsValid && this.Rounds.Count > 0)
             {
@@ -97,8 +93,8 @@ namespace LPS.Domain
 
                 List<Task> awaitableTasks = new();
                 #region Loggin Round Details
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbose, _cts.Token));
-                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbose, _cts.Token));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Details", LPSLoggingLevel.Verbose, token));
+                awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbose, token));
                 #endregion
 
                 foreach (var round in Rounds)
@@ -109,9 +105,8 @@ namespace LPS.Domain
                         _lpsClientManager,
                         _lpsClientConfig,
                         _httpIterationExecutionCommandStatusMonitor,
-                        _lpsMetricsDataMonitor, _terminationCheckerService, _iterationFailureEvaluator,
-                        _cts);
-                    await roundExecCommand.ExecuteAsync(round);
+                        _lpsMetricsDataMonitor, _terminationCheckerService, _iterationFailureEvaluator);
+                    await roundExecCommand.ExecuteAsync(round, token);
                 }
             }
         }

@@ -97,7 +97,7 @@ namespace Apis.Controllers
                 {
                     var dimensionSet = await ((IMetricCollector)metric).GetDimensionSetAsync();
 
-                    var statusList = await _httpIterationCommandStatusMonitor.Query(((IMetricCollector)metric).HttpIteration);
+                    var statusList = await _httpIterationCommandStatusMonitor.QueryAsync(((IMetricCollector)metric).HttpIteration);
                     string status = statusList != null ? DetermineOverallStatus(statusList) : ExecutionStatus.Unkown.ToString();
 
                     var metricData = metricsList.FirstOrDefault(m => m.IterationId == ((IHttpDimensionSet)dimensionSet).IterationId);

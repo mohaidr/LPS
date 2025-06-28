@@ -19,7 +19,6 @@ namespace LPS.Domain
         }
         private ILogger _logger;
         IMetricsDataMonitor _lpsMetricsDataMonitor;
-        CancellationTokenSource _cts;
         public Round(SetupCommand command, 
             ILogger logger,
             IMetricsDataMonitor lpsMetricsDataMonitor,

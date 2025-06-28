@@ -62,6 +62,5 @@ namespace LPS.Domain
 
         public CaptureHandler Capture { get; protected set; }
         //TODO: ReadHandler To Be Implemented 
-        public ReadHandler Read { get; protected set; } 
     }
 }

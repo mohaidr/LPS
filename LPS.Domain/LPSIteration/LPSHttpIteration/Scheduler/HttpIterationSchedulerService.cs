@@ -15,10 +15,11 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
         private readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
         readonly IWatchdog _watchdog;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        readonly CancellationTokenSource _cts;
         readonly ILogger _logger;
         readonly ITerminationCheckerService _terminationCheckerService;
         readonly IIterationFailureEvaluator _iterationFailureEvaluator;
+        readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
+        readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
         public HttpIterationSchedulerService(ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -26,38 +27,40 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
                 ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 ITerminationCheckerService terminationCheckerService,
                 IIterationFailureEvaluator iterationFailureEvaluator,
-                CancellationTokenSource cts)
+                IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
+                IClientConfiguration<HttpRequest> lpsClientConfig)
         {
             _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
-            _cts = cts;
             _watchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
             _terminationCheckerService = terminationCheckerService;
             _iterationFailureEvaluator = iterationFailureEvaluator;
+            _lpsClientManager = lpsClientManager;
+            _lpsClientConfig = lpsClientConfig;
             _logger = logger;
         }
 
-        public async Task ScheduleHttpIterationExecutionAsync(DateTime scheduledTime, HttpIteration httpIteration, IClientService<HttpRequest, HttpResponse> httpClient)
+        public async Task ScheduleAsync(DateTime scheduledTime, HttpIteration httpIteration, CancellationToken token)
         {
-            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _terminationCheckerService, _iterationFailureEvaluator, _cts);
+            IClientService<HttpRequest, HttpResponse> httpClient = _lpsClientManager.DequeueClient() ?? _lpsClientManager.CreateInstance(_lpsClientConfig);
+            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _terminationCheckerService, _iterationFailureEvaluator);
             try
             {
                 _httpIterationExecutionCommandStatusMonitor.Register(httpIterationCommand, httpIteration);
-
                 var delayTime = (scheduledTime - DateTime.Now);
                 if (delayTime > TimeSpan.Zero)
                 {
-                    await Task.Delay(delayTime, _cts.Token);
+                    await Task.Delay(delayTime, token);
                 }
                 if (httpIteration.StartupDelay > 0)
                 {
-                  await Task.Delay(TimeSpan.FromSeconds(httpIteration.StartupDelay));
+                  await Task.Delay(TimeSpan.FromSeconds(httpIteration.StartupDelay), token);
                 }
                 _lpsMetricsDataMonitor?.Monitor(httpIteration);
-                await httpIterationCommand.ExecuteAsync(httpIteration);
+                await httpIterationCommand.ExecuteAsync(httpIteration, token);
             }
-            catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Scheduled execution of '{httpIteration.Name}' has been cancelled", LPSLoggingLevel.Warning);
             }

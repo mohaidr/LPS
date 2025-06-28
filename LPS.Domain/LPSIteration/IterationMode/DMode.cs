@@ -35,17 +35,17 @@ namespace LPS.Domain.LPSRun.IterationMode
             _terminationCheckerService = terminationCheckerService;
         }
 
-        public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
+        public async Task<int> ExecuteAsync(CancellationToken token)
         {
             try
             {
                 int numberOfSentRequests = 0;
                 var stopwatch = Stopwatch.StartNew();
 
-                while (stopwatch.Elapsed.TotalSeconds < _duration && !cancellationToken.IsCancellationRequested && !(await _terminationCheckerService.IsTerminationRequiredAsync(_httpIteration)))
+                while (stopwatch.Elapsed.TotalSeconds < _duration && !token.IsCancellationRequested && !(await _terminationCheckerService.IsTerminationRequiredAsync(_httpIteration)))
                 {
-                    await _watchdog.BalanceAsync(_hostName, cancellationToken);
-                    await _command.ExecuteAsync(_request);
+                    await _watchdog.BalanceAsync(_hostName, token);
+                    await _command.ExecuteAsync(_request, token);
                     numberOfSentRequests++;
                 }
 

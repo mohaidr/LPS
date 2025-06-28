@@ -24,9 +24,5 @@ namespace LPS.Domain.LPSRun.IterationMode
         /// The result contains the number of sent requests.
         /// </returns>
         Task<int> ExecuteAsync(CancellationToken cancellationToken);
-        async Task<int> ExecuteAsync(CancellationTokenSource cts) 
-        { 
-           return await ExecuteAsync(cts.Token);
-        }
     }
 }

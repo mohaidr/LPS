@@ -79,7 +79,7 @@ namespace LPS.Infrastructure.Monitoring.Command
             return false;
         }
 
-        public async ValueTask<List<ExecutionStatus>> Query(TEntity entity)
+        public async ValueTask<List<ExecutionStatus>> QueryAsync(TEntity entity)
         {
             List<ExecutionStatus> remoteCommandsStatuses = await GetRemoteStatusesAsync(entity); ;
 
@@ -90,7 +90,7 @@ namespace LPS.Infrastructure.Monitoring.Command
             return []; // Return an empty list if no commands are associated with the entity
         }
 
-        public async ValueTask<Dictionary<TEntity, IList<ExecutionStatus>>> Query(Func<TEntity, bool> predicate)
+        public async ValueTask<Dictionary<TEntity, IList<ExecutionStatus>>> QueryAsync(Func<TEntity, bool> predicate)
         {
             Dictionary<TEntity, IList<ExecutionStatus>> entityStatuses = [];
             var entities = _commandRegistry.Keys.Where(predicate).ToList();

@@ -25,7 +25,6 @@ namespace LPS.Domain
         protected IWatchdog _watchdog;
         protected IMetricsDataMonitor _lpsMonitoringEnroller;
         protected ITerminationCheckerService _terminationCheckerService;
-        protected CancellationTokenSource _cts;
         protected Iteration()
         {
             Id = Guid.NewGuid();

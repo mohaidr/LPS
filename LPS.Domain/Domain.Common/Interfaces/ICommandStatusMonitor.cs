@@ -34,7 +34,7 @@ namespace LPS.Domain.Domain.Common.Interfaces
         /// </summary>
         /// <param name="entity">The entity whose command statuses are to be queried.</param>
         /// <returns>A list of execution statuses for the associated commands.</returns>
-        ValueTask<List<ExecutionStatus>> Query(TEntity entity);
+        ValueTask<List<ExecutionStatus>> QueryAsync(TEntity entity);
 
         /// <summary>
         /// Retrieves execution statuses for all entities matching the specified predicate.
@@ -44,6 +44,6 @@ namespace LPS.Domain.Domain.Common.Interfaces
         /// A dictionary mapping each matching entity to a list of execution statuses 
         /// for its associated commands.
         /// </returns>
-        public ValueTask<Dictionary<TEntity, IList<ExecutionStatus>>> Query(Func<TEntity, bool> predicate);
+        public ValueTask<Dictionary<TEntity, IList<ExecutionStatus>>> QueryAsync(Func<TEntity, bool> predicate);
     }
 }
