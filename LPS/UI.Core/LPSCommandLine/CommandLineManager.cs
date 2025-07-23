@@ -50,7 +50,7 @@ namespace LPS.UI.Core.LPSCommandLine
         readonly AppSettingsWritableOptions _appSettings;
         readonly IMetricsDataMonitor _lpsMonitoringEnroller;
         readonly CancellationTokenSource _cts;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         readonly IPlaceholderResolverService _placeholderResolverService;
         readonly IMapper _mapper;
         readonly IEntityDiscoveryService _entityDiscoveryService;
@@ -72,7 +72,7 @@ namespace LPS.UI.Core.LPSCommandLine
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             AppSettingsWritableOptions appSettings,
-            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
+            ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
             IMetricsDataMonitor lpsMonitoringEnroller,
             IVariableManager variableManager,
             IPlaceholderResolverService placeholderResolverService,

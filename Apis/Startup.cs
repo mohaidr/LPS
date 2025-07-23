@@ -1,5 +1,7 @@
-﻿using Apis.Services;
+﻿using Apis.GrpcServices;
+using Apis.Services;
 using LPS.GrpcServices;
+using LPS.Infrastructure.Monitoring.GRPCServices;
 
 namespace LPS.Apis
 {
@@ -37,6 +39,8 @@ namespace LPS.Apis
                 endpoints.MapGrpcService<MetricsGrpcService>();
                 endpoints.MapGrpcService<EntityDiscoveryGrpcService>();
                 endpoints.MapGrpcService<MonitorGRPCService>();
+                endpoints.MapGrpcService<MetricsQueryGrpcService>();
+                endpoints.MapGrpcService<IterationTerminationGrpcService>();
 
                 // Register MVC routes
                 endpoints.MapControllerRoute(

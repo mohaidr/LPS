@@ -8,5 +8,7 @@ namespace LPS.Infrastructure.Common.Interfaces
     {
         ValueTask<List<IMetricCollector>> GetAsync(Func<IMetricCollector, bool> predicate);
         ValueTask<List<T>> GetAsync<T>(Func<T, bool> predicate) where T : IMetricCollector;
+        Task<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate) where T : IMetricCollector;
+
     }
 }

@@ -10,6 +10,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json.Serialization;
+using System.Net;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
@@ -83,7 +84,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             public void Update(HttpResponse.SetupCommand response)
             {
-                var summary = _responseSummaries.FirstOrDefault(rs => rs.HttpStatusCode == ((int)response.StatusCode).ToString() && rs.HttpStatusReason == response.StatusMessage);
+                var summary = _responseSummaries.FirstOrDefault(rs => rs.HttpStatusCode == response.StatusCode && rs.HttpStatusReason == response.StatusMessage);
                 if (summary!=null)
                 {
                     summary.Count += 1;
@@ -91,7 +92,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 else
                 {
                     var instance = new HttpResponseSummary(
-                        ((int)response.StatusCode).ToString(),
+                        response.StatusCode,
                         response.StatusMessage,
                         1
                     );
@@ -102,9 +103,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
     }
-    public class HttpResponseSummary(string httpStatusCode, string httpStatusReason, int count)
+    public class HttpResponseSummary(HttpStatusCode httpStatusCode, string httpStatusReason, int count)
     {
-        public string HttpStatusCode { get; private set; } = httpStatusCode;
+        public HttpStatusCode HttpStatusCode { get; private set; } = httpStatusCode;
         public string HttpStatusReason { get; private set; } = httpStatusReason;
         public int Count { get; set; } = count;
     }

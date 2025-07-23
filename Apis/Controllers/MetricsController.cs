@@ -1,7 +1,7 @@
 ﻿using LPS.Domain.Common.Interfaces;
 using LPS.Domain;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.Monitoring.Command;
+using LPS.Infrastructure.Monitoring.Status;
 using LPS.Infrastructure.Monitoring.Metrics;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -13,6 +13,7 @@ using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using HdrHistogram;
 using LPS.Infrastructure.Nodes;
+using LPS.Protos.Shared;
 
 namespace Apis.Controllers
 {
@@ -20,13 +21,13 @@ namespace Apis.Controllers
     [Route("api/[controller]")]
     public class MetricsController(
         LPS.Domain.Common.Interfaces.ILogger logger,
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationCommandStatusMonitor,
+        IIterationStatusMonitor iterationStatusMonitor,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsQueryService metricsQueryService) : ControllerBase
     {
         readonly LPS.Domain.Common.Interfaces.ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider? _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationCommandStatusMonitor = httpIterationCommandStatusMonitor;
+        readonly IIterationStatusMonitor _iterationStatusMonitor = iterationStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
 
         // MetricData class extended to hold Data Transmission metrics
@@ -97,8 +98,7 @@ namespace Apis.Controllers
                 {
                     var dimensionSet = await ((IMetricCollector)metric).GetDimensionSetAsync();
 
-                    var statusList = await _httpIterationCommandStatusMonitor.QueryAsync(((IMetricCollector)metric).HttpIteration);
-                    string status = statusList != null ? DetermineOverallStatus(statusList) : ExecutionStatus.Unkown.ToString();
+                    string status = (await _iterationStatusMonitor.GetTerminalStatusAsync(((IMetricCollector)metric).HttpIteration)).ToString();
 
                     var metricData = metricsList.FirstOrDefault(m => m.IterationId == ((IHttpDimensionSet)dimensionSet).IterationId);
                     if (metricData == null)
@@ -139,27 +139,6 @@ namespace Apis.Controllers
                     }
                 }
             }
-        }
-
-        private static string DetermineOverallStatus(List<ExecutionStatus> statuses)
-        {
-            if (statuses.Count == 0 || statuses.All(status => status == ExecutionStatus.PendingExecution))
-                return "PendingExecution";
-            if (statuses.Any(status => status == ExecutionStatus.Scheduled) && !statuses.Any(status => status == ExecutionStatus.Ongoing))
-                return "Scheduled";
-            if (statuses.Any(status => status == ExecutionStatus.Ongoing))
-                return "Ongoing";
-            if (statuses.Any(status => status == ExecutionStatus.Failed))
-                return "Failed";
-            if (statuses.Any(status => status == ExecutionStatus.Terminated))
-                return "Terminated";
-            if (statuses.Any(status => status == ExecutionStatus.Cancelled) && !statuses.Any(status => status == ExecutionStatus.Failed))
-                return "Cancelled";
-            if (statuses.All(status => status == ExecutionStatus.Completed))
-                return "Completed";
-            if (statuses.All(status => status == ExecutionStatus.Completed || status == ExecutionStatus.Paused) && statuses.Any(status => status == ExecutionStatus.Paused))
-                return "Paused";
-            return "Undefined"; // Default case, should ideally never be reached
         }
     }
 }

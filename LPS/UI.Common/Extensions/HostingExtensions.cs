@@ -20,6 +20,7 @@ using LPS.Infrastructure.Nodes;
 using FluentValidation;
 using Apis.Common;
 using LPS.Infrastructure.Common;
+using LPS.Infrastructure.GRPCClients.Factory;
 
 namespace LPS.UI.Common.Extensions
 {
@@ -123,10 +124,11 @@ namespace LPS.UI.Common.Extensions
                         WatchdogConfigSection);
 
                     var fileLogger = serviceProvider.GetRequiredService<ILogger>();
-                    var metricsService = serviceProvider.GetRequiredService<IMetricsQueryService>();
+                    var grpcClientFactory = serviceProvider.GetRequiredService<ICustomGrpcClientFactory>();
+                    var clusterConfiguration = serviceProvider.GetRequiredService<IClusterConfiguration>();
                     var operationIdProvider = serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>();
 
-                    Watchdog watchdog= Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, metricsService);
+                    Watchdog watchdog = Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration);
 
                     if (!isValid)
                     {
@@ -135,7 +137,7 @@ namespace LPS.UI.Common.Extensions
                     else
                     {
                         watchdog = validOptions != null
-                            ? MapToWatchdog(validOptions, fileLogger, operationIdProvider, metricsService)
+                            ? MapToWatchdog(validOptions, fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration)
                             : watchdog;
                     }
 
@@ -265,7 +267,8 @@ namespace LPS.UI.Common.Extensions
             WatchdogOptions options,
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider,
-            IMetricsQueryService metricsService)
+                        ICustomGrpcClientFactory customGrpcClientFactory,
+            IClusterConfiguration clusterConfiguration)
         {
             #pragma warning disable CS8629 // Nullable value type may be null.
             return new Watchdog(
@@ -280,8 +283,9 @@ namespace LPS.UI.Common.Extensions
                 options.ResumeCoolingAfter.Value,
                 options.SuspensionMode.Value,
                 logger,
-                operationIdProvider,
-                metricsService);
+                operationIdProvider, 
+                customGrpcClientFactory, 
+                clusterConfiguration);
             #pragma warning restore CS8629 // Nullable value type may be null.
         }
 

@@ -246,6 +246,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
         }
 
+        //support storing the variable generated in a global variable to be reused
         private async Task<string> ResolveMethodAsync(string placeholder, string sessionId, CancellationToken token)
         {
             int openParenIndex = placeholder.IndexOf('(');

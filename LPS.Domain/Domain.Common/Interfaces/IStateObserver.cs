@@ -10,6 +10,6 @@ namespace LPS.Domain.Domain.Common.Interfaces
 {
     public interface IStateObserver
     {
-        void NotifyMe(ExecutionStatus status);
+        void NotifyMe(CommandExecutionStatus status);
     }
 }

@@ -10,15 +10,15 @@ message StatusQueryRequest {
 }
 
 // Enum representing ExecutionStatus
-enum ExecutionStatus {
-  PENDING_EXECUTION = 0;
-  SCHEDULED = 1;
-  ONGOING = 2;
-  COMPLETED = 3;
-  PAUSED = 4;
+enum ExecutionStatus 
+{
+  SCHEDULED = 0;
+  ONGOING = 1;
+  COMPLETED = 2;
+  FAILED = 3;
+  TERMINATED=4;
   CANCELLED = 5;
-  FAILED = 6;
-  UNKOWN = 7; 
+  UNKOWN = -1; 
 }
 
 // Response with statuses

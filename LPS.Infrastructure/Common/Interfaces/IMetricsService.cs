@@ -23,7 +23,7 @@ namespace LPS.Infrastructure.Common.Interfaces
         /// Attempts to decrement the active connections count for the specified request, 
         /// marking it as successful or not.
         /// </summary>
-        ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token);
+        ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, CancellationToken token);
 
         /// <summary>
         /// Attempts to update response-related metrics for the specified request.

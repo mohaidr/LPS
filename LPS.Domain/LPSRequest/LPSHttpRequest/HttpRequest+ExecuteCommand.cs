@@ -28,8 +28,8 @@ namespace LPS.Domain
             readonly ILogger _logger = logger;
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            private ExecutionStatus _executionStatus;
-            public ExecutionStatus Status => _executionStatus;
+            private CommandExecutionStatus _executionStatus;
+            public CommandExecutionStatus Status => _executionStatus;
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
             //and need to clean it up and use clear contracts as any change in the logic here will break
             //the system 
@@ -45,22 +45,22 @@ namespace LPS.Domain
                     entity._logger = this._logger;
                     entity._watchdog = this._watchdog;
                     entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
-                    _executionStatus = ExecutionStatus.Ongoing;
+                    _executionStatus = CommandExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this, token);
 
                     if (!entity.HasFailed)
-                        _executionStatus = ExecutionStatus.Completed;
+                        _executionStatus = CommandExecutionStatus.Completed;
                     else
-                        _executionStatus = ExecutionStatus.Failed;
+                        _executionStatus = CommandExecutionStatus.Failed;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
-                    _executionStatus = ExecutionStatus.Cancelled;
+                   // _executionStatus = ExecutionStatus.Cancelled;
                     throw;
                 }
                 catch
                 {
-                    _executionStatus = ExecutionStatus.Failed;
+                    _executionStatus = CommandExecutionStatus.Failed;
                 }
             }
         }

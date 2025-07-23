@@ -221,14 +221,14 @@ namespace LPS.Infrastructure.LPSClients
 
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
                         //Update Throughput Metrics
-                        await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, responseMessage.IsSuccessStatusCode, linkedCts.Token);
+                        await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, linkedCts.Token);
                     }
                 }
             }
             catch (Exception ex)
             {
                 //Decrease Connections On Failure
-                await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, false, token);
+                await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, token);
 
                 HttpResponse.SetupCommand lpsResponseCommand = new()
                 {

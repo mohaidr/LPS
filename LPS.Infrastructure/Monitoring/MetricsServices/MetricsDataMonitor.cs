@@ -23,7 +23,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IMetricsRepository metricRepository,
         IMetricsQueryService metricsQueryService,
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> commandStatusMonitor,
+        ICommandStatusMonitor<HttpIteration> commandStatusMonitor,
         INodeMetadata nodeMetadata,
         ICustomGrpcClientFactory customGrpcClientFactory,
         IClusterConfiguration clusterConfiguration,
@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         private readonly IMetricsRepository _metricsRepository = metricRepository ?? throw new ArgumentNullException(nameof(metricRepository));
         private readonly IMetricsQueryService _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException();
-        private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _commandStatusMonitor = commandStatusMonitor ?? throw new ArgumentNullException();
+        private readonly ICommandStatusMonitor<HttpIteration> _commandStatusMonitor = commandStatusMonitor ?? throw new ArgumentNullException();
         private readonly INodeMetadata _nodeMetadata= nodeMetadata ?? throw new ArgumentNullException();
         private ICustomGrpcClientFactory _customGrpcClientFactory= customGrpcClientFactory?? throw new ArgumentNullException();
         private IClusterConfiguration _clusterConfiguration = clusterConfiguration?? throw new ArgumentNullException();
@@ -66,7 +66,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             {
                new ResponseCodeMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider),
                new DurationMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider) ,
-               new ThroughputMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider) ,
+               new ThroughputMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider) ,
                new DataTransmissionMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider)
             };
         }

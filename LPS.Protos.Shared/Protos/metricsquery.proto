@@ -1,0 +1,112 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "LPS.Protos.Shared";
+
+package metrics;
+
+// Common types
+message HttpMetricMetadata {
+  string roundName = 1;
+  string iterationId = 2;
+  string iterationName = 3;
+  string httpMethod = 4;
+  string url = 5;
+  string httpVersion = 6;
+}
+
+// Filter combination mode
+enum FilterMode {
+  AND = 0;
+  OR = 1;
+}
+
+// Extended and Unified Request
+message MetricRequest {
+  string fullyQualifiedName = 1;
+  string roundName = 2;
+  string iterationId = 3;
+  string iterationName = 4;
+  string httpMethod = 5;
+  string hostname = 6;
+  string path = 7;
+  string httpVersion = 8;
+  FilterMode mode = 9;
+}
+
+message RequestsRate {
+  string every = 1; // e.g., "1s", "cooldown-period"
+  double value = 2; // number of requests per that interval
+}
+
+message HttpResponseSummary {
+  string httpStatusCode = 1;
+  string httpStatusReason = 2;
+  int32 count = 3;
+}
+
+// Duration Metric
+message DurationMetricResponse {
+  HttpMetricMetadata metadata = 1;
+  double sumResponseTime = 2;
+  double averageResponseTime = 3;
+  double minResponseTime = 4;
+  double maxResponseTime = 5;
+  double p90ResponseTime = 6;
+  double p50ResponseTime = 7;
+  double p10ResponseTime = 8;
+}
+
+message DurationMetricSearchResponse {
+  repeated DurationMetricResponse responses = 1;
+}
+
+// Data Transmission Metric
+message DataTransmissionMetricResponse {
+  HttpMetricMetadata metadata = 1;
+  double totalDataTransmissionTimeInMilliseconds = 2;
+  double dataSent = 3;
+  double dataReceived = 4;
+  double averageDataSent = 5;
+  double averageDataReceived = 6;
+  double upstreamThroughputBps = 7;
+  double downstreamThroughputBps = 8;
+  double throughputBps = 9;
+}
+
+message DataTransmissionMetricSearchResponse {
+  repeated DataTransmissionMetricResponse responses = 1;
+}
+
+// Throughput Metric
+message ThroughputMetricResponse {
+  HttpMetricMetadata metadata = 1;
+  double totalDataTransmissionTimeInMilliseconds = 2;
+  RequestsRate requestsRate = 3;
+  RequestsRate requestsRatePerCoolDownPeriod = 4;
+  int32 requestsCount = 5;
+  int32 activeRequestsCount = 6;
+  int32 successfulRequestCount = 7;
+  int32 failedRequestsCount = 8;
+}
+
+message ThroughputMetricSearchResponse {
+  repeated ThroughputMetricResponse responses = 1;
+}
+
+// Response Code Metric
+message ResponseCodeMetricResponse {
+  HttpMetricMetadata metadata = 1;
+  repeated HttpResponseSummary summaries = 2;
+}
+
+message ResponseCodeMetricSearchResponse {
+  repeated ResponseCodeMetricResponse responses = 1;
+}
+
+// Unified Metric Query Service
+service MetricsQueryService {
+  rpc GetDurationMetrics(MetricRequest) returns (DurationMetricSearchResponse);
+  rpc GetDataTransmissionMetrics(MetricRequest) returns (DataTransmissionMetricSearchResponse);
+  rpc GetThroughputMetrics(MetricRequest) returns (ThroughputMetricSearchResponse);
+  rpc GetResponseCodeMetrics(MetricRequest) returns (ResponseCodeMetricSearchResponse);
+}

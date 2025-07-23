@@ -1,4 +1,4 @@
-﻿using DomainStatus = LPS.Domain.Domain.Common.Enums.ExecutionStatus;
+﻿using DomainStatus = LPS.Domain.Domain.Common.Enums.CommandExecutionStatus;
 using GrpcStatus = LPS.Protos.Shared.ExecutionStatus;
 
 namespace LPS.Infrastructure.Common.GRPCExtensions
@@ -12,13 +12,12 @@ namespace LPS.Infrastructure.Common.GRPCExtensions
         {
             return status switch
             {
-                DomainStatus.PendingExecution => GrpcStatus.PendingExecution,
                 DomainStatus.Scheduled => GrpcStatus.Scheduled,
                 DomainStatus.Ongoing => GrpcStatus.Ongoing,
                 DomainStatus.Completed => GrpcStatus.Completed,
-                DomainStatus.Paused => GrpcStatus.Paused,
                 DomainStatus.Cancelled => GrpcStatus.Cancelled,
                 DomainStatus.Failed => GrpcStatus.Failed,
+                DomainStatus.Terminated => GrpcStatus.Terminated,
                 DomainStatus.Unkown => GrpcStatus.Unkown,
                 _ => GrpcStatus.Unkown
             };
@@ -31,13 +30,12 @@ namespace LPS.Infrastructure.Common.GRPCExtensions
         {
             return status switch
             {
-                GrpcStatus.PendingExecution => DomainStatus.PendingExecution,
                 GrpcStatus.Scheduled => DomainStatus.Scheduled,
                 GrpcStatus.Ongoing => DomainStatus.Ongoing,
                 GrpcStatus.Completed => DomainStatus.Completed,
-                GrpcStatus.Paused => DomainStatus.Paused,
                 GrpcStatus.Cancelled => DomainStatus.Cancelled,
                 GrpcStatus.Failed => DomainStatus.Failed,
+                GrpcStatus.Terminated => DomainStatus.Terminated,
                 GrpcStatus.Unkown => DomainStatus.Unkown,
                 _ => DomainStatus.Unkown
             };

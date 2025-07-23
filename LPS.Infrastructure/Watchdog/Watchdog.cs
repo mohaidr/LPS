@@ -1,125 +1,109 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.EventListeners;
-using LPS.Infrastructure.Monitoring.Metrics;
+using LPS.Infrastructure.GRPCClients;
+using LPS.Protos.Shared;
+using LPS.Infrastructure.GRPCClients.Factory;
+using LPS.Infrastructure.Nodes;
 
 namespace LPS.Infrastructure.Watchdog
 {
-    /// <summary>
-    /// Defines the suspension modes for resource monitoring.
-    /// </summary>
     public enum SuspensionMode
     {
         Any,
         All
     }
-
-    /// <summary>
-    /// Monitors system resources and manages cooling mechanisms based on defined thresholds.
-    /// </summary>
-    /// <remarks>
-    /// Initializes a new instance of the <see cref="Watchdog"/> class with specified configuration.
-    /// </remarks>
-    /// <param name="memoryLimitMB">Maximum allowed memory in MB.</param>
-    /// <param name="cpuLimit">Maximum allowed CPU percentage.</param>
-    /// <param name="coolDownMemoryMB">Memory threshold for cooldown.</param>
-    /// <param name="coolDownCPUPercentage">CPU threshold for cooldown.</param>
-    /// <param name="maxConcurrentConnectionsPerHostName">Maximum concurrent connections per host.</param>
-    /// <param name="coolDownConcurrentConnectionsCountPerHostName">Concurrent connections threshold for cooldown.</param>
-    /// <param name="coolDownRetryTimeInSeconds">Retry interval during cooldown.</param>
-    /// <param name="maxCoolingPeriod">Maximum duration for cooling.</param>
-    /// <param name="resumeCoolingAfter">Time after which cooling can be resumed.</param>
-    /// <param name="suspensionMode">Mode of suspension (Any or All).</param>
-    /// <param name="logger">The logger instance.</param>
-    /// <param name="operationIdProvider">The operation ID provider.</param>
-    public class Watchdog(
-        double memoryLimitMB,
-        double cpuLimit,
-        double coolDownMemoryMB,
-        double coolDownCPUPercentage,
-        int maxConcurrentConnectionsPerHostName,
-        int coolDownConcurrentConnectionsCountPerHostName,
-        int coolDownRetryTimeInSeconds,
-        int maxCoolingPeriod,
-        int resumeCoolingAfter,
-        SuspensionMode suspensionMode,
-        ILogger logger,
-        IRuntimeOperationIdProvider operationIdProvider,
-        IMetricsQueryService metricsQueryService) : IWatchdog
+    public class Watchdog : IWatchdog
     {
-        public double MaxMemoryMB { get; } = memoryLimitMB;
-        public double MaxCPUPercentage { get; } = cpuLimit;
-        public double CoolDownMemoryMB { get; } = coolDownMemoryMB;
-        public double CoolDownCPUPercentage { get; } = coolDownCPUPercentage;
-        public SuspensionMode SuspensionMode { get; } = suspensionMode;
-        public int CoolDownRetryTimeInSeconds { get; } = coolDownRetryTimeInSeconds;
-        public int MaxConcurrentConnectionsCountPerHostName { get; } = maxConcurrentConnectionsPerHostName;
-        public int CoolDownConcurrentConnectionsCountPerHostName { get; } = coolDownConcurrentConnectionsCountPerHostName;
-        public int MaxCoolingPeriod { get; } = maxCoolingPeriod;
-        public int ResumeCoolingAfter { get; } = resumeCoolingAfter;
-        IMetricsQueryService _metricsQueryService = metricsQueryService;
-
-        // Private fields
+        private readonly ILogger _logger;
+        private readonly IRuntimeOperationIdProvider _operationIdProvider;
+        private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
+        IClusterConfiguration _clusterConfiguration;
         private readonly ResourceEventListener _resourceListener = new ResourceEventListener();
-        private readonly ILogger _logger = logger;
-        private readonly IRuntimeOperationIdProvider _operationIdProvider = operationIdProvider;
-
-        private ResourceState _resourceState = ResourceState.Cool;
-
-        private bool _isResourceUsageExceeded;
-        private bool _isResourceCoolingDown;
-
-        // Synchronization
         private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        // Cooling state fields
+        private ResourceState _resourceState = ResourceState.Cool;
+        private bool _isResourceUsageExceeded;
+        private bool _isResourceCoolingDown;
         private bool _isCoolingStarted = false;
         private bool _isGCExecuted = false;
         private bool _isCoolingPaused = false;
+
         private readonly Stopwatch _maxCoolingStopwatch = new Stopwatch();
         private readonly Stopwatch _resetToCoolingStopwatch = new Stopwatch();
 
-        private Watchdog(ILogger logger, IRuntimeOperationIdProvider operationIdProvider, IMetricsQueryService metricsQueryService)
-            : this(
-                  memoryLimitMB: 1000,
-                  cpuLimit: 50,
-                  coolDownMemoryMB: 500,
-                  coolDownCPUPercentage: 30,
-                  maxConcurrentConnectionsPerHostName: 1000,
-                  coolDownConcurrentConnectionsCountPerHostName: 100,
-                  coolDownRetryTimeInSeconds: 1,
-                  maxCoolingPeriod: 60,
-                  resumeCoolingAfter: 300,
-                  suspensionMode: SuspensionMode.Any,
-                  logger: logger,
-                  operationIdProvider: operationIdProvider,
-                  metricsQueryService: metricsQueryService)
+        public double MaxMemoryMB { get; }
+        public double MaxCPUPercentage { get; }
+        public double CoolDownMemoryMB { get; }
+        public double CoolDownCPUPercentage { get; }
+        public int MaxConcurrentConnectionsCountPerHostName { get; }
+        public int CoolDownConcurrentConnectionsCountPerHostName { get; }
+        public int CoolDownRetryTimeInSeconds { get; }
+        public int MaxCoolingPeriod { get; }
+        public int ResumeCoolingAfter { get; }
+        public SuspensionMode SuspensionMode { get; }
+        GrpcMetricsQueryServiceClient _grpcClient;
+        public Watchdog(
+            double memoryLimitMB,
+            double cpuLimit,
+            double coolDownMemoryMB,
+            double coolDownCPUPercentage,
+            int maxConcurrentConnectionsPerHostName,
+            int coolDownConcurrentConnectionsCountPerHostName,
+            int coolDownRetryTimeInSeconds,
+            int maxCoolingPeriod,
+            int resumeCoolingAfter,
+            SuspensionMode suspensionMode,
+            ILogger logger,
+            IRuntimeOperationIdProvider operationIdProvider,
+            ICustomGrpcClientFactory customGrpcClientFactory,
+            IClusterConfiguration clusterConfiguration)
         {
+            MaxMemoryMB = memoryLimitMB;
+            MaxCPUPercentage = cpuLimit;
+            CoolDownMemoryMB = coolDownMemoryMB;
+            CoolDownCPUPercentage = coolDownCPUPercentage;
+            MaxConcurrentConnectionsCountPerHostName = maxConcurrentConnectionsPerHostName;
+            CoolDownConcurrentConnectionsCountPerHostName = coolDownConcurrentConnectionsCountPerHostName;
+            CoolDownRetryTimeInSeconds = coolDownRetryTimeInSeconds;
+            MaxCoolingPeriod = maxCoolingPeriod;
+            ResumeCoolingAfter = resumeCoolingAfter;
+            SuspensionMode = suspensionMode;
+
+            _logger = logger;
+            _operationIdProvider = operationIdProvider;
+            _customGrpcClientFactory = customGrpcClientFactory;
+            _clusterConfiguration = clusterConfiguration;
+            _grpcClient = customGrpcClientFactory.GetClient<GrpcMetricsQueryServiceClient>(clusterConfiguration.MasterNodeIP);
         }
 
-        public static Watchdog GetDefaultInstance(ILogger logger, IRuntimeOperationIdProvider operationIdProvider,IMetricsQueryService metricsQueryService)
+        public static Watchdog GetDefaultInstance(ILogger logger, IRuntimeOperationIdProvider operationIdProvider, ICustomGrpcClientFactory customGrpcClientFactory, IClusterConfiguration clusterConfiguration)
         {
-            return new Watchdog(logger, operationIdProvider, metricsQueryService);
+            return new Watchdog(
+                1000, 50, 500, 30, 1000, 100, 1, 60, 300,
+                SuspensionMode.Any, logger, operationIdProvider, customGrpcClientFactory, clusterConfiguration);
         }
 
         public async Task<ResourceState> BalanceAsync(string hostName, CancellationToken token = default)
         {
-            bool semaphoreAcquired = false;
+            bool acquired = false;
+
             try
             {
                 await _semaphoreSlim.WaitAsync(token);
-                semaphoreAcquired = true;
+                acquired = true;
+
                 if (_isCoolingPaused && _resetToCoolingStopwatch.Elapsed.TotalSeconds > ResumeCoolingAfter)
                 {
                     await _logger.LogAsync(_operationIdProvider.OperationId, "Resuming cooling if needed", LPSLoggingLevel.Information, token);
                     _resetToCoolingStopwatch.Reset();
                     _isCoolingPaused = false;
+                    await _logger.LogAsync(_operationIdProvider.OperationId, "Resuming cooling if needed", LPSLoggingLevel.Information, token);
                 }
 
                 await UpdateResourceUsageFlagAsync(hostName);
@@ -128,21 +112,14 @@ namespace LPS.Infrastructure.Watchdog
 
                 while (_resourceState != ResourceState.Cool && !_isCoolingPaused && !token.IsCancellationRequested)
                 {
-                    if (!_isCoolingStarted)
-                    {
-                        await StartCoolingAsync(token);
-                    }
-
+                    if (!_isCoolingStarted) await StartCoolingAsync(token);
                     if (_maxCoolingStopwatch.Elapsed.TotalSeconds > MaxCoolingPeriod)
                     {
                         await PauseCoolingAsync(token);
                         break;
                     }
 
-                    if (!_isGCExecuted)
-                    {
-                        await ExecuteGarbageCollectionAsync(token);
-                    }
+                    if (!_isGCExecuted) await ExecuteGarbageCollectionAsync(token);
 
                     await LogCoolingInitiationAsync(token);
                     await Task.Delay(TimeSpan.FromSeconds(CoolDownRetryTimeInSeconds), token);
@@ -154,18 +131,13 @@ namespace LPS.Infrastructure.Watchdog
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_operationIdProvider.OperationId,
-                    $"Watchdog failed to balance resource usage.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}",
-                    LPSLoggingLevel.Error, token);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Watchdog failed to balance resources.\n{ex}", LPSLoggingLevel.Error, token);
                 _resourceState = ResourceState.Unknown;
             }
             finally
             {
                 ResetCoolingState();
-                if (semaphoreAcquired)
-                {
-                    _semaphoreSlim.Release();
-                }
+                if (acquired) _semaphoreSlim.Release();
             }
 
             return _resourceState;
@@ -173,17 +145,24 @@ namespace LPS.Infrastructure.Watchdog
 
         private async Task<int> GetHostActiveConnectionsCountAsync(string hostName)
         {
+            _grpcClient = _customGrpcClientFactory.GetClient<GrpcMetricsQueryServiceClient>(_clusterConfiguration.MasterNodeIP);
             try
             {
-                var data = await _metricsQueryService
-                    .GetAsync<ThroughputMetricCollector>(metric => metric.GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result?.URL?.Contains(hostName) == true);
-                    return data.Sum(metric => metric.GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result?.ActiveRequestsCount ?? 0);
+                var request = new MetricRequest
+                {
+                    Hostname = hostName,
+                    Mode = FilterMode.And
+                };
+
+                var response = await _grpcClient.GetThroughputMetricsAsync(request);
+
+                int totalActiveConnections = response.Responses.Sum(r => r.ActiveRequestsCount);
+                return totalActiveConnections;
             }
             catch (Exception ex)
             {
-               await _logger.LogAsync(_operationIdProvider.OperationId,
-                    $"Failed to get active connections count.\n{ex.Message}\n{ex.InnerException?.Message}\n{ex.StackTrace}",
-                    LPSLoggingLevel.Error);
+                await _logger.LogAsync(_operationIdProvider.OperationId,
+                    $"Failed to get active connections count.\n{ex}", LPSLoggingLevel.Error);
                 return -1;
             }
         }
@@ -240,6 +219,7 @@ namespace LPS.Infrastructure.Watchdog
             _resetToCoolingStopwatch.Start();
             await _logger.LogAsync(_operationIdProvider.OperationId, $"Pausing cooling for {ResumeCoolingAfter} seconds", LPSLoggingLevel.Information, token);
         }
+
         private async Task ExecuteGarbageCollectionAsync(CancellationToken token)
         {
             GC.Collect();

@@ -5,8 +5,12 @@ using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.EventSources;
 using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Net;
 using System.Text.Json.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
+using YamlDotNet.Core.Tokens;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
@@ -14,26 +18,26 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     {
         int _activeRequestssCount;
         int _requestsCount;
-        int _successfulRequestsCount;
-        int _failedRequestsCount;
         ProtectedConnectionDimensionSet _dimensionSet;
         protected override IDimensionSet DimensionSet => _dimensionSet;
+        IMetricsQueryService _metricsQueryService;
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
 
         readonly Stopwatch _throughputWatch;
         Timer _timer;
         private SpinLock _spinLock = new();
-        public ThroughputMetricCollector(HttpIteration httpIteration, string roundName, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
+        public ThroughputMetricCollector(HttpIteration httpIteration, string roundName, IMetricsQueryService metricsQueryService, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _httpIteration = httpIteration;
+            _metricsQueryService = metricsQueryService;
             _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.Url.Url, _httpIteration.HttpRequest.HttpVersion);
             _throughputWatch = new Stopwatch();
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
         readonly object lockObject = new();
-        private void UpdateMetrics()
+        private async ValueTask<bool> UpdateMetrics(CancellationToken token)
         {
             bool isCoolDown = _httpIteration.Mode == IterationMode.DCB || _httpIteration.Mode == IterationMode.CRB || _httpIteration.Mode == IterationMode.CB;
             int cooldownPeriod = isCoolDown ? _httpIteration.CoolDownTime.Value : 1;
@@ -42,6 +46,14 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 try
                 {
+                    var dimensionSet = await (await _metricsQueryService
+                                        .GetAsync<ResponseCodeMetricCollector>(m => m.HttpIteration.Id == _httpIteration.Id))
+                                        .SingleOrDefault().GetDimensionSetAsync<ResponseCodeMetricDimensionSet>();
+                    int successCount = dimensionSet
+                                        .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode)).Sum(r => r.Count);
+
+                    int failedCount = dimensionSet
+                                        .ResponseSummaries.Where(r => HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode)).Sum(r => r.Count); ;
                     lock (lockObject)
                     {
                         var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
@@ -50,19 +62,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
                         if (timeElapsed > 1000)
                         {
-                            requestsRate = new RequestsRate($"1s", Math.Round((_successfulRequestsCount / (timeElapsed / 1000)), 2));
+                            requestsRate = new RequestsRate($"1s", Math.Round((successCount / (timeElapsed / 1000)), 2));
                         }
                         if (isCoolDown && timeElapsed > cooldownPeriod)
                         {
-                            requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms", Math.Round((_successfulRequestsCount / timeElapsed) * cooldownPeriod, 2));
+                            requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms", Math.Round((successCount / timeElapsed) * cooldownPeriod, 2));
                         }
-                        _dimensionSet.Update(_activeRequestssCount, _requestsCount, _successfulRequestsCount, _failedRequestsCount, timeElapsed, requestsRate, requestsRatePerCoolDown);
+                        _dimensionSet.Update(_activeRequestssCount, _requestsCount, successCount, failedCount, timeElapsed, requestsRate, requestsRatePerCoolDown);
                     }
+                    return true;
                 }
-                finally
+                catch (Exception ex)
                 {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Failed to update throughput metrics \n{ex}", LPSLoggingLevel.Error, token);
+                    return false;
                 }
+ 
             }
+            return false;
         }
 
         // A timer is necessary for periods of inactivity while the test is still running, such as during a watchdog check or the time between the start and completion of a request, etc.
@@ -74,17 +91,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 {
                     try
                     {
-                        UpdateMetrics();
-                    }
-                    finally
-                    {
+                        _= UpdateMetrics(default).Result;
+                    }catch (Exception ex) {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId, "Failed to update throughput metrics \n{ex}", LPSLoggingLevel.Error);
+
                     }
                 }
             }, null, 0, 1000);
 
         }
 
-        public bool IncreaseConnectionsCount()
+        public async ValueTask<bool> IncreaseConnectionsCount(CancellationToken token)
         {
             bool lockTaken = false;
             try
@@ -92,7 +109,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _spinLock.Enter(ref lockTaken);
                 ++_activeRequestssCount;
                 ++_requestsCount;
-                UpdateMetrics();
+               await  UpdateMetrics(token);
                 return true;
             }
             catch (Exception ex)
@@ -106,24 +123,14 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public bool DecreseConnectionsCount(bool isSuccess)
+        public async ValueTask<bool> DecreseConnectionsCount(CancellationToken token)
         {
             bool lockTaken = false;
             try
             {
                 _spinLock.Enter(ref lockTaken);
-                if (isSuccess)
-                {
-                    --_activeRequestssCount;
-                    ++_successfulRequestsCount;
-                }
-                else
-                {
-                    --_activeRequestssCount;
-                    ++_failedRequestsCount;
-                }
-
-                UpdateMetrics();
+                --_activeRequestssCount;
+                await UpdateMetrics(token);
                 return true;
             }
             catch (Exception ex)

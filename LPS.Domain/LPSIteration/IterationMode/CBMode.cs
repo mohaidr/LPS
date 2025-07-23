@@ -18,7 +18,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         private readonly bool _maximizeThroughput;
         private readonly IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
         readonly HttpIteration _httpIteration;
-        readonly ITerminationCheckerService _terminationCheckerService;
+        readonly IIterationStatusMonitor _iterationStatusMonitor;
         public CBMode(
             HttpRequest.ExecuteCommand command,
             int coolDownTime,
@@ -26,7 +26,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             bool maximizeThroughput,
             IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor, 
             HttpIteration httpIteration,
-            ITerminationCheckerService terminationCheckerService)
+            IIterationStatusMonitor iterationStatusMonitor)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _coolDownTime = coolDownTime;
@@ -34,7 +34,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             _maximizeThroughput = maximizeThroughput;
             _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
             _httpIteration = httpIteration ?? throw new ArgumentNullException();
-            _terminationCheckerService = terminationCheckerService ?? throw new ArgumentNullException();
+            _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException();
         }
 
         public async Task<int> ExecuteAsync(CancellationToken token)
@@ -46,7 +46,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
 
-            while (continueCondition() && !await _terminationCheckerService.IsTerminationRequiredAsync(_httpIteration))
+            while (continueCondition() && !await _iterationStatusMonitor.IsTerminatedAsync(_httpIteration, token))
             {
                 if (_maximizeThroughput)
                 {

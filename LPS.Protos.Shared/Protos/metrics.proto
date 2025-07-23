@@ -14,7 +14,6 @@ service MetricsProtoService {
 message UpdateConnectionsRequest {
     string request_id = 1;
     bool increase = 2;
-    bool is_successful = 3;
 }
 
 message UpdateConnectionsResponse {

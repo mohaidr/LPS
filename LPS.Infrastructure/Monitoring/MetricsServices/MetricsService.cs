@@ -63,7 +63,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 updated = response.Success;
             }
-            else {
+            else 
+            {
                 requestId = await DiscoverRequestIdOnMaster(requestId, token);
             }
 
@@ -77,11 +78,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var throughputMetric = _metrics[requestId.ToString()]
                 .Single(metric => metric.MetricType == LPSMetricType.Throughput);
 
-            updated ??= ((IThroughputMetricCollector)throughputMetric).IncreaseConnectionsCount();
+            var result = await ((IThroughputMetricCollector)throughputMetric).IncreaseConnectionsCount(token);
+            updated ??= result;
             return updated.Value;
         }
 
-        public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, bool isSuccessful, CancellationToken token)
+        public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
             bool? updated = null;
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
@@ -90,7 +92,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 {
                     RequestId = requestId.ToString(),
                     Increase = false,
-                    IsSuccessful = isSuccessful
                 });
                 updated = response.Success;
             }
@@ -107,8 +108,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             await QueryMetricsAsync(requestId);
             var throughputMetric = _metrics[requestId.ToString()]
                 .Single(metric => metric.MetricType == LPSMetricType.Throughput);
-
-            updated ??= ((IThroughputMetricCollector)throughputMetric).DecreseConnectionsCount(isSuccessful);
+            var result = await ((IThroughputMetricCollector)throughputMetric).DecreseConnectionsCount(token);
+            updated ??= result;
             return updated.Value;
         }
 
@@ -227,7 +228,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         }
         private async Task<Guid> DiscoverRequestIdOnMaster(Guid requestId, CancellationToken token)
         {
-            var entityDiscoveryRecord = _entityDiscoveryService.Discover(r => r.RequestId == requestId).FirstOrDefault(); // There is no record for such request Id
+            var entityDiscoveryRecord = _entityDiscoveryService.Discover(r => r.RequestId == requestId)?.SingleOrDefault();
             if (entityDiscoveryRecord != null)
             {
                 // if this is worker, there is no need to translate as this is the local requestId
@@ -240,7 +241,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 if (entityDiscoveryRecord.Node.Metadata.NodeType != Nodes.NodeType.Master)
                 {
                     var fullyQualifiedName = entityDiscoveryRecord.FullyQualifiedName;
-                    var record = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == Nodes.NodeType.Master && r.FullyQualifiedName == fullyQualifiedName).FirstOrDefault();
+                    var record = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == Nodes.NodeType.Master && r.FullyQualifiedName == fullyQualifiedName)?.SingleOrDefault();
                     var matchingRequestId = record?.RequestId?? Guid.Empty; // Empty means it was registered by the worker but was not defined in the plan executing on the master
                     if (record != null)
                     {

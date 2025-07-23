@@ -48,5 +48,30 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return null;
             }
         }
+
+        public async Task<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate) where T : IMetricCollector
+        {
+            try
+            {
+                var result = new List<T>();
+                var all = _metricsRepository.Data.Values
+                    .SelectMany(metricsContainer => metricsContainer.Metrics.OfType<T>());
+
+                foreach (var item in all)
+                {
+                    if (await predicate(item))
+                    {
+                        result.Add(item);
+                    }
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to get metrics with async predicate.\n{ex}", LPSLoggingLevel.Error);
+                return null;
+            }
+        }
     }
 }

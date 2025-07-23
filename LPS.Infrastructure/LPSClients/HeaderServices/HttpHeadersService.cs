@@ -56,7 +56,7 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
         {
             if (string.IsNullOrEmpty(name) || string.IsNullOrEmpty(value))
                 return;
-
+            value = value.Trim();
             switch (name.ToLower())
             {
                 case "content-type":

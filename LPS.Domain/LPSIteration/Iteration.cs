@@ -24,7 +24,7 @@ namespace LPS.Domain
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         protected IWatchdog _watchdog;
         protected IMetricsDataMonitor _lpsMonitoringEnroller;
-        protected ITerminationCheckerService _terminationCheckerService;
+        protected IIterationStatusMonitor _iterationStatusMonitor;
         protected Iteration()
         {
             Id = Guid.NewGuid();

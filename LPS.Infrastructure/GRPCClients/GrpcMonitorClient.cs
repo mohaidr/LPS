@@ -28,7 +28,7 @@ namespace LPS.Infrastructure.GRPCClients
             _channel = ch;
         }
 
-        public async Task<List<Domain.Domain.Common.Enums.ExecutionStatus>> QueryIterationStatusesAsync(string fqdn, CancellationToken token = default)
+        public async Task<List<Domain.Domain.Common.Enums.CommandExecutionStatus>> QueryIterationStatusesAsync(string fqdn, CancellationToken token = default)
         {
             var request = new StatusQueryRequest { FullyQualifiedName = fqdn };
             var response = await base.QueryIterationStatusesAsync(request, cancellationToken: token);

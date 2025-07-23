@@ -16,13 +16,15 @@ namespace LPS.GrpcServices
         private readonly INodeRegistry _nodeRegistry;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        INodeMetadata _nodeMetaData;
         public EntityDiscoveryGrpcService(IEntityDiscoveryService entityDiscoveryService, 
-            INodeRegistry nodeRegistry, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            INodeRegistry nodeRegistry, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider, INodeMetadata nodeMetaData)
         {
             _entityDiscoveryService = entityDiscoveryService;
             _nodeRegistry = nodeRegistry;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _nodeMetaData = nodeMetaData;
         }
 
         public override Task<Empty> AddEntityDiscoveryRecord(Protos.Shared.EntityDiscoveryRecord record, ServerCallContext context)
@@ -56,7 +58,7 @@ namespace LPS.GrpcServices
                 _logger.Log(_runtimeOperationIdProvider.OperationId, "FullyQualifiedName must be provided.", LPSLoggingLevel.Error);
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "FullyQualifiedName must be provided."));
             }
-            var record = _entityDiscoveryService.Discover(r=> r.FullyQualifiedName == query.FullyQualifiedName)?.FirstOrDefault();
+            var record = _entityDiscoveryService.Discover(r=> r.FullyQualifiedName == query.FullyQualifiedName && r.Node.Metadata.NodeType == _nodeMetaData.NodeType)?.SingleOrDefault();
 
             if (record == null)
             {

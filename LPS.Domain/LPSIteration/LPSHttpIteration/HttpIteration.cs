@@ -75,7 +75,7 @@ namespace LPS.Domain
         public int? CoolDownTime { get; private set; }
         public IterationMode? Mode { get; private set; }
         public bool MaximizeThroughput { get; private set; }
-        public ExecutionStatus Status { get; private set; }
+        public CommandExecutionStatus Status { get; private set; }
         public HttpRequest HttpRequest { get; protected set; }
         public ICollection<HttpStatusCode> ErrorStatusCodes { get; private set; }
 

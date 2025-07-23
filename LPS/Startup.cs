@@ -12,7 +12,7 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common;
 using LPS.UI.Core.Host;
 using LPS.Domain.Domain.Common.Interfaces;
-using LPS.Infrastructure.Monitoring.Command;
+using LPS.Infrastructure.Monitoring.Status;
 using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.LPSClients;
 using LPS.Infrastructure.Common.Interfaces;
@@ -107,7 +107,8 @@ namespace LPS
                     services.AddSingleton<IMetricsRepository, MetricsRepository>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddSingleton<IMetricsQueryService, MetricsQueryService>();
-                    services.AddSingleton<ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>, HttpIterationCommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration>>();
+                    services.AddSingleton<IIterationStatusMonitor, IterationStatusMonitor>();
+                    services.AddSingleton<ICommandStatusMonitor<HttpIteration>, HttpIterationCommandStatusMonitor>();
                     services.AddSingleton<AppSettingsWritableOptions>();
                     services.AddSingleton<CancellationTokenSource>();
                     services.AddSingleton<IConsoleLogger, ConsoleLogger>();
@@ -120,6 +121,10 @@ namespace LPS
                         SizeLimit = 1024
                     }));
                     services.AddSingleton<INodeRegistry, NodeRegistry>();
+
+                    services.AddSingleton<ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration>, InMemoryCommandRepository<IAsyncCommand<HttpIteration>, HttpIteration>>();
+
+
                     services.AddSingleton<ITestTriggerNotifier, TestTriggerNotifier>();
                     services.AddSingleton<INodeMetadata, NodeMetadata>();
                     services.AddSingleton<IClientManager<Domain.HttpRequest, Domain.HttpResponse, IClientService<Domain.HttpRequest, Domain.HttpResponse>>, HttpClientManager>();

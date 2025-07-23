@@ -30,7 +30,7 @@ namespace Apis.Services
         {
             var success = request.Increase
                 ? await _metricsService.TryIncreaseConnectionsCountAsync(Guid.Parse(request.RequestId), context.CancellationToken)
-                : await _metricsService.TryDecreaseConnectionsCountAsync(Guid.Parse(request.RequestId), request.IsSuccessful, context.CancellationToken);
+                : await _metricsService.TryDecreaseConnectionsCountAsync(Guid.Parse(request.RequestId), context.CancellationToken);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update connections count request completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
 
             return new UpdateConnectionsResponse { Success = success };

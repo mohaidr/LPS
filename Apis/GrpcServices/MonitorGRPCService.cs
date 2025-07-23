@@ -13,29 +13,31 @@ namespace Apis.Services
     public class MonitorGRPCService : MonitorService.MonitorServiceBase
     {
         private readonly IEntityDiscoveryService _discoveryService;
-        private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _statusMonitor;
+        private readonly ICommandStatusMonitor<HttpIteration> _statusMonitor;
         private readonly IMetricsDataMonitor _metricsMonitor;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        INodeMetadata _nodeMetadata;
         public MonitorGRPCService(
             IEntityDiscoveryService discoveryService,
-            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> statusMonitor,
+            ICommandStatusMonitor<HttpIteration> statusMonitor,
              IMetricsDataMonitor metricsMonitor, 
-             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, INodeMetadata nodeMetadata)
         {
             _discoveryService = discoveryService;
             _statusMonitor = statusMonitor;
             _metricsMonitor = metricsMonitor;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _nodeMetadata = nodeMetadata;
         }
 
         public override async Task<StatusQueryResponse> QueryIterationStatuses(StatusQueryRequest request, ServerCallContext context)
         {
             // Discover entity by FQDN
             var record = _discoveryService
-                .Discover(r => r.FullyQualifiedName == request.FullyQualifiedName)
-                ?.FirstOrDefault();
+                .Discover(r => r.FullyQualifiedName == request.FullyQualifiedName && 
+                            r.Node.Metadata.NodeType == _nodeMetadata.NodeType)?.SingleOrDefault();
 
             if (record == null)
             {
@@ -63,8 +65,8 @@ namespace Apis.Services
         public override Task<MonitorResponse> Monitor(MonitorRequest request, ServerCallContext context)
         {
             var record = _discoveryService
-                .Discover(r => r.FullyQualifiedName == request.FullyQualifiedName)
-                ?.FirstOrDefault();
+                .Discover(r => r.FullyQualifiedName == request.FullyQualifiedName &&
+                            r.Node.Metadata.NodeType == _nodeMetadata.NodeType)?.SingleOrDefault();
 
             if (record == null)
             {

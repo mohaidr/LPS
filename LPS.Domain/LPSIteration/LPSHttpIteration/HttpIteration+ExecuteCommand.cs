@@ -22,9 +22,7 @@ namespace LPS.Domain
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             readonly IMetricsDataMonitor _lpsMonitoringEnroller;
-            ITerminationCheckerService _terminationCheckerService;
-            IIterationFailureEvaluator _iterationFailureEvaluator;
-
+            IIterationStatusMonitor _iterationStatusMonitor;
             protected ExecuteCommand()
             {
             }
@@ -35,20 +33,18 @@ namespace LPS.Domain
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IMetricsDataMonitor lpsMonitoringEnroller,
-                ITerminationCheckerService terminationCheckerService,
-                IIterationFailureEvaluator iterationFailureEvaluator)
+                IIterationStatusMonitor iterationStatusMonitor)
             {
                 _httpClientService = httpClientService;
                 _logger = logger;
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
-                _terminationCheckerService = terminationCheckerService;
-                _iterationFailureEvaluator = iterationFailureEvaluator;
-                _executionStatus = ExecutionStatus.Scheduled;
+                _iterationStatusMonitor = iterationStatusMonitor;
+                _executionStatus = CommandExecutionStatus.Scheduled;
             }
-            private ExecutionStatus _executionStatus;
-            public ExecutionStatus Status => _executionStatus;
+            private CommandExecutionStatus _executionStatus;
+            public CommandExecutionStatus Status => _executionStatus;
 
             public async Task ExecuteAsync(HttpIteration entity, CancellationToken token)
             {
@@ -61,45 +57,27 @@ namespace LPS.Domain
                 entity._watchdog = _watchdog;
                 entity._runtimeOperationIdProvider = _runtimeOperationIdProvider;
                 entity._lpsMonitoringEnroller = _lpsMonitoringEnroller;
-                entity._terminationCheckerService = _terminationCheckerService;
+                entity._iterationStatusMonitor = _iterationStatusMonitor;
                 try
                 {
-                    _executionStatus = ExecutionStatus.Ongoing;
+                    _executionStatus = CommandExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this, token);
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
-                    _executionStatus = ExecutionStatus.Cancelled;
+                    _executionStatus = CommandExecutionStatus.Cancelled;
                     throw;
-                }  
-                catch 
-                {  
-                } // No exception should stop the iteration execution, termination rules and cancellations are the ways to stop ongoing execution
-                finally 
-                {
-                    if (_executionStatus != ExecutionStatus.Cancelled)
-                    {
-                        if (await _terminationCheckerService.IsTerminationRequiredAsync(entity)) //Update to adopt -> // cancel all the scheduled operations
-                        {
-                            _executionStatus = ExecutionStatus.Terminated;
-                        }
-                        else if (await _iterationFailureEvaluator.IsErrorRateExceededAsync(entity)) //Update to adopt -> // and no ongoing commands running
-                        {
-                            _executionStatus = ExecutionStatus.Failed;
-                        }
-                        else
-                        {
-                            _executionStatus = ExecutionStatus.Completed;
-                        }
-                    }
                 }
-            }
-
-            public void CancellIfScheduled()
-            {
-                if (_executionStatus == ExecutionStatus.Scheduled)
+                catch
                 {
-                    _executionStatus = ExecutionStatus.Cancelled;
+                    _executionStatus = CommandExecutionStatus.Failed;
+                } // No exception should stop the iteration execution, termination rules and cancellations are the ways to stop ongoing execution
+                finally
+                {
+                    if (await _iterationStatusMonitor.IsTerminatedAsync(entity, token))
+                        _executionStatus = CommandExecutionStatus.Terminated;
+                    else
+                        _executionStatus = CommandExecutionStatus.Completed;
                 }
             }
         }
@@ -174,7 +152,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _terminationCheckerService
+                            this, _iterationStatusMonitor
                         );
                         break;
 
@@ -187,7 +165,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _terminationCheckerService
+                            this, _iterationStatusMonitor
                         );
                         break;
 
@@ -199,7 +177,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this,_terminationCheckerService
+                            this, _iterationStatusMonitor
                         );
                         break;
 
@@ -209,7 +187,7 @@ namespace LPS.Domain
                             request: this.HttpRequest,
                             command: httpRequestExecuteCommand,
                             requestCount: this.RequestCount.Value,
-                            watchdog: _watchdog, _terminationCheckerService
+                            watchdog: _watchdog, _iterationStatusMonitor
                         );
                         break;
 
@@ -219,7 +197,7 @@ namespace LPS.Domain
                             request: this.HttpRequest,
                             command: httpRequestExecuteCommand,
                             duration: this.Duration.Value,
-                            watchdog: _watchdog, _terminationCheckerService
+                            watchdog: _watchdog, _iterationStatusMonitor
                         );
                         break;
 

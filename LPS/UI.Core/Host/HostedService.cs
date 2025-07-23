@@ -44,8 +44,7 @@ namespace LPS.UI.Core.Host
         IMetricsDataMonitor metricDataMonitor,
         IVariableManager variableManager,
         IPlaceholderResolverService placeholderResolverService,
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>,
-        HttpIteration> httpIterationExecutionCommandStatusMonitor,
+        ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
         AppSettingsWritableOptions appSettings,
                 ITestTriggerNotifier testTriggerNotifier,
                                 ITestExecutionService testExecutionService,
@@ -67,7 +66,7 @@ namespace LPS.UI.Core.Host
         readonly IWatchdog _watchdog = watchdog;
         readonly AppSettingsWritableOptions _appSettings = appSettings;
         readonly IMetricsDataMonitor _metricDataMonitor = metricDataMonitor;
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
+        readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
         readonly IVariableManager _variableManager = variableManager;
         readonly IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
         readonly ITestExecutionService _testExecutionService = testExecutionService;

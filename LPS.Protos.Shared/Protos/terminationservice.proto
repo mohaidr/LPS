@@ -1,0 +1,17 @@
+﻿// Protos/iteration_termination.proto
+syntax = "proto3";
+
+option csharp_namespace = "LPS.Protos.Shared";
+package metrics;
+
+service IterationTerminationService {
+  rpc IsTerminated (IsTerminatedByFQDNRequest) returns (IsTerminatedResponse);
+}
+
+message IsTerminatedByFQDNRequest {
+  string fullyQualifiedName = 1;
+}
+
+message IsTerminatedResponse {
+  bool isTerminated = 1;
+}

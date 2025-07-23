@@ -36,13 +36,14 @@ namespace LPS.UI.Core.Services
         private readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
         private readonly IClientConfiguration<HttpRequest> _config;
         private readonly IWatchdog _watchdog;
-        private readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        private readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         private readonly IDashboardService _dashboardService;
         private readonly CancellationTokenSource _cts;
         private readonly IEntityRepositoryService _entityRepositoryService;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
-        private readonly ITerminationCheckerService _terminationCheckerService;
-        private readonly IIterationFailureEvaluator _iterationFailureEvaluator;
+        private readonly IIterationStatusMonitor _iterationStatusMonitor;
+        public readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -56,11 +57,12 @@ namespace LPS.UI.Core.Services
             IClientConfiguration<HttpRequest> config,
             IWatchdog watchdog,
             IDashboardService dashboardService,
-            ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
+            ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
             IEntityRepositoryService entityRepositoryService,
             ICustomGrpcClientFactory customGrpcClientFactory,
-            ITerminationCheckerService terminationCheckerService,
+            IIterationStatusMonitor iterationStatusMonitor,
             IIterationFailureEvaluator iterationFailureEvaluator,
+            ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
             CancellationTokenSource cts)
         {
             _logger = logger;
@@ -79,8 +81,8 @@ namespace LPS.UI.Core.Services
             _cts = cts;
             _entityRepositoryService = entityRepositoryService;
             _customGrpcClientFactory = customGrpcClientFactory;
-            _terminationCheckerService = terminationCheckerService;
-            _iterationFailureEvaluator = iterationFailureEvaluator;
+            _iterationStatusMonitor = iterationStatusMonitor;
+            _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
             // Create the AutoMapper configuration
             var mapperConfig = new MapperConfiguration(cfg =>
             {
@@ -187,7 +189,7 @@ namespace LPS.UI.Core.Services
                 await localNode.SetNodeStatus(NodeStatus.Running);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
                 _dashboardService.Start();
-                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _lpsMonitoringEnroller, _terminationCheckerService, _iterationFailureEvaluator)
+                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
                     .ExecuteAsync(plan, _cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
             }

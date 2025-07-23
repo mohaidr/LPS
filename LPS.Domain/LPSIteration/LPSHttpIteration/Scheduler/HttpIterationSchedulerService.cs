@@ -11,31 +11,28 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
 {
     public class HttpIterationSchedulerService : IHttpIterationSchedulerService
     {
-        readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
         private readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
         readonly IWatchdog _watchdog;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly ILogger _logger;
-        readonly ITerminationCheckerService _terminationCheckerService;
-        readonly IIterationFailureEvaluator _iterationFailureEvaluator;
+        readonly IIterationStatusMonitor _iterationStatusMonitor;
         readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
         readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
         public HttpIterationSchedulerService(ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
-                ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
-                ITerminationCheckerService terminationCheckerService,
-                IIterationFailureEvaluator iterationFailureEvaluator,
+                ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
+                IIterationStatusMonitor iterationStatusMonitor,
                 IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpRequest> lpsClientConfig)
         {
             _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
             _watchdog = watchdog;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
-            _terminationCheckerService = terminationCheckerService;
-            _iterationFailureEvaluator = iterationFailureEvaluator;
+            _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
+            _iterationStatusMonitor = iterationStatusMonitor;
             _lpsClientManager = lpsClientManager;
             _lpsClientConfig = lpsClientConfig;
             _logger = logger;
@@ -44,10 +41,10 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
         public async Task ScheduleAsync(DateTime scheduledTime, HttpIteration httpIteration, CancellationToken token)
         {
             IClientService<HttpRequest, HttpResponse> httpClient = _lpsClientManager.DequeueClient() ?? _lpsClientManager.CreateInstance(_lpsClientConfig);
-            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _terminationCheckerService, _iterationFailureEvaluator);
+            HttpIteration.ExecuteCommand httpIterationCommand = new(httpClient, _logger, _watchdog, _runtimeOperationIdProvider, _lpsMetricsDataMonitor, _iterationStatusMonitor);
             try
             {
-                _httpIterationExecutionCommandStatusMonitor.Register(httpIterationCommand, httpIteration);
+                _httpIterationExecutionCommandRepository.Register(httpIterationCommand, httpIteration);
                 var delayTime = (scheduledTime - DateTime.Now);
                 if (delayTime > TimeSpan.Zero)
                 {
@@ -67,7 +64,7 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             finally
             {
                 _lpsMetricsDataMonitor?.Stop(httpIteration);
-                httpIterationCommand.CancellIfScheduled();
+               // httpIterationCommand.CancellIfScheduled();
             }
         }
     }

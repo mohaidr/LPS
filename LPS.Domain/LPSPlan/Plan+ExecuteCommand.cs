@@ -23,9 +23,10 @@ namespace LPS.Domain
         IClientConfiguration<HttpRequest> _lpsClientConfig;
         IWatchdog _watchdog;
         IMetricsDataMonitor _lpsMetricsDataMonitor;
-        ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
-        ITerminationCheckerService _terminationCheckerService;
+        ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+        IIterationStatusMonitor _iterationStatusMonitor;
         IIterationFailureEvaluator _iterationFailureEvaluator;
+        ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
 
         public class ExecuteCommand : IAsyncCommand<Plan>
         {
@@ -35,9 +36,9 @@ namespace LPS.Domain
             readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
             readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
-            readonly ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandStatusMonitor;
-            readonly ITerminationCheckerService _terminationCheckerService;
-            readonly IIterationFailureEvaluator _iterationFailureEvaluator;
+            readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
+            readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+            readonly IIterationStatusMonitor _iterationStatusMonitor;
             protected ExecuteCommand()
             {
             }
@@ -46,10 +47,10 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpRequest> lpsClientConfig,
-                ICommandStatusMonitor<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandStatusMonitor,
+                ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
+                ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
-                ITerminationCheckerService terminationCheckerService,
-                IIterationFailureEvaluator  iterationFailureEvaluator)
+                IIterationStatusMonitor iterationStatusMonitor)
             {
                 _logger = logger;
                 _watchdog = watchdog;
@@ -58,11 +59,11 @@ namespace LPS.Domain
                 _lpsClientConfig = lpsClientConfig;
                 _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
-                _terminationCheckerService = terminationCheckerService;
-                _iterationFailureEvaluator = iterationFailureEvaluator;
+                _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
+                _iterationStatusMonitor = iterationStatusMonitor;
             }
-            private ExecutionStatus _executionStatus;
-            public ExecutionStatus Status => _executionStatus;
+            private CommandExecutionStatus _executionStatus;
+            public CommandExecutionStatus Status => _executionStatus;
             async public Task ExecuteAsync(Plan entity, CancellationToken token)
             {
                 if (entity == null)
@@ -77,8 +78,8 @@ namespace LPS.Domain
                 entity._lpsClientManager = this._lpsClientManager;
                 entity._lpsMetricsDataMonitor = this._lpsMetricsDataMonitor;
                 entity._httpIterationExecutionCommandStatusMonitor = this._httpIterationExecutionCommandStatusMonitor;
-                entity._terminationCheckerService = this._terminationCheckerService;
-                entity._iterationFailureEvaluator = this._iterationFailureEvaluator;
+                entity._iterationStatusMonitor = this._iterationStatusMonitor;
+                entity._httpIterationExecutionCommandRepository = this._httpIterationExecutionCommandRepository;
                 await entity.ExecuteAsync(this, token);
             }
 
@@ -97,6 +98,7 @@ namespace LPS.Domain
                 awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan Name:  {this.Name}", LPSLoggingLevel.Verbose, token));
                 #endregion
 
+
                 foreach (var round in Rounds)
                 {
                     var roundExecCommand = new Round.ExecuteCommand(_logger,
@@ -104,8 +106,8 @@ namespace LPS.Domain
                         _runtimeOperationIdProvider,
                         _lpsClientManager,
                         _lpsClientConfig,
-                        _httpIterationExecutionCommandStatusMonitor,
-                        _lpsMetricsDataMonitor, _terminationCheckerService, _iterationFailureEvaluator);
+                        _httpIterationExecutionCommandStatusMonitor, _httpIterationExecutionCommandRepository,
+                        _lpsMetricsDataMonitor, _iterationStatusMonitor);
                     await roundExecCommand.ExecuteAsync(round, token);
                 }
             }
