@@ -169,7 +169,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
                 return this;
             }
 
-            public Builder SetGlobal(bool isGlobal)
+            public Builder SetGlobal(bool isGlobal = true)
             {
                 _variableHolder.IsGlobal = isGlobal;
                 return this;

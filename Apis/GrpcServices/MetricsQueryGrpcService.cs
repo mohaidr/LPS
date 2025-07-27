@@ -99,12 +99,12 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                     FailedRequestsCount = d.FailedRequestsCount,
                     RequestsRate = new Protos.Shared.RequestsRate
                     {
-                        Every = d.RequestsRate.Every,
+                        Every = d.RequestsRate.Every ?? string.Empty,
                         Value = d.RequestsRate.Value
                     },
                     RequestsRatePerCoolDownPeriod = new Protos.Shared.RequestsRate
                     {
-                        Every = d.RequestsRatePerCoolDownPeriod.Every,
+                        Every = d.RequestsRatePerCoolDownPeriod.Every ?? string.Empty,
                         Value = d.RequestsRatePerCoolDownPeriod.Value
                     }
                 });
@@ -148,7 +148,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
             where TCollector : class, IMetricCollector
             where TDimensionSet : HttpMetricDimensionSet
         {
-            return await _metricsQueryService.GetAsync<TCollector>(async collector =>
+            var results = await _metricsQueryService.GetAsync<TCollector>(async collector =>
             {
                 var d = (TDimensionSet)await collector.GetDimensionSetAsync();
                 var checks = new List<bool>();
@@ -184,6 +184,9 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                     ? checks.Any(x => x)
                     : checks.All(x => x);
             });
+
+            return results;
+
         }
     }
 }

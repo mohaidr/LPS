@@ -75,14 +75,14 @@ namespace LPS.UI.Core.LPSCommandLine
                 SaveResponse.AddAlias("-sr");
                 SupportH2C.AddAlias("-sh2c");
                 SupportH2C.AddAlias("-h2c");
-                MaxErrorRateOption.AddAlias("mer");
-                ErrorStatusCodesOption.AddAlias("esc");
+                MaxErrorRateOption.AddAlias("-mer");
+                ErrorStatusCodesOption.AddAlias("-esc");
                 TerminationRuleOption.AddAlias("-tr");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
                 AddCaseInsensitiveAliases(MaxErrorRateOption, "--maxerrorrate");
-                AddCaseInsensitiveAliases(MaxErrorRateOption, "--errorstatuscodes");
+                AddCaseInsensitiveAliases(ErrorStatusCodesOption, "--errorstatuscodes");
                 AddCaseInsensitiveAliases(TerminationRuleOption, "--terminationrule");
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
                 AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
@@ -124,7 +124,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> ErrorStatusCodesOption { get; } = new Option<string>(
-                "--errorStatusCodesOption", "Error status codes to be used to calculate the max error rate")
+                "--errorStatusCodes", "Error status codes to be used to calculate the max error rate")
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne

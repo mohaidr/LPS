@@ -38,6 +38,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 sessionManager,
                 memoryCacheService,
                 variableManager,
+                this,
                 runtimeOperationIdProvider,
                 logger);
         }
@@ -217,17 +218,20 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly ILogger _logger;
         private readonly ParameterExtractorService _paramService;
+        IPlaceholderResolverService _placeholderResolverService;
         public PlaceholderProcessor(
             ParameterExtractorService paramService,
             ISessionManager sessionManager,
             ICacheService<string> memoryCacheService,
             IVariableManager variableManager,
+            IPlaceholderResolverService placeholderResolverService,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILogger logger)
         {
             _sessionManager = sessionManager;
             _memoryCacheService = memoryCacheService;
             _variableManager = variableManager;
+            _placeholderResolverService = placeholderResolverService;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _logger = logger;
             _paramService = paramService;
@@ -412,6 +416,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100000, sessionId, token);
             var counterName =  await _paramService.ExtractStringAsync(parameters, "counter", string.Empty, sessionId, token);
             var step =  await _paramService.ExtractNumberAsync(parameters, "step", 1, sessionId, token);
+            var variableName =  await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+
             var counterNameCachePart = !string.IsNullOrEmpty(counterName) ? $"_{counterName.Trim()}" : string.Empty;
             if (startValue >= endValue)
             {
@@ -448,6 +454,19 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
                 // Update the cache with the new value
                 await _memoryCacheService.SetItemAsync(cacheKey, currentValue.ToString(), TimeSpan.MaxValue);
+                if (!string.IsNullOrWhiteSpace(variableName))
+                {
+                    var builder = new VariableHolder.Builder(_placeholderResolverService);
+                    var variableHolder = await builder
+                        .WithFormat(MimeType.TextPlain) // Assuming plain text for headers
+                        .WithRawValue(currentValue.ToString())
+                        .SetGlobal()
+                        .BuildAsync(token);
+
+                    await _variableManager.AddVariableAsync(variableName, variableHolder, token);
+
+                }
+
 
                 return currentValue.ToString();
             }
