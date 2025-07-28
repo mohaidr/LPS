@@ -158,7 +158,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 {
                     if (result[endIndex] == '}')
                     {
-                        return endIndex; 
+                        return endIndex;
                     }
                     endIndex++;
                 }
@@ -176,14 +176,14 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 currentChar = result[endIndex];
                 if (currentChar == '(') { parenthesesBalance++; isMethod = true; }
                 if (currentChar == ')') parenthesesBalance--;
-                if (currentChar == '[') { squareBracketBalance++;};
+                if (currentChar == '[') { squareBracketBalance++; };
                 if (currentChar == ']') { squareBracketBalance--; };
                 insideParentheses = parenthesesBalance > 0;
                 insideSquareBracket = squareBracketBalance > 0;
                 if ((!insideParentheses && !insideSquareBracket &&
-                    !char.IsLetterOrDigit(currentChar) && !pathChars.Contains(currentChar)) 
-                    || parenthesesBalance<0 
-                    || squareBracketBalance <0)
+                    !char.IsLetterOrDigit(currentChar) && !pathChars.Contains(currentChar))
+                    || parenthesesBalance < 0
+                    || squareBracketBalance < 0)
                 {
                     break;
                 }
@@ -196,13 +196,13 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
              For variables, the stopper should not be part of the variable name. The caller method determines the placeholder name by subtracting the start index (the first letter after $) from the stopper index.
              For example, in $x_$y, the stopper index is 2, and the start index is 1. Subtracting 1 from 2 gives the variable name length (1), allowing us to extract the variable name by slicing from the start index for the calculated length.
             */
-            if (isMethod && currentChar ==')' && parenthesesBalance == 0)
+            if (isMethod && currentChar == ')' && parenthesesBalance == 0)
             {
                 endIndex++;
             }
             // handle the case "[$x, $y]" so we do not take ] with $y
-            if (squareBracketBalance !=0 
-                && (lastChar == '[' || lastChar == ']')) 
+            if (squareBracketBalance != 0
+                && (lastChar == '[' || lastChar == ']'))
                 endIndex--;
 
             return endIndex;
@@ -261,7 +261,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 "random" => await GenerateRandomStringAsync(parameters, sessionId, token),
                 "randomnumber" => await GenerateRandomNumberAsync(parameters, sessionId, token),
                 "timestamp" => await GenerateTimestampAsync(parameters, sessionId, token),
-                "guid" => Guid.NewGuid().ToString(),
+                "guid" => await GenerateGuidAsync(parameters, sessionId, token),
                 "urlencode" => await UrlEncodeAsync(parameters, sessionId, token),
                 "urldecode" => await UrlDecodeAsync(parameters, sessionId, token),       // <-- added
                 "base64encode" => await Base64EncodeAsync(parameters, sessionId, token),
@@ -304,9 +304,9 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 ? await ExtractValueFromPathAsync(variableHolder, path, sessionId, token)
                 : variableHolder.ExtractValueWithRegex();
 
-            if(path== null || (!path.Contains('$') && !string.IsNullOrWhiteSpace(sessionId))) // No cache to handle a case where a method or variable is embedded in a path so it has to be resolved with every request, e.g ${csvData[$loopcounter(start=0, end=5, counter=test),0]}
-                await _memoryCacheService.SetItemAsync(cacheKey, resolvedValue, !string.IsNullOrEmpty(sessionId) ? TimeSpan.FromSeconds(30): TimeSpan.MaxValue);
-            
+            if (path == null || (!path.Contains('$') && !string.IsNullOrWhiteSpace(sessionId))) // No cache to handle a case where a method or variable is embedded in a path so it has to be resolved with every request, e.g ${csvData[$loopcounter(start=0, end=5, counter=test),0]}
+                await _memoryCacheService.SetItemAsync(cacheKey, resolvedValue, !string.IsNullOrEmpty(sessionId) ? TimeSpan.FromSeconds(30) : TimeSpan.MaxValue);
+
             return resolvedValue;
         }
 
@@ -331,26 +331,70 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
         }
 
+        private async Task StoreVariableIfNeededAsync(string variableName, string value, CancellationToken token)
+        {
+            if (string.IsNullOrWhiteSpace(variableName))
+                return;
+
+            var holder = await new VariableHolder.Builder(_placeholderResolverService)
+                .WithFormat(MimeType.TextPlain)
+                .WithRawValue(value)
+                .SetGlobal()
+                .BuildAsync(token);
+
+            await _variableManager.AddVariableAsync(variableName, holder, token);
+        }
+
+
         private async Task<string> GenerateRandomStringAsync(string parameters, string sessionId, CancellationToken token)
         {
             int length = await _paramService.ExtractNumberAsync(parameters, "length", 10, sessionId, token);
+            string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             var random = new Random();
-            return new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+            string result = new string(Enumerable.Repeat(chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
+
+            await StoreVariableIfNeededAsync(variableName, result, token);
+
+            return result;
         }
 
         private async Task<string> GenerateRandomNumberAsync(string parameters, string sessionId, CancellationToken token)
         {
             int min = await _paramService.ExtractNumberAsync(parameters, "min", 1, sessionId, token);
             int max = await _paramService.ExtractNumberAsync(parameters, "max", 100, sessionId, token);
+            string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+
             var random = new Random();
-            return random.Next(min, max + 1).ToString();
+            string result = random.Next(min, max + 1).ToString();
+            await StoreVariableIfNeededAsync(variableName, result, token);
+
+
+            return result;
         }
 
         private async Task<string> GenerateTimestampAsync(string parameters, string sessionId, CancellationToken token)
         {
             string format = await _paramService.ExtractStringAsync(parameters, "format", "yyyy-MM-ddTHH:mm:ss", sessionId, token);
-            return DateTime.UtcNow.ToString(format);
+            string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+
+            string result = DateTime.UtcNow.ToString(format);
+
+            await StoreVariableIfNeededAsync(variableName, result, token);
+
+
+            return result;
+        }
+
+        private async Task<string> GenerateGuidAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+            string result = Guid.NewGuid().ToString();
+            await StoreVariableIfNeededAsync(variableName, result, token);
+
+
+            return result;
         }
 
         private async Task<string> GenerateHashAsync(string parameters, string sessionId, CancellationToken token)
@@ -414,9 +458,9 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             // Extract parameters for start and end values
             var startValue = await _paramService.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
             var endValue = await _paramService.ExtractNumberAsync(parameters, "end", 100000, sessionId, token);
-            var counterName =  await _paramService.ExtractStringAsync(parameters, "counter", string.Empty, sessionId, token);
-            var step =  await _paramService.ExtractNumberAsync(parameters, "step", 1, sessionId, token);
-            var variableName =  await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+            var counterName = await _paramService.ExtractStringAsync(parameters, "counter", string.Empty, sessionId, token);
+            var step = await _paramService.ExtractNumberAsync(parameters, "step", 1, sessionId, token);
+            var variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
 
             var counterNameCachePart = !string.IsNullOrEmpty(counterName) ? $"_{counterName.Trim()}" : string.Empty;
             if (startValue >= endValue)
@@ -439,7 +483,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 }
                 else
                 {
-                    currentValue+= step;
+                    currentValue += step;
                     if (currentValue > endValue || currentValue < startValue)
                     {
                         currentValue = startValue; // Restart counter
@@ -454,18 +498,9 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
 
                 // Update the cache with the new value
                 await _memoryCacheService.SetItemAsync(cacheKey, currentValue.ToString(), TimeSpan.MaxValue);
-                if (!string.IsNullOrWhiteSpace(variableName))
-                {
-                    var builder = new VariableHolder.Builder(_placeholderResolverService);
-                    var variableHolder = await builder
-                        .WithFormat(MimeType.TextPlain) // Assuming plain text for headers
-                        .WithRawValue(currentValue.ToString())
-                        .SetGlobal()
-                        .BuildAsync(token);
 
-                    await _variableManager.AddVariableAsync(variableName, variableHolder, token);
+                await StoreVariableIfNeededAsync(variableName, currentValue.ToString(), token);
 
-                }
 
 
                 return currentValue.ToString();
