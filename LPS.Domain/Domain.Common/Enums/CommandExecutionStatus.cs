@@ -21,12 +21,13 @@ namespace LPS.Domain.Domain.Common.Enums
 
     public enum EntityExecutionStatus
     {
-        Scheduled = 0,
-        Ongoing = 1,
-        Success = 2,
-        Failed = 3,
-        Terminated = 4,
-        Cancelled = 5,
+        NotStarted = 0,
+        Scheduled = 1,
+        Ongoing = 2,
+        Success = 3,
+        Failed = 4,
+        Terminated = 5,
+        Cancelled = 6,
         Unkown = -1,
     }
 }

@@ -3,6 +3,7 @@ using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +21,6 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
         public bool? MakeGlobal { get; protected set; }
         public string Regex { get; protected set; }
         public IList<string> Headers { get; protected set; }
-
         public HandlerType HandlerType => HandlerType.StopIf;
         public bool IsValid
         {

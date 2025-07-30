@@ -134,7 +134,7 @@ namespace LPS.Infrastructure.LPSClients
 
                                 if (httpRequestEntity.Capture.MakeGlobal == true)
                                 {
-                                    variableHolder = await builder.SetGlobal(true)
+                                    variableHolder = await builder.SetGlobal()
                                         .BuildAsync(token);
                                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} as a global variable", LPSLoggingLevel.Verbose, linkedCts.Token);
                                     await _variableManager.AddVariableAsync(httpRequestEntity.Capture.To, variableHolder, token);

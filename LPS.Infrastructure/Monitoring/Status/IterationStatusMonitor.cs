@@ -50,7 +50,10 @@ namespace LPS.Infrastructure.Monitoring.Status
             {
                 return EntityExecutionStatus.Scheduled;
             }
-
+            if (!(await _commandStatusMonitor.QueryAsync(httpIteration)).Any())
+            {
+                return EntityExecutionStatus.NotStarted;
+            }
             return EntityExecutionStatus.Success;
         }
 

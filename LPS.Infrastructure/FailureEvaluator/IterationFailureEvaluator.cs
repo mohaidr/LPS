@@ -85,7 +85,7 @@ namespace LPS.Infrastructure.FailureEvaluator
                     return false;
 
                 var actualErrorRate = (double)errors / total;
-                return actualErrorRate > (iteration.MaxErrorRate / 100.0);
+                return actualErrorRate > (iteration.MaxErrorRate.Value);
             }
             catch (Exception ex)
             {
