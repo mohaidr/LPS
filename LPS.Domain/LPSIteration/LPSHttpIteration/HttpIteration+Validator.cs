@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using FluentValidation;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Validation;
 
 namespace LPS.Domain
@@ -20,13 +21,18 @@ namespace LPS.Domain
             private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             private readonly SetupCommand _command;
             private readonly HttpIteration _entity;
+            ISkipIfEvaluator _skipIfEvaluator;
 
-            public Validator(HttpIteration entity, SetupCommand command, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            public Validator(HttpIteration entity, SetupCommand command, 
+                ISkipIfEvaluator skipIfEvaluator,
+                ILogger logger, 
+                IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
                 _command = command;
                 _entity = entity;
+                _skipIfEvaluator = skipIfEvaluator;
 
                 #region Validation Rules
                 RuleFor(c => c.Name)
@@ -60,6 +66,8 @@ namespace LPS.Domain
                 RuleFor(c => c.CoolDownTime)
                     .Must(BeValidCoolDownTime)
                     .WithMessage(c => $"The 'CoolDownTime' {(c.Mode == IterationMode.DCB || c.Mode == IterationMode.CRB || c.Mode == IterationMode.CB ? $"must be specified and greater than 0{(c.Mode == IterationMode.DCB && c.Duration.HasValue ? ", it must be less than Duration*1000 as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
+
+                RuleFor(c => c.SkipIf).Must(skipIf => _skipIfEvaluator.IsValidExpression(skipIf));
 
                 RuleFor(c => c)
                     .Must(c =>

@@ -136,6 +136,11 @@ namespace LPS.Domain
             var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, _logger, _watchdog, _runtimeOperationIdProvider);
             try
             {
+                if (await _skipIfEvaluator.ShouldSkipAsync(SkipIf, command.HttpClientService.SessionId, token))
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration {Name} is being skipped because the condition '{SkipIf}' evaluated to true.", LPSLoggingLevel.Information, token);
+                    return;
+                }
                 await LogRequestDetailsAsync(token);
 
                 IIterationModeService iterationModeService;

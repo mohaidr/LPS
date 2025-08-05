@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -80,6 +81,10 @@ namespace LPS.Domain.Common.Interfaces
                 "read" => true,
                 "loopcounter" => true,
                 "iterate" => true,
+                "uuid" => true,
+                "format" => true,
+                "jwtclaim" => true,
+                "generateemail" => true,
                 _ => false // Unsupported method
             };
         }

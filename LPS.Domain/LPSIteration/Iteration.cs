@@ -45,6 +45,7 @@ namespace LPS.Domain
         public bool IsValid { get; protected set; }
         public IterationType Type { get; protected set; }
         public double? MaxErrorRate { get; protected set; }
+        public string SkipIf { get; protected set; }
 
     }
 }

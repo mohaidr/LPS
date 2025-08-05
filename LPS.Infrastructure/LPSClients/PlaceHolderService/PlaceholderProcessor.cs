@@ -75,6 +75,11 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 "hash" => await GenerateHashAsync(parameters, sessionId, token),
                 "read" => await ReadFileAsync(parameters, sessionId, token),
                 "loopcounter" or "iterate" => await IterateAsync(parameters, sessionId, token),
+                "uuid" => await GenerateUuidAsync(parameters, sessionId, token),
+                "format" => await FormatTemplateAsync(parameters, sessionId, token),
+                "jwtclaim" => await ExtractJwtClaimAsync(parameters, sessionId, token),
+                "generateemail" => await GenerateEmailAsync(parameters, sessionId, token),
+
                 _ => throw new InvalidOperationException($"Unknown function: {functionName}")
             };
         }
@@ -348,6 +353,76 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 return string.Empty;
 
             return Uri.UnescapeDataString(value);
+        }
+
+        //new ones
+
+        private async Task<string> ExtractJwtClaimAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string tokenStr = await _paramService.ExtractStringAsync(parameters, "token", "", sessionId, token);
+            string claim = await _paramService.ExtractStringAsync(parameters, "claim", "", sessionId, token);
+
+            if (string.IsNullOrEmpty(tokenStr) || string.IsNullOrEmpty(claim))
+                return string.Empty;
+
+            string[] parts = tokenStr.Split('.');
+            if (parts.Length < 2)
+                throw new InvalidOperationException("Invalid JWT token format.");
+
+            string payloadJson = Encoding.UTF8.GetString(Convert.FromBase64String(PadBase64(parts[1])));
+            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(payloadJson);
+
+            if (dict != null && dict.TryGetValue(claim, out var value))
+                return value?.ToString() ?? string.Empty;
+
+            return string.Empty;
+
+            static string PadBase64(string base64)
+            {
+                return base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=');
+            }
+        }
+
+
+        private async Task<string> GenerateEmailAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string prefix = await _paramService.ExtractStringAsync(parameters, "prefix", "user", sessionId, token);
+            string domain = await _paramService.ExtractStringAsync(parameters, "domain", "example.com", sessionId, token);
+            string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+            string uniquePart = Guid.NewGuid().ToString("N").Substring(0, 8);
+            string email = $"{prefix}-{uniquePart}@{domain}";
+
+            await StoreVariableIfNeededAsync(variableName, email, token);
+            return email;
+        }
+
+        private async Task<string> FormatTemplateAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            try
+            {
+                string template = await _paramService.ExtractStringAsync(parameters, "template", string.Empty, sessionId, token);
+                string args = await _paramService.ExtractStringAsync(parameters, "args", string.Empty, sessionId, token);
+                string result = string.Format(template, args.Split(",").ToArray());
+                result = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(result, string.Empty, token);
+                string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+                await StoreVariableIfNeededAsync(variableName, result, token);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"{ex}", LPSLoggingLevel.Error, token);
+                return string.Empty;
+            }
+        }
+
+        private async Task<string> GenerateUuidAsync(string parameters, string sessionId, CancellationToken token)
+        {
+            string prefix = await _paramService.ExtractStringAsync(parameters, "prefix", "", sessionId, token);
+            string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+            string uuid = Guid.NewGuid().ToString();
+            string result = $"{prefix}{uuid}";
+            await StoreVariableIfNeededAsync(variableName, result, token);
+            return result;
         }
 
     }

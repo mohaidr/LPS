@@ -39,6 +39,7 @@ using Newtonsoft.Json;
 using LPS.Infrastructure.Services;
 using LPS.Infrastructure.Monitoring.TerminationServices;
 using LPS.Infrastructure.FailureEvaluator;
+using LPS.Infrastructure.Skip;
 
 namespace LPS
 {
@@ -142,6 +143,7 @@ namespace LPS
                     services.AddSingleton<ITestOrchestratorService, TestOrchestratorService>();
                     services.AddSingleton<ITerminationCheckerService, HttpIterationTerminationCheckerService>();
                     services.AddSingleton<IIterationFailureEvaluator, IterationFailureEvaluator>();
+                    services.AddSingleton<ISkipIfEvaluator, SkipIfEvaluator>();
                     services.AddSingleton<IDashboardService, DashboardService>();
                     services.AddSingleton<NodeHealthMonitorBackgroundService>();
                     services.ConfigureWritable<DashboardConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Dashboard"), AppConstants.AppSettingsFileLocation);

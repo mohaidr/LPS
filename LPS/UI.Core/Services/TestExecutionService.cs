@@ -43,6 +43,7 @@ namespace LPS.UI.Core.Services
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         public readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+        public readonly ISkipIfEvaluator _skipIfEvaluator;
 
         public TestExecutionService(
             ILogger logger,
@@ -61,7 +62,7 @@ namespace LPS.UI.Core.Services
             IEntityRepositoryService entityRepositoryService,
             ICustomGrpcClientFactory customGrpcClientFactory,
             IIterationStatusMonitor iterationStatusMonitor,
-            IIterationFailureEvaluator iterationFailureEvaluator,
+            ISkipIfEvaluator skipIfEvaluator,
             ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
             CancellationTokenSource cts)
         {
@@ -82,6 +83,7 @@ namespace LPS.UI.Core.Services
             _entityRepositoryService = entityRepositoryService;
             _customGrpcClientFactory = customGrpcClientFactory;
             _iterationStatusMonitor = iterationStatusMonitor;
+            _skipIfEvaluator = skipIfEvaluator;
             _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
             // Create the AutoMapper configuration
             var mapperConfig = new MapperConfiguration(cfg =>
@@ -223,7 +225,7 @@ namespace LPS.UI.Core.Services
                 iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
             }
             var iterationCommand = _mapper.Map<HttpIteration.SetupCommand>(iterationDto);
-            var iterationEntity = new HttpIteration(iterationCommand, _logger, _runtimeOperationIdProvider);
+            var iterationEntity = new HttpIteration(iterationCommand, _skipIfEvaluator, _logger, _runtimeOperationIdProvider);
             if (iterationEntity.IsValid)
             {
                 var requestCommand = _mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest);
@@ -257,11 +259,11 @@ namespace LPS.UI.Core.Services
 
         public void RegisterEntities(Plan plan)
         {
-            var entityRegisterer = new EntityRegisterer(_clusterConfiguration, 
+            var entityRegisterer = new EntityRegisterer(_clusterConfiguration,
                 _nodeRegistry.GetLocalNode().Metadata,
-                _entityDiscoveryService, 
-                _nodeRegistry, 
-                _entityRepositoryService, 
+                _entityDiscoveryService,
+                _nodeRegistry,
+                _entityRepositoryService,
                 _customGrpcClientFactory);
             entityRegisterer.RegisterEntities(plan);
         }

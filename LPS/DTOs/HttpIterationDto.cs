@@ -41,6 +41,7 @@ namespace LPS.DTOs
         // Cooldown time (can be a variable)
         public string CoolDownTime { get; set; }
         public string MaxErrorRate { get; set; }
+        public string SkipIf { get; set; }
         public string ErrorStatusCodes { get; set; } // The user should provide them as comma separated to make it easier to define variables and reslove them
 
         public List<TerminationRuleDto> TerminationRules { get; set; }
@@ -58,6 +59,7 @@ namespace LPS.DTOs
                 BatchSize = this.BatchSize,
                 CoolDownTime = this.CoolDownTime,
                 MaxErrorRate = this.MaxErrorRate,
+                SkipIf = this.SkipIf,
                 TerminationRules = [.. this.TerminationRules]
             };
 

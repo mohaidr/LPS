@@ -45,12 +45,12 @@ namespace LPS.Domain
             public bool? MaximizeThroughput { get; set; }
             public double? MaxErrorRate { get; set; }
             public ICollection<HttpStatusCode> ErrorStatusCodes { get; set; }
-
             public IterationMode? Mode { get; set; }
             public int? RequestCount { get; set; }
             public int? Duration { get; set; }
             public int? BatchSize { get; set; }
             public int? CoolDownTime { get; set; }
+            public string SkipIf {  get; set; }
             public ICollection<TerminationRule> TerminationRules { get; private set; }
 
             [JsonIgnore]
@@ -76,6 +76,7 @@ namespace LPS.Domain
                 targetCommand.TerminationRules = [.. this.TerminationRules];
                 targetCommand.MaxErrorRate = this.MaxErrorRate;
                 targetCommand.ErrorStatusCodes = this.ErrorStatusCodes;
+                targetCommand.SkipIf = this.SkipIf;
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
@@ -89,7 +90,7 @@ namespace LPS.Domain
             //Set the inherited properties through the parent entity setupcommand
             var IterationSetUpCommand = new Iteration.SetupCommand() { Id = command.Id, Name = command.Name }; // if there are fields has to be set, then pass them here.
             base.Setup(IterationSetUpCommand);
-            var validator = new Validator(this, command, _logger, _runtimeOperationIdProvider);
+            var validator = new Validator(this, command, _skipIfEvaluator, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && IterationSetUpCommand.IsValid)
             {
                 this.StartupDelay = command.StartupDelay;
@@ -100,6 +101,7 @@ namespace LPS.Domain
                 this.CoolDownTime = command.CoolDownTime; ;
                 this.BatchSize = command.BatchSize;
                 this.MaxErrorRate = command.MaxErrorRate;
+                this.SkipIf = command.SkipIf;
                 this.ErrorStatusCodes = command.ErrorStatusCodes;
                 this.TerminationRules = command.TerminationRules.ToList();
                 this.IsValid = true;
@@ -113,7 +115,7 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            HttpIteration clone = new(_logger, _runtimeOperationIdProvider);
+            HttpIteration clone = new(_skipIfEvaluator, _logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 clone.Id = this.Id;

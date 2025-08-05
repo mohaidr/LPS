@@ -16,6 +16,7 @@ namespace LPS.Domain.Domain.Common.Enums
         Failed = 3,
         Terminated = 4,
         Cancelled = 5,
+        Skipped = 6,
         Unkown = -1,
     }
 
@@ -28,6 +29,7 @@ namespace LPS.Domain.Domain.Common.Enums
         Failed = 4,
         Terminated = 5,
         Cancelled = 6,
+        Skipped = 7,
         Unkown = -1,
     }
 }

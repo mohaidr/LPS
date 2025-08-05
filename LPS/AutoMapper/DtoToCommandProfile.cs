@@ -61,6 +61,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.BatchSize, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.BatchSize).Result))
                 .ForMember(dest => dest.CoolDownTime, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.CoolDownTime).Result))
                 .ForMember(dest => dest.MaxErrorRate, opt => opt.MapFrom(src => ResolvePlaceholderAsync<double?>(src.MaxErrorRate).Result))
+                .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.SkipIf).Result))
                 .ForMember(dest=> dest.ErrorStatusCodes, opt=> opt.MapFrom(src=> ResolvePlaceholderAsync<string>(src.ErrorStatusCodes).Result.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result).ToList()))
                 .ForMember(dest => dest.TerminationRules, opt => opt.MapFrom(src => src.TerminationRules.Select(tr => 
                     new TerminationRule(ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result).ToList(), 

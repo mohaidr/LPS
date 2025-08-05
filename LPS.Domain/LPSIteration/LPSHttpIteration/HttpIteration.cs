@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Exceptions;
+using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSFlow;
 using Newtonsoft.Json.Linq;
 
@@ -23,22 +24,27 @@ namespace LPS.Domain
             Type = IterationType.Http;
             TerminationRules = [];
         }
+        ISkipIfEvaluator _skipIfEvaluator;
         private HttpIteration(
+            ISkipIfEvaluator skipIfEvaluator,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             Type = IterationType.Http;
+            _skipIfEvaluator = skipIfEvaluator;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
         }
 
 
         public HttpIteration(SetupCommand command,
+            ISkipIfEvaluator skipIfEvaluator,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             ArgumentNullException.ThrowIfNull(command);
             Type = IterationType.Http;
+            _skipIfEvaluator = skipIfEvaluator;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);
@@ -75,10 +81,8 @@ namespace LPS.Domain
         public int? CoolDownTime { get; private set; }
         public IterationMode? Mode { get; private set; }
         public bool MaximizeThroughput { get; private set; }
-        public CommandExecutionStatus Status { get; private set; }
         public HttpRequest HttpRequest { get; protected set; }
         public ICollection<HttpStatusCode> ErrorStatusCodes { get; private set; }
-
         public ICollection<TerminationRule> TerminationRules { get; private set; }
     }
     public readonly struct TerminationRule(
