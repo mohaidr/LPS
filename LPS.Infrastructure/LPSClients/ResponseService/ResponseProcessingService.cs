@@ -33,7 +33,6 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         private readonly ILogger _logger = logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
        private readonly IMetricsService _metricsService = metricsService;
-        readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         public async Task<(HttpResponse.SetupCommand command, double dataReceivedSize, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage responseMessage,
             HttpRequest httpRequest,
@@ -65,7 +64,6 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     MemoryStream memoryStream = null;
                     byte[] buffer = _bufferPool.Rent(64000);
                     
-                    bool isSemaphoreAcquired = false;
                     try
                     {
                         // Initialize memoryStream if caching is needed
@@ -112,13 +110,9 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                             content = Encoding.UTF8.GetString(memoryStream.ToArray());
                             await _memoryCacheService.SetItemAsync(cacheKey, content);
                         }
-                        await _semaphoreSlim.WaitAsync(token);
-                        isSemaphoreAcquired = true;
                     }
                     finally
                     {
-                        if (isSemaphoreAcquired)
-                            _semaphoreSlim.Release();
                         _bufferPool.Return(buffer);
                         if (memoryStream != null)
                         {

@@ -2,11 +2,10 @@
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.MessageServices;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SessionManager;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using System.Collections.Generic;
 
 

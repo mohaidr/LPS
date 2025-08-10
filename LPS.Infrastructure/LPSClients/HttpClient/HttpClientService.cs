@@ -13,9 +13,12 @@ using LPS.Infrastructure.LPSClients.MessageServices;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SessionManager;
-using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using LPS.Infrastructure.LPSClients.CachService;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
+using LPS.Infrastructure.VariableServices.VariableHolders;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Extensions;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -104,7 +107,7 @@ namespace LPS.Infrastructure.LPSClients
                         var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
                         initialResponseWatch.Stop();
 
-                        #region Take Content Caching DecesionDecesion
+                        #region Take Content Caching Decesion
                         string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
                         MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
                         bool captureResponse = httpRequestEntity.Capture != null && httpRequestEntity.Capture.IsValid;
@@ -119,94 +122,66 @@ namespace LPS.Infrastructure.LPSClients
                         #region Capture Response
                         if (captureResponse)
                         {
-                            MimeType @as = MimeTypeExtensions.FromKeyword(httpRequestEntity.Capture.As);
-
                             var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{httpRequestEntity.Id}");
-                            if (rawContent != null)
-                            {
-                                var builder = new VariableHolder.Builder(_placeholderResolverService);
-                                var variableHolder = await builder.BuildAsync(linkedCts.Token);
-                                variableHolder = await builder
-                                    .WithFormat(IVariableHolder.IsKnownSupportedFormat(mimeType) ? mimeType :
-                                                IVariableHolder.IsKnownSupportedFormat(@as) ? @as : MimeType.Unknown)
-                                    .WithPattern(httpRequestEntity.Capture.Regex)
-                                    .WithRawValue(rawContent).BuildAsync(token);
 
-                                if (httpRequestEntity.Capture.MakeGlobal == true)
+                            var responseVariableBuilder = new HttpResponseVariableHolder.Builder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
+                            var stringVariableBuiler = new StringVariableHolder.Builder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, _memoryCacheService);
+
+                            bool typeDetected = httpRequestEntity.Capture.As.TryToVariableType(out VariableType type);
+
+                            // auto detect type if type if not provided, if not detected; default to string if not
+                            if (!typeDetected)
+                            {
+                                switch (mimeType)
                                 {
-                                    variableHolder = await builder.SetGlobal()
-                                        .BuildAsync(token);
-                                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} as a global variable", LPSLoggingLevel.Verbose, linkedCts.Token);
-                                    await _variableManager.AddVariableAsync(httpRequestEntity.Capture.To, variableHolder, token);
+                                    case MimeType.ApplicationJson:
+                                        type = VariableType.JsonString;
+                                        break;
+                                    case MimeType.RawXml:
+                                    case MimeType.TextXml:
+                                    case MimeType.ApplicationXml:
+                                        type = VariableType.XmlString;
+                                        break;
+
+                                    case MimeType.TextCsv:
+                                        type = VariableType.CsvString;
+                                        break;
+                                    default:
+                                        type = VariableType.String;
+                                        break;
                                 }
-                                else
-                                {
-                                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, linkedCts.Token);
-                                    await _sessionManager.AddResponseAsync(this.SessionId, httpRequestEntity.Capture.To, variableHolder, linkedCts.Token);
-                                }
+                            }
+
+                            var bodyVariableHolder = rawContent != null ?
+                                    await stringVariableBuiler
+                                    .WithType(type)
+                                    .WithPattern(httpRequestEntity.Capture.Regex)
+                                    .WithRawValue(rawContent).BuildAsync(token)
+                                : null;
+
+                            var responseVariableHolder = await responseVariableBuilder
+                                 .WithBody(bodyVariableHolder)
+                                 .WithHeaders(responseMessage.Headers.ToDictionary())
+                                 .WithStatusCode(responseMessage.StatusCode)
+                                 .WithStatusReason(responseMessage.ReasonPhrase)
+                                 .BuildAsync(token);
+
+
+                            if (httpRequestEntity.Capture.MakeGlobal == true)
+                            {
+                                responseVariableHolder = await responseVariableBuilder.SetGlobal().BuildAsync(token);
+                                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} as a global variable", LPSLoggingLevel.Verbose, linkedCts.Token);
+                                await _variableManager.AddVariableAsync(httpRequestEntity.Capture.To, responseVariableHolder, token);
                             }
                             else
                             {
-                                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The client is unable to capture the response because the format is either unknown or the content is empty.", LPSLoggingLevel.Warning, linkedCts.Token);
-                            }
-
-                            if (httpRequestEntity.Capture.Headers != null && httpRequestEntity.Capture.Headers.Any())
-                            {
-                                foreach (var headerName in httpRequestEntity.Capture.Headers)
-                                {
-                                    // Check if the response contains the header
-                                    if (responseMessage.Headers.TryGetValues(headerName, out var headerValues) ||
-                                        responseMessage.Content.Headers.TryGetValues(headerName, out headerValues))
-                                    {
-                                        // Combine multiple header values into a single string (if needed)
-                                        string headerValue = string.Join(", ", headerValues);
-
-                                        // Sanitize the header name to create a valid variable name
-                                        string variableName = headerName.Replace("-", string.Empty);
-
-                                        // Create a VariableHolder for the header
-                                        var builder = new VariableHolder.Builder(_placeholderResolverService);
-                                        var variableHolder = await builder
-                                            .WithFormat(MimeType.TextPlain) // Assuming plain text for headers
-                                            .WithRawValue(headerValue)
-                                            .BuildAsync(token);
-
-                                        // Store the variable based on the MakeGlobal option
-                                        if (httpRequestEntity.Capture.MakeGlobal == true)
-                                        {
-                                            variableHolder = await builder.SetGlobal(true).BuildAsync(linkedCts.Token);
-                                            await _logger.LogAsync(
-                                                _runtimeOperationIdProvider.OperationId,
-                                                $"Setting response header '{headerName}' with value '{headerValue}' as global variable '{variableName}'",
-                                                LPSLoggingLevel.Verbose,
-                                                linkedCts.Token
-                                            );
-                                            await _variableManager.AddVariableAsync(variableName, variableHolder, linkedCts.Token);
-                                        }
-                                        else
-                                        {
-                                            await _logger.LogAsync(
-                                                _runtimeOperationIdProvider.OperationId,
-                                                $"Setting response header '{headerName}' with value '{headerValue}' in session '{this.SessionId}' as variable '{variableName}'",
-                                                LPSLoggingLevel.Verbose,
-                                                linkedCts.Token
-                                            );
-                                            await _sessionManager.AddResponseAsync(this.SessionId, variableName, variableHolder, linkedCts.Token);
-                                        }
-                                    }
-                                    else
-                                    {
-                                        // Log if the header was not found in the response
-                                        await _logger.LogAsync(
-                                            _runtimeOperationIdProvider.OperationId,
-                                            $"Response does not contain the header '{headerName}' specified in the Capture.Headers list.",
-                                            LPSLoggingLevel.Warning,
-                                            linkedCts.Token
-                                        );
-                                    }
-                                }
+                                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, linkedCts.Token);
+                                await _sessionManager.AddResponseAsync(this.SessionId, httpRequestEntity.Capture.To, responseVariableHolder, linkedCts.Token);
                             }
                         }
+
+
+
                         #endregion
 
                         // Download Html Embdedded Resources, conditonally

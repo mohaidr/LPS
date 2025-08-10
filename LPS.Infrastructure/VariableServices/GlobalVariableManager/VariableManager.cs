@@ -6,15 +6,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.LPSClients.SessionManager;
+using LPS.Infrastructure.VariableServices.VariableHolders;
 
-namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
+namespace LPS.Infrastructure.VariableServices.GlobalVariableManager
 {
     public partial class VariableManager(IRuntimeOperationIdProvider operationProvider, ILogger logger) : IVariableManager
     {
         private readonly ConcurrentDictionary<string, IVariableHolder> _variables = new();
-        private readonly IRuntimeOperationIdProvider _operationIdProvider= operationProvider;
-        private readonly ILogger _logger= logger;
+        private readonly IRuntimeOperationIdProvider _operationIdProvider = operationProvider;
+        private readonly ILogger _logger = logger;
         public async Task AddVariableAsync(string variableName, IVariableHolder variableHolder, CancellationToken token = default)
         {
             if (string.IsNullOrWhiteSpace(variableName))

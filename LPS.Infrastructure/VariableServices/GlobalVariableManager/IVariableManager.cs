@@ -1,13 +1,9 @@
 ﻿#nullable enable
-using LPS.Infrastructure.LPSClients.SessionManager;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using LPS.Domain.Common.Interfaces;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LPS.Infrastructure.LPSClients.GlobalVariableManager
+namespace LPS.Infrastructure.VariableServices.GlobalVariableManager
 {
     public interface IVariableManager
     {

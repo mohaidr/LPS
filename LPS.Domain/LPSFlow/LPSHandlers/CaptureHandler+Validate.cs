@@ -1,12 +1,9 @@
 ﻿using FluentValidation;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Extensions;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Validation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace LPS.Domain.LPSFlow.LPSHandlers
 {
@@ -42,12 +39,8 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 RuleFor(command => command.As)
                     .Must(@as =>
                     {
-                        @as ??= string.Empty;
-                        return @as.Equals("JSON", StringComparison.OrdinalIgnoreCase)
-                        || @as.Equals("XML", StringComparison.OrdinalIgnoreCase)
-                        || @as.Equals("Text", StringComparison.OrdinalIgnoreCase)
-                        || @as.Equals("CSV", StringComparison.OrdinalIgnoreCase)
-                        || @as == string.Empty;
+                        return @as.TryToVariableType(out VariableType type) &&
+                        (type == VariableType.String || type == VariableType.JsonString || type == VariableType.XmlString || type == VariableType.CsvString);
                     }).WithMessage($"The provided value for 'As' ({command?.As}) is not valid or supported.");
                 RuleFor(command => command.Regex)
                 .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))

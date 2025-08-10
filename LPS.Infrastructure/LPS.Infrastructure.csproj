@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="AsyncKeyedLock" Version="7.1.6" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
     <PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
     <PackageReference Include="HdrHistogram" Version="2.5.0" />

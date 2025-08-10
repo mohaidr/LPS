@@ -1,7 +1,6 @@
 ﻿using LPS.Domain.Common;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.Caching;
-using LPS.Infrastructure.LPSClients.GlobalVariableManager;
 using System;
 using System.Linq;
 using System.Text;
@@ -12,8 +11,9 @@ using System.IO;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.LPSClients.CachService;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
-namespace LPS.Infrastructure.LPSClients.PlaceHolderService
+namespace LPS.Infrastructure.VariableServices.PlaceHolderService
 {
     public partial class PlaceholderResolverService : IPlaceholderResolverService
     {
@@ -85,7 +85,7 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
             }
             catch (Exception ex)
             {
-                throw new InvalidOperationException($"Failed to convert placeholder value to type {typeof(T)}.", ex);
+                throw new InvalidCastException($"Failed to convert placeholder value to type {typeof(T)}.", ex);
             }
         }
 
@@ -180,8 +180,8 @@ namespace LPS.Infrastructure.LPSClients.PlaceHolderService
                 if (currentChar == ']') { squareBracketBalance--; };
                 insideParentheses = parenthesesBalance > 0;
                 insideSquareBracket = squareBracketBalance > 0;
-                if ((!insideParentheses && !insideSquareBracket &&
-                    !char.IsLetterOrDigit(currentChar) && !pathChars.Contains(currentChar))
+                if (!insideParentheses && !insideSquareBracket &&
+                    !char.IsLetterOrDigit(currentChar) && !pathChars.Contains(currentChar)
                     || parenthesesBalance < 0
                     || squareBracketBalance < 0)
                 {

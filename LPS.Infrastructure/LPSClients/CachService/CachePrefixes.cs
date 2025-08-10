@@ -17,6 +17,6 @@ namespace LPS.Infrastructure.LPSClients.CachService
         public const string GlobalCounter = "GlobalCounter_";
         public const string SessionCounter = "Counter_";
         public const string Path = "Path_";
-        public const string Placeholder = "Placeholder_";
+        public const string Variable = "Variable_";
     }
 }

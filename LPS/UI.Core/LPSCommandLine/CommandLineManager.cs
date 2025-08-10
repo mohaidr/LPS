@@ -13,14 +13,13 @@ using LPS.UI.Common.Options;
 using Microsoft.Extensions.Options;
 using LPS.UI.Core.LPSCommandLine.Commands;
 using LPS.Domain.Domain.Common.Interfaces;
-using LPS.Infrastructure.LPSClients.GlobalVariableManager;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using AutoMapper;
 using LPS.AutoMapper;
 using LPS.Infrastructure.Nodes;
 using Apis.Common;
 using LPS.Common.Interfaces;
 using LPS.UI.Core.Services;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.UI.Core.LPSCommandLine
 {

@@ -7,7 +7,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LPS.Infrastructure.LPSClients.PlaceHolderService
+namespace LPS.Infrastructure.VariableServices.PlaceHolderService
 {
     public class ParameterExtractorService
     {

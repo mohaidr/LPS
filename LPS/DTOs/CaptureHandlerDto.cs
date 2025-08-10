@@ -1,4 +1,7 @@
-﻿using LPS.Domain.LPSFlow.LPSHandlers;
+﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.LPSFlow.LPSHandlers;
+using LPS.Infrastructure.VariableServices.VariableHolders;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,26 +17,31 @@ namespace LPS.DTOs
         public CaptureHandlerDto()
         {
             To = string.Empty;
-            As = string.Empty;
             Regex = string.Empty;
             MakeGlobal = "false"; // Support placeholders for boolean values
-            Headers = new List<string>();
         }
 
         // Name of the capture handler
         public string To { get; set; }
 
         // Type information
-        public string As { get; set; }
+        // Type information
+        private string? _as;
+        public string As
+        {
+            get => _as ?? VariableType.String.ToString();
+            set
+            {
+                _as = value;
 
+            }
+        }
         // Whether the capture should be global (supports placeholders)
         public string MakeGlobal { get; set; }
 
         // Regex pattern for capturing
         public string Regex { get; set; }
 
-        // List of headers
-        public IList<string> Headers { get; set; }
 
         // Deep copy method
         public void DeepCopy(out CaptureHandlerDto targetDto)
@@ -44,7 +52,6 @@ namespace LPS.DTOs
                 As = this.As,
                 Regex = this.Regex,
                 MakeGlobal = this.MakeGlobal,
-                Headers = new List<string>(this.Headers) // Create a new list to ensure deep copying
             };
         }
     }

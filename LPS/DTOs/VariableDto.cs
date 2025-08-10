@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using LPS.Domain.Domain.Common.Enums;
+
 
 namespace LPS.DTOs
 {
@@ -11,7 +8,6 @@ namespace LPS.DTOs
     {
         public VariableDto()
         {
-            As = string.Empty;
             Regex = string.Empty;
             Name = string.Empty;
             Value = string.Empty;
@@ -24,7 +20,15 @@ namespace LPS.DTOs
         public string Value { get; set; }
 
         // Type information
-        public string As { get; set; }
+        private string? _as;
+        public string As
+        {
+            get => _as?? VariableType.String.ToString();
+            set {
+                _as =  value;
+            
+            }
+        }
 
         // Regex pattern for validation
         public string Regex { get; set; }

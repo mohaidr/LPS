@@ -1,30 +1,19 @@
-﻿using LPS.Domain;
-using System;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Collections.Generic;
-using System.Net;
-using FluentValidation;
-using FluentValidation.Results;
-using LPS.UI.Common;
-using System.Text;
-using Microsoft.AspNetCore.Http;
+﻿using FluentValidation;
 using LPS.DTOs;
+using LPS.Domain.Domain.Common.Extensions;
+using LPS.Domain.Domain.Common.Enums;
 using System.CommandLine;
-using LPS.Domain.LPSFlow.LPSHandlers;
-using LPS.Domain.Common;
-using LPS.Infrastructure.LPSClients.SessionManager;
 
 namespace LPS.UI.Core.LPSValidators
 {
     public class CaptureValidator : CommandBaseValidator<CaptureHandlerDto>
     {
 
-        readonly CaptureHandlerDto _captureHandlerDto;
-        public CaptureValidator(CaptureHandlerDto captureHandlerDto)
+        readonly CaptureHandlerDto _dto;
+        public CaptureValidator(CaptureHandlerDto dto)
         {
-            ArgumentNullException.ThrowIfNull(captureHandlerDto);
-            _captureHandlerDto = captureHandlerDto;
+            ArgumentNullException.ThrowIfNull(dto);
+            _dto = dto;
             RuleFor(dto => dto.To)
                 .NotNull().NotEmpty()
                 .WithMessage("'Variable Name' must not be empty")
@@ -42,19 +31,19 @@ namespace LPS.UI.Core.LPSValidators
                 .WithMessage("The 'MakeGlobal' property must be 'true', 'false', or a placeholder starting with '$'");
 
             RuleFor(dto => dto.As)
-                .Must(@as =>
-                {
-                    @as ??= string.Empty;
-                    return IVariableHolder.IsKnownSupportedFormat(MimeTypeExtensions.FromKeyword(@as))
-                    || @as == string.Empty;
-                }).WithMessage("The provided value for 'As' is not valid or supported.");
-            
+                    .Must(@as =>
+                    {
+                        return @as.TryToVariableType(out VariableType type) &&
+                        (type == VariableType.String || type == VariableType.JsonString || type == VariableType.XmlString || type == VariableType.CsvString);
+                    }).WithMessage($"The provided value for 'As' ({_dto.As}) is not valid or supported.");
+
+
             RuleFor(dto => dto.Regex)
             .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))
             .WithMessage("Input must be either empty or a valid .NET regular expression.");
         }
 
-        public override CaptureHandlerDto Dto { get { return _captureHandlerDto; } }
+        public override CaptureHandlerDto Dto { get { return _dto; } }
 
         private static bool IsValidRegex(string pattern)
         {

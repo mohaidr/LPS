@@ -575,8 +575,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(MakeGlobal, "--makeglobal");
 
 
-                HeaderOption.AddAlias("-h");
-                AddCaseInsensitiveAliases(HeaderOption, "--header");
             }
 
             public static Option<string> IterationNameOption { get; } = new Option<string>(
@@ -601,13 +599,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 "--to", "Variable name")
             {
                 IsRequired = true
-            };
-
-            public static Option<IList<string>> HeaderOption { get; } = new Option<IList<string>>(
-            "--header", "Header")
-            {
-                IsRequired = false,
-                AllowMultipleArgumentsPerToken = true
             };
 
             public static Option<string> AsOption { get; } = new Option<string>(

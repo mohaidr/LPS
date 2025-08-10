@@ -21,7 +21,6 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private static Option<string>? _asOption;
         private static Option<string>? _regexOption;
         private static Option<string>? _makeGlobal;
-        private static Option<IList<string>>? _headerOption;
 
 
 
@@ -36,7 +35,6 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _asOption = asOption?? CaptureCommandOptions.AsOption;
             _regexOption = regexOption?? CaptureCommandOptions.RegexOption;
             _makeGlobal = makeGlobal ?? CaptureCommandOptions.MakeGlobal;
-            _headerOption = headerOption ?? CaptureCommandOptions.HeaderOption;
         }
 
 #pragma warning disable CS8601 // Possible null reference assignment.
@@ -49,7 +47,6 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 As = bindingContext.ParseResult.GetValueForOption(_asOption),
                 Regex = bindingContext.ParseResult.GetValueForOption(_regexOption),
                 MakeGlobal = bindingContext.ParseResult.GetValueForOption(_makeGlobal),
-                Headers = bindingContext.ParseResult.GetValueForOption(_headerOption),
             };
         }
         #pragma warning restore CS8604 // Possible null reference argument.

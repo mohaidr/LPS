@@ -1,12 +1,7 @@
 ﻿using FluentValidation;
-using FluentValidation.Results;
-using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.DTOs;
-using LPS.Infrastructure.Common;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.UI.Common;
-using LPS.UI.Common.Extensions;
 using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;
 using LPS.UI.Core.Services;

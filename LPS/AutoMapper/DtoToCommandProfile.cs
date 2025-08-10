@@ -93,7 +93,6 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.As, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.As).Result))
                 .ForMember(dest => dest.MakeGlobal, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.MakeGlobal).Result))
                 .ForMember(dest => dest.Regex, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.Regex).Result))
-                .ForMember(dest => dest.Headers, opt => opt.MapFrom(src => src.Headers.Select(header => ResolvePlaceholderAsync<string>(header).Result).ToList()))
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
             .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());

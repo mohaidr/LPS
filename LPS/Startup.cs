@@ -22,8 +22,6 @@ using LPS.Infrastructure.LPSClients.URLServices;
 using LPS.Infrastructure.LPSClients.MessageServices;
 using LPS.Infrastructure.LPSClients.ResponseService;
 using LPS.Infrastructure.LPSClients.SampleResponseServices;
-using LPS.Infrastructure.LPSClients.GlobalVariableManager;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
 using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.Monitoring.MetricsServices;
 using LPS.Infrastructure.Nodes;
@@ -40,6 +38,9 @@ using LPS.Infrastructure.Services;
 using LPS.Infrastructure.Monitoring.TerminationServices;
 using LPS.Infrastructure.FailureEvaluator;
 using LPS.Infrastructure.Skip;
+using LPS.Infrastructure.VariableServices.PlaceHolderService;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
+using LPS.Infrastructure.VariableServices;
 
 namespace LPS
 {
@@ -144,6 +145,7 @@ namespace LPS
                     services.AddSingleton<ITerminationCheckerService, HttpIterationTerminationCheckerService>();
                     services.AddSingleton<IIterationFailureEvaluator, IterationFailureEvaluator>();
                     services.AddSingleton<ISkipIfEvaluator, SkipIfEvaluator>();
+                    services.AddSingleton<IVariableFactory, VariableFactory>();
                     services.AddSingleton<IDashboardService, DashboardService>();
                     services.AddSingleton<NodeHealthMonitorBackgroundService>();
                     services.ConfigureWritable<DashboardConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Dashboard"), AppConstants.AppSettingsFileLocation);

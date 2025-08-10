@@ -50,6 +50,11 @@ namespace LPS.Infrastructure.FailureEvaluator
         {
             try
             {
+                if (!iteration.MaxErrorRate.HasValue)
+                {
+                    return false;
+                }
+
                 if ((await _commandStatusMonitor.QueryAsync(iteration)).Any(status => status == CommandExecutionStatus.Ongoing || status == CommandExecutionStatus.Scheduled))
                     return false;
 

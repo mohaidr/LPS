@@ -1,7 +1,4 @@
-﻿using LPS.Infrastructure.LPSClients.HeaderServices;
-using LPS.Infrastructure.LPSClients.PlaceHolderService;
-using LPS.Infrastructure.LPSClients.SessionManager;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;

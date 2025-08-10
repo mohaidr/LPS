@@ -6,8 +6,6 @@ using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.DTOs;
-using LPS.Infrastructure.LPSClients.GlobalVariableManager;
-using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.Nodes;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;
@@ -19,6 +17,11 @@ using LPS.UI.Core.Host;
 using LPS.UI.Common;
 using LPS.Infrastructure.Entity;
 using LPS.Infrastructure.GRPCClients.Factory;
+using LPS.Infrastructure.VariableServices;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
+using LPS.Infrastructure.VariableServices.VariableHolders;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Extensions;
 
 namespace LPS.UI.Core.Services
 {
@@ -44,7 +47,7 @@ namespace LPS.UI.Core.Services
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         public readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
         public readonly ISkipIfEvaluator _skipIfEvaluator;
-
+        public readonly IVariableFactory _variableFactory;
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -63,6 +66,7 @@ namespace LPS.UI.Core.Services
             ICustomGrpcClientFactory customGrpcClientFactory,
             IIterationStatusMonitor iterationStatusMonitor,
             ISkipIfEvaluator skipIfEvaluator,
+            IVariableFactory variableFactory,
             ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
             CancellationTokenSource cts)
         {
@@ -84,6 +88,7 @@ namespace LPS.UI.Core.Services
             _customGrpcClientFactory = customGrpcClientFactory;
             _iterationStatusMonitor = iterationStatusMonitor;
             _skipIfEvaluator = skipIfEvaluator;
+            _variableFactory = variableFactory;
             _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
             // Create the AutoMapper configuration
             var mapperConfig = new MapperConfiguration(cfg =>
@@ -201,17 +206,32 @@ namespace LPS.UI.Core.Services
             }
         }
 
-
-        private async Task<VariableHolder> BuildVariableHolder(VariableDto variableDto, bool isGlobal, CancellationToken cancellationToken)
+        // This should change
+        private async Task<IVariableHolder> BuildVariableHolder(VariableDto variableDto, bool isGlobal, CancellationToken cancellationToken)
         {
-            var mimeType = MimeTypeExtensions.FromKeyword(variableDto.As);
-            var builder = new VariableHolder.Builder(_placeholderResolverService);
-            return await builder
-                .WithFormat(mimeType)
-                .WithPattern(variableDto.Regex)
-                .WithRawValue(variableDto.Value)
-                .SetGlobal(isGlobal)
-                .BuildAsync(cancellationToken);
+            if (variableDto.As.Equals("json", StringComparison.OrdinalIgnoreCase)
+                 || variableDto.As.Equals("xml", StringComparison.OrdinalIgnoreCase)
+                 || variableDto.As.Equals("csv", StringComparison.OrdinalIgnoreCase)
+                 || variableDto.As.Equals("string", StringComparison.OrdinalIgnoreCase))
+            {
+                return await _variableFactory.CreateStringAsync(variableDto.Value, variableDto.As.ToVariableType(), variableDto.Regex, true, cancellationToken);
+            }
+            else
+            if (variableDto.As.Equals("int", StringComparison.OrdinalIgnoreCase)
+                 || variableDto.As.Equals("double", StringComparison.OrdinalIgnoreCase)
+                 || variableDto.As.Equals("float", StringComparison.OrdinalIgnoreCase))
+            {
+                return await _variableFactory.CreateNumberAsync(variableDto.Value, variableDto.As.ToVariableType(), true, cancellationToken);
+            }
+            else
+            if (variableDto.As.Equals("bool", StringComparison.OrdinalIgnoreCase)
+                || variableDto.As.Equals("boolean", StringComparison.OrdinalIgnoreCase))
+            {
+                return await _variableFactory.CreateBooleanAsync(variableDto.Value, true, cancellationToken);
+            }
+
+            throw new NotImplementedException();
+
         }
 
         private HttpIteration ProcessIteration(RoundDto roundDto, HttpIterationDto iterationDto)
