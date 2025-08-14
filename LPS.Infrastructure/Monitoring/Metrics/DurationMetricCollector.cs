@@ -1,40 +1,64 @@
 ﻿using HdrHistogram;
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.EventSources;
+using LPS.Infrastructure.Monitoring.MetricsVariables;
 using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Infrastructure.Monitoring.EventSources;
-using LPS.Domain.Common.Interfaces;
-using System.Text.Json.Serialization;
+
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-
     public class DurationMetricCollector : BaseMetricCollector, IResponseMetricCollector
     {
+        private const string MetricName = "Duration";
+
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly LPSDurationMetricDimensionSetProtected _dimensionSet;
-        readonly LongHistogram _histogram;
-        readonly ResponseMetricEventSource _eventSource;
-        internal DurationMetricCollector(HttpIteration httpIteration, string roundName, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base (httpIteration, logger, runtimeOperationIdProvider)
+        private readonly LongHistogram _histogram;
+        private readonly ResponseMetricEventSource _eventSource;
+        private readonly IMetricsVariableService _metricsVariableService; // NEW
+
+        internal DurationMetricCollector(
+            HttpIteration httpIteration,
+            string roundName,
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMetricsVariableService metricsVariableService) // NEW
+            : base(httpIteration, logger, runtimeOperationIdProvider)
         {
-            _httpIteration = httpIteration;
+            _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(roundName, _httpIteration.Id, httpIteration.Name, httpIteration.HttpRequest.HttpMethod, httpIteration.HttpRequest.Url.Url, httpIteration.HttpRequest.HttpVersion);
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(
+                roundName,
+                _httpIteration.Id,
+                httpIteration.Name,
+                httpIteration.HttpRequest.HttpMethod,
+                httpIteration.HttpRequest.Url.Url,
+                httpIteration.HttpRequest.HttpVersion);
             _histogram = new LongHistogram(1, 1000000, 3);
-            _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
         }
+
         protected override IDimensionSet DimensionSet => _dimensionSet;
 
         public override LPSMetricType MetricType => LPSMetricType.ResponseTime;
-        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse.SetupCommand response)
+
+        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse.SetupCommand response, CancellationToken token)
         {
             await _semaphore.WaitAsync();
             try
             {
                 _dimensionSet.Update(response.TotalTime.TotalMilliseconds, _histogram);
                 _eventSource.WriteResponseTimeMetrics(response.TotalTime.TotalMilliseconds);
+
+                await PushMetricAsync(token);
             }
             finally
             {
@@ -43,9 +67,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public IResponseMetricCollector Update(HttpResponse.SetupCommand httpResponse)
+        public IResponseMetricCollector Update(HttpResponse.SetupCommand httpResponse, CancellationToken token)
         {
-            return UpdateAsync(httpResponse).Result;
+            return UpdateAsync(httpResponse, token).Result;
         }
 
         public override void Stop()
@@ -55,6 +79,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 IsStarted = false;
             }
         }
+
         public override void Start()
         {
             if (!IsStarted)
@@ -63,9 +88,28 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
+        // NEW: Serialize and push to variable service
+        private async Task PushMetricAsync(CancellationToken token)
+        {
+            var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                WriteIndented = false
+            });
+
+            await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
+        }
+
         private class LPSDurationMetricDimensionSetProtected : DurationMetricDimensionSet
         {
-            public LPSDurationMetricDimensionSetProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion) {
+            public LPSDurationMetricDimensionSetProtected(
+                string roundName,
+                Guid iterationId,
+                string iterationName,
+                string httpMethod,
+                string url,
+                string httpVersion)
+            {
                 IterationId = iterationId;
                 RoundName = roundName;
                 IterationName = iterationName;
@@ -73,14 +117,19 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 URL = url;
                 HttpVersion = httpVersion;
             }
+
             public void Update(double responseTime, LongHistogram histogram)
             {
-                double averageDenominator = AverageResponseTime != 0 ? (SumResponseTime / AverageResponseTime) + 1 : 1;
+                double averageDenominator = AverageResponseTime != 0
+                    ? (SumResponseTime / AverageResponseTime) + 1
+                    : 1;
+
                 TimeStamp = DateTime.UtcNow;
                 MaxResponseTime = Math.Max(responseTime, MaxResponseTime);
                 MinResponseTime = MinResponseTime == 0 ? responseTime : Math.Min(responseTime, MinResponseTime);
-                SumResponseTime = SumResponseTime + responseTime;
+                SumResponseTime += responseTime;
                 AverageResponseTime = SumResponseTime / averageDenominator;
+
                 histogram.RecordValue((long)responseTime);
                 P10ResponseTime = histogram.GetValueAtPercentile(10);
                 P50ResponseTime = histogram.GetValueAtPercentile(50);
@@ -89,7 +138,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public class DurationMetricDimensionSet: HttpMetricDimensionSet
+    public class DurationMetricDimensionSet : HttpMetricDimensionSet
     {
         public double SumResponseTime { get; protected set; }
         public double AverageResponseTime { get; protected set; }

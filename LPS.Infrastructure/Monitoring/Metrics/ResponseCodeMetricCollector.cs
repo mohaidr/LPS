@@ -3,71 +3,99 @@ using LPS.Domain;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Monitoring.EventSources;
+using LPS.Infrastructure.Monitoring.MetricsVariables; // NEW
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;                    // NEW
+using System.Text.Json.Serialization;     // NEW
 using System.Threading;
 using System.Threading.Tasks;
-using System.Text.Json.Serialization;
 using System.Net;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public class ResponseCodeMetricCollector : BaseMetricCollector, IResponseMetricCollector
     {
-        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
-        readonly ResponseMetricEventSource _eventSource;
+        private const string MetricName = "ResponseCode";
 
-        internal ResponseCodeMetricCollector(HttpIteration httpIteration, string roundName, ILogger logger , IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
+        private readonly ResponseMetricEventSource _eventSource;
+        private ProtectedResponseCodeDimensionSet _dimensionSet { get; set; }
+
+        // NEW: metrics variable service
+        private readonly IMetricsVariableService _metricsVariableService;
+
+        internal ResponseCodeMetricCollector(
+            HttpIteration httpIteration,
+            string roundName,
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMetricsVariableService metricsVariableService // NEW
+        ) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
-            _httpIteration = httpIteration;
+            _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new ProtectedResponseCodeDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.Url.Url, _httpIteration.HttpRequest.HttpVersion);
-            _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _dimensionSet = new ProtectedResponseCodeDimensionSet(
+                roundName,
+                _httpIteration.Id,
+                _httpIteration.Name,
+                _httpIteration.HttpRequest.HttpMethod,
+                _httpIteration.HttpRequest.Url.Url,
+                _httpIteration.HttpRequest.HttpVersion);
+
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
         }
 
         protected override IDimensionSet DimensionSet => _dimensionSet;
 
         public override LPSMetricType MetricType => LPSMetricType.ResponseCode;
-        private ProtectedResponseCodeDimensionSet _dimensionSet { get; set; }
 
-        public IResponseMetricCollector Update(HttpResponse.SetupCommand response)
-        {
-            return UpdateAsync(response).Result;
-        }
+        public IResponseMetricCollector Update(HttpResponse.SetupCommand response, CancellationToken token)
+            => UpdateAsync(response, token).Result;
 
-        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse.SetupCommand response)
+        public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse.SetupCommand response, CancellationToken token)
         {
-            await _semaphore.WaitAsync();
+            bool isLockTaken;
+            await _semaphore.WaitAsync(token);
+            isLockTaken = true;
             try
             {
                 _dimensionSet.Update(response);
                 _eventSource.WriteResponseBreakDownMetrics(response.StatusCode);
+
+                await PushMetricAsync(token); // NEW
             }
             finally
             {
-                _semaphore.Release();
+               if(isLockTaken) _semaphore.Release();
             }
             return this;
         }
 
-
         public override void Stop()
         {
-            if (IsStarted)
-            {
-                IsStarted = false;
-            }
+            if (IsStarted) IsStarted = false;
         }
 
         public override void Start()
         {
-            if (!IsStarted)
+            if (!IsStarted) IsStarted = true;
+        }
+
+        // NEW: serialize and publish the dimension set to the variable system
+        private async Task PushMetricAsync(CancellationToken token)
+        {
+            var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
             {
-                IsStarted = true;
-            }
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                WriteIndented = false
+            });
+
+            await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
         }
 
         private class ProtectedResponseCodeDimensionSet : ResponseCodeMetricDimensionSet
@@ -84,8 +112,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             public void Update(HttpResponse.SetupCommand response)
             {
-                var summary = _responseSummaries.FirstOrDefault(rs => rs.HttpStatusCode == response.StatusCode && rs.HttpStatusReason == response.StatusMessage);
-                if (summary!=null)
+                var summary = _responseSummaries.FirstOrDefault(rs =>
+                    rs.HttpStatusCode == response.StatusCode &&
+                    rs.HttpStatusReason == response.StatusMessage);
+
+                if (summary != null)
                 {
                     summary.Count += 1;
                 }
@@ -103,12 +134,14 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
     }
+
     public class HttpResponseSummary(HttpStatusCode httpStatusCode, string httpStatusReason, int count)
     {
         public HttpStatusCode HttpStatusCode { get; private set; } = httpStatusCode;
         public string HttpStatusReason { get; private set; } = httpStatusReason;
         public int Count { get; set; } = count;
     }
+
     public class ResponseCodeMetricDimensionSet : HttpMetricDimensionSet
     {
         public ResponseCodeMetricDimensionSet()

@@ -3,86 +3,124 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.EventSources;
+using LPS.Infrastructure.Monitoring.MetricsVariables; // NEW
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Text.Json.Serialization;
+using System.Text.Json;                 // NEW
+using System.Text.Json.Serialization;  // NEW
 using System.Threading;
 using System.Threading.Tasks;
-using YamlDotNet.Core.Tokens;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public class ThroughputMetricCollector : BaseMetricCollector, IThroughputMetricCollector
     {
-        int _activeRequestssCount;
-        int _requestsCount;
-        ProtectedConnectionDimensionSet _dimensionSet;
+        private const string MetricName = "Throughput";
+
+        private int _activeRequestssCount;
+        private int _requestsCount;
+        private readonly ProtectedConnectionDimensionSet _dimensionSet;
         protected override IDimensionSet DimensionSet => _dimensionSet;
-        IMetricsQueryService _metricsQueryService;
+        private readonly IMetricsQueryService _metricsQueryService;
+
+        private readonly Stopwatch _throughputWatch;
+        private Timer _timer;
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
+
+        // NEW: metrics variable service
+        private readonly IMetricsVariableService _metricsVariableService;
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
 
-        readonly Stopwatch _throughputWatch;
-        Timer _timer;
-        private SpinLock _spinLock = new();
-        public ThroughputMetricCollector(HttpIteration httpIteration, string roundName, IMetricsQueryService metricsQueryService, Domain.Common.Interfaces.ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : base(httpIteration, logger, runtimeOperationIdProvider)
+        public ThroughputMetricCollector(
+            HttpIteration httpIteration,
+            string roundName,
+            IMetricsQueryService metricsQueryService,
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMetricsVariableService metricsVariableService // NEW
+        ) : base(httpIteration, logger, runtimeOperationIdProvider)
         {
-            _httpIteration = httpIteration;
-            _metricsQueryService = metricsQueryService;
-            _dimensionSet = new ProtectedConnectionDimensionSet(roundName, _httpIteration.Id, _httpIteration.Name, _httpIteration.HttpRequest.HttpMethod, _httpIteration.HttpRequest.Url.Url, _httpIteration.HttpRequest.HttpVersion);
+            _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
+            _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException(nameof(metricsQueryService));
+            _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+
+            _dimensionSet = new ProtectedConnectionDimensionSet(
+                roundName,
+                _httpIteration.Id,
+                _httpIteration.Name,
+                _httpIteration.HttpRequest.HttpMethod,
+                _httpIteration.HttpRequest.Url.Url,
+                _httpIteration.HttpRequest.HttpVersion);
+
             _throughputWatch = new Stopwatch();
-            _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         }
-        readonly object lockObject = new();
-        private async ValueTask<bool> UpdateMetrics(CancellationToken token)
+
+        private async ValueTask<bool> UpdateMetricsAsync(CancellationToken token)
         {
-            bool isCoolDown = _httpIteration.Mode == IterationMode.DCB || _httpIteration.Mode == IterationMode.CRB || _httpIteration.Mode == IterationMode.CB;
+            bool isCoolDown = _httpIteration.Mode == IterationMode.DCB
+                           || _httpIteration.Mode == IterationMode.CRB
+                           || _httpIteration.Mode == IterationMode.CB;
+
             int cooldownPeriod = isCoolDown ? _httpIteration.CoolDownTime.Value : 1;
 
-            if (IsStarted)
+            if (!IsStarted)
+                return false;
+
+            try
             {
-                try
-                {
-                    var dimensionSet = await (await _metricsQueryService
-                                        .GetAsync<ResponseCodeMetricCollector>(m => m.HttpIteration.Id == _httpIteration.Id))
-                                        .SingleOrDefault().GetDimensionSetAsync<ResponseCodeMetricDimensionSet>();
-                    int successCount = dimensionSet
-                                        .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode)).Sum(r => r.Count);
+                var dimensionSet = await (await _metricsQueryService
+                                        .GetAsync<ResponseCodeMetricCollector>(m => m.HttpIteration.Id == _httpIteration.Id, token))
+                                        .SingleOrDefault()
+                                        .GetDimensionSetAsync<ResponseCodeMetricDimensionSet>(token);
 
-                    int failedCount = dimensionSet
-                                        .ResponseSummaries.Where(r => HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode)).Sum(r => r.Count); ;
-                    lock (lockObject)
-                    {
-                        var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
-                        var requestsRate = new RequestsRate(string.Empty, 0);
-                        var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
+                int successCount = dimensionSet
+                    .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
+                    .Sum(r => r.Count);
 
-                        if (timeElapsed > 1000)
-                        {
-                            requestsRate = new RequestsRate($"1s", Math.Round((successCount / (timeElapsed / 1000)), 2));
-                        }
-                        if (isCoolDown && timeElapsed > cooldownPeriod)
-                        {
-                            requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms", Math.Round((successCount / timeElapsed) * cooldownPeriod, 2));
-                        }
-                        _dimensionSet.Update(_activeRequestssCount, _requestsCount, successCount, failedCount, timeElapsed, requestsRate, requestsRatePerCoolDown);
-                    }
-                    return true;
-                }
-                catch (Exception ex)
+                int failedCount = dimensionSet
+                    .ResponseSummaries.Where(r => HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
+                    .Sum(r => r.Count);
+
+
+                var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
+                var requestsRate = new RequestsRate(string.Empty, 0);
+                var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
+
+                if (timeElapsed > 1000)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Failed to update throughput metrics \n{ex}", LPSLoggingLevel.Error, token);
-                    return false;
+                    requestsRate = new RequestsRate("1s", Math.Round((successCount / (timeElapsed / 1000)), 2));
                 }
- 
+                if (isCoolDown && timeElapsed > cooldownPeriod)
+                {
+                    requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriod}ms",
+                        Math.Round((successCount / timeElapsed) * cooldownPeriod, 2));
+                }
+
+                _dimensionSet.Update(
+                    _activeRequestssCount,
+                    _requestsCount,
+                    successCount,
+                    failedCount,
+                    timeElapsed,
+                    requestsRate,
+                    requestsRatePerCoolDown);
+
+                await PushMetricAsync(token); // NEW
+                return true;
             }
-            return false;
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"Failed to update throughput metrics \n{ex}", LPSLoggingLevel.Error, token);
+                return false;
+            }
         }
 
-        // A timer is necessary for periods of inactivity while the test is still running, such as during a watchdog check or the time between the start and completion of a request, etc.
+        // A timer is necessary for periods of inactivity while the test is still running
         private void SchedualMetricsUpdate()
         {
             _timer = new Timer(_ =>
@@ -91,56 +129,53 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 {
                     try
                     {
-                        _= UpdateMetrics(default).Result;
-                    }catch (Exception ex) {
-                        _logger.Log(_runtimeOperationIdProvider.OperationId, "Failed to update throughput metrics \n{ex}", LPSLoggingLevel.Error);
-
+                        _semaphore.Wait();
+                        _ = UpdateMetricsAsync(default).Result;
+                        _semaphore.Release();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId,
+                            $"Failed to update throughput metrics \n{ex}", LPSLoggingLevel.Error);
                     }
                 }
             }, null, 0, 1000);
-
         }
 
         public async ValueTask<bool> IncreaseConnectionsCount(CancellationToken token)
         {
-            bool lockTaken = false;
+            bool isLockTaken = false;
             try
             {
-                _spinLock.Enter(ref lockTaken);
+                await _semaphore.WaitAsync(token);
+                isLockTaken = true;
                 ++_activeRequestssCount;
                 ++_requestsCount;
-               await  UpdateMetrics(token);
+                await UpdateMetricsAsync(token);
                 return true;
-            }
-            catch (Exception ex)
-            {
-                return false;
             }
             finally
             {
-                if (lockTaken)
-                    _spinLock.Exit();
+                if (isLockTaken)
+                    _semaphore.Release();
             }
         }
 
         public async ValueTask<bool> DecreseConnectionsCount(CancellationToken token)
         {
-            bool lockTaken = false;
+            bool isLockTaken = false;
             try
             {
-                _spinLock.Enter(ref lockTaken);
+                await _semaphore.WaitAsync(token);
+                isLockTaken = true;
                 --_activeRequestssCount;
-                await UpdateMetrics(token);
+                await UpdateMetricsAsync(token);
                 return true;
-            }
-            catch (Exception ex)
-            {
-                return false;
             }
             finally
             {
-                if (lockTaken)
-                    _spinLock.Exit();
+                if (isLockTaken)
+                    _semaphore.Release();
             }
         }
 
@@ -170,10 +205,23 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
+        // NEW: Serialize and push to Metrics variable system
+        private async Task PushMetricAsync(CancellationToken token)
+        {
+            var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                WriteIndented = false
+            });
+
+            await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
+        }
+
         private class ProtectedConnectionDimensionSet : ThroughputMetricDimensionSet
         {
             [JsonIgnore]
             public bool StopUpdate { get; set; }
+
             public ProtectedConnectionDimensionSet(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
                 IterationId = iterationId;
@@ -183,19 +231,30 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 URL = url;
                 HttpVersion = httpVersion;
             }
-            // When calling this method, make sure you take thread safety into considration
-            public void Update(int activeRequestsCount, int requestsCount = default, int successfulRequestsCount = default, int failedRequestsCount = default, double totalDataTransmissionTimeInMilliseconds = default, RequestsRate requestsRate = default, RequestsRate requestsRatePerCoolDown = default)
+
+            public void Update(
+                int activeRequestsCount,
+                int requestsCount = default,
+                int successfulRequestsCount = default,
+                int failedRequestsCount = default,
+                double totalDataTransmissionTimeInMilliseconds = default,
+                RequestsRate requestsRate = default,
+                RequestsRate requestsRatePerCoolDown = default)
             {
                 if (!StopUpdate)
                 {
                     TimeStamp = DateTime.UtcNow;
-                    this.RequestsCount = requestsCount.Equals(default) ? this.RequestsCount : requestsCount;
-                    this.ActiveRequestsCount = activeRequestsCount;
-                    this.SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? this.SuccessfulRequestCount : successfulRequestsCount;
-                    this.FailedRequestsCount = failedRequestsCount.Equals(default) ? this.FailedRequestsCount : failedRequestsCount;
-                    this.TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds.Equals(default) ? this.TotalDataTransmissionTimeInMilliseconds : totalDataTransmissionTimeInMilliseconds;
-                    this.RequestsRate = requestsRate.Equals(default(RequestsRate)) ? this.RequestsRate : requestsRate;
-                    this.RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate)) ? this.RequestsRatePerCoolDownPeriod : requestsRatePerCoolDown;
+                    RequestsCount = requestsCount.Equals(default) ? RequestsCount : requestsCount;
+                    ActiveRequestsCount = activeRequestsCount;
+                    SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? SuccessfulRequestCount : successfulRequestsCount;
+                    FailedRequestsCount = failedRequestsCount.Equals(default) ? FailedRequestsCount : failedRequestsCount;
+                    TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds.Equals(default)
+                        ? TotalDataTransmissionTimeInMilliseconds
+                        : totalDataTransmissionTimeInMilliseconds;
+                    RequestsRate = requestsRate.Equals(default(RequestsRate)) ? RequestsRate : requestsRate;
+                    RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate))
+                        ? RequestsRatePerCoolDownPeriod
+                        : requestsRatePerCoolDown;
                 }
             }
         }
@@ -205,31 +264,15 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     {
         public double Value { get; } = value;
         public string Every { get; } = every;
-        public bool Equals(RequestsRate other)
-        {
-            return Value.Equals(other.Value) && string.Equals(Every, other.Every, StringComparison.Ordinal);
-        }
-        public override bool Equals(object obj)
-        {
-            return obj is RequestsRate other && Equals(other);
-        }
-        public override int GetHashCode()
-        {
-            return HashCode.Combine(Value, Every);
-        }
-        public static bool operator ==(RequestsRate left, RequestsRate right)
-        {
-            return left.Equals(right);
-        }
-        public static bool operator !=(RequestsRate left, RequestsRate right)
-        {
-            return !(left == right);
-        }
-        public override string ToString()
-        {
-            return $"RequestsRate: Every = {Every}, Value = {Value}";
-        }
+        public bool Equals(RequestsRate other) =>
+            Value.Equals(other.Value) && string.Equals(Every, other.Every, StringComparison.Ordinal);
+        public override bool Equals(object obj) => obj is RequestsRate other && Equals(other);
+        public override int GetHashCode() => HashCode.Combine(Value, Every);
+        public static bool operator ==(RequestsRate left, RequestsRate right) => left.Equals(right);
+        public static bool operator !=(RequestsRate left, RequestsRate right) => !(left == right);
+        public override string ToString() => $"RequestsRate: Every = {Every}, Value = {Value}";
     }
+
     public class ThroughputMetricDimensionSet : HttpMetricDimensionSet
     {
         public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }

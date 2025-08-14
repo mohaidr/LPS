@@ -7,11 +7,8 @@ namespace LPS.Domain.Common.Interfaces
 {
 
     // Shoud we move the interface and the enum to the domain?
-    public interface IVariableHolder
+    public interface IWrapperVariableHolder: IObjectVariableHolder
     {
-        VariableType? Type { get; }
-        bool IsGlobal { get; }
-        IVariableBuilder Builder { get; }
-        ValueTask<string> GetRawValueAsync () ;
+        IVariableHolder VariableHolder { get; }
     }
 }

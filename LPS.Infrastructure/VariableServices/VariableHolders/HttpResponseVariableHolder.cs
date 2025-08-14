@@ -1,6 +1,7 @@
 ﻿using Grpc.Net.Client.Balancer;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
 using System;
 using System.Collections.Generic;
@@ -19,11 +20,18 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         private readonly IPlaceholderResolverService _placeholderResolverService;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private HttpResponseVariableHolder(IPlaceholderResolverService resolver, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        private readonly VBuilder _builder;
+        public IVariableBuilder Builder => _builder;
+
+        private HttpResponseVariableHolder(IPlaceholderResolverService resolver,
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider, 
+            VBuilder builder)
         {
             _placeholderResolverService = resolver;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _builder = builder;
         }
 
         // Required by IVariableHolder
@@ -175,20 +183,27 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             "Proxy-Authentication-Info",
             "Proxy-AuthenticationInfo"
         };
+
         // -----------------------
         // Builder
         // -----------------------
-        public class Builder
+        public sealed class VBuilder : IVariableBuilder
         {
-            private readonly HttpResponseVariableHolder _holder;
-
             private readonly IPlaceholderResolverService _placeholderResolverService;
             private readonly ILogger _logger;
             private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
 
+            // Pre-created holder (do not touch until BuildAsync)
+            private readonly HttpResponseVariableHolder _holder;
 
+            // Local fields to store data before assigning to the holder
+            private bool _isGlobal;
+            private IStringVariableHolder _body;
+            private HttpStatusCode? _statusCode;
+            private string _statusReason = string.Empty;
+            private readonly Dictionary<string, List<string>> _headers = new(StringComparer.OrdinalIgnoreCase);
 
-            public Builder(
+            public VBuilder(
                 IPlaceholderResolverService placeholderResolverService,
                 ILogger logger,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider)
@@ -196,34 +211,35 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 _placeholderResolverService = placeholderResolverService ?? throw new ArgumentNullException(nameof(placeholderResolverService));
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-                _holder = new HttpResponseVariableHolder(_placeholderResolverService, _logger, _runtimeOperationIdProvider)
+
+                // Create the holder once and keep it untouched until BuildAsync
+                _holder = new HttpResponseVariableHolder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, this)
                 {
                     Type = VariableType.HttpResponse
                 };
-
             }
 
-
-            public Builder SetGlobal(bool isGlobal = true)
+            public VBuilder SetGlobal(bool isGlobal = true)
             {
-                _holder.IsGlobal = isGlobal;
+                _isGlobal = isGlobal; // buffer locally
                 return this;
             }
 
-            public Builder WithBody(IStringVariableHolder body)
+            public VBuilder WithBody(IStringVariableHolder body)
             {
-                _holder.Body = body ?? null;
+                _body = body; // buffer locally
                 return this;
             }
 
-            public Builder WithStatusCode(HttpStatusCode? statusCode)
+            public VBuilder WithStatusCode(HttpStatusCode? statusCode)
             {
-                _holder.StatusCode = statusCode ?? null;
+                _statusCode = statusCode; // buffer locally
                 return this;
             }
-            public Builder WithStatusReason(string reason)
+
+            public VBuilder WithStatusReason(string reason)
             {
-                _holder.StatusReason = string.IsNullOrWhiteSpace(reason) ? string.Empty : reason;
+                _statusReason = string.IsNullOrWhiteSpace(reason) ? string.Empty : reason; // buffer locally
                 return this;
             }
 
@@ -237,28 +253,27 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     .Trim();
             }
 
-
-            public Builder WithHeader(string key, string value)
+            public VBuilder WithHeader(string key, string value)
             {
                 if (string.IsNullOrWhiteSpace(key)) return this;
 
-                // add with the original name
-                if (!_holder._headers.TryGetValue(key, out var list))
+                // Buffer with the original name
+                if (!_headers.TryGetValue(key, out var list))
                 {
                     list = new List<string>();
-                    _holder._headers[key] = list;
+                    _headers[key] = list;
                 }
                 list.Add(value);
 
-                // add with a normalized header name
+                // Buffer with a normalized header name as well
                 var normalized = NormalizeHeaderName(key);
                 if (!string.IsNullOrEmpty(normalized) &&
                     !normalized.Equals(key, StringComparison.OrdinalIgnoreCase))
                 {
-                    if (!_holder._headers.TryGetValue(normalized, out var normList))
+                    if (!_headers.TryGetValue(normalized, out var normList))
                     {
                         normList = new List<string>();
-                        _holder._headers[normalized] = normList;
+                        _headers[normalized] = normList;
                     }
                     normList.Add(value);
                 }
@@ -266,7 +281,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-            public Builder WithHeaders(IEnumerable<KeyValuePair<string, string>> headers)
+            public VBuilder WithHeaders(IEnumerable<KeyValuePair<string, string>> headers)
             {
                 if (headers == null) return this;
                 foreach (var kv in headers)
@@ -274,7 +289,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-            public Builder WithHeaders(IDictionary<string, IEnumerable<string>> headers)
+            public VBuilder WithHeaders(IDictionary<string, IEnumerable<string>> headers)
             {
                 if (headers == null) return this;
                 foreach (var kv in headers)
@@ -285,20 +300,42 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-
-
-
-            public async ValueTask<HttpResponseVariableHolder> BuildAsync(CancellationToken token)
+            public async ValueTask<IVariableHolder> BuildAsync(CancellationToken token)
             {
-                if (_holder.Body is null && _holder.StatusCode is null)
-                {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Body or StatusCode must be provided for HttpResponseVariableHolder", LPSLoggingLevel.Error, token);
+                token.ThrowIfCancellationRequested();
 
-                    throw new InvalidOperationException("Body must be provided for HttpResponseVariableHolder.");
+                // Validate local buffered state before assigning to the holder
+                if (_body is null && _statusCode is null)
+                {
+                    await _logger.LogAsync(
+                        _runtimeOperationIdProvider.OperationId,
+                        "Body or StatusCode must be provided for HttpResponseVariableHolder",
+                        LPSLoggingLevel.Error,
+                        token);
+
+                    throw new InvalidOperationException("Body or StatusCode must be provided for HttpResponseVariableHolder.");
                 }
 
-                return _holder;
+                // Assign all buffered values to the pre-created holder
+                _holder.IsGlobal = _isGlobal;
+                _holder.Body = _body;
+                _holder.StatusCode = _statusCode;
+                _holder.StatusReason = _statusReason;
+
+                // Copy buffered headers into the holder
+                foreach (var kv in _headers)
+                {
+                    if (!_holder._headers.TryGetValue(kv.Key, out var list))
+                    {
+                        list = new List<string>();
+                        _holder._headers[kv.Key] = list;
+                    }
+                    list.AddRange(kv.Value);
+                }
+
+                return _holder; // return the same instance created in the constructor
             }
         }
+
     }
 }

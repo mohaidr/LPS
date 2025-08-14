@@ -23,13 +23,13 @@ namespace Apis.Controllers
         LPS.Domain.Common.Interfaces.ILogger logger,
         IIterationStatusMonitor iterationStatusMonitor,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMetricsQueryService metricsQueryService) : ControllerBase
+        IMetricsQueryService metricsQueryService, CancellationTokenSource cts) : ControllerBase
     {
         readonly LPS.Domain.Common.Interfaces.ILogger _logger = logger;
         readonly IRuntimeOperationIdProvider? _runtimeOperationIdProvider = runtimeOperationIdProvider;
         readonly IIterationStatusMonitor _iterationStatusMonitor = iterationStatusMonitor;
         readonly IMetricsQueryService _metricsQueryService = metricsQueryService;
-
+        readonly CancellationTokenSource _cts = cts;
         // MetricData class extended to hold Data Transmission metrics
         private class MetricData
         {
@@ -56,10 +56,10 @@ namespace Apis.Controllers
             try
             {
                 // Initiate asynchronous fetching of metrics
-                var responseTimeMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseTime);
-                var responseBreakDownMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseCode);
-                var connectionsMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.Throughput);
-                var dataTransmissionMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.DataTransmission);
+                var responseTimeMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseTime, _cts.Token);
+                var responseBreakDownMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.ResponseCode, _cts.Token);
+                var connectionsMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.Throughput, _cts.Token);
+                var dataTransmissionMetricsTask = _metricsQueryService.GetAsync(metric => metric.MetricType == LPSMetricType.DataTransmission, _cts.Token);
 
                 // Await all tasks to complete
 
@@ -96,7 +96,7 @@ namespace Apis.Controllers
             {
                 foreach (var metric in metrics)
                 {
-                    var dimensionSet = await ((IMetricCollector)metric).GetDimensionSetAsync();
+                    var dimensionSet = await ((IMetricCollector)metric).GetDimensionSetAsync(_cts.Token);
 
                     string status = (await _iterationStatusMonitor.GetTerminalStatusAsync(((IMetricCollector)metric).HttpIteration)).ToString();
 
@@ -125,16 +125,16 @@ namespace Apis.Controllers
                     switch (type)
                     {
                         case "ResponseTime":
-                            metricData.ResponseTimeMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
+                            metricData.ResponseTimeMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync(_cts.Token);
                             break;
                         case "ResponseCode":
-                            metricData.ResponseBreakDownMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
+                            metricData.ResponseBreakDownMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync(_cts.Token);
                             break;
                         case "ConnectionsCount":
-                            metricData.ConnectionMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
+                            metricData.ConnectionMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync(_cts.Token);
                             break;
                         case "DataTransmission":  // Handle data transmission metrics
-                            metricData.DataTransmissionMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync();
+                            metricData.DataTransmissionMetrics = await ((IMetricCollector)metric).GetDimensionSetAsync(_cts.Token);
                             break;
                     }
                 }

@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
         private readonly IRuntimeOperationIdProvider _operationIdProvider = operationProvider;
         private readonly ILogger _logger = logger;
 
-        public async Task  AddResponseAsync(string variableName, IVariableHolder variableHolder, CancellationToken token = default)
+        public async Task AddResponseAsync(string variableName, IVariableHolder variableHolder, CancellationToken token = default)
         {
             if (!_variables.TryAdd(variableName, variableHolder))
             {

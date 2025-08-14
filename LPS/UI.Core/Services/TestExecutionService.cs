@@ -120,7 +120,7 @@ namespace LPS.UI.Core.Services
                 {
                     variableValidator.ValidateAndThrow(variableDto);
                     var variableHolder = await BuildVariableHolder(variableDto, true, parameters.CancellationToken);
-                    _variableManager.AddVariableAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
+                    _variableManager.PutAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
                 }
 
                 // Environment-Specific Variables
@@ -138,7 +138,7 @@ namespace LPS.UI.Core.Services
                             variableValidator.ValidateAndThrow(variableDto);
                             var variableHolder = await BuildVariableHolder(variableDto, false, parameters.CancellationToken);
 
-                            _variableManager.AddVariableAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
+                            _variableManager.PutAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
                         }
                     }
                     else

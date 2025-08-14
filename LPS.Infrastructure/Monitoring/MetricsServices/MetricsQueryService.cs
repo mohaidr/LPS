@@ -4,6 +4,7 @@ using LPS.Infrastructure.Common.Interfaces;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
@@ -17,7 +18,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         private readonly IMetricsRepository _metricsRepository = metricsRepository ?? throw new ArgumentNullException(nameof(metricsRepository));
 
-        public async ValueTask<List<IMetricCollector>> GetAsync(Func<IMetricCollector, bool> predicate)
+        public async ValueTask<List<IMetricCollector>> GetAsync(Func<IMetricCollector, bool> predicate, CancellationToken token)
         {
             try
             {
@@ -28,12 +29,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to get metrics.\n{ex}", LPSLoggingLevel.Error);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to get metrics.\n{ex}", LPSLoggingLevel.Error, token);
                 return null;
             }
         }
 
-        public async ValueTask<List<T>> GetAsync<T>(Func<T, bool> predicate) where T : IMetricCollector
+        public async ValueTask<List<T>> GetAsync<T>(Func<T, bool> predicate, CancellationToken token) where T : IMetricCollector
         {
             try
             {
@@ -44,12 +45,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to get metrics.\n{ex}", LPSLoggingLevel.Error);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to get metrics.\n{ex}", LPSLoggingLevel.Error, token);
                 return null;
             }
         }
 
-        public async Task<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate) where T : IMetricCollector
+        public async Task<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate, CancellationToken token) where T : IMetricCollector
         {
             try
             {
@@ -69,7 +70,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to get metrics with async predicate.\n{ex}", LPSLoggingLevel.Error);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to get metrics with async predicate.\n{ex}", LPSLoggingLevel.Error, token);
                 return null;
             }
         }

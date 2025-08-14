@@ -17,21 +17,18 @@ namespace LPS.Infrastructure.VariableServices
         private readonly IPlaceholderResolverService _placeholderResolverService;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly ICacheService<string> _memoryCacheService;
 
         public VariableFactory(IPlaceholderResolverService placeholderResolverService, 
             ILogger logger, 
-            IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            ICacheService<string> memoryCacheService)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _placeholderResolverService = placeholderResolverService
                 ?? throw new ArgumentNullException(nameof(placeholderResolverService));
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _memoryCacheService = memoryCacheService;
         }
 
-        public async Task<IVariableHolder> CreateStringAsync(
+        public async Task<IStringVariableHolder> CreateStringAsync(
             string rawValue,
             VariableType type = VariableType.String,
             string? pattern = null,
@@ -43,14 +40,14 @@ namespace LPS.Infrastructure.VariableServices
                 throw new NotSupportedException($"Type '{type}' is not supported by CreateStringAsync.");
 
             var resolvedValue = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(rawValue, string.Empty, token);
-            var holder = await new StringVariableHolder.Builder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, _memoryCacheService)
+            var holder = await new StringVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider)
                 .WithType(type)
                 .WithRawValue(resolvedValue)
                 .WithPattern(pattern ?? string.Empty)
                 .SetGlobal(isGlobal)
                 .BuildAsync(token);
 
-            return holder;
+            return (IStringVariableHolder)holder;
         }
 
         public async Task<IVariableHolder> CreateBooleanAsync(
@@ -59,7 +56,7 @@ namespace LPS.Infrastructure.VariableServices
             CancellationToken token = default)
         {
             var resolvedValue = await _placeholderResolverService.ResolvePlaceholdersAsync<bool>(rawValue, string.Empty, token);
-            var holder = await new BooleanVariableHolder.Builder(_logger, _runtimeOperationIdProvider)
+            var holder = await new BooleanVariableHolder.VBuilder(_logger, _runtimeOperationIdProvider)
                 .WithRawValue(resolvedValue)
                 .SetGlobal(isGlobal)
                 .BuildAsync(token);
@@ -73,13 +70,12 @@ namespace LPS.Infrastructure.VariableServices
             bool isGlobal = true,
             CancellationToken token = default)
         {
-
             switch (type)
             {
                 case VariableType.Int:
                     {
                         var resolvedValue = await _placeholderResolverService.ResolvePlaceholdersAsync<int>(rawValue, string.Empty, token);
-                        var holder = await new NumberVariableHolder.Builder(_logger, _runtimeOperationIdProvider)
+                        var holder = await new NumberVariableHolder.VBuilder(_logger, _runtimeOperationIdProvider)
                             .WithRawValue(resolvedValue)
                             .SetGlobal(isGlobal)
                             .BuildAsync(token);
@@ -88,7 +84,7 @@ namespace LPS.Infrastructure.VariableServices
                 case VariableType.Float:
                     {
                         var resolvedValue = await _placeholderResolverService.ResolvePlaceholdersAsync<float>(rawValue, string.Empty, token);
-                        var holder = await new NumberVariableHolder.Builder(_logger, _runtimeOperationIdProvider)
+                        var holder = await new NumberVariableHolder.VBuilder(_logger, _runtimeOperationIdProvider)
                             .WithRawValue(resolvedValue)
                             .SetGlobal(isGlobal)
                             .BuildAsync(token);
@@ -97,7 +93,7 @@ namespace LPS.Infrastructure.VariableServices
                 case VariableType.Double:
                     {
                         var resolvedValue = await _placeholderResolverService.ResolvePlaceholdersAsync<double>(rawValue, string.Empty, token);
-                        var holder = await new NumberVariableHolder.Builder(_logger, _runtimeOperationIdProvider)
+                        var holder = await new NumberVariableHolder.VBuilder(_logger, _runtimeOperationIdProvider)
                             .WithRawValue(resolvedValue)
                             .SetGlobal(isGlobal)
                             .BuildAsync(token);
@@ -106,7 +102,7 @@ namespace LPS.Infrastructure.VariableServices
                 case VariableType.Decimal:
                     {
                         var resolvedValue = await _placeholderResolverService.ResolvePlaceholdersAsync<decimal>(rawValue, string.Empty, token);
-                        var holder = await new NumberVariableHolder.Builder(_logger, _runtimeOperationIdProvider)
+                        var holder = await new NumberVariableHolder.VBuilder(_logger, _runtimeOperationIdProvider)
                             .WithRawValue(resolvedValue)
                             .SetGlobal(isGlobal)
                             .BuildAsync(token);
@@ -124,7 +120,7 @@ namespace LPS.Infrastructure.VariableServices
             bool isGlobal = false,
             CancellationToken token = default)
         {
-            var builder = new HttpResponseVariableHolder.Builder(_placeholderResolverService, _logger, _runtimeOperationIdProvider)
+            var builder = new HttpResponseVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider)
                 .WithBody(body)
                 .WithStatusCode(statusCode)
                 .SetGlobal(isGlobal);
@@ -136,7 +132,7 @@ namespace LPS.Infrastructure.VariableServices
             }
 
             var holder = await builder.BuildAsync(token);
-            return holder;
+            return (IHttpResponseVariableHolder)holder;
         }
 
 

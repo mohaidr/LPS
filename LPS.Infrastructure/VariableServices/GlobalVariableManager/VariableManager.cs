@@ -15,7 +15,7 @@ namespace LPS.Infrastructure.VariableServices.GlobalVariableManager
         private readonly ConcurrentDictionary<string, IVariableHolder> _variables = new();
         private readonly IRuntimeOperationIdProvider _operationIdProvider = operationProvider;
         private readonly ILogger _logger = logger;
-        public async Task AddVariableAsync(string variableName, IVariableHolder variableHolder, CancellationToken token = default)
+        public async Task PutAsync(string variableName, IVariableHolder variableHolder, CancellationToken token = default)
         {
             if (string.IsNullOrWhiteSpace(variableName))
                 throw new ArgumentException("Variable name cannot be null or whitespace.", nameof(variableName));
@@ -31,7 +31,7 @@ namespace LPS.Infrastructure.VariableServices.GlobalVariableManager
             }
         }
 
-        public async Task<IVariableHolder?> GetVariableAsync(string variableName, CancellationToken token)
+        public async Task<IVariableHolder?> GetAsync(string variableName, CancellationToken token)
         {
             if (_variables.TryGetValue(variableName.Trim(), out var variableHolder))
             {

@@ -19,13 +19,13 @@ namespace LPS.Infrastructure.LPSClients.SessionManager
         private readonly IRuntimeOperationIdProvider _operationIdProvider = operationProvider;
         private readonly ILogger _logger = logger;
 
-        public async Task AddResponseAsync(string sessionId, string variableName, IVariableHolder capturedResponse, CancellationToken token)
+        public async Task PutVariableAsync(string sessionId, string variableName, IVariableHolder variableHolder, CancellationToken token)
         {
             var session = _sessions.GetOrAdd(sessionId, _ => new ClientSession(sessionId, _operationIdProvider, _logger));
-            await session.AddResponseAsync(variableName, capturedResponse, token);
+            await session.AddResponseAsync(variableName, variableHolder, token);
         }
 
-        public async Task<IVariableHolder?> GetResponseAsync(string sessionId, string variableName, CancellationToken token)
+        public async Task<IVariableHolder?> GetVariableAsync(string sessionId, string variableName, CancellationToken token)
         {
             if (!string.IsNullOrEmpty(sessionId) && _sessions.TryGetValue(sessionId, out var session))
                 return session.GetResponse(variableName);

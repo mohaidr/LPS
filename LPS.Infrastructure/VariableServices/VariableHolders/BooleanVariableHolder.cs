@@ -1,6 +1,7 @@
 ﻿using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Infrastructure.Common.Interfaces;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,62 +17,83 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private readonly VBuilder _builder;
+        public IVariableBuilder Builder => _builder;
 
         private BooleanVariableHolder(
             ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider, VBuilder builder)
         {
             
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            _builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
 
         public ValueTask<string> GetRawValueAsync() => ValueTask.FromResult(Value);
 
         // ======= Builder Class =======
-        public class Builder
+        public sealed class VBuilder : IVariableBuilder
         {
-            private readonly BooleanVariableHolder _variableHolder;
             private readonly ILogger _logger;
             private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
 
-            public Builder(
+            // Pre-created holder: do NOT touch it until BuildAsync
+            private readonly BooleanVariableHolder _holder;
+
+            // Local buffered state
+            private bool? _rawValue;
+            private bool _isGlobal;
+
+            public VBuilder(
                 ILogger logger,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
 
-                _variableHolder = new BooleanVariableHolder( _logger, _runtimeOperationIdProvider)
+                // Create the holder once here; assignments happen later in BuildAsync
+                _holder = new BooleanVariableHolder(_logger, _runtimeOperationIdProvider, this)
                 {
                     Type = VariableType.Boolean
                 };
             }
 
-            public Builder WithRawValue(bool value)
+            public VBuilder WithRawValue(bool value)
             {
-                _variableHolder.Value = value.ToString();
+                _rawValue = value; // buffer locally
                 return this;
             }
 
-            public Builder SetGlobal(bool isGlobal = true)
+            public VBuilder SetGlobal(bool isGlobal = true)
             {
-                _variableHolder.IsGlobal = isGlobal;
+                _isGlobal = isGlobal; // buffer locally
                 return this;
             }
 
-            public async ValueTask<BooleanVariableHolder> BuildAsync(CancellationToken token)
+            public async ValueTask<IVariableHolder> BuildAsync(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
 
-                if (string.IsNullOrWhiteSpace(_variableHolder.Value))
+                // Validate local buffered state before assigning to the holder
+                if (!_rawValue.HasValue)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The raw avalue of the holder can't be null or empty", LPSLoggingLevel.Error, token);
-                    throw new InvalidOperationException("The raw avalue of the holder can't be null or empty");
-                    
+                    await _logger.LogAsync(
+                        _runtimeOperationIdProvider.OperationId,
+                        "The raw value of the BooleanVariableHolder must be provided.",
+                        LPSLoggingLevel.Error,
+                        token);
+
+                    throw new InvalidOperationException("The raw value of the BooleanVariableHolder must be provided.");
                 }
 
-                return _variableHolder;
+                // Assign buffered values atomically to the pre-created holder
+                _holder.Value = _rawValue.Value.ToString();
+                _holder.IsGlobal = _isGlobal;
+
+                return _holder; // return the same instance created in the constructor
             }
+
         }
     }
 }

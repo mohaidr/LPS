@@ -8,12 +8,11 @@ using LPS.Infrastructure.GRPCClients;
 using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.Nodes;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
@@ -27,17 +26,21 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         INodeMetadata nodeMetadata,
         ICustomGrpcClientFactory customGrpcClientFactory,
         IClusterConfiguration clusterConfiguration,
-        IEntityDiscoveryService entityDiscoveryService) : IMetricsDataMonitor, IDisposable
+        IEntityDiscoveryService entityDiscoveryService,
+       IVariableManager variableManager,
+       IMetricsVariableService metricsVariableService) : IMetricsDataMonitor, IDisposable
     {
         private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         private readonly IMetricsRepository _metricsRepository = metricRepository ?? throw new ArgumentNullException(nameof(metricRepository));
-        private readonly IMetricsQueryService _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException();
-        private readonly ICommandStatusMonitor<HttpIteration> _commandStatusMonitor = commandStatusMonitor ?? throw new ArgumentNullException();
-        private readonly INodeMetadata _nodeMetadata= nodeMetadata ?? throw new ArgumentNullException();
-        private ICustomGrpcClientFactory _customGrpcClientFactory= customGrpcClientFactory?? throw new ArgumentNullException();
-        private IClusterConfiguration _clusterConfiguration = clusterConfiguration?? throw new ArgumentNullException();
-        private IEntityDiscoveryService _entityDiscoveryService = entityDiscoveryService ?? throw new ArgumentNullException();
+        private readonly IMetricsQueryService _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException(nameof(metricsQueryService));
+        private readonly ICommandStatusMonitor<HttpIteration> _commandStatusMonitor = commandStatusMonitor ?? throw new ArgumentNullException(nameof(commandStatusMonitor));
+        private readonly INodeMetadata _nodeMetadata= nodeMetadata ?? throw new ArgumentNullException(nameof(nodeMetadata));
+        private ICustomGrpcClientFactory _customGrpcClientFactory= customGrpcClientFactory?? throw new ArgumentNullException(nameof(customGrpcClientFactory));
+        private IClusterConfiguration _clusterConfiguration = clusterConfiguration?? throw new ArgumentNullException(nameof(clusterConfiguration));
+        private IEntityDiscoveryService _entityDiscoveryService = entityDiscoveryService ?? throw new ArgumentNullException(nameof(entityDiscoveryService));
+        private readonly IVariableManager _variableManager = variableManager?? throw new ArgumentNullException(nameof(variableManager));
+        private readonly IMetricsVariableService _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
         public bool TryRegister(string roundName, HttpIteration httpIteration)
         {
             try
@@ -64,10 +67,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             return new List<IMetricCollector>
             {
-               new ResponseCodeMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider),
-               new DurationMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider) ,
-               new ThroughputMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider) ,
-               new DataTransmissionMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider)
+               new ResponseCodeMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider,_metricsVariableService),
+               new DurationMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider,_metricsVariableService) ,
+               new ThroughputMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider, _metricsVariableService),
+               new DataTransmissionMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider,_metricsVariableService)
             };
         }
         

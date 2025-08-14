@@ -74,7 +74,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 updated ??= false;
                 return updated.Value;
             }
-            await QueryMetricsAsync(requestId);
+            await QueryMetricsAsync(requestId, token);
             var throughputMetric = _metrics[requestId.ToString()]
                 .Single(metric => metric.MetricType == LPSMetricType.Throughput);
 
@@ -105,7 +105,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 updated ??= false;
                 return updated.Value;
             }
-            await QueryMetricsAsync(requestId);
+            await QueryMetricsAsync(requestId, token);
             var throughputMetric = _metrics[requestId.ToString()]
                 .Single(metric => metric.MetricType == LPSMetricType.Throughput);
             var result = await ((IThroughputMetricCollector)throughputMetric).DecreseConnectionsCount(token);
@@ -139,10 +139,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return updated.Value;
             }
 
-            await QueryMetricsAsync(requestId);
+            await QueryMetricsAsync(requestId, token);
             var responseMetrics = _metrics[requestId.ToString()]
                 .Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
-            var result= await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse)));
+            var result= await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse, token)));
             updated ??= true;
             return updated.Value;
         }
@@ -171,10 +171,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 updated ??= false;
                 return updated.Value;
             }
-            var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
+            var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                ((IDataTransmissionMetricCollector)metric).UpdateDataSent(totalBytes, elapsedTicks, token);
+                await ((IDataTransmissionMetricCollector)metric).UpdateDataSentAsync(totalBytes, elapsedTicks, token);
             }
             updated ??= true;
             return updated.Value;
@@ -205,26 +205,26 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 updated ??= false;
                 return updated.Value;
             }
-            var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId);
+            var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                ((IDataTransmissionMetricCollector)metric).UpdateDataReceived(totalBytes, elapsedTicks, token);
+                await((IDataTransmissionMetricCollector)metric).UpdateDataReceivedAsync(totalBytes, elapsedTicks, token);
             }
             updated ??= false;
             return updated.Value;
         }
 
-        private async ValueTask<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId)
+        private async ValueTask<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId, CancellationToken token)
         {
-            await QueryMetricsAsync(requestId);
+            await QueryMetricsAsync(requestId, token);
             return _metrics[requestId.ToString()]
                 .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
         }
 
-        private async Task QueryMetricsAsync(Guid requestId) // call this so in case the request id was sent by the worker to be translated to the matching one on the master
+        private async Task QueryMetricsAsync(Guid requestId, CancellationToken token) // call this so in case the request id was sent by the worker to be translated to the matching one on the master
         {
             _metrics.TryAdd(requestId.ToString(),
-                await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId));
+                await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId, token));
         }
         private async Task<Guid> DiscoverRequestIdOnMaster(Guid requestId, CancellationToken token)
         {

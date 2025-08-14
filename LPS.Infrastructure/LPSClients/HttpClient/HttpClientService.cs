@@ -124,8 +124,6 @@ namespace LPS.Infrastructure.LPSClients
                         {
                             var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{httpRequestEntity.Id}");
 
-                            var responseVariableBuilder = new HttpResponseVariableHolder.Builder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
-                            var stringVariableBuiler = new StringVariableHolder.Builder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, _memoryCacheService);
 
                             bool typeDetected = httpRequestEntity.Capture.As.TryToVariableType(out VariableType type);
 
@@ -152,14 +150,23 @@ namespace LPS.Infrastructure.LPSClients
                                 }
                             }
 
-                            var bodyVariableHolder = rawContent != null ?
-                                    await stringVariableBuiler
+                            var responseVariableHolder = await _sessionManager.GetVariableAsync(this.SessionId, httpRequestEntity.Capture.To, token)
+                                ?? await _variableManager.GetAsync(httpRequestEntity.Capture.To, token);
+                            var bodyVariableHolder = ((IHttpResponseVariableHolder)responseVariableHolder)?.Body;
+
+                            var responseVariableBuilder = responseVariableHolder?.Builder != null ? ((HttpResponseVariableHolder.VBuilder)responseVariableHolder.Builder) :  new HttpResponseVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
+                            var stringVariableBuiler = bodyVariableHolder?.Builder!=null ? ((StringVariableHolder.VBuilder)bodyVariableHolder?.Builder) : new StringVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
+
+
+                            bodyVariableHolder = rawContent != null ?
+                                    (IStringVariableHolder)await stringVariableBuiler
                                     .WithType(type)
                                     .WithPattern(httpRequestEntity.Capture.Regex)
-                                    .WithRawValue(rawContent).BuildAsync(token)
+                                    .WithRawValue(rawContent)
+                                    .BuildAsync(token)
                                 : null;
 
-                            var responseVariableHolder = await responseVariableBuilder
+                            responseVariableHolder = await responseVariableBuilder
                                  .WithBody(bodyVariableHolder)
                                  .WithHeaders(responseMessage.Headers.ToDictionary())
                                  .WithStatusCode(responseMessage.StatusCode)
@@ -171,16 +178,14 @@ namespace LPS.Infrastructure.LPSClients
                             {
                                 responseVariableHolder = await responseVariableBuilder.SetGlobal().BuildAsync(token);
                                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} as a global variable", LPSLoggingLevel.Verbose, linkedCts.Token);
-                                await _variableManager.AddVariableAsync(httpRequestEntity.Capture.To, responseVariableHolder, token);
+                                await _variableManager.PutAsync(httpRequestEntity.Capture.To, responseVariableHolder, token);
                             }
                             else
                             {
                                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, linkedCts.Token);
-                                await _sessionManager.AddResponseAsync(this.SessionId, httpRequestEntity.Capture.To, responseVariableHolder, linkedCts.Token);
+                                await _sessionManager.PutVariableAsync(this.SessionId, httpRequestEntity.Capture.To, responseVariableHolder, linkedCts.Token);
                             }
                         }
-
-
 
                         #endregion
 

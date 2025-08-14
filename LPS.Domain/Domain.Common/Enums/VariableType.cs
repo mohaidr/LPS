@@ -26,7 +26,11 @@ namespace LPS.Domain.Domain.Common.Enums
         Boolean,
 
         // HttpResponse (Special Type)
-        HttpResponse
+        HttpResponse,
+
+        Object,
+
+        Wrapper
     }
 
 }

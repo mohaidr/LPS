@@ -16,10 +16,11 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
     public class MetricsQueryGrpcService : Protos.Shared.MetricsQueryService.MetricsQueryServiceBase
     {
         private readonly IMetricsQueryService _metricsQueryService;
-
-        public MetricsQueryGrpcService(IMetricsQueryService metricsQueryService)
+        CancellationTokenSource _cts;
+        public MetricsQueryGrpcService(IMetricsQueryService metricsQueryService, CancellationTokenSource cts)
         {
             _metricsQueryService = metricsQueryService;
+            _cts = cts;
         }
 
         private HttpMetricMetadata BuildMetadata(HttpMetricDimensionSet dimension) => new()
@@ -39,7 +40,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
             var response = new DurationMetricSearchResponse();
             foreach (var collector in collectors)
             {
-                var d = (DurationMetricDimensionSet)await collector.GetDimensionSetAsync();
+                var d = (DurationMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
                 response.Responses.Add(new DurationMetricResponse
                 {
                     Metadata = BuildMetadata(d),
@@ -63,7 +64,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
             foreach (var collector in collectors)
             {
-                var d = (DataTransmissionMetricDimensionSet)await collector.GetDimensionSetAsync();
+                var d = (DataTransmissionMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
                 response.Responses.Add(new DataTransmissionMetricResponse
                 {
                     Metadata = BuildMetadata(d),
@@ -88,7 +89,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
             foreach (var collector in collectors)
             {
-                var d = (ThroughputMetricDimensionSet)await collector.GetDimensionSetAsync();
+                var d = (ThroughputMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
                 response.Responses.Add(new ThroughputMetricResponse
                 {
                     Metadata = BuildMetadata(d),
@@ -122,7 +123,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
             foreach (var collector in collectors)
             {
-                var d = (ResponseCodeMetricDimensionSet)await collector.GetDimensionSetAsync();
+                var d = (ResponseCodeMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
                 var resp = new ResponseCodeMetricResponse
                 {
                     Metadata = BuildMetadata(d)
@@ -150,7 +151,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
         {
             var results = await _metricsQueryService.GetAsync<TCollector>(async collector =>
             {
-                var d = (TDimensionSet)await collector.GetDimensionSetAsync();
+                var d = (TDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
                 var checks = new List<bool>();
 
                 if (!string.IsNullOrEmpty(request.FullyQualifiedName))
@@ -183,7 +184,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                 return request.Mode == FilterMode.Or
                     ? checks.Any(x => x)
                     : checks.All(x => x);
-            });
+            }, _cts.Token);
 
             return results;
 

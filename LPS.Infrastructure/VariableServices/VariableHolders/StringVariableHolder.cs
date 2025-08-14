@@ -16,6 +16,7 @@ using LPS.Domain.Common;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.LPSClients.CachService;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.VariableServices.VariableHolders
 {
@@ -29,13 +30,15 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         public string Value { get; private set; }
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        ICacheService<string> _memoryCacheService;
-        private StringVariableHolder(IPlaceholderResolverService resolver, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, ICacheService<string> memoryCacheService)
+        private readonly VBuilder _builder;
+        public IVariableBuilder Builder => _builder;
+
+        private StringVariableHolder(IPlaceholderResolverService resolver, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, VBuilder builder)
         {
             _placeholderResolverService = resolver ?? throw new ArgumentNullException(nameof(resolver));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-            _memoryCacheService = memoryCacheService ?? throw new ArgumentNullException(nameof(memoryCacheService));
+            _builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
 
         public ValueTask<string> GetRawValueAsync()
@@ -47,13 +50,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         {
             if (string.IsNullOrWhiteSpace(path))
                 return await GetRawValueAsync();
-            var hash = this.GetHashCode();
             var resolvedPath = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(path ?? string.Empty, sessionId, token);
-            var cacheKey = $"{CachePrefixes.Variable}{hash}_{resolvedPath}";
-            if (_memoryCacheService.TryGetItem(cacheKey, out string cachedContent))
-            {
-                return cachedContent;
-            }
             string extracted = Type switch
             {
                 VariableType.JsonString => await ExtractJsonValue(resolvedPath ?? "", sessionId, token),
@@ -65,10 +62,6 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
             var result = await ApplyRegexIfNeededAsync(extracted, token);
 
-            // Cache only if the path is null OR (the path has no embedded placeholder)
-            // Example where we skip caching: ${csvData[$loopcounter(...),0]} because it changes every request
-            if (path == null || !path.Contains('$'))
-                await _memoryCacheService.SetItemAsync(cacheKey, result, TimeSpan.FromSeconds(30));
             return result;
         }
 
@@ -170,66 +163,79 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 throw new InvalidOperationException($"Failed to apply regex pattern '{Pattern}'.", ex);
             }
         }
-        public class Builder
+        public sealed class VBuilder : IVariableBuilder
         {
             private readonly StringVariableHolder _variableHolder;
             private readonly IPlaceholderResolverService _placeholderResolverService;
             private readonly ILogger _logger;
             private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-            ICacheService<string> _memoryCacheService;
 
+            // Local buffered state (do NOT touch _variableHolder until BuildAsync)
+            private VariableType? _type;          // defaults to holder's initial type if not set
+            private string _pattern;              // may be null/empty
+            private string _rawValue;             // must be provided
+            private bool _isGlobal;               // default false unless set
 
-
-            public Builder(
+            public VBuilder(
                 IPlaceholderResolverService placeholderResolverService,
                 ILogger logger,
-                IRuntimeOperationIdProvider runtimeOperationIdProvider,
-                ICacheService<string> memoryCacheService)
+                IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
                 _placeholderResolverService = placeholderResolverService ?? throw new ArgumentNullException(nameof(placeholderResolverService));
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-                _memoryCacheService = memoryCacheService ?? throw new ArgumentNullException();
-                _variableHolder = new StringVariableHolder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, _memoryCacheService)
+
+                // Pre-create holder; keep it untouched until BuildAsync
+                _variableHolder = new StringVariableHolder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, this)
                 {
                     Type = VariableType.String // default
                 };
             }
 
-
-            public Builder WithType(VariableType type)
+            public VBuilder WithType(VariableType type)
             {
-                _variableHolder.Type = type;
+                _type = type; // buffer locally
                 return this;
             }
 
-            public Builder WithPattern(string pattern)
+            public VBuilder WithPattern(string pattern)
             {
-                _variableHolder.Pattern = pattern;
+                _pattern = pattern; // buffer locally
                 return this;
             }
 
-            public Builder WithRawValue(string value)
+            public VBuilder WithRawValue(string value)
             {
-                _variableHolder.Value = value;
+                _rawValue = value; // buffer locally
                 return this;
             }
 
-            public Builder SetGlobal(bool isGlobal = true)
+            public VBuilder SetGlobal(bool isGlobal = true)
             {
-                _variableHolder.IsGlobal = isGlobal;
+                _isGlobal = isGlobal; // buffer locally
                 return this;
             }
 
-            public async ValueTask<StringVariableHolder> BuildAsync(CancellationToken token)
+            public async ValueTask<IVariableHolder> BuildAsync(CancellationToken token)
             {
+                token.ThrowIfCancellationRequested();
 
-                if (string.IsNullOrWhiteSpace(_variableHolder.Value))
+                if (string.IsNullOrWhiteSpace(_rawValue))
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "The raw avalue of the holder can't be null or empty", LPSLoggingLevel.Error, token);
-                    throw new InvalidOperationException("The raw avalue of the holder can't be null or empty");
+                    await _logger.LogAsync(
+                        _runtimeOperationIdProvider.OperationId,
+                        "The raw value of the StringVariableHolder can't be null or empty.",
+                        LPSLoggingLevel.Error,
+                        token);
 
+                    throw new InvalidOperationException("The raw value of the StringVariableHolder can't be null or empty.");
                 }
+
+                // Assign buffered values atomically to the pre-created holder
+                if (_type.HasValue) _variableHolder.Type = _type.Value;
+                _variableHolder.Pattern = _pattern ?? string.Empty;
+                _variableHolder.Value = _rawValue;
+                _variableHolder.IsGlobal = _isGlobal;
 
                 return _variableHolder;
             }

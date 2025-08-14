@@ -1,17 +1,24 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.MetricsVariables; // <-- add
+using LPS.Infrastructure.VariableServices.VariableHolders;
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public class DataTransmissionMetricCollector : BaseMetricCollector, IDataTransmissionMetricCollector
     {
-        private SpinLock _spinLock = new();
+        private const string MetricName = "DataTransmission";
+
+        private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly string _roundName;
         private double _totalDataSent = 0;
         private double _totalDataReceived = 0;
@@ -19,22 +26,41 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private double _totalDataUploadTimeSeconds = 0;
         private double _totalDataTransmissionSeconds = 0;
         private double _totalDataDownloadTimeSeconds = 0;
-        private LPSDurationMetricDimensionSetProtected _dimensionSet;
-        IMetricsQueryService _metricsQueryService;
-        internal DataTransmissionMetricCollector(HttpIteration httpIteration, string roundName, IMetricsQueryService metricsQueryService, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider)
+        private readonly LPSDurationMetricDimensionSetProtected _dimensionSet;
+        private readonly IMetricsQueryService _metricsQueryService;
+
+        // NEW: metrics variable service
+        private readonly IMetricsVariableService _metricsVariableService;
+
+        internal DataTransmissionMetricCollector(
+            HttpIteration httpIteration,
+            string roundName,
+            IMetricsQueryService metricsQueryService,
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMetricsVariableService metricsVariableService) // <-- add
             : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _roundName = roundName;
             _httpIteration = httpIteration;
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(_roundName, httpIteration.Id, httpIteration.Name, httpIteration.HttpRequest.HttpMethod, httpIteration.HttpRequest.Url.Url, httpIteration.HttpRequest.HttpVersion);
-            _logger = logger;
-            _metricsQueryService = metricsQueryService;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _dimensionSet = new LPSDurationMetricDimensionSetProtected(
+                _roundName,
+                httpIteration.Id,
+                httpIteration.Name,
+                httpIteration.HttpRequest.HttpMethod,
+                httpIteration.HttpRequest.Url.Url,
+                httpIteration.HttpRequest.HttpVersion);
+
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException(nameof(metricsQueryService));
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
         }
 
         protected override IDimensionSet DimensionSet => _dimensionSet;
 
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
+
         public override void Start()
         {
             if (!IsStarted)
@@ -57,83 +83,94 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public void UpdateDataSent(double totalBytes, double elapsedTicks, CancellationToken token = default)
+        public async ValueTask UpdateDataSentAsync(double totalBytes, double elapsedTicks, CancellationToken token = default)
         {
             bool lockTaken = false;
             try
             {
-                _spinLock.Enter(ref lockTaken);
-                _totalDataUploadTimeSeconds += elapsedTicks / Stopwatch.Frequency; //(elapsedTicks/Stopwatch.Frequency) => gives the time in second
-                if (!IsStarted)
-                {
-                    throw new InvalidOperationException("Metric collector is stopped.");
-                }
+                await _semaphore.WaitAsync(token);
+                lockTaken = true;
 
-                // Update the total and count, then calculate the average
+                if (!IsStarted) throw new InvalidOperationException("Metric collector is stopped.");
+                _totalDataUploadTimeSeconds += elapsedTicks / Stopwatch.Frequency;
                 _totalDataSent += totalBytes;
-                _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
-                    .Single()
-                    .GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result
-                    .RequestsCount;
-                UpdateMetrics();
+                _requestsCount = await GetRequestsCountAsync(token);
+
+                await UpdateMetricsAsync(token); // <-- pass token
             }
             finally
             {
-                if (lockTaken)
-                    _spinLock.Exit();
+                if (lockTaken) _semaphore.Release();
             }
         }
 
-        public void UpdateDataReceived(double totalBytes, double elapsedTicks, CancellationToken token = default)
+        public async ValueTask UpdateDataReceivedAsync(double totalBytes, double elapsedTicks, CancellationToken token = default)
         {
-
             bool lockTaken = false;
             try
             {
-                _spinLock.Enter(ref lockTaken);
+                await _semaphore.WaitAsync(token);
+                lockTaken = true;
+                if (!IsStarted) throw new InvalidOperationException("Metric collector is stopped.");
 
-                if (!IsStarted)
-                {
-                    throw new InvalidOperationException("Metric collector is stopped.");
-                }
-
-                // Update the total and count, then calculate the average
-                _totalDataDownloadTimeSeconds += elapsedTicks / Stopwatch.Frequency; // (elapsedTicks/Stopwatch.Frequency) => gives the time in second
+                _totalDataDownloadTimeSeconds += elapsedTicks / Stopwatch.Frequency;
                 _totalDataReceived += totalBytes;
-                _requestsCount = _metricsQueryService.GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == this._dimensionSet.IterationId).Result
-                    .Single()
-                    .GetDimensionSetAsync<ThroughputMetricDimensionSet>().Result
-                    .RequestsCount;
+                _requestsCount = await GetRequestsCountAsync(token);
 
-                UpdateMetrics();
+                await UpdateMetricsAsync(token); // <-- pass token
             }
             finally
             {
-                if (lockTaken)
-                    _spinLock.Exit();
+                if (lockTaken) _semaphore.Release();
             }
         }
 
-        readonly object lockObject = new();
-
-        private void UpdateMetrics()
+        // UPDATED: accept token and push to Metrics variable service
+        private async ValueTask UpdateMetricsAsync(CancellationToken token)
         {
             try
             {
-                lock (lockObject)
-                {
-                    _totalDataTransmissionSeconds = _totalDataDownloadTimeSeconds + _totalDataUploadTimeSeconds;
-                    _dimensionSet.UpdateDataSent(_totalDataSent, _requestsCount > 0 ? _totalDataSent / _requestsCount : 0, _totalDataUploadTimeSeconds > 0 ? _totalDataSent / _totalDataUploadTimeSeconds : 0, _totalDataTransmissionSeconds * 1000);
-                    _dimensionSet.UpdateDataReceived(_totalDataReceived, _requestsCount > 0 ? _totalDataReceived / _requestsCount : 0, _totalDataDownloadTimeSeconds > 0 ? _totalDataReceived / _totalDataDownloadTimeSeconds : 0, _totalDataTransmissionSeconds * 1000);
-                    _dimensionSet.UpdateAverageBytes(_totalDataTransmissionSeconds > 0 ? (_totalDataReceived + _totalDataSent) / _totalDataTransmissionSeconds : 0, _totalDataTransmissionSeconds * 1000);
-                }
-            }
-            finally
-            {
+                _totalDataTransmissionSeconds = _totalDataDownloadTimeSeconds + _totalDataUploadTimeSeconds;
 
+                _dimensionSet.UpdateDataSent(
+                    _totalDataSent,
+                    _requestsCount > 0 ? _totalDataSent / _requestsCount : 0,
+                    _totalDataUploadTimeSeconds > 0 ? _totalDataSent / _totalDataUploadTimeSeconds : 0,
+                    _totalDataTransmissionSeconds * 1000);
+
+                _dimensionSet.UpdateDataReceived(
+                    _totalDataReceived,
+                    _requestsCount > 0 ? _totalDataReceived / _requestsCount : 0,
+                    _totalDataDownloadTimeSeconds > 0 ? _totalDataReceived / _totalDataDownloadTimeSeconds : 0,
+                    _totalDataTransmissionSeconds * 1000);
+
+                _dimensionSet.UpdateAverageBytes(
+                    _totalDataTransmissionSeconds > 0 ? (_totalDataReceived + _totalDataSent) / _totalDataTransmissionSeconds : 0,
+                    _totalDataTransmissionSeconds * 1000);
+
+                // Serialize the dimension set and publish to variable system
+                var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
+                {
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    WriteIndented = false
+                });
+
+                // Push under: Metrics.{IterationName}.DataTransmission
+                await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
             }
+            finally { }
         }
 
+        private async Task<int> GetRequestsCountAsync(CancellationToken token)
+        {
+            var throughputCollectors = await _metricsQueryService
+                .GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == _dimensionSet.IterationId, token);
+
+            var single = throughputCollectors.Single();
+
+            var dim = await single.GetDimensionSetAsync<ThroughputMetricDimensionSet>(token);
+            return dim.RequestsCount;
+        }
         private class LPSDurationMetricDimensionSetProtected : DataTransmissionMetricDimensionSet
         {
             public LPSDurationMetricDimensionSetProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
@@ -170,7 +207,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 ThroughputBps = averageBytesPerSecond;
                 TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
             }
-
         }
     }
 

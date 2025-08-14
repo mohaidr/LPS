@@ -99,8 +99,8 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                 path = placeholder.Substring(splitIndex);
             }
 
-            var variableHolder = await _sessionManager.GetResponseAsync(sessionId, variableName, token)
-                              ?? await _variableManager.GetVariableAsync(variableName, token);
+            var variableHolder = await _sessionManager.GetVariableAsync(sessionId, variableName, token)
+                              ?? await _variableManager.GetAsync(variableName, token);
 
             if (variableHolder == null)
             {
@@ -137,13 +137,13 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
             if (string.IsNullOrWhiteSpace(variableName))
                 return;
 
-            var holder = await new StringVariableHolder.Builder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, _memoryCacheService)
+            var holder = await new StringVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider)
                 .WithType(VariableType.String)
                 .WithRawValue(value)
                 .SetGlobal()
                 .BuildAsync(token);
 
-            await _variableManager.AddVariableAsync(variableName, holder, token);
+            await _variableManager.PutAsync(variableName, holder, token);
         }
 
         private async Task<string> GenerateRandomStringAsync(string parameters, string sessionId, CancellationToken token)

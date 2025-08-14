@@ -10,7 +10,7 @@ namespace LPS.Domain.Domain.Common.Interfaces
 {
     public interface IVariableFactory
     {
-        Task<IVariableHolder> CreateStringAsync(
+        Task<IStringVariableHolder> CreateStringAsync(
             string rawValue,
             VariableType type = VariableType.String,   // String, JsonString, XmlString, CsvString
             string? pattern = null,

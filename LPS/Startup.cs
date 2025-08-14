@@ -41,6 +41,7 @@ using LPS.Infrastructure.Skip;
 using LPS.Infrastructure.VariableServices.PlaceHolderService;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices;
+using LPS.Infrastructure.Monitoring.MetricsVariables;
 
 namespace LPS
 {
@@ -109,6 +110,7 @@ namespace LPS
                     services.AddSingleton<IMetricsRepository, MetricsRepository>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddSingleton<IMetricsQueryService, MetricsQueryService>();
+                    services.AddSingleton<IMetricsVariableService, MetricsVariableService>();
                     services.AddSingleton<IIterationStatusMonitor, IterationStatusMonitor>();
                     services.AddSingleton<ICommandStatusMonitor<HttpIteration>, HttpIterationCommandStatusMonitor>();
                     services.AddSingleton<AppSettingsWritableOptions>();
