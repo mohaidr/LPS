@@ -9,7 +9,12 @@ namespace LPS.Infrastructure.Common.Interfaces
 {
     public interface IMetricsVariableService
     {
-        Task PutMetricAsync(string iterationName, string metricName, string dimensionSetJson, CancellationToken token);
+        Task PutMetricAsync(
+            string roundName,
+            string iterationName,
+            string metricName,
+            string dimensionSetJson,
+            CancellationToken token);
     }
 
 }

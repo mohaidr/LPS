@@ -49,7 +49,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                 return default; // Return default value of the specified type
 
             string resolvedValue = await ParseAsync(input, sessionId, token);
-
             try
             {
                 // Handle nullable types

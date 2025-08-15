@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly LongHistogram _histogram;
         private readonly ResponseMetricEventSource _eventSource;
         private readonly IMetricsVariableService _metricsVariableService; // NEW
-
+        private readonly string _roundName;
         internal DurationMetricCollector(
             HttpIteration httpIteration,
             string roundName,
@@ -32,6 +32,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             : base(httpIteration, logger, runtimeOperationIdProvider)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
+            _roundName = roundName?? throw new ArgumentNullException(nameof(roundName));
+            _histogram = new LongHistogram(1, 1000000, 3);
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
             _dimensionSet = new LPSDurationMetricDimensionSetProtected(
                 roundName,
@@ -40,10 +45,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 httpIteration.HttpRequest.HttpMethod,
                 httpIteration.HttpRequest.Url.Url,
                 httpIteration.HttpRequest.HttpVersion);
-            _histogram = new LongHistogram(1, 1000000, 3);
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-            _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
         }
 
         protected override IDimensionSet DimensionSet => _dimensionSet;
@@ -97,7 +98,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 WriteIndented = false
             });
 
-            await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
+            await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
         }
 
         private class LPSDurationMetricDimensionSetProtected : DurationMetricDimensionSet

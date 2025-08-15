@@ -26,7 +26,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
-
+        private readonly string _roundName;
         internal ResponseCodeMetricCollector(
             HttpIteration httpIteration,
             string roundName,
@@ -37,6 +37,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
+            _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
             _dimensionSet = new ProtectedResponseCodeDimensionSet(
                 roundName,
                 _httpIteration.Id,
@@ -95,7 +96,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 WriteIndented = false
             });
 
-            await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
+            await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
         }
 
         private class ProtectedResponseCodeDimensionSet : ResponseCodeMetricDimensionSet

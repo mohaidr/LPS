@@ -32,7 +32,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly IMetricsVariableService _metricsVariableService;
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
-
+        public readonly string _roundName;
         public ThroughputMetricCollector(
             HttpIteration httpIteration,
             string roundName,
@@ -45,6 +45,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException(nameof(metricsQueryService));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+            _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
 
             _dimensionSet = new ProtectedConnectionDimensionSet(
                 roundName,
@@ -214,7 +215,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 WriteIndented = false
             });
 
-            await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
+            await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
         }
 
         private class ProtectedConnectionDimensionSet : ThroughputMetricDimensionSet

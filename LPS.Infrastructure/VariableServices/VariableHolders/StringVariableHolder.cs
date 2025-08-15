@@ -48,6 +48,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         public async ValueTask<string> GetValueAsync(string? path, string sessionId, CancellationToken token)
         {
+
             if (string.IsNullOrWhiteSpace(path))
                 return await GetRawValueAsync();
             var resolvedPath = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(path ?? string.Empty, sessionId, token);

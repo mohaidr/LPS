@@ -156,7 +156,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 });
 
                 // Push under: Metrics.{IterationName}.DataTransmission
-                await _metricsVariableService.PutMetricAsync(_httpIteration.Name, MetricName, json, token);
+                await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
             }
             finally { }
         }

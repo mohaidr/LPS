@@ -2,15 +2,16 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using LPS.Domain.Domain.Common.Enums;
+using AsyncKeyedLock;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
-using LPS.Infrastructure.Common.Interfaces;
-using AsyncKeyedLock;
 
 namespace LPS.Infrastructure.Monitoring.MetricsVariables
 {
+
     public sealed class MetricsVariableService : IMetricsVariableService
     {
         private const string MetricsRootName = "Metrics";
@@ -20,6 +21,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _op;
 
+        // lock key = $"{roundName}::{iterationName}"
         private static readonly AsyncKeyedLocker<string> _locker = new();
 
         public MetricsVariableService(
@@ -34,8 +36,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
             _op = op ?? throw new ArgumentNullException(nameof(op));
         }
 
-        public async Task PutMetricAsync(string iterationName, string metricName, string dimensionSetJson, CancellationToken token)
+        public async Task PutMetricAsync(
+            string roundName,
+            string iterationName,
+            string metricName,
+            string dimensionSetJson,
+            CancellationToken token)
         {
+            if (string.IsNullOrWhiteSpace(roundName))
+                throw new ArgumentException("Round name is required.", nameof(roundName));
             if (string.IsNullOrWhiteSpace(iterationName))
                 throw new ArgumentException("Iteration name is required.", nameof(iterationName));
             if (string.IsNullOrWhiteSpace(metricName))
@@ -45,65 +54,26 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
 
             token.ThrowIfCancellationRequested();
 
-            var metricsRoot = await _manager.GetAsync(MetricsRootName, token).ConfigureAwait(false) as MultipleVariableHolder;
-            if (metricsRoot is null)
-            {
-                var newRoot = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(_resolver, _logger, _op, _manager)
-                    .SetGlobal(true)
-                    .BuildAsync(token)
-                    .ConfigureAwait(false);
-
-                await _manager.PutAsync(MetricsRootName, newRoot, token).ConfigureAwait(false);
-            }
-
-            using (await _locker.LockAsync(iterationName, token).ConfigureAwait(false))
+ 
+            // lock per (round,iteration) to avoid cross-writes
+            var lockKey = $"{roundName}::{iterationName}";
+            using (await _locker.LockAsync(lockKey, token).ConfigureAwait(false))
             {
                 token.ThrowIfCancellationRequested();
 
-                metricsRoot = await _manager.GetAsync(MetricsRootName, token).ConfigureAwait(false) as MultipleVariableHolder;
-                if (metricsRoot is null)
+                // refresh root under lock in case it was created concurrently
+                var metricsRoot = await GetOrCreateRootAsync(token).ConfigureAwait(false);
+
+                // ensure round node
+                var roundNode = await GetOrCreateChildContainerAsync(metricsRoot, roundName, token).ConfigureAwait(false);
+
+                // ensure iteration node under round
+                var iterationNode = await GetOrCreateChildContainerAsync(roundNode, iterationName, token).ConfigureAwait(false);
+
+                // upsert metric as JsonString
+                if (iterationNode.TryGetChild(metricName, out var existing) && existing is StringVariableHolder s)
                 {
-                    metricsRoot = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(_resolver, _logger, _op, _manager)
-                        .SetGlobal(true)
-                        .BuildAsync(token)
-                        .ConfigureAwait(false);
-
-                    await _manager.PutAsync(MetricsRootName, metricsRoot, token).ConfigureAwait(false);
-                }
-
-                MultipleVariableHolder iterationContainer;
-                WrapperVariableHolder iterationWrapper;
-
-                if (metricsRoot.TryGetChild(iterationName, out var existingIteration) &&
-                    existingIteration is IWrapperVariableHolder wrapper &&
-                    wrapper.VariableHolder is MultipleVariableHolder innerContainer)
-                {
-                    iterationWrapper = (WrapperVariableHolder)wrapper;
-                    iterationContainer = innerContainer;
-                }
-                else
-                {
-                    iterationContainer = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(_resolver, _logger, _op, _manager)
-                        .SetGlobal()
-                        .BuildAsync(token)
-                        .ConfigureAwait(false);
-
-                    iterationWrapper = (WrapperVariableHolder)await new WrapperVariableHolder.VBuilder(_resolver, _logger, _op)
-                        .WithVariable(iterationContainer)
-                        .SetGlobal()
-                        .BuildAsync(token)
-                        .ConfigureAwait(false);
-
-                    await ((MultipleVariableHolder.VBuilder)metricsRoot.Builder)
-                        .AttachChild(iterationName, iterationWrapper)
-                        .BuildAsync(token)
-                        .ConfigureAwait(false);
-                }
-
-                if (iterationContainer.TryGetChild(metricName, out var existingMetric) &&
-                    existingMetric is StringVariableHolder svh)
-                {
-                    await ((StringVariableHolder.VBuilder)svh.Builder)
+                    await ((StringVariableHolder.VBuilder)s.Builder)
                         .WithType(VariableType.JsonString)
                         .WithPattern(string.Empty)
                         .WithRawValue(dimensionSetJson)
@@ -121,12 +91,47 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
                         .BuildAsync(token)
                         .ConfigureAwait(false);
 
-                    await ((MultipleVariableHolder.VBuilder)iterationContainer.Builder)
+                    await ((MultipleVariableHolder.VBuilder)iterationNode.Builder)
                         .AttachChild(metricName, metricHolder)
                         .BuildAsync(token)
                         .ConfigureAwait(false);
                 }
             }
+        }
+
+        private async Task<MultipleVariableHolder> GetOrCreateRootAsync(CancellationToken token)
+        {
+            var root = await _manager.GetAsync(MetricsRootName, token).ConfigureAwait(false) as MultipleVariableHolder;
+            if (root is not null) return root;
+
+            var newRoot = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(_resolver, _logger, _op, _manager)
+                .SetGlobal(true)
+                .BuildAsync(token)
+                .ConfigureAwait(false);
+
+            await _manager.PutAsync(MetricsRootName, newRoot, token).ConfigureAwait(false);
+            return newRoot;
+        }
+
+        private  async Task<MultipleVariableHolder> GetOrCreateChildContainerAsync(
+            MultipleVariableHolder parent,
+            string childName,
+            CancellationToken token)
+        {
+            if (parent.TryGetChild(childName, out var existing) && existing is MultipleVariableHolder m) return m;
+
+            var newContainer = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(
+                    _resolver, _logger, _op, _manager)
+                .SetGlobal()
+                .BuildAsync(token)
+                .ConfigureAwait(false);
+
+            await ((MultipleVariableHolder.VBuilder)parent.Builder)
+                .AttachChild(childName, newContainer)
+                .BuildAsync(token)
+                .ConfigureAwait(false);
+
+            return newContainer;
         }
     }
 }
