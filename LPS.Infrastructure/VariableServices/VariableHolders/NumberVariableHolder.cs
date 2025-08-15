@@ -30,7 +30,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             _builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
 
-        public ValueTask<string> GetRawValueAsync() => ValueTask.FromResult(Value);
+        public ValueTask<string> GetRawValueAsync(CancellationToken token) => ValueTask.FromResult(Value);
 
         // ====== Builder ======
         public sealed class VBuilder : IVariableBuilder

@@ -105,7 +105,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
             if (root is not null) return root;
 
             var newRoot = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(_resolver, _logger, _op, _manager)
-                .SetGlobal(true)
+                .SetGlobal()
                 .BuildAsync(token)
                 .ConfigureAwait(false);
 

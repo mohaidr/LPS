@@ -41,7 +41,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             _builder = builder ?? throw new ArgumentNullException(nameof(builder));
         }
 
-        public ValueTask<string> GetRawValueAsync()
+        public ValueTask<string> GetRawValueAsync(CancellationToken token)
         {
             return ValueTask.FromResult(Value);
         }
@@ -50,7 +50,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         {
 
             if (string.IsNullOrWhiteSpace(path))
-                return await GetRawValueAsync();
+                return await GetRawValueAsync(token);
             var resolvedPath = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(path ?? string.Empty, sessionId, token);
             string extracted = Type switch
             {

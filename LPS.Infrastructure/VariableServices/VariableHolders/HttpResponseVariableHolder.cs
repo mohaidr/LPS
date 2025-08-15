@@ -53,12 +53,12 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         IReadOnlyDictionary<string, IReadOnlyList<string>> IHttpResponseVariableHolder.Headers => throw new NotImplementedException();
 
 
-        public ValueTask<string> GetRawValueAsync()
+        public ValueTask<string> GetRawValueAsync(CancellationToken token)
         {
             // For HttpResponse, the "raw value" is the response body
             return Body is null
                 ? ValueTask.FromResult(string.Empty)
-                : Body.GetRawValueAsync();
+                : Body.GetRawValueAsync(token);
         }
 
         public async ValueTask<string> GetValueAsync(string? path, string sessionId, CancellationToken token)
@@ -66,7 +66,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             var hash = this.GetHashCode();
             // No path => return raw body
             if (string.IsNullOrWhiteSpace(path))
-                return await GetRawValueAsync();
+                return await GetRawValueAsync(token);
 
             // Resolve placeholders in the path itself (if any)
             var resolvedPath = await _placeholderResolverService

@@ -112,22 +112,19 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
 
             if (string.IsNullOrWhiteSpace(path))
             {
-                resolvedValue = await variableHolder.GetRawValueAsync();
+                resolvedValue = await variableHolder.GetRawValueAsync(token);
             }
             else
             {
-                if (variableHolder is IStringVariableHolder)
+                if (variableHolder is IObjectVariableHolder)
                 {
-                    resolvedValue = await ((IStringVariableHolder)variableHolder).GetValueAsync(path, sessionId, token);
+                    resolvedValue = await ((IObjectVariableHolder)variableHolder).GetValueAsync(path, sessionId, token);
                 }
-                else if (variableHolder is IHttpResponseVariableHolder)
+                else 
                 {
-                    resolvedValue = await ((IHttpResponseVariableHolder)variableHolder).GetValueAsync(path, sessionId, token);
+                    resolvedValue = await variableHolder.GetRawValueAsync(token);
                 }
             }
-            // Cache only if the path is null OR (the path has no embedded placeholder)
-            // Example where we skip caching: ${csvData[$loopcounter(start=0, end=5, counter=test),0]} because it changes every request
-
             return resolvedValue;
         }
 

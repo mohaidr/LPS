@@ -42,7 +42,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         public bool IsGlobal { get; private set; }
 
 
-        public ValueTask<string> GetRawValueAsync()
+        public ValueTask<string> GetRawValueAsync(CancellationToken token)
         {
             // Keep it simple for object: no intrinsic raw string
             return ValueTask.FromResult(string.Empty);
@@ -89,7 +89,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 // Delegate to child with remaining path
                 return await ((IObjectVariableHolder)child).GetValueAsync(rest, sessionId, token);
             else
-                return await child.GetRawValueAsync();
+                return await child.GetRawValueAsync(token);
 
         }
 
