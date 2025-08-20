@@ -283,5 +283,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public int ActiveRequestsCount { get; protected set; }
         public int SuccessfulRequestCount { get; protected set; }
         public int FailedRequestsCount { get; protected set; }
+        public double ErrorRate => FailedRequestsCount / (RequestsCount - ActiveRequestsCount != 0 ? (double)RequestsCount - ActiveRequestsCount : 1);
     }
 }

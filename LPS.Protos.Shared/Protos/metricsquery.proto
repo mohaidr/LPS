@@ -87,6 +87,7 @@ message ThroughputMetricResponse {
   int32 activeRequestsCount = 6;
   int32 successfulRequestCount = 7;
   int32 failedRequestsCount = 8;
+  double errorRate =9;
 }
 
 message ThroughputMetricSearchResponse {

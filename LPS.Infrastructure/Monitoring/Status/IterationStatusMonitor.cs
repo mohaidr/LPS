@@ -1,6 +1,7 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -53,7 +54,7 @@ namespace LPS.Infrastructure.Monitoring.Status
             {
                 return EntityExecutionStatus.Scheduled;
             }
-            if (commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
+            if (commandsStatuses.Any() && commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
             {
                 return EntityExecutionStatus.Skipped;
             }

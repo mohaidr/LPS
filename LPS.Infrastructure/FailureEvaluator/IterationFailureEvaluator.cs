@@ -43,7 +43,6 @@ namespace LPS.Infrastructure.FailureEvaluator
             _discoveryService = discoveryService;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-
         }
 
         public async Task<bool> IsErrorRateExceededAsync(HttpIteration iteration, CancellationToken token = default)
@@ -66,30 +65,9 @@ namespace LPS.Infrastructure.FailureEvaluator
                     throw new ArgumentException(nameof(fqdn));
 
                 var grpcClient = _grpcClientFactory.GetClient<GrpcMetricsQueryServiceClient>(_clusterConfig.MasterNodeIP);
-                var response = await grpcClient.GetResponseCodesAsync(fqdn);
+                var response = await grpcClient.GetThroughputAsync(fqdn);
 
-                var summaries = response?.Responses?.SingleOrDefault()?.Summaries;
-                if (summaries == null || summaries.Count == 0)
-                    return false;
-
-
-                int total = 0;
-                int errors = 0;
-
-                foreach (var summary in summaries)
-                {
-                    int count = summary.Count;
-                    Enum.TryParse(summary.HttpStatusCode, true, out HttpStatusCode code);
-
-                    total += count;
-                    if (iteration.ErrorStatusCodes.Contains(code))
-                        errors += count;
-                }
-
-                if (total == 0)
-                    return false;
-
-                var actualErrorRate = (double)errors / total;
+                var actualErrorRate = (double)response?.Responses?.SingleOrDefault()?.ErrorRate;
                 return actualErrorRate > (iteration.MaxErrorRate.Value);
             }
             catch (Exception ex)

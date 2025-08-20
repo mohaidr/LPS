@@ -98,6 +98,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                     ActiveRequestsCount = d.ActiveRequestsCount,
                     SuccessfulRequestCount = d.SuccessfulRequestCount,
                     FailedRequestsCount = d.FailedRequestsCount,
+                    ErrorRate = d.ErrorRate,
                     RequestsRate = new Protos.Shared.RequestsRate
                     {
                         Every = d.RequestsRate.Every ?? string.Empty,
@@ -156,7 +157,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
                 if (!string.IsNullOrEmpty(request.FullyQualifiedName))
                 {
-                    checks.Add(request.FullyQualifiedName.Contains($"/round/{d.RoundName}/iteration/{d.IterationName}", StringComparison.OrdinalIgnoreCase));
+                    checks.Add(request.FullyQualifiedName.EndsWith($"/round/{d.RoundName}/iteration/{d.IterationName}", StringComparison.OrdinalIgnoreCase));
                 }
 
 
