@@ -26,7 +26,7 @@ namespace LPS.Domain
             protected ExecuteCommand()
             {
             }
-
+            
             public ExecuteCommand(
                 IClientService<HttpRequest, HttpResponse> httpClientService,
                 ILogger logger,
@@ -60,8 +60,15 @@ namespace LPS.Domain
                 entity._iterationStatusMonitor = _iterationStatusMonitor;
                 try
                 {
+                    if (await entity._skipIfEvaluator.ShouldSkipAsync(entity.SkipIf, _httpClientService.SessionId, token))
+                    {
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration {entity.Name} is being skipped because the condition '{entity.SkipIf}' evaluated to true.", LPSLoggingLevel.Information, token);
+                        _executionStatus = CommandExecutionStatus.Skipped;
+                        return;
+                    }
                     _executionStatus = CommandExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this, token);
+                    _executionStatus = CommandExecutionStatus.Completed;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
@@ -76,8 +83,6 @@ namespace LPS.Domain
                 {
                     if (await _iterationStatusMonitor.IsTerminatedAsync(entity, token))
                         _executionStatus = CommandExecutionStatus.Terminated;
-                    else
-                        _executionStatus = CommandExecutionStatus.Completed;
                 }
             }
         }

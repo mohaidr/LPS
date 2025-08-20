@@ -42,15 +42,26 @@ namespace LPS.Infrastructure.Monitoring.Status
             {
                 return EntityExecutionStatus.Failed;
             }
-            if (await _commandStatusMonitor.IsAnyCommandOngoing(httpIteration))
+
+            var commandsStatuses  = await _commandStatusMonitor.QueryAsync(httpIteration);
+
+            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing))
             {
                 return EntityExecutionStatus.Ongoing;
             }
-            if ((await _commandStatusMonitor.QueryAsync(httpIteration)).Any(status => status == CommandExecutionStatus.Scheduled))
+            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Scheduled))
             {
                 return EntityExecutionStatus.Scheduled;
             }
-            if (!(await _commandStatusMonitor.QueryAsync(httpIteration)).Any())
+            if (commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
+            {
+                return EntityExecutionStatus.Skipped;
+            }
+            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Skipped) && !commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
+            {
+                return EntityExecutionStatus.PartiallySkipped;
+            }
+            if (!commandsStatuses.Any())
             {
                 return EntityExecutionStatus.NotStarted;
             }

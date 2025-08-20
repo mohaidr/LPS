@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NCalc;
 using System.Linq.Expressions;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.Nodes;
 
 namespace LPS.Infrastructure.Skip
 {
@@ -13,11 +14,13 @@ namespace LPS.Infrastructure.Skip
         private readonly IPlaceholderResolverService _placeholderResolver;
         private readonly ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        public SkipIfEvaluator(IPlaceholderResolverService placeholderResolver, IRuntimeOperationIdProvider runtimeOperationIdProvider, ILogger logger)
+        INodeMetadata _nodeMetadata;
+        public SkipIfEvaluator(IPlaceholderResolverService placeholderResolver, INodeMetadata nodeMetadata, IRuntimeOperationIdProvider runtimeOperationIdProvider, ILogger logger)
         {
             _placeholderResolver = placeholderResolver;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _nodeMetadata = nodeMetadata;
         }
 
         public async Task<bool> ShouldSkipAsync(string skipIfExpression, string sessionId, CancellationToken token)
@@ -39,7 +42,11 @@ namespace LPS.Infrastructure.Skip
 
                 if (result is bool skip && skip)
                 {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration skipped due to evaluated condition: {resolved}", LPSLoggingLevel.Verbose);
+                    await _logger.LogAsync(
+                        _runtimeOperationIdProvider.OperationId,
+                        $"Iteration skipped due to evaluated condition: {resolved}. Node Details (Name: {_nodeMetadata.NodeName}, IP: {_nodeMetadata.NodeIP})",
+                        LPSLoggingLevel.Warning);
+
                     return true;
                 }
 

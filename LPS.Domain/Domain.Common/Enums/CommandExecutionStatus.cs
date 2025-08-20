@@ -30,6 +30,7 @@ namespace LPS.Domain.Domain.Common.Enums
         Terminated = 5,
         Cancelled = 6,
         Skipped = 7,
+        PartiallySkipped = 8,
         Unkown = -1,
     }
 }
