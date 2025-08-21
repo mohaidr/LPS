@@ -105,8 +105,7 @@ namespace LPS.Domain
                         _watchdog,
                         _runtimeOperationIdProvider,
                         _lpsClientManager,
-                        _lpsClientConfig,
-                        _httpIterationExecutionCommandStatusMonitor, _httpIterationExecutionCommandRepository,
+                        _lpsClientConfig, _httpIterationExecutionCommandRepository,
                         _lpsMetricsDataMonitor, _iterationStatusMonitor);
                     await roundExecCommand.ExecuteAsync(round, token);
                 }

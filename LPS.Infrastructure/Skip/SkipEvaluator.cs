@@ -37,7 +37,7 @@ namespace LPS.Infrastructure.Skip
                     return false;
 
                 // Evaluate the resolved expression using NCalcAsync
-                var expr = new AsyncExpression(resolved);
+                var expr = new AsyncExpression(resolved, ExpressionOptions.StrictTypeMatching);
                 var result = await expr.EvaluateAsync();
 
                 if (result is bool skip && skip)

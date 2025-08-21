@@ -10,6 +10,6 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
 {
     public interface IHttpIterationSchedulerService
     {
-        Task ScheduleAsync(DateTime scheduledTime, HttpIteration httpIteration, CancellationToken token);
+        Task ScheduleAsync(DateTime scheduledTime, HttpIteration.ExecuteCommand httpIterationCommand, HttpIteration httpIteration, CancellationToken token);
     }
 }
