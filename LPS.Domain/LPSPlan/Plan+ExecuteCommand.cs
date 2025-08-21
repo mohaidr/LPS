@@ -26,7 +26,7 @@ namespace LPS.Domain
         ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         IIterationStatusMonitor _iterationStatusMonitor;
         IIterationFailureEvaluator _iterationFailureEvaluator;
-        ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+        ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
 
         public class ExecuteCommand : IAsyncCommand<Plan>
         {
@@ -37,7 +37,7 @@ namespace LPS.Domain
             readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
-            readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+            readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
             readonly IIterationStatusMonitor _iterationStatusMonitor;
             protected ExecuteCommand()
             {
@@ -48,7 +48,7 @@ namespace LPS.Domain
                 IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpRequest> lpsClientConfig,
                 ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
-                ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
+                ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 IIterationStatusMonitor iterationStatusMonitor)
             {

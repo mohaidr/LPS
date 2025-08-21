@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.Monitoring.Status
 {
     public class HttpIterationCommandStatusMonitor: ICommandStatusMonitor<HttpIteration>
     {
-        private readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _commandRepo;
+        private readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _commandRepo;
         private readonly IEntityDiscoveryService _entityDiscoveryService;
         private readonly INodeRegistry _nodeRegistry;
         private readonly INodeMetadata _nodeMetadata;
@@ -29,7 +29,7 @@ namespace LPS.Infrastructure.Monitoring.Status
         private readonly ILogger _logger;
 
         public HttpIterationCommandStatusMonitor(
-            ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> commandRepo,
+            ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> commandRepo,
             IEntityDiscoveryService entityDiscoveryService,
             INodeRegistry nodeRegistry,
             INodeMetadata nodeMetadata,

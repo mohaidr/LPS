@@ -45,7 +45,7 @@ namespace LPS.UI.Core.Services
         private readonly IEntityRepositoryService _entityRepositoryService;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
-        public readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+        public readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
         public readonly ISkipIfEvaluator _skipIfEvaluator;
         public readonly IVariableFactory _variableFactory;
         public TestExecutionService(
@@ -67,7 +67,7 @@ namespace LPS.UI.Core.Services
             IIterationStatusMonitor iterationStatusMonitor,
             ISkipIfEvaluator skipIfEvaluator,
             IVariableFactory variableFactory,
-            ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
+            ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
             CancellationTokenSource cts)
         {
             _logger = logger;

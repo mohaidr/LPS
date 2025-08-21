@@ -10,28 +10,16 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Status
 {
-    public class InMemoryCommandRepository<TCommand, TEntity> : ICommandRepository<TCommand, TEntity>
+    public class InMemoryCommandRepository<TEntity, TCommand> : ICommandRepository<TEntity, TCommand>
         where TCommand : IAsyncCommand<TEntity>
         where TEntity : HttpIteration
     {
         private readonly ConcurrentDictionary<TEntity, ConcurrentBag<TCommand>> _registry = new();
 
-        public void Register(TCommand command, TEntity entity)
+        public void Add(TEntity key,TCommand value)
         {
-            var commands = _registry.GetOrAdd(entity, _ => new ConcurrentBag<TCommand>());
-            commands.Add(command);
-        }
-
-        public void UnRegister(TCommand command, TEntity entity)
-        {
-            if (_registry.TryGetValue(entity, out var commands))
-            {
-                var filtered = new ConcurrentBag<TCommand>(commands.Where(c => !c.Equals(command)));
-                if (filtered.IsEmpty)
-                    _registry.TryRemove(entity, out _);
-                else
-                    _registry[entity] = filtered;
-            }
+            var commands = _registry.GetOrAdd(key, _ => new ConcurrentBag<TCommand>());
+            commands.Add(value);
         }
 
         public IEnumerable<TCommand> GetCommands(TEntity entity)

@@ -126,7 +126,7 @@ namespace LPS
                     }));
                     services.AddSingleton<INodeRegistry, NodeRegistry>();
 
-                    services.AddSingleton<ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration>, InMemoryCommandRepository<IAsyncCommand<HttpIteration>, HttpIteration>>();
+                    services.AddSingleton<ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>>, InMemoryCommandRepository<HttpIteration, IAsyncCommand<HttpIteration>>>();
 
 
                     services.AddSingleton<ITestTriggerNotifier, TestTriggerNotifier>();

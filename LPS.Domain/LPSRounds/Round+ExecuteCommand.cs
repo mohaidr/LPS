@@ -18,7 +18,7 @@ namespace LPS.Domain
         IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
         IClientConfiguration<HttpRequest> _lpsClientConfig;
         IWatchdog _watchdog;
-        ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+        ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
         IIterationStatusMonitor _iterationStatusMonitor;
 
         public class ExecuteCommand : IAsyncCommand<Round>
@@ -30,7 +30,7 @@ namespace LPS.Domain
             readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly IIterationStatusMonitor _iterationStatusMonitor;
-            readonly ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> _httpIterationExecutionCommandRepository;
+            readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
 
             protected ExecuteCommand() { }
 
@@ -40,7 +40,7 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpRequest> lpsClientConfig,
-                ICommandRepository<IAsyncCommand<HttpIteration>, HttpIteration> httpIterationExecutionCommandRepository,
+                ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
                 IIterationStatusMonitor iterationStatusMonitor)
             {
@@ -144,7 +144,7 @@ namespace LPS.Domain
                     _lpsMetricsDataMonitor,
                     _iterationStatusMonitor);
 
-                _httpIterationExecutionCommandRepository.Register(httpIterationCommand, httpIteration);
+                _httpIterationExecutionCommandRepository.Add(httpIteration, httpIterationCommand);
 
                 commandQueue.Enqueue((httpIterationCommand, httpIteration));
             }
