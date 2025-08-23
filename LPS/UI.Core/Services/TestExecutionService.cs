@@ -207,31 +207,53 @@ namespace LPS.UI.Core.Services
         }
 
         // This should change
-        private async Task<IVariableHolder> BuildVariableHolder(VariableDto variableDto, bool isGlobal, CancellationToken cancellationToken)
+        private async Task<IVariableHolder> BuildVariableHolder(
+           VariableDto variableDto,
+           bool isGlobal,
+           CancellationToken cancellationToken)
         {
-            if (variableDto.As.Equals("json", StringComparison.OrdinalIgnoreCase)
-                 || variableDto.As.Equals("xml", StringComparison.OrdinalIgnoreCase)
-                 || variableDto.As.Equals("csv", StringComparison.OrdinalIgnoreCase)
-                 || variableDto.As.Equals("string", StringComparison.OrdinalIgnoreCase))
-            {
-                return await _variableFactory.CreateStringAsync(variableDto.Value, variableDto.As.ToVariableType(), variableDto.Regex, true, cancellationToken);
-            }
-            else
-            if (variableDto.As.Equals("int", StringComparison.OrdinalIgnoreCase)
-                 || variableDto.As.Equals("double", StringComparison.OrdinalIgnoreCase)
-                 || variableDto.As.Equals("float", StringComparison.OrdinalIgnoreCase))
-            {
-                return await _variableFactory.CreateNumberAsync(variableDto.Value, variableDto.As.ToVariableType(), true, cancellationToken);
-            }
-            else
-            if (variableDto.As.Equals("bool", StringComparison.OrdinalIgnoreCase)
-                || variableDto.As.Equals("boolean", StringComparison.OrdinalIgnoreCase))
-            {
-                return await _variableFactory.CreateBooleanAsync(variableDto.Value, true, cancellationToken);
-            }
+            var variableType = variableDto.As.ToVariableType();
 
-            throw new NotImplementedException();
+            switch (variableType)
+            {
+                // String-based
+                case VariableType.String:
+                case VariableType.QString:
+                case VariableType.JsonString:
+                case VariableType.XmlString:
+                case VariableType.CsvString:
+                case VariableType.QJsonString:
+                case VariableType.QXmlString:
+                case VariableType.QCsvString:
+                    return await _variableFactory.CreateStringAsync(
+                        variableDto.Value,
+                        variableType,
+                        variableDto.Regex,
+                        true,
+                        cancellationToken);
 
+                // Numbers
+                case VariableType.Int:
+                case VariableType.Double:
+                case VariableType.Float:
+                case VariableType.Decimal:
+                    return await _variableFactory.CreateNumberAsync(
+                        variableDto.Value,
+                        variableType,
+                        true,
+                        cancellationToken);
+
+                // Boolean
+                case VariableType.Boolean:
+                    return await _variableFactory.CreateBooleanAsync(
+                        variableDto.Value,
+                        true,
+                        cancellationToken);
+
+                default:
+                    throw new NotImplementedException(
+                        $"Variable type '{variableType}' is not yet supported in {nameof(BuildVariableHolder)}.");
+            }
         }
 
         private HttpIteration ProcessIteration(RoundDto roundDto, HttpIterationDto iterationDto)

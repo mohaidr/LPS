@@ -43,7 +43,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         public ValueTask<string> GetRawValueAsync(CancellationToken token)
         {
-            return ValueTask.FromResult(Value);
+            return (Type == VariableType.QString || Type == VariableType.QCsvString || Type == VariableType.QJsonString || Type == VariableType.QXmlString)  ? ValueTask.FromResult($"\"{Value}\"") : ValueTask.FromResult(Value);
         }
 
         public async ValueTask<string> GetValueAsync(string? path, string sessionId, CancellationToken token)
@@ -57,6 +57,10 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 VariableType.JsonString => await ExtractJsonValue(resolvedPath ?? "", sessionId, token),
                 VariableType.XmlString => await ExtractXmlValue(resolvedPath ?? "", sessionId, token),
                 VariableType.CsvString => await ExtractCsvValueAsync(resolvedPath ?? "", sessionId, token),
+                VariableType.QJsonString => $"\"{await ExtractJsonValue(resolvedPath ?? "", sessionId, token)}\"",
+                VariableType.QXmlString => $"\"{await ExtractXmlValue(resolvedPath ?? "", sessionId, token)}\"",
+                VariableType.QCsvString => $"\"{await ExtractCsvValueAsync(resolvedPath ?? "", sessionId, token)}\"",
+                VariableType.QString => $"\"{Value}\"",
                 VariableType.String => Value,
                 _ => throw new NotSupportedException($"Format '{Type}' is not supported by StringVariableHolder.")
             };

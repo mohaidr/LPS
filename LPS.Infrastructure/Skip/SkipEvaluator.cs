@@ -23,8 +23,11 @@ namespace LPS.Infrastructure.Skip
             _nodeMetadata = nodeMetadata;
         }
 
+        //TODO: This must be smarter in the future, detect the string variable holders and ask to return them as quoted for correct comparison insted of forcing the user to define the variable as Q type
+        // This can happen by updating the placeholder to offer an option to ask for the value as qouted value if the variable holder it detected is string
         public async Task<bool> ShouldSkipAsync(string skipIfExpression, string sessionId, CancellationToken token)
         {
+
             if (string.IsNullOrWhiteSpace(skipIfExpression))
                 return false;
 

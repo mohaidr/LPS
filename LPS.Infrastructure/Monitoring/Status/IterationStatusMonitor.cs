@@ -56,7 +56,8 @@ namespace LPS.Infrastructure.Monitoring.Status
 
             // PartiallySkipped -> not terminal
             if (commandsStatuses.Any(status => status == CommandExecutionStatus.Skipped) &&
-                !commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
+                !commandsStatuses.All(status => status == CommandExecutionStatus.Skipped)&& 
+                !commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing))
                 return EntityExecutionStatus.PartiallySkipped;
 
             // Ongoing (not terminal)

@@ -14,17 +14,25 @@ namespace LPS.Domain.Domain.Common.Extensions
                 // String
                 ["string"] = VariableType.String,
                 ["text"] = VariableType.String,
+                ["qstring"] = VariableType.QString,
 
                 // Structured string shortcuts
                 ["jsonstring"] = VariableType.JsonString,
                 ["json"] = VariableType.JsonString,
+                ["qjsonstring"] = VariableType.QJsonString,
+                ["qjson"] = VariableType.QJsonString,
+
 
                 ["xmlstring"] = VariableType.XmlString,
                 ["xml"] = VariableType.XmlString,
+                ["qxmlstring"] = VariableType.QXmlString,
+                ["qxml"] = VariableType.QXmlString,
+
 
                 ["csvstring"] = VariableType.CsvString,
                 ["csv"] = VariableType.CsvString,
-
+                ["qcsvstring"] = VariableType.QCsvString,
+                ["qcsv"] = VariableType.QCsvString,
                 // Numbers
                 ["float"] = VariableType.Float,
                 ["single"] = VariableType.Float,
@@ -44,7 +52,10 @@ namespace LPS.Domain.Domain.Common.Extensions
                 ["httpresponse"] = VariableType.HttpResponse,
                 ["http-response"] = VariableType.HttpResponse,
                 ["http_response"] = VariableType.HttpResponse,
-                ["response"] = VariableType.HttpResponse
+                ["response"] = VariableType.HttpResponse,
+
+                ["multiple"] = VariableType.Multiple,
+                ["keyvalue"] = VariableType.KeyValue
             };
 
         /// <summary>

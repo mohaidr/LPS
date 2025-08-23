@@ -21,7 +21,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         private readonly VBuilder _builder;
         public IVariableBuilder Builder => _builder;
 
-        public VariableType? Type { get; private set; } = VariableType.Object;
+        public VariableType? Type { get; private set; } = VariableType.KeyValue;
         public bool IsGlobal { get; private set; }
 
         public KeyValuePair<string, IVariableHolder> KeyValue { get; private set; }
@@ -124,7 +124,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     isGlobal: true,
                     builder: this)
                 {
-                    Type = VariableType.Object
+                    Type = VariableType.KeyValue
                 };
             }
 

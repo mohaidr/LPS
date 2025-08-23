@@ -36,7 +36,7 @@ namespace LPS.Infrastructure.VariableServices
             CancellationToken token = default)
         {
             // Only string-family types are allowed here
-            if (type is not (VariableType.String or VariableType.JsonString or VariableType.XmlString or VariableType.CsvString))
+            if (type is not (VariableType.String or VariableType.QString or VariableType.QJsonString or VariableType.QCsvString or VariableType.QXmlString or VariableType.JsonString or VariableType.XmlString or VariableType.CsvString))
                 throw new NotSupportedException($"Type '{type}' is not supported by CreateStringAsync.");
 
             var resolvedValue = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(rawValue, string.Empty, token);

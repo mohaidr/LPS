@@ -10,12 +10,15 @@ namespace LPS.Domain.Domain.Common.Enums
     {
         // String Variable Type
         String,
-
+        QString,
         // Dealing with it as a special string type which you can navigate through with path (.,/,[])
         JsonString,
         XmlString,
         CsvString,
 
+        QJsonString,
+        QXmlString,
+        QCsvString,
         //Number Variable Type
         Float,
         Double,
@@ -28,7 +31,9 @@ namespace LPS.Domain.Domain.Common.Enums
         // HttpResponse (Special Type)
         HttpResponse,
 
-        Object,
+        KeyValue,
+
+        Multiple,
 
         Wrapper
     }

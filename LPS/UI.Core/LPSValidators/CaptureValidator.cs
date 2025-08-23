@@ -33,8 +33,7 @@ namespace LPS.UI.Core.LPSValidators
             RuleFor(dto => dto.As)
                     .Must(@as =>
                     {
-                        return @as.TryToVariableType(out VariableType type) &&
-                        (type == VariableType.String || type == VariableType.JsonString || type == VariableType.XmlString || type == VariableType.CsvString);
+                        return @as.TryToVariableType(out VariableType type);
                     }).WithMessage($"The provided value for 'As' ({_dto.As}) is not valid or supported.");
 
 

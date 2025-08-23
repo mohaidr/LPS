@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         }
 
         // IVariableHolder members
-        public VariableType? Type { get; private set; } = VariableType.Object;
+        public VariableType? Type { get; private set; } = VariableType.Multiple;
         public bool IsGlobal { get; private set; }
 
 
@@ -134,7 +134,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     isGlobal: true,
                     builder: this)
                 {
-                    Type = VariableType.Object
+                    Type = VariableType.Multiple
                 };
             }
 

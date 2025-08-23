@@ -39,8 +39,7 @@ namespace LPS.Domain.LPSFlow.LPSHandlers
                 RuleFor(command => command.As)
                     .Must(@as =>
                     {
-                        return @as.TryToVariableType(out VariableType type) &&
-                        (type == VariableType.String || type == VariableType.JsonString || type == VariableType.XmlString || type == VariableType.CsvString);
+                        return @as.TryToVariableType(out VariableType type);
                     }).WithMessage($"The provided value for 'As' ({command?.As}) is not valid or supported.");
                 RuleFor(command => command.Regex)
                 .Must(regex => string.IsNullOrEmpty(regex) || IsValidRegex(regex))
