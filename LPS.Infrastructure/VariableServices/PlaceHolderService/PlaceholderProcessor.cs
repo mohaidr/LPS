@@ -69,7 +69,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
             {
                 "random" => await GenerateRandomStringAsync(parameters, sessionId, token),
                 "randomnumber" => await GenerateRandomNumberAsync(parameters, sessionId, token),
-                "timestamp" => await GenerateTimestampAsync(parameters, sessionId, token),
+                "timestamp" or "datetime" => await GenerateTimestampAsync(parameters, sessionId, token),
                 "guid" => await GenerateGuidAsync(parameters, sessionId, token),
                 "urlencode" => await UrlEncodeAsync(parameters, sessionId, token),
                 "urldecode" => await UrlDecodeAsync(parameters, sessionId, token),       // <-- added
@@ -86,7 +86,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                 _ => throw new InvalidOperationException($"Unknown function: {functionName}")
             };
         }
-
         private async Task<string> ResolveVariableAsync(string placeholder, string sessionId, CancellationToken token)
         {
             string variableName = placeholder;
@@ -127,8 +126,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
             }
             return resolvedValue;
         }
-
-
         private async Task StoreVariableIfNeededAsync(string variableName, string value, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(variableName))
@@ -142,7 +139,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
 
             await _variableManager.PutAsync(variableName, holder, token);
         }
-
         private async Task<string> GenerateRandomStringAsync(string parameters, string sessionId, CancellationToken token)
         {
             int length = await _paramService.ExtractNumberAsync(parameters, "length", 10, sessionId, token);
@@ -156,7 +152,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
 
             return result;
         }
-
         private async Task<string> GenerateRandomNumberAsync(string parameters, string sessionId, CancellationToken token)
         {
             int min = await _paramService.ExtractNumberAsync(parameters, "min", 1, sessionId, token);
@@ -170,16 +165,19 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
 
             return result;
         }
-
         private async Task<string> GenerateTimestampAsync(string parameters, string sessionId, CancellationToken token)
         {
             string format = await _paramService.ExtractStringAsync(parameters, "format", "yyyy-MM-ddTHH:mm:ss", sessionId, token);
             string variableName = await _paramService.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+            int offsetHours = await _paramService.ExtractNumberAsync(parameters, "offsetHours", 0, sessionId, token);
 
-            string result = DateTime.UtcNow.ToString(format);
+            // Apply offset
+            DateTime utcNow = DateTime.UtcNow;
+            DateTime adjustedTime = utcNow.AddHours(offsetHours);
+
+            string result = adjustedTime.ToString(format);
 
             await StoreVariableIfNeededAsync(variableName, result, token);
-
 
             return result;
         }
@@ -193,7 +191,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
 
             return result;
         }
-
         private async Task<string> GenerateHashAsync(string parameters, string sessionId, CancellationToken token)
         {
             string value = await _paramService.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
@@ -346,7 +343,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
         }
 
         //new ones
-
         private async Task<string> ExtractJwtClaimAsync(string parameters, string sessionId, CancellationToken token)
         {
             string tokenStr = await _paramService.ExtractStringAsync(parameters, "token", "", sessionId, token);
@@ -372,7 +368,6 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                 return base64.PadRight(base64.Length + (4 - base64.Length % 4) % 4, '=');
             }
         }
-
 
         private async Task<string> GenerateEmailAsync(string parameters, string sessionId, CancellationToken token)
         {
