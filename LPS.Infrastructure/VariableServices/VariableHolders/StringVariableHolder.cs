@@ -48,9 +48,16 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         public async ValueTask<string> GetValueAsync(string? path, string sessionId, CancellationToken token)
         {
-
             if (string.IsNullOrWhiteSpace(path))
-                return await GetRawValueAsync(token);
+            {
+                return await GetRawValueAsync(token); 
+            }
+            else if (Type == VariableType.String || Type == VariableType.QString)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"A variable of type string can't have path. Empty value will be returned", LPSLoggingLevel.Warning, token);
+                return Type== VariableType.QString ? "\"\"": string.Empty;
+            }    
+
             var resolvedPath = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(path ?? string.Empty, sessionId, token);
             string extracted = Type switch
             {
@@ -61,7 +68,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 VariableType.QXmlString => $"\"{await ExtractXmlValue(resolvedPath ?? "", sessionId, token)}\"",
                 VariableType.QCsvString => $"\"{await ExtractCsvValueAsync(resolvedPath ?? "", sessionId, token)}\"",
                 VariableType.QString => $"\"{Value}\"",
-                VariableType.String => Value,
+                    VariableType.String => Value,
                 _ => throw new NotSupportedException($"Format '{Type}' is not supported by StringVariableHolder.")
             };
 
@@ -79,15 +86,16 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
                 if (tokenResult == null)
                 {
-                    throw new InvalidOperationException($"JSON path '{jsonPath}' not found.");
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"JSON path '{jsonPath}' not found. Empty value will be returned", LPSLoggingLevel.Error, token);
+                    return string.Empty;
                 }
 
                 return tokenResult;
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"{ex}", LPSLoggingLevel.Error, token);
-                throw new InvalidOperationException($"Failed to extract JSON value using path '{jsonPath}'.", ex);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to extract JSON value using path '{jsonPath}'.\n{ex}", LPSLoggingLevel.Error, token);
+                return string.Empty;
             }
         }
 
@@ -101,16 +109,16 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
                 if (node?.InnerText == null)
                 {
-                    throw new InvalidOperationException($"XPath '{xpath}' not found.");
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"XPath '{xpath}' not found. Empty value will be returned", LPSLoggingLevel.Error, token);
+                    return string.Empty;
                 }
                 return node?.InnerText;
 
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"{ex}", LPSLoggingLevel.Error, token);
-
-                throw new InvalidOperationException($"Failed to extract XML value using XPath '{xpath}'.", ex);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to extract XML value using XPath '{xpath}'.\n{ex}", LPSLoggingLevel.Error, token);
+                return string.Empty;
             }
         }
 
@@ -137,19 +145,23 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 var records = csv.GetRecords<dynamic>().ToList();
 
                 if (rowIndex < 0 || rowIndex >= records.Count)
-                    throw new IndexOutOfRangeException("Row index is out of range.");
-
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Row index {rowIndex} is out of range. Returning empty value", LPSLoggingLevel.Error, token);
+                    return string.Empty;
+                }
                 var record = (IDictionary<string, object>)records[rowIndex];
 
                 if (columnIndex < 0 || columnIndex >= record.Count)
-                    throw new IndexOutOfRangeException("Column index is out of range.");
-
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Column index {columnIndex} is out of range. Returning empty value", LPSLoggingLevel.Error, token);
+                    return string.Empty;
+                }
                 return record.Values.ElementAt(columnIndex)?.ToString() ?? string.Empty;
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"{ex}", LPSLoggingLevel.Error, token);
-                throw;
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to extract csv value using indices '{indices}'.\n{ex}", LPSLoggingLevel.Error, token);
+                return string.Empty;
             }
         }
 
