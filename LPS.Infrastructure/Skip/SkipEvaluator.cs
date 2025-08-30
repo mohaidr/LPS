@@ -66,6 +66,11 @@ namespace LPS.Infrastructure.Skip
         {
             try
             {
+                expressionText= expressionText?.Replace(".", "")
+                    .Replace("[", "").Replace("]", "")
+                    .Replace("{", "")
+                    .Replace("}", "")
+                    .Replace('/', ' ');
                 var expr = new AsyncExpression(expressionText, ExpressionOptions.AllowNullOrEmptyExpressions);
                 expr.EvaluateAsync();
                 return true;

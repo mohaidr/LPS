@@ -104,7 +104,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
             if (variableHolder == null)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Variable '{variableName}' not found.", LPSLoggingLevel.Warning, token);
-                return $"${variableName}";
+                return $"${{{variableName}{path}}}";
             }
 
             string resolvedValue = string.Empty;

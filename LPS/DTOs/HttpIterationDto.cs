@@ -27,10 +27,12 @@ namespace LPS.DTOs
         public string MaximizeThroughput { get; set; }
 
         // Iteration mode (can be a variable)
-        public string Mode { get; set; }
+        private string _mode;
+        public string Mode { get { return string.IsNullOrWhiteSpace(_mode) ? "R" : _mode;  } set { _mode = value; } }
 
         // Request count (can be a variable)
-        public string RequestCount { get; set; }
+        private string _requestCount;
+        public string RequestCount { get { return ((string.IsNullOrWhiteSpace(_mode)  || (_mode?.Equals("R", StringComparison.OrdinalIgnoreCase) ?? false)) && string.IsNullOrWhiteSpace(_requestCount)) ? "1" : _requestCount; } set { _requestCount = value; } }
 
         // Duration (can be a variable)
         public string Duration { get; set; }
