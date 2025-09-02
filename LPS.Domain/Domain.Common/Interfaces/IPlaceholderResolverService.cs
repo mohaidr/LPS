@@ -54,40 +54,6 @@ namespace LPS.Domain.Common.Interfaces
         /// Supported methods include:
         /// <c>random</c>, <c>randomnumber</c>, <c>timestamp</c>, <c>guid</c>, <c>base64encode</c>, <c>hash</c>, <c>customvariable</c>, and <c>read</c>.
         /// </remarks>
-        static bool IsSupportedPlaceHolderMethod(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value) || !value.StartsWith("$") || !value.EndsWith(")"))
-                return false;
-
-            // Extract function name
-            int openParenIndex = value.IndexOf('(');
-            if (openParenIndex == -1)
-                return false;
-
-            string functionName = value.Substring(1, openParenIndex - 1).Trim().ToLowerInvariant(); // Skip $
-
-            // Check against supported methods
-            return functionName switch
-            {
-                "random" => true,
-                "randomnumber" => true,
-                "timestamp" => true,
-                "guid" => true,
-                "base64encode" => true,
-                "base64decode" => true,
-                "urlencode" => true,
-                "urldecode" => true,
-                "hash" => true,
-                "read" => true,
-                "loopcounter" => true,
-                "iterate" => true,
-                "uuid" => true,
-                "format" => true,
-                "jwtclaim" => true,
-                "generateemail" => true,
-                _ => false // Unsupported method
-            };
-        }
     }
 }
 

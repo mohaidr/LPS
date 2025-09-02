@@ -114,7 +114,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                         int stopperIndex = FindStopperIndex(result, startIndex); // the stopper will always be }
 
                         string placeholder = result.ToString(startIndex, stopperIndex - startIndex); // Exclude closing '}'
-                        string resolvedValue = await _processor.ResolvePlaceholderAsync(placeholder, sessionId, token);
+                        string resolvedValue = await _processor.ProcessPlaceholderAsync(placeholder, sessionId, token);
 
                         result.Remove(currentIndex, stopperIndex - currentIndex + 1); // to remove }
                         result.Insert(currentIndex, resolvedValue);
@@ -125,7 +125,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                         int startIndex = currentIndex + 1;
                         int stopperIndex = FindStopperIndex(result, startIndex); // Stoppers like / ; , ] } etc., indicate the end of a variable. For example, in $x,$y, the ',' acts as a stopper, signaling that $x is a complete placeholder to resolve, so $x,$y should be treated as two separate variables.
                         string placeholder = result.ToString(startIndex, stopperIndex - startIndex);
-                        string resolvedValue = await _processor.ResolvePlaceholderAsync(placeholder, sessionId, token);
+                        string resolvedValue = await _processor.ProcessPlaceholderAsync(placeholder, sessionId, token);
 
                         result.Remove(currentIndex, stopperIndex - currentIndex);
                         result.Insert(currentIndex, resolvedValue);
