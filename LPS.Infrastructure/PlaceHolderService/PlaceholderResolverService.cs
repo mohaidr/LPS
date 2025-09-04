@@ -13,34 +13,21 @@ using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.LPSClients.CachService;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
-namespace LPS.Infrastructure.VariableServices.PlaceHolderService
+namespace LPS.Infrastructure.PlaceHolderService
 {
     public partial class PlaceholderResolverService : IPlaceholderResolverService
     {
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly ILogger _logger;
-        private readonly PlaceholderProcessor _processor;
+        private readonly IPlaceholderProcessor _processor;
         public PlaceholderResolverService(
-            ISessionManager sessionManager,
-            ICacheService<string> memoryCacheService,
-            IVariableManager variableManager,
+            IPlaceholderProcessor processor,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILogger logger)
         {
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            var paramExtractionService = new ParameterExtractorService(
-                this,
-                _runtimeOperationIdProvider,
-                _logger);
-            _processor = new PlaceholderProcessor(
-                paramExtractionService,
-                sessionManager,
-                memoryCacheService,
-                variableManager,
-                this,
-                runtimeOperationIdProvider,
-                logger);
+            _processor = processor ?? throw new ArgumentNullException(nameof(processor));
         }
 
         public async Task<T> ResolvePlaceholdersAsync<T>(string input, string sessionId, CancellationToken token)
@@ -48,7 +35,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
             if (string.IsNullOrWhiteSpace(input))
                 return default; // Return default value of the specified type
 
-            string resolvedValue = await ParseAsync(input, sessionId, token);
+            string resolvedValue = await ResolveAsync(input, sessionId, token);
             try
             {
                 // Handle nullable types
@@ -88,7 +75,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
             }
         }
 
-        private async Task<string> ParseAsync(string input, string sessionId, CancellationToken token)
+        private async Task<string> ResolveAsync(string input, string sessionId, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(input) || !input.Contains('$'))
                 return input;

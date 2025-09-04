@@ -62,7 +62,7 @@ namespace LPS.Domain
                 {
                     if (await entity._skipIfEvaluator.ShouldSkipAsync(entity.SkipIf, _httpClientService.SessionId, token))
                     {
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration {entity.Name} is being skipped because the condition '{entity.SkipIf}' evaluated to true.", LPSLoggingLevel.Information, token);
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration {entity.Name} is being skipped because the condition '{entity.SkipIf}' evaluated to true.", LPSLoggingLevel.Verbose, token);
                         _executionStatus = CommandExecutionStatus.Skipped;
                         return;
                     }

@@ -38,10 +38,10 @@ using LPS.Infrastructure.Services;
 using LPS.Infrastructure.Monitoring.TerminationServices;
 using LPS.Infrastructure.FailureEvaluator;
 using LPS.Infrastructure.Skip;
-using LPS.Infrastructure.VariableServices.PlaceHolderService;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices;
 using LPS.Infrastructure.Monitoring.MetricsVariables;
+using LPS.Infrastructure.PlaceHolderService;
 
 namespace LPS
 {
@@ -139,7 +139,7 @@ namespace LPS
                     services.AddSingleton<IMessageService, MessageService>();
                     services.AddSingleton<IResponseProcessingService, ResponseProcessingService>();
                     services.AddSingleton<IResponseProcessorFactory, ResponseProcessorFactory>();
-                    services.AddSingleton<IPlaceholderResolverService, PlaceholderResolverService>();
+                    services.AddPlaceholderResolution();
                     services.AddSingleton<ISessionManager, SessionManager>();
                     services.AddSingleton<IVariableManager, VariableManager>();
                     services.AddSingleton<ITestExecutionService, TestExecutionService>();

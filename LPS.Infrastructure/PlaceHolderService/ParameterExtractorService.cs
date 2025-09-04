@@ -7,16 +7,16 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace LPS.Infrastructure.VariableServices.PlaceHolderService
+namespace LPS.Infrastructure.PlaceHolderService
 {
     public class ParameterExtractorService
     {
-        private readonly PlaceholderResolverService _resolver;
+        private readonly Lazy<IPlaceholderResolverService> _resolver;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly ILogger _logger;
 
         public ParameterExtractorService(
-            PlaceholderResolverService resolver,
+            Lazy<IPlaceholderResolverService> resolver,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILogger logger)
         {
@@ -40,7 +40,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                 var parts = pair.Split('=', 2);
                 if (parts.Length == 2 && parts[0].Trim() == key)
                 {
-                    int resolvedValue = await _resolver.ResolvePlaceholdersAsync<int>(parts[1].Trim(), sessionId, token);
+                    int resolvedValue = await _resolver.Value.ResolvePlaceholdersAsync<int>(parts[1].Trim(), sessionId, token);
                     return resolvedValue;
                 }
             }
@@ -59,7 +59,7 @@ namespace LPS.Infrastructure.VariableServices.PlaceHolderService
                 var parts = pair.Split('=', 2);
                 if (parts.Length == 2 && parts[0].Trim() == key)
                 {
-                    return await _resolver.ResolvePlaceholdersAsync<string>(parts[1].Trim(), sessionId, token);
+                    return await _resolver.Value.ResolvePlaceholdersAsync<string>(parts[1].Trim(), sessionId, token);
                 }
             }
 
