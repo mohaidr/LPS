@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 /// Defines methods for collecting metrics related to data transmission,
 /// including the size of data sent or received and the time taken for the operation.
 /// </summary>
-public interface IDataTransmissionMetricCollector
+public interface IDataTransmissionMetricAggregator
 {
     /// <summary>
     /// Updates the metrics for data sent, including the size of the data and the time taken to upload it.

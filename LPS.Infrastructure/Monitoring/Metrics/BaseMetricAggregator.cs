@@ -9,10 +9,10 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public abstract class BaseMetricCollector(HttpIteration httpIteration, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : IMetricCollector
+    public abstract class BaseMetricAggregator(HttpIteration httpIteration, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider) : IMetricAggregator
     {
         protected HttpIteration _httpIteration = httpIteration;
-        protected abstract IDimensionSet DimensionSet { get; }
+        protected abstract IMetricShapshot Snapshot { get; }
         protected ILogger _logger = logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
 
@@ -25,7 +25,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             try
             {
-                return SerializationHelper.Serialize(DimensionSet);
+                return SerializationHelper.Serialize(Snapshot);
             }
             catch (Exception ex)
             {
@@ -33,11 +33,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public async ValueTask<IDimensionSet> GetDimensionSetAsync(CancellationToken token)
+        public async ValueTask<IMetricShapshot> GetSnapshotAsync(CancellationToken token)
         {
-            if (DimensionSet != null)
+            if (Snapshot != null)
             {
-                return DimensionSet;
+                return Snapshot;
             }
             else
             {
@@ -46,9 +46,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public async ValueTask<TDimensionSet> GetDimensionSetAsync<TDimensionSet>(CancellationToken token) where TDimensionSet : IDimensionSet
+        public async ValueTask<TDimensionSet> GetSnapshotAsync<TDimensionSet>(CancellationToken token) where TDimensionSet : IMetricShapshot
         {
-            if (DimensionSet is TDimensionSet dimensionSet)
+            if (Snapshot is TDimensionSet dimensionSet)
             {
                 return dimensionSet;
             }

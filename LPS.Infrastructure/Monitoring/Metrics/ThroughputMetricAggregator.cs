@@ -2,26 +2,24 @@
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.Monitoring.EventSources;
-using LPS.Infrastructure.Monitoring.MetricsVariables; // NEW
 using System;
 using System.Diagnostics;
 using System.Linq;
-using System.Text.Json;                 // NEW
-using System.Text.Json.Serialization;  // NEW
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class ThroughputMetricCollector : BaseMetricCollector, IThroughputMetricCollector
+    public class ThroughputMetricAggregator : BaseMetricAggregator, IThroughputMetricCollector
     {
         private const string MetricName = "Throughput";
 
         private int _activeRequestssCount;
         private int _requestsCount;
-        private readonly ProtectedConnectionDimensionSet _dimensionSet;
-        protected override IDimensionSet DimensionSet => _dimensionSet;
+        private readonly ProtectedConnectionSnapshot _snapshot;
+        protected override IMetricShapshot Snapshot => _snapshot;
         private readonly IMetricsQueryService _metricsQueryService;
 
         private readonly Stopwatch _throughputWatch;
@@ -33,7 +31,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
         public readonly string _roundName;
-        public ThroughputMetricCollector(
+        public ThroughputMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
             IMetricsQueryService metricsQueryService,
@@ -47,7 +45,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
 
-            _dimensionSet = new ProtectedConnectionDimensionSet(
+            _snapshot = new ProtectedConnectionSnapshot(
                 roundName,
                 _httpIteration.Id,
                 _httpIteration.Name,
@@ -74,9 +72,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             try
             {
                 var dimensionSet = await (await _metricsQueryService
-                                        .GetAsync<ResponseCodeMetricCollector>(m => m.HttpIteration.Id == _httpIteration.Id, token))
+                                        .GetAsync<ResponseCodeMetricAggregator>(m => m.HttpIteration.Id == _httpIteration.Id, token))
                                         .SingleOrDefault()
-                                        .GetDimensionSetAsync<ResponseCodeMetricDimensionSet>(token);
+                                        .GetSnapshotAsync<ResponseCodeMetricSnapshot>(token);
 
                 int successCount = dimensionSet
                     .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
@@ -101,7 +99,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                         Math.Round((successCount / timeElapsed) * cooldownPeriod, 2));
                 }
 
-                _dimensionSet.Update(
+                _snapshot.Update(
                     _activeRequestssCount,
                     _requestsCount,
                     successCount,
@@ -186,7 +184,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 IsStarted = true;
                 _throughputWatch.Start();
-                _dimensionSet.StopUpdate = false;
+                _snapshot.StopUpdate = false;
                 SchedualMetricsUpdate();
             }
         }
@@ -196,7 +194,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             if (IsStarted)
             {
                 IsStarted = false;
-                _dimensionSet.StopUpdate = true;
+                _snapshot.StopUpdate = true;
                 try
                 {
                     _throughputWatch?.Stop();
@@ -209,7 +207,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         // NEW: Serialize and push to Metrics variable system
         private async Task PushMetricAsync(CancellationToken token)
         {
-            var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 WriteIndented = false
@@ -218,12 +216,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
         }
 
-        private class ProtectedConnectionDimensionSet : ThroughputMetricDimensionSet
+        private class ProtectedConnectionSnapshot : ThroughputMetricSnapshot
         {
             [JsonIgnore]
             public bool StopUpdate { get; set; }
 
-            public ProtectedConnectionDimensionSet(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
+            public ProtectedConnectionSnapshot(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
                 IterationId = iterationId;
                 RoundName = roundName;
@@ -274,7 +272,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public override string ToString() => $"RequestsRate: Every = {Every}, Value = {Value}";
     }
 
-    public class ThroughputMetricDimensionSet : HttpMetricDimensionSet
+    public class ThroughputMetricSnapshot : HttpMetricSnapshot
     {
         public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }

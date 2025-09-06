@@ -23,7 +23,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
             _cts = cts;
         }
 
-        private HttpMetricMetadata BuildMetadata(HttpMetricDimensionSet dimension) => new()
+        private HttpMetricMetadata BuildMetadata(HttpMetricSnapshot dimension) => new()
         {
             RoundName = dimension.RoundName,
             IterationId = dimension.IterationId.ToString(),
@@ -35,12 +35,12 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<DurationMetricSearchResponse> GetDurationMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<DurationMetricCollector, DurationMetricDimensionSet>(request);
+            var collectors = await FilterCollectorsAsync<DurationMetricAggregator, DurationMetricSnapshot>(request);
 
             var response = new DurationMetricSearchResponse();
             foreach (var collector in collectors)
             {
-                var d = (DurationMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
+                var d = (DurationMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
                 response.Responses.Add(new DurationMetricResponse
                 {
                     Metadata = BuildMetadata(d),
@@ -59,12 +59,12 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<DataTransmissionMetricSearchResponse> GetDataTransmissionMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<DataTransmissionMetricCollector, DataTransmissionMetricDimensionSet>(request);
+            var collectors = await FilterCollectorsAsync<DataTransmissionMetricAggregator, DataTransmissionMetricSnapshot>(request);
             var response = new DataTransmissionMetricSearchResponse();
 
             foreach (var collector in collectors)
             {
-                var d = (DataTransmissionMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
+                var d = (DataTransmissionMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
                 response.Responses.Add(new DataTransmissionMetricResponse
                 {
                     Metadata = BuildMetadata(d),
@@ -84,12 +84,12 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<ThroughputMetricSearchResponse> GetThroughputMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<ThroughputMetricCollector, ThroughputMetricDimensionSet>(request);
+            var collectors = await FilterCollectorsAsync<ThroughputMetricAggregator, ThroughputMetricSnapshot>(request);
             var response = new ThroughputMetricSearchResponse();
 
             foreach (var collector in collectors)
             {
-                var d = (ThroughputMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
+                var d = (ThroughputMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
                 response.Responses.Add(new ThroughputMetricResponse
                 {
                     Metadata = BuildMetadata(d),
@@ -119,12 +119,12 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<ResponseCodeMetricSearchResponse> GetResponseCodeMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<ResponseCodeMetricCollector, ResponseCodeMetricDimensionSet>(request);
+            var collectors = await FilterCollectorsAsync<ResponseCodeMetricAggregator, ResponseCodeMetricSnapshot>(request);
             var response = new ResponseCodeMetricSearchResponse();
 
             foreach (var collector in collectors)
             {
-                var d = (ResponseCodeMetricDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
+                var d = (ResponseCodeMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
                 var resp = new ResponseCodeMetricResponse
                 {
                     Metadata = BuildMetadata(d)
@@ -147,12 +147,12 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
         }
 
         private async Task<List<TCollector>> FilterCollectorsAsync<TCollector, TDimensionSet>(MetricRequest request)
-            where TCollector : class, IMetricCollector
-            where TDimensionSet : HttpMetricDimensionSet
+            where TCollector : class, IMetricAggregator
+            where TDimensionSet : HttpMetricSnapshot
         {
             var results = await _metricsQueryService.GetAsync<TCollector>(async collector =>
             {
-                var d = (TDimensionSet)await collector.GetDimensionSetAsync(_cts.Token);
+                var d = (TDimensionSet)await collector.GetSnapshotAsync(_cts.Token);
                 var checks = new List<bool>();
 
                 if (!string.IsNullOrEmpty(request.FullyQualifiedName))

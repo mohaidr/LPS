@@ -16,18 +16,18 @@ using System.Net;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class ResponseCodeMetricCollector : BaseMetricCollector, IResponseMetricCollector
+    public class ResponseCodeMetricAggregator : BaseMetricAggregator, IResponseMetricCollector
     {
         private const string MetricName = "ResponseCode";
 
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly ResponseMetricEventSource _eventSource;
-        private ProtectedResponseCodeDimensionSet _dimensionSet { get; set; }
+        private ProtectedResponseCodeSnapshot _snapshot { get; set; }
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
         private readonly string _roundName;
-        internal ResponseCodeMetricCollector(
+        internal ResponseCodeMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
             ILogger logger,
@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
-            _dimensionSet = new ProtectedResponseCodeDimensionSet(
+            _snapshot = new ProtectedResponseCodeSnapshot(
                 roundName,
                 _httpIteration.Id,
                 _httpIteration.Name,
@@ -51,7 +51,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
         }
 
-        protected override IDimensionSet DimensionSet => _dimensionSet;
+        protected override IMetricShapshot Snapshot => _snapshot;
 
         public override LPSMetricType MetricType => LPSMetricType.ResponseCode;
 
@@ -65,7 +65,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             isLockTaken = true;
             try
             {
-                _dimensionSet.Update(response);
+                _snapshot.Update(response);
                 _eventSource.WriteResponseBreakDownMetrics(response.StatusCode);
 
                 await PushMetricAsync(token); // NEW
@@ -90,7 +90,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         // NEW: serialize and publish the dimension set to the variable system
         private async Task PushMetricAsync(CancellationToken token)
         {
-            var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 WriteIndented = false
@@ -99,9 +99,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
         }
 
-        private class ProtectedResponseCodeDimensionSet : ResponseCodeMetricDimensionSet
+        private class ProtectedResponseCodeSnapshot : ResponseCodeMetricSnapshot
         {
-            public ProtectedResponseCodeDimensionSet(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
+            public ProtectedResponseCodeSnapshot(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
                 IterationId = iterationId;
                 RoundName = roundName;
@@ -143,9 +143,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public int Count { get; set; } = count;
     }
 
-    public class ResponseCodeMetricDimensionSet : HttpMetricDimensionSet
+    public class ResponseCodeMetricSnapshot : HttpMetricSnapshot
     {
-        public ResponseCodeMetricDimensionSet()
+        public ResponseCodeMetricSnapshot()
         {
             _responseSummaries = new ConcurrentBag<HttpResponseSummary>();
         }

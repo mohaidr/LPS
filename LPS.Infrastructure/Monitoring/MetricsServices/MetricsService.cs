@@ -21,7 +21,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
     {
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly ConcurrentDictionary<string, IList<IMetricCollector>> _metrics = new();
+        private readonly ConcurrentDictionary<string, IList<IMetricAggregator>> _metrics = new();
         private readonly IMetricsQueryService _metricsQueryService;
         private readonly INodeMetadata _nodeMetaData;
         private readonly IEntityDiscoveryService _entityDiscoveryService;
@@ -174,7 +174,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                await ((IDataTransmissionMetricCollector)metric).UpdateDataSentAsync(totalBytes, elapsedTicks, token);
+                await ((IDataTransmissionMetricAggregator)metric).UpdateDataSentAsync(totalBytes, elapsedTicks, token);
             }
             updated ??= true;
             return updated.Value;
@@ -208,13 +208,13 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                await((IDataTransmissionMetricCollector)metric).UpdateDataReceivedAsync(totalBytes, elapsedTicks, token);
+                await((IDataTransmissionMetricAggregator)metric).UpdateDataReceivedAsync(totalBytes, elapsedTicks, token);
             }
             updated ??= false;
             return updated.Value;
         }
 
-        private async ValueTask<IEnumerable<IMetricCollector>> GetDataTransmissionMetricsAsync(Guid requestId, CancellationToken token)
+        private async ValueTask<IEnumerable<IMetricAggregator>> GetDataTransmissionMetricsAsync(Guid requestId, CancellationToken token)
         {
             await QueryMetricsAsync(requestId, token);
             return _metrics[requestId.ToString()]

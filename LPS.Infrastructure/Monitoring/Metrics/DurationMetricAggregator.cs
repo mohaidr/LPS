@@ -13,17 +13,17 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class DurationMetricCollector : BaseMetricCollector, IResponseMetricCollector
+    public class DurationMetricAggregator : BaseMetricAggregator, IResponseMetricCollector
     {
         private const string MetricName = "Duration";
 
         private readonly SemaphoreSlim _semaphore = new(1, 1);
-        private readonly LPSDurationMetricDimensionSetProtected _dimensionSet;
+        private readonly LPSDurationMetricSnapshotProtected _snapshot;
         private readonly LongHistogram _histogram;
         private readonly ResponseMetricEventSource _eventSource;
         private readonly IMetricsVariableService _metricsVariableService; // NEW
         private readonly string _roundName;
-        internal DurationMetricCollector(
+        internal DurationMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
             ILogger logger,
@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(
+            _snapshot = new LPSDurationMetricSnapshotProtected(
                 roundName,
                 _httpIteration.Id,
                 httpIteration.Name,
@@ -47,7 +47,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 httpIteration.HttpRequest.HttpVersion);
         }
 
-        protected override IDimensionSet DimensionSet => _dimensionSet;
+        protected override IMetricShapshot Snapshot => _snapshot;
 
         public override LPSMetricType MetricType => LPSMetricType.ResponseTime;
 
@@ -56,7 +56,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync();
             try
             {
-                _dimensionSet.Update(response.TotalTime.TotalMilliseconds, _histogram);
+                _snapshot.Update(response.TotalTime.TotalMilliseconds, _histogram);
                 _eventSource.WriteResponseTimeMetrics(response.TotalTime.TotalMilliseconds);
 
                 await PushMetricAsync(token);
@@ -92,7 +92,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         // NEW: Serialize and push to variable service
         private async Task PushMetricAsync(CancellationToken token)
         {
-            var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
+            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                 WriteIndented = false
@@ -101,9 +101,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
         }
 
-        private class LPSDurationMetricDimensionSetProtected : DurationMetricDimensionSet
+        private class LPSDurationMetricSnapshotProtected : DurationMetricSnapshot
         {
-            public LPSDurationMetricDimensionSetProtected(
+            public LPSDurationMetricSnapshotProtected(
                 string roundName,
                 Guid iterationId,
                 string iterationName,
@@ -139,7 +139,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public class DurationMetricDimensionSet : HttpMetricDimensionSet
+    public class DurationMetricSnapshot : HttpMetricSnapshot
     {
         public double SumResponseTime { get; protected set; }
         public double AverageResponseTime { get; protected set; }

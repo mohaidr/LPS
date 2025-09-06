@@ -18,7 +18,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
         private readonly IMetricsRepository _metricsRepository = metricsRepository ?? throw new ArgumentNullException(nameof(metricsRepository));
 
-        public async ValueTask<List<IMetricCollector>> GetAsync(Func<IMetricCollector, bool> predicate, CancellationToken token)
+        public async ValueTask<List<IMetricAggregator>> GetAsync(Func<IMetricAggregator, bool> predicate, CancellationToken token)
         {
             try
             {
@@ -34,7 +34,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        public async ValueTask<List<T>> GetAsync<T>(Func<T, bool> predicate, CancellationToken token) where T : IMetricCollector
+        public async ValueTask<List<T>> GetAsync<T>(Func<T, bool> predicate, CancellationToken token) where T : IMetricAggregator
         {
             try
             {
@@ -50,7 +50,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        public async Task<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate, CancellationToken token) where T : IMetricCollector
+        public async Task<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate, CancellationToken token) where T : IMetricAggregator
         {
             try
             {

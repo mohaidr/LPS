@@ -11,9 +11,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public class MetricsContainer
     {
-        public IReadOnlyList<IMetricCollector> Metrics { get; }
+        public IReadOnlyList<IMetricAggregator> Metrics { get; }
 
-        public MetricsContainer(IReadOnlyList<IMetricCollector> metrics)
+        public MetricsContainer(IReadOnlyList<IMetricAggregator> metrics)
         {
             Metrics = metrics;
         }

@@ -63,14 +63,14 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        private IReadOnlyList<IMetricCollector> CreateMetricCollectors(string roundName, HttpIteration httpIteration)
+        private IReadOnlyList<IMetricAggregator> CreateMetricCollectors(string roundName, HttpIteration httpIteration)
         {
-            return new List<IMetricCollector>
+            return new List<IMetricAggregator>
             {
-               new ResponseCodeMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider,_metricsVariableService),
-               new DurationMetricCollector(httpIteration, roundName, _logger, _runtimeOperationIdProvider,_metricsVariableService) ,
-               new ThroughputMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider, _metricsVariableService),
-               new DataTransmissionMetricCollector(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider,_metricsVariableService)
+               new ResponseCodeMetricAggregator(httpIteration, roundName, _logger, _runtimeOperationIdProvider,_metricsVariableService),
+               new DurationMetricAggregator(httpIteration, roundName, _logger, _runtimeOperationIdProvider,_metricsVariableService) ,
+               new ThroughputMetricAggregator(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider, _metricsVariableService),
+               new DataTransmissionMetricAggregator(httpIteration, roundName, _metricsQueryService, _logger, _runtimeOperationIdProvider,_metricsVariableService)
             };
         }
         

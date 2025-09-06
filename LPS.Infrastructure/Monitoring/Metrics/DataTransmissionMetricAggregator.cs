@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class DataTransmissionMetricCollector : BaseMetricCollector, IDataTransmissionMetricCollector
+    public class DataTransmissionMetricAggregator : BaseMetricAggregator, IDataTransmissionMetricAggregator
     {
         private const string MetricName = "DataTransmission";
 
@@ -26,13 +26,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private double _totalDataUploadTimeSeconds = 0;
         private double _totalDataTransmissionSeconds = 0;
         private double _totalDataDownloadTimeSeconds = 0;
-        private readonly LPSDurationMetricDimensionSetProtected _dimensionSet;
+        private readonly LPSDurationMetricSnapshotProtected _snapshot;
         private readonly IMetricsQueryService _metricsQueryService;
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
 
-        internal DataTransmissionMetricCollector(
+        internal DataTransmissionMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
             IMetricsQueryService metricsQueryService,
@@ -43,7 +43,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _roundName = roundName;
             _httpIteration = httpIteration;
-            _dimensionSet = new LPSDurationMetricDimensionSetProtected(
+            _snapshot = new LPSDurationMetricSnapshotProtected(
                 _roundName,
                 httpIteration.Id,
                 httpIteration.Name,
@@ -57,7 +57,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
         }
 
-        protected override IDimensionSet DimensionSet => _dimensionSet;
+        protected override IMetricShapshot Snapshot => _snapshot;
 
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
 
@@ -132,24 +132,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 _totalDataTransmissionSeconds = _totalDataDownloadTimeSeconds + _totalDataUploadTimeSeconds;
 
-                _dimensionSet.UpdateDataSent(
+                _snapshot.UpdateDataSent(
                     _totalDataSent,
                     _requestsCount > 0 ? _totalDataSent / _requestsCount : 0,
                     _totalDataUploadTimeSeconds > 0 ? _totalDataSent / _totalDataUploadTimeSeconds : 0,
                     _totalDataTransmissionSeconds * 1000);
 
-                _dimensionSet.UpdateDataReceived(
+                _snapshot.UpdateDataReceived(
                     _totalDataReceived,
                     _requestsCount > 0 ? _totalDataReceived / _requestsCount : 0,
                     _totalDataDownloadTimeSeconds > 0 ? _totalDataReceived / _totalDataDownloadTimeSeconds : 0,
                     _totalDataTransmissionSeconds * 1000);
 
-                _dimensionSet.UpdateAverageBytes(
+                _snapshot.UpdateAverageBytes(
                     _totalDataTransmissionSeconds > 0 ? (_totalDataReceived + _totalDataSent) / _totalDataTransmissionSeconds : 0,
                     _totalDataTransmissionSeconds * 1000);
 
                 // Serialize the dimension set and publish to variable system
-                var json = JsonSerializer.Serialize(_dimensionSet, new JsonSerializerOptions
+                var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
                 {
                     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
                     WriteIndented = false
@@ -164,16 +164,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private async Task<int> GetRequestsCountAsync(CancellationToken token)
         {
             var throughputCollectors = await _metricsQueryService
-                .GetAsync<ThroughputMetricCollector>(m => m.HttpIteration.Id == _dimensionSet.IterationId, token);
+                .GetAsync<ThroughputMetricAggregator>(m => m.HttpIteration.Id == _snapshot.IterationId, token);
 
             var single = throughputCollectors.Single();
 
-            var dim = await single.GetDimensionSetAsync<ThroughputMetricDimensionSet>(token);
+            var dim = await single.GetSnapshotAsync<ThroughputMetricSnapshot>(token);
             return dim.RequestsCount;
         }
-        private class LPSDurationMetricDimensionSetProtected : DataTransmissionMetricDimensionSet
+        private class LPSDurationMetricSnapshotProtected : DataTransmissionMetricSnapshot
         {
-            public LPSDurationMetricDimensionSetProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
+            public LPSDurationMetricSnapshotProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
             {
                 RoundName = roundName;
                 IterationId = iterationId;
@@ -210,7 +210,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
     }
 
-    public class DataTransmissionMetricDimensionSet : HttpMetricDimensionSet
+    public class DataTransmissionMetricSnapshot : HttpMetricSnapshot
     {
         public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
         public double DataSent { get; protected set; }

@@ -4,7 +4,7 @@ using System.Text.Json.Serialization;
 namespace LPS.Infrastructure.Common.Interfaces
 {
 
-    public interface IHttpDimensionSet : IDimensionSet
+    public interface IHttpDimensionSet : IMetricShapshot
     {
         public string RoundName { get;}
         public Guid IterationId { get; }

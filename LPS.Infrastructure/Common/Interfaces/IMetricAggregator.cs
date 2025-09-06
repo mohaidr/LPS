@@ -11,13 +11,13 @@ namespace LPS.Infrastructure.Common.Interfaces
         Throughput,
         DataTransmission
     }
-    public interface IMetricCollector
+    public interface IMetricAggregator
     {
         public HttpIteration HttpIteration { get; }
         public LPSMetricType MetricType { get; }
         public string Stringify();
-        public ValueTask<IDimensionSet> GetDimensionSetAsync(CancellationToken token);
-        ValueTask<TDimensionSet> GetDimensionSetAsync<TDimensionSet>(CancellationToken token) where TDimensionSet : IDimensionSet;
+        public ValueTask<IMetricShapshot> GetSnapshotAsync(CancellationToken token);
+        ValueTask<TDimensionSet> GetSnapshotAsync<TDimensionSet>(CancellationToken token) where TDimensionSet : IMetricShapshot;
         public void Start();
         public void Stop();
         public bool IsStarted { get; }
