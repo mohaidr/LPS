@@ -35,22 +35,22 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<DurationMetricSearchResponse> GetDurationMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<DurationMetricAggregator, DurationMetricSnapshot>(request);
+            var aggregators = await FilterAggregatorsAsync<DurationMetricAggregator, DurationMetricSnapshot>(request);
 
             var response = new DurationMetricSearchResponse();
-            foreach (var collector in collectors)
+            foreach (var aggregator in aggregators)
             {
-                var d = (DurationMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
+                var snapshot = (DurationMetricSnapshot)await aggregator.GetSnapshotAsync(_cts.Token);
                 response.Responses.Add(new DurationMetricResponse
                 {
-                    Metadata = BuildMetadata(d),
-                    SumResponseTime = d.SumResponseTime,
-                    AverageResponseTime = d.AverageResponseTime,
-                    MinResponseTime = d.MinResponseTime,
-                    MaxResponseTime = d.MaxResponseTime,
-                    P90ResponseTime = d.P90ResponseTime,
-                    P50ResponseTime = d.P50ResponseTime,
-                    P10ResponseTime = d.P10ResponseTime
+                    Metadata = BuildMetadata(snapshot),
+                    SumResponseTime = snapshot.SumResponseTime,
+                    AverageResponseTime = snapshot.AverageResponseTime,
+                    MinResponseTime = snapshot.MinResponseTime,
+                    MaxResponseTime = snapshot.MaxResponseTime,
+                    P90ResponseTime = snapshot.P90ResponseTime,
+                    P50ResponseTime = snapshot.P50ResponseTime,
+                    P10ResponseTime = snapshot.P10ResponseTime
                 });
             }
 
@@ -59,23 +59,23 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<DataTransmissionMetricSearchResponse> GetDataTransmissionMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<DataTransmissionMetricAggregator, DataTransmissionMetricSnapshot>(request);
+            var aggregators = await FilterAggregatorsAsync<DataTransmissionMetricAggregator, DataTransmissionMetricSnapshot>(request);
             var response = new DataTransmissionMetricSearchResponse();
 
-            foreach (var collector in collectors)
+            foreach (var aggregator in aggregators)
             {
-                var d = (DataTransmissionMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
+                var snapshot = (DataTransmissionMetricSnapshot)await aggregator.GetSnapshotAsync(_cts.Token);
                 response.Responses.Add(new DataTransmissionMetricResponse
                 {
-                    Metadata = BuildMetadata(d),
-                    TotalDataTransmissionTimeInMilliseconds = d.TotalDataTransmissionTimeInMilliseconds,
-                    DataSent = d.DataSent,
-                    DataReceived = d.DataReceived,
-                    AverageDataSent = d.AverageDataSent,
-                    AverageDataReceived = d.AverageDataReceived,
-                    UpstreamThroughputBps = d.UpstreamThroughputBps,
-                    DownstreamThroughputBps = d.DownstreamThroughputBps,
-                    ThroughputBps = d.ThroughputBps
+                    Metadata = BuildMetadata(snapshot),
+                    TotalDataTransmissionTimeInMilliseconds = snapshot.TotalDataTransmissionTimeInMilliseconds,
+                    DataSent = snapshot.DataSent,
+                    DataReceived = snapshot.DataReceived,
+                    AverageDataSent = snapshot.AverageDataSent,
+                    AverageDataReceived = snapshot.AverageDataReceived,
+                    UpstreamThroughputBps = snapshot.UpstreamThroughputBps,
+                    DownstreamThroughputBps = snapshot.DownstreamThroughputBps,
+                    ThroughputBps = snapshot.ThroughputBps
                 });
             }
 
@@ -84,30 +84,30 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<ThroughputMetricSearchResponse> GetThroughputMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<ThroughputMetricAggregator, ThroughputMetricSnapshot>(request);
+            var aggregators = await FilterAggregatorsAsync<ThroughputMetricAggregator, ThroughputMetricSnapshot>(request);
             var response = new ThroughputMetricSearchResponse();
 
-            foreach (var collector in collectors)
+            foreach (var aggregator in aggregators)
             {
-                var d = (ThroughputMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
+                var snapshot = (ThroughputMetricSnapshot)await aggregator.GetSnapshotAsync(_cts.Token);
                 response.Responses.Add(new ThroughputMetricResponse
                 {
-                    Metadata = BuildMetadata(d),
-                    TotalDataTransmissionTimeInMilliseconds = d.TotalDataTransmissionTimeInMilliseconds,
-                    RequestsCount = d.RequestsCount,
-                    ActiveRequestsCount = d.ActiveRequestsCount,
-                    SuccessfulRequestCount = d.SuccessfulRequestCount,
-                    FailedRequestsCount = d.FailedRequestsCount,
-                    ErrorRate = d.ErrorRate,
+                    Metadata = BuildMetadata(snapshot),
+                    TotalDataTransmissionTimeInMilliseconds = snapshot.TotalDataTransmissionTimeInMilliseconds,
+                    RequestsCount = snapshot.RequestsCount,
+                    ActiveRequestsCount = snapshot.ActiveRequestsCount,
+                    SuccessfulRequestCount = snapshot.SuccessfulRequestCount,
+                    FailedRequestsCount = snapshot.FailedRequestsCount,
+                    ErrorRate = snapshot.ErrorRate,
                     RequestsRate = new Protos.Shared.RequestsRate
                     {
-                        Every = d.RequestsRate.Every ?? string.Empty,
-                        Value = d.RequestsRate.Value
+                        Every = snapshot.RequestsRate.Every ?? string.Empty,
+                        Value = snapshot.RequestsRate.Value
                     },
                     RequestsRatePerCoolDownPeriod = new Protos.Shared.RequestsRate
                     {
-                        Every = d.RequestsRatePerCoolDownPeriod.Every ?? string.Empty,
-                        Value = d.RequestsRatePerCoolDownPeriod.Value
+                        Every = snapshot.RequestsRatePerCoolDownPeriod.Every ?? string.Empty,
+                        Value = snapshot.RequestsRatePerCoolDownPeriod.Value
                     }
                 });
             }
@@ -119,18 +119,18 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
 
         public override async Task<ResponseCodeMetricSearchResponse> GetResponseCodeMetrics(MetricRequest request, ServerCallContext context)
         {
-            var collectors = await FilterCollectorsAsync<ResponseCodeMetricAggregator, ResponseCodeMetricSnapshot>(request);
+            var aggregators = await FilterAggregatorsAsync<ResponseCodeMetricAggregator, ResponseCodeMetricSnapshot>(request);
             var response = new ResponseCodeMetricSearchResponse();
 
-            foreach (var collector in collectors)
+            foreach (var aggregator in aggregators)
             {
-                var d = (ResponseCodeMetricSnapshot)await collector.GetSnapshotAsync(_cts.Token);
+                var snapshot = (ResponseCodeMetricSnapshot)await aggregator.GetSnapshotAsync(_cts.Token);
                 var resp = new ResponseCodeMetricResponse
                 {
-                    Metadata = BuildMetadata(d)
+                    Metadata = BuildMetadata(snapshot)
                 };
 
-                foreach (var summary in d.ResponseSummaries)
+                foreach (var summary in snapshot.ResponseSummaries)
                 {
                     resp.Summaries.Add(new Protos.Shared.HttpResponseSummary
                     {
@@ -146,13 +146,13 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
             return response;
         }
 
-        private async Task<List<TCollector>> FilterCollectorsAsync<TCollector, TDimensionSet>(MetricRequest request)
-            where TCollector : class, IMetricAggregator
-            where TDimensionSet : HttpMetricSnapshot
+        private async Task<List<TAggregator>> FilterAggregatorsAsync<TAggregator, TSnapshot>(MetricRequest request)
+            where TAggregator : class, IMetricAggregator
+            where TSnapshot : HttpMetricSnapshot
         {
-            var results = await _metricsQueryService.GetAsync<TCollector>(async collector =>
+            var results = await _metricsQueryService.GetAsync<TAggregator>(async collector =>
             {
-                var d = (TDimensionSet)await collector.GetSnapshotAsync(_cts.Token);
+                var d = (TSnapshot)await collector.GetSnapshotAsync(_cts.Token);
                 var checks = new List<bool>();
 
                 if (!string.IsNullOrEmpty(request.FullyQualifiedName))

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class HttpMetricSnapshot : IHttpDimensionSet
+    public class HttpMetricSnapshot : IHttpSnapshot
     {
         [JsonIgnore]
         public DateTime TimeStamp { get; protected set; }

@@ -163,13 +163,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private async Task<int> GetRequestsCountAsync(CancellationToken token)
         {
-            var throughputCollectors = await _metricsQueryService
+            var throughputAggregators = await _metricsQueryService
                 .GetAsync<ThroughputMetricAggregator>(m => m.HttpIteration.Id == _snapshot.IterationId, token);
 
-            var single = throughputCollectors.Single();
+            var single = throughputAggregators.Single();
 
-            var dim = await single.GetSnapshotAsync<ThroughputMetricSnapshot>(token);
-            return dim.RequestsCount;
+            var snapshot = await single.GetSnapshotAsync<ThroughputMetricSnapshot>(token);
+            return snapshot.RequestsCount;
         }
         private class LPSDurationMetricSnapshotProtected : DataTransmissionMetricSnapshot
         {

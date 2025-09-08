@@ -100,20 +100,20 @@ namespace Apis.Controllers
 
                     string status = (await _iterationStatusMonitor.GetTerminalStatusAsync(((IMetricAggregator)metric).HttpIteration)).ToString();
 
-                    var metricData = metricsList.FirstOrDefault(m => m.IterationId == ((IHttpDimensionSet)dimensionSet).IterationId);
+                    var metricData = metricsList.FirstOrDefault(m => m.IterationId == ((IHttpSnapshot)dimensionSet).IterationId);
                     if (metricData == null)
                     {
                         metricData = new MetricData
                         {
                             ExecutionStatus = status,
-                            TimeStamp = ((IHttpDimensionSet)dimensionSet).TimeStamp,
-                            RoundName = ((IHttpDimensionSet)dimensionSet).RoundName,
-                            IterationId = ((IHttpDimensionSet)dimensionSet).IterationId,
-                            IterationName = ((IHttpDimensionSet)dimensionSet).IterationName,
-                            URL = ((IHttpDimensionSet)dimensionSet).URL,
-                            HttpMethod = ((IHttpDimensionSet)dimensionSet).HttpMethod,
-                            HttpVersion = ((IHttpDimensionSet)dimensionSet).HttpVersion,
-                            Endpoint = $"{((IHttpDimensionSet)dimensionSet).IterationName} {((IHttpDimensionSet)dimensionSet).URL} HTTP/{((IHttpDimensionSet)dimensionSet).HttpVersion}"
+                            TimeStamp = ((IHttpSnapshot)dimensionSet).TimeStamp,
+                            RoundName = ((IHttpSnapshot)dimensionSet).RoundName,
+                            IterationId = ((IHttpSnapshot)dimensionSet).IterationId,
+                            IterationName = ((IHttpSnapshot)dimensionSet).IterationName,
+                            URL = ((IHttpSnapshot)dimensionSet).URL,
+                            HttpMethod = ((IHttpSnapshot)dimensionSet).HttpMethod,
+                            HttpVersion = ((IHttpSnapshot)dimensionSet).HttpVersion,
+                            Endpoint = $"{((IHttpSnapshot)dimensionSet).IterationName} {((IHttpSnapshot)dimensionSet).URL} HTTP/{((IHttpSnapshot)dimensionSet).HttpVersion}"
                         };
                         metricsList.Add(metricData);
                     }

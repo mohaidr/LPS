@@ -9,7 +9,7 @@ namespace LPS.Infrastructure.Common.Interfaces
     {
         ValueTask<List<IMetricAggregator>> GetAsync(Func<IMetricAggregator, bool> predicate, CancellationToken token);
         ValueTask<List<T>> GetAsync<T>(Func<T, bool> predicate, CancellationToken token) where T : IMetricAggregator;
-        Task<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate, CancellationToken token) where T : IMetricAggregator;
+        ValueTask<List<T>> GetAsync<T>(Func<T, Task<bool>> predicate, CancellationToken token) where T : IMetricAggregator;
 
     }
 }

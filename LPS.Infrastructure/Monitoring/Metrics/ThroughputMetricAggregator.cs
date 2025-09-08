@@ -71,16 +71,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             try
             {
-                var dimensionSet = await (await _metricsQueryService
+                var snapshot = await (await _metricsQueryService
                                         .GetAsync<ResponseCodeMetricAggregator>(m => m.HttpIteration.Id == _httpIteration.Id, token))
                                         .SingleOrDefault()
                                         .GetSnapshotAsync<ResponseCodeMetricSnapshot>(token);
 
-                int successCount = dimensionSet
+                int successCount = snapshot
                     .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
                     .Sum(r => r.Count);
 
-                int failedCount = dimensionSet
+                int failedCount = snapshot
                     .ResponseSummaries.Where(r => HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
                     .Sum(r => r.Count);
 

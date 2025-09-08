@@ -21,8 +21,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
     {
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly ConcurrentDictionary<string, IList<IMetricAggregator>> _metrics = new();
-        private readonly IMetricsQueryService _metricsQueryService;
+        private readonly ConcurrentDictionary<string, IReadOnlyList<IMetricAggregator>> _aggregators = new();
+        private readonly IMetricAggregatorFactory _metricAggregatorFactory;
         private readonly INodeMetadata _nodeMetaData;
         private readonly IEntityDiscoveryService _entityDiscoveryService;
         private readonly MetricsProtoServiceClient _grpcClient;
@@ -32,14 +32,14 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             INodeMetadata nodeMetaData,
             IEntityDiscoveryService entityDiscoveryService,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricsQueryService metricsQueryService,
+            IMetricAggregatorFactory metricAggregatorFactory,
             IClusterConfiguration clusterConfiguration,
             ICustomGrpcClientFactory customGrpcClientFactory)
         {
             _logger = logger;
             _entityDiscoveryService = entityDiscoveryService;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _metricsQueryService = metricsQueryService;
+            _metricAggregatorFactory = metricAggregatorFactory;
             _nodeMetaData = nodeMetaData;
             _clusterConfiguration = clusterConfiguration;
             _customGrpcClientFactory = customGrpcClientFactory;
@@ -75,7 +75,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return updated.Value;
             }
             await QueryMetricsAsync(requestId, token);
-            var throughputMetric = _metrics[requestId.ToString()]
+            var throughputMetric = _aggregators[requestId.ToString()]
                 .Single(metric => metric.MetricType == LPSMetricType.Throughput);
 
             var result = await ((IThroughputMetricCollector)throughputMetric).IncreaseConnectionsCount(token);
@@ -106,7 +106,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return updated.Value;
             }
             await QueryMetricsAsync(requestId, token);
-            var throughputMetric = _metrics[requestId.ToString()]
+            var throughputMetric = _aggregators[requestId.ToString()]
                 .Single(metric => metric.MetricType == LPSMetricType.Throughput);
             var result = await ((IThroughputMetricCollector)throughputMetric).DecreseConnectionsCount(token);
             updated ??= result;
@@ -140,7 +140,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
 
             await QueryMetricsAsync(requestId, token);
-            var responseMetrics = _metrics[requestId.ToString()]
+            var responseMetrics = _aggregators[requestId.ToString()]
                 .Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
             var result= await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse, token)));
             updated ??= true;
@@ -217,14 +217,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private async ValueTask<IEnumerable<IMetricAggregator>> GetDataTransmissionMetricsAsync(Guid requestId, CancellationToken token)
         {
             await QueryMetricsAsync(requestId, token);
-            return _metrics[requestId.ToString()]
+            return _aggregators[requestId.ToString()]
                 .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
         }
 
         private async Task QueryMetricsAsync(Guid requestId, CancellationToken token) // call this so in case the request id was sent by the worker to be translated to the matching one on the master
         {
-            _metrics.TryAdd(requestId.ToString(),
-                await _metricsQueryService.GetAsync(metric => metric.HttpIteration.HttpRequest.Id == requestId, token));
+            var iteration = _metricAggregatorFactory.Iterations.Single(iteration => iteration.HttpRequest.Id == requestId);
+            _metricAggregatorFactory.TryGet(iteration.Id, out IReadOnlyList<IMetricAggregator> aggregators);
+            _aggregators.TryAdd(requestId.ToString(), aggregators);
         }
         private async Task<Guid> DiscoverRequestIdOnMaster(Guid requestId, CancellationToken token)
         {
