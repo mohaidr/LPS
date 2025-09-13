@@ -2,8 +2,6 @@
 using LPS.Infrastructure.Monitoring.Metrics;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,6 +22,19 @@ namespace LPS.Infrastructure.Common.Interfaces
         /// <summary>Try to get the latest snapshot for a given iteration and metric type.</summary>
         bool TryGetLatest<TSnapshot>(Guid iterationId, LPSMetricType metricType, out TSnapshot? snapshot)
             where TSnapshot : HttpMetricSnapshot;
+
+        /// <summary>
+        /// Gets the latest snapshot for each metric type for the given iteration (0–4 items),
+        /// ordered by LPSMetricType. Returns false if none exist.
+        /// </summary>
+        bool TryGetLatest(Guid iterationId, out IReadOnlyList<HttpMetricSnapshot> snapshots);
+
+
+        /// <summary>
+        /// Try to get all snapshots for a given iteration across all metric types.
+        /// Recommended to return them ordered chronologically if your snapshot type carries a timestamp/sequence.
+        /// </summary>
+        bool TryGet(Guid iterationId, out IReadOnlyList<HttpMetricSnapshot> snapshots);
 
         /// <summary>Enumerate the registered iterations (those that have pushed at least one snapshot).</summary>
         IEnumerable<HttpIteration> Iterations { get; }

@@ -24,7 +24,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public string HttpMethod { get; protected set; }
         [JsonIgnore]
         public string HttpVersion { get; protected set; }
-
         public abstract LPSMetricType MetricType { get; }
     }
 }

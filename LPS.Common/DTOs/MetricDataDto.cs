@@ -21,9 +21,9 @@ namespace LPS.UI.Common.DTOs
         public string Endpoint { get; init; } = string.Empty;
         public string ExecutionStatus { get; init; } = string.Empty;
 
-        public ResponseCodeMetricSnapshot? ResponseBreakDownMetrics { get; init; }   // ResponseCode
-        public DurationMetricSnapshot? ResponseTimeMetrics { get; init; }        // Duration / ResponseTime
-        public ThroughputMetricSnapshot? ConnectionMetrics { get; init; }          // Throughput
+        public ResponseCodeMetricSnapshot? ResponseBreakDownMetrics { get; init; }
+        public DurationMetricSnapshot? ResponseTimeMetrics { get; init; }
+        public ThroughputMetricSnapshot? ConnectionMetrics { get; init; }
         public DataTransmissionMetricSnapshot? DataTransmissionMetrics { get; init; }
     }
 }

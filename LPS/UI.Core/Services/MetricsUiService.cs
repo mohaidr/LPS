@@ -57,24 +57,33 @@ namespace LPS.UI.Core.Services
 
             foreach (var iteration in iterations)
             {
-                // Grab the latest snapshot(s) we need
-                _store.TryGetLatest<ResponseCodeMetricSnapshot>(iteration.Id, LPSMetricType.ResponseCode, out var respCode);
-                _store.TryGetLatest<DurationMetricSnapshot>(iteration.Id, LPSMetricType.ResponseTime, out var duration);
-                _store.TryGetLatest<ThroughputMetricSnapshot>(iteration.Id, LPSMetricType.Throughput, out var throughput);
-                _store.TryGetLatest<DataTransmissionMetricSnapshot>(iteration.Id, LPSMetricType.DataTransmission, out var dataTx);
+                // Get latest-per-type snapshots for this iteration (0–N items)
+                if (!_store.TryGetLatest(iteration.Id, out var latestList) || latestList.Count == 0)
+                    continue;
 
-                // If the caller asked to filter by RoundName, do it using the snapshot metadata.
+                // Extract typed latest snapshots (if present)
+                var respCode = latestList.OfType<ResponseCodeMetricSnapshot>().FirstOrDefault();
+                var duration = latestList.OfType<DurationMetricSnapshot>().FirstOrDefault();
+                var throughput = latestList.OfType<ThroughputMetricSnapshot>().FirstOrDefault();
+                var dataTx = latestList.OfType<DataTransmissionMetricSnapshot>().FirstOrDefault();
+
+                // If the caller asked to filter by RoundName, do it using any available snapshot
                 if (!string.IsNullOrWhiteSpace(q.RoundName))
                 {
-                    var anyForRound = GetAnySnapshot(respCode, duration, throughput, dataTx);
-                    // If we still don't have a snapshot, this iteration has no data yet → skip
-                    if (anyForRound is null) continue;
+                    HttpMetricSnapshot? anyForRound =
+                        respCode as HttpMetricSnapshot
+                        ?? duration as HttpMetricSnapshot
+                        ?? throughput as HttpMetricSnapshot
+                        ?? dataTx as HttpMetricSnapshot;
+
+                    if (anyForRound is null)
+                        continue;
 
                     if (!string.Equals(anyForRound.RoundName, q.RoundName, StringComparison.OrdinalIgnoreCase))
                         continue; // round doesn't match → skip
                 }
 
-                // If caller asked for a specific metric type, null-out others (no tuple switch)
+                // If caller asked for a specific metric type, null-out others
                 if (q.MetricType is LPSMetricType only)
                 {
                     if (only != LPSMetricType.ResponseCode) respCode = null;
@@ -102,7 +111,7 @@ namespace LPS.UI.Core.Services
                     TimeStamp = any?.TimeStamp ?? DateTime.UtcNow,
                     RoundName = any?.RoundName ?? string.Empty,
                     IterationId = any?.IterationId ?? iteration.Id,
-                    IterationName = any?.IterationName ?? iteration.Name, // if IterationName is not set on snapshot, we fall back
+                    IterationName = any?.IterationName ?? iteration.Name,
                     URL = any?.URL ?? iteration.HttpRequest?.Url?.Url ?? string.Empty,
                     HttpMethod = any?.HttpMethod ?? iteration.HttpRequest?.HttpMethod ?? string.Empty,
                     HttpVersion = any?.HttpVersion ?? iteration.HttpRequest?.HttpVersion ?? string.Empty,
@@ -119,18 +128,7 @@ namespace LPS.UI.Core.Services
 
             return results;
         }
-
-        private static HttpMetricSnapshot? GetAnySnapshot(
-            ResponseCodeMetricSnapshot? respCode,
-            DurationMetricSnapshot? duration,
-            ThroughputMetricSnapshot? throughput,
-            DataTransmissionMetricSnapshot? dataTx)
-        {
-            return respCode as HttpMetricSnapshot
-                ?? duration as HttpMetricSnapshot
-                ?? throughput as HttpMetricSnapshot
-                ?? dataTx as HttpMetricSnapshot;
-        }
+    
     }
 
 }

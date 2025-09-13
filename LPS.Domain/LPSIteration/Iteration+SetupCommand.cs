@@ -17,7 +17,6 @@ namespace LPS.Domain
     {
         public class SetupCommand : ICommand<Iteration>
         {
-
             public SetupCommand()
             {
             }

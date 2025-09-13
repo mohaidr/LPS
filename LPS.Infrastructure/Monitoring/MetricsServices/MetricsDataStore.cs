@@ -8,7 +8,6 @@ using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.Entity;
 using LPS.Infrastructure.Monitoring.Metrics;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
@@ -22,18 +21,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
     {
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _op;
-        private readonly IEntityRepositoryService _entityRepositoryService;
+
         // To avoid unbounded memory, you can cap each metric-type queue length.
         private readonly int _perTypeCapacity;
 
-        // Allowed metric types (must match your 4 aggregators).
-        private static readonly HashSet<LPSMetricType> _allowedTypes = new()
-        {
-            LPSMetricType.ResponseCode,
-            LPSMetricType.ResponseTime,
-            LPSMetricType.Throughput,
-            LPSMetricType.DataTransmission
-        };
         private sealed class PerType
         {
             public readonly ConcurrentQueue<HttpMetricSnapshot> Queue = new();
@@ -57,7 +48,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         public MetricDataStoreService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            int perTypeCapacity = 2048) // sensible default; adjust if you want
+            int perTypeCapacity = 2048)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
@@ -68,14 +59,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             if (iteration is null) throw new ArgumentNullException(nameof(iteration));
             if (snapshot is null) throw new ArgumentNullException(nameof(snapshot));
-
-            if (!_allowedTypes.Contains(snapshot.MetricType))
-            {
-                await _logger.LogAsync(_op.OperationId,
-                    $"MetricDataStore: Rejected snapshot for unsupported type '{snapshot.MetricType}' (Iteration {iteration.Id}).",
-                    LPSLoggingLevel.Warning, token);
-                return;
-            }
 
             var entry = _store.GetOrAdd(iteration.Id, _ => new Entry(iteration));
             var per = entry.Types.GetOrAdd(snapshot.MetricType, _ => new PerType());
@@ -101,8 +84,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             if (!_store.TryGetValue(iterationId, out var entry)) return false;
             if (!entry.Types.TryGetValue(metricType, out var per)) return false;
 
-            snapshots = per.Queue.ToArray(); // OK: not on hot path
-            return true;
+            snapshots = per.Queue.ToArray(); // snapshot the queue
+            return snapshots.Count > 0;
         }
 
         public bool TryGetLatest<TSnapshot>(Guid iterationId, LPSMetricType metricType, out TSnapshot? snapshot)
@@ -120,6 +103,40 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return true;
             }
             return false;
+        }
+
+        // NEW #1: all snapshots across all metric types for the iteration
+        public bool TryGet(Guid iterationId, out IReadOnlyList<HttpMetricSnapshot> snapshots)
+        {
+            snapshots = Array.Empty<HttpMetricSnapshot>();
+            if (!_store.TryGetValue(iterationId, out var entry)) return false;
+
+            var list = new List<HttpMetricSnapshot>(capacity: 256);
+            foreach (var per in entry.Types.Values)
+            {
+                var arr = per.Queue.ToArray(); // FIFO preserved per type
+                if (arr.Length > 0) list.AddRange(arr);
+            }
+
+            snapshots = list;
+            return list.Count > 0;
+        }
+
+        // NEW #2: latest snapshot per metric type for the iteration
+        public bool TryGetLatest(Guid iterationId, out IReadOnlyList<HttpMetricSnapshot> snapshots)
+        {
+            snapshots = Array.Empty<HttpMetricSnapshot>();
+            if (!_store.TryGetValue(iterationId, out var entry)) return false;
+
+            var list = new List<HttpMetricSnapshot>(capacity: entry.Types.Count);
+            foreach (var per in entry.Types.Values)
+            {
+                var last = per.Latest;
+                if (last is not null) list.Add(last);
+            }
+
+            snapshots = list;
+            return list.Count > 0;
         }
 
         public IEnumerable<HttpIteration> Iterations =>
