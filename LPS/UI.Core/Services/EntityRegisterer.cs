@@ -42,29 +42,35 @@ namespace LPS.UI.Core.Services
                 _entityRepositoryService.Add(round);
                 foreach (var iteration in round.GetReadOnlyIterations())
                 {
-                    _entityRepositoryService.Add(iteration);
-
-                    if (((HttpIteration)iteration).HttpRequest != null)
+                    if (iteration is HttpIteration)
                     {
-                        var fqdn = $"plan/{plan.Name}/round/{round.Name}/Iteration/{iteration.Name}";
-                        _entityDiscoveryService.AddEntityDiscoveryRecord(fqdn, round.Id, iteration.Id, ((HttpIteration)iteration).HttpRequest.Id, _nodeRegistry.GetLocalNode()); // register locally
-                        if (_nodeMetaData.NodeType != Infrastructure.Nodes.NodeType.Master)
-                        {
-                            var request = new Protos.Shared.EntityDiscoveryRecord
-                            {
-                                FullyQualifiedName = fqdn,
-                                RoundId = round.Id.ToString(),
-                                IterationId = iteration.Id.ToString(),
-                                RequestId = ((HttpIteration)iteration).HttpRequest.Id.ToString(),
-                                Node = new Protos.Shared.Node
-                                {
-                                    Name = _nodeMetaData.NodeName,
-                                    NodeIP = _nodeMetaData.NodeIP,
-                                }
-                            };
+                        _entityRepositoryService.Add((HttpIteration)iteration);
 
-                            grpcClient.AddEntityDiscoveryRecord(request);// register on the master
+                        if (((HttpIteration)iteration).HttpRequest != null)
+                        {
+                            var fqdn = $"plan/{plan.Name}/round/{round.Name}/Iteration/{iteration.Name}";
+                            _entityDiscoveryService.AddEntityDiscoveryRecord(fqdn, round.Id, iteration.Id, ((HttpIteration)iteration).HttpRequest.Id, _nodeRegistry.GetLocalNode()); // register locally
+                            if (_nodeMetaData.NodeType != Infrastructure.Nodes.NodeType.Master)
+                            {
+                                var request = new Protos.Shared.EntityDiscoveryRecord
+                                {
+                                    FullyQualifiedName = fqdn,
+                                    RoundId = round.Id.ToString(),
+                                    IterationId = iteration.Id.ToString(),
+                                    RequestId = ((HttpIteration)iteration).HttpRequest.Id.ToString(),
+                                    Node = new Protos.Shared.Node
+                                    {
+                                        Name = _nodeMetaData.NodeName,
+                                        NodeIP = _nodeMetaData.NodeIP,
+                                    }
+                                };
+
+                                grpcClient.AddEntityDiscoveryRecord(request);// register on the master
+                            }
                         }
+                    }
+                    else { 
+                        throw new NotImplementedException();
                     }
                 }
             }

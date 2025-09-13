@@ -18,7 +18,6 @@ using System.Text;
 using System.Text.Json;
 using LPS.Infrastructure.Nodes;
 using FluentValidation;
-using Apis.Common;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.GRPCClients.Factory;
 
