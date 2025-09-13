@@ -11,11 +11,13 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using LPS.Infrastructure.Monitoring.MetricsServices;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public class DataTransmissionMetricAggregator : BaseMetricAggregator, IDataTransmissionMetricAggregator
     {
+
         private const string MetricName = "DataTransmission";
 
         private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -27,7 +29,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private double _totalDataTransmissionSeconds = 0;
         private double _totalDataDownloadTimeSeconds = 0;
         private readonly LPSDurationMetricSnapshotProtected _snapshot;
-        private readonly IMetricsQueryService _metricsQueryService;
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
@@ -35,11 +36,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         internal DataTransmissionMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
-            IMetricsQueryService metricsQueryService,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricsVariableService metricsVariableService) // <-- add
-            : base(httpIteration, logger, runtimeOperationIdProvider)
+            IMetricsVariableService metricsVariableService, IMetricDataStore metricDataStore) // <-- add
+            : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _roundName = roundName;
             _httpIteration = httpIteration;
@@ -52,9 +52,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 httpIteration.HttpRequest.HttpVersion);
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException(nameof(metricsQueryService));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+            PushMetricAsync(default).Wait();
+
         }
 
         protected override IMetricShapshot Snapshot => _snapshot;
@@ -94,7 +95,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 if (!IsStarted) throw new InvalidOperationException("Metric collector is stopped.");
                 _totalDataUploadTimeSeconds += elapsedTicks / Stopwatch.Frequency;
                 _totalDataSent += totalBytes;
-                _requestsCount = await GetRequestsCountAsync(token);
+                _requestsCount = GetRequestsCountAsync(token);
 
                 await UpdateMetricsAsync(token); // <-- pass token
             }
@@ -115,7 +116,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
                 _totalDataDownloadTimeSeconds += elapsedTicks / Stopwatch.Frequency;
                 _totalDataReceived += totalBytes;
-                _requestsCount = await GetRequestsCountAsync(token);
+                _requestsCount = GetRequestsCountAsync(token);
 
                 await UpdateMetricsAsync(token); // <-- pass token
             }
@@ -147,29 +148,31 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _snapshot.UpdateAverageBytes(
                     _totalDataTransmissionSeconds > 0 ? (_totalDataReceived + _totalDataSent) / _totalDataTransmissionSeconds : 0,
                     _totalDataTransmissionSeconds * 1000);
-
-                // Serialize the dimension set and publish to variable system
-                var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
-                {
-                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                    WriteIndented = false
-                });
-
-                // Push under: Metrics.{IterationName}.DataTransmission
-                await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
+                
+                await PushMetricAsync(token);
             }
             finally { }
         }
 
-        private async Task<int> GetRequestsCountAsync(CancellationToken token)
+        private async Task PushMetricAsync(CancellationToken token)
         {
-            var throughputAggregators = await _metricsQueryService
-                .GetAsync<ThroughputMetricAggregator>(m => m.HttpIteration.Id == _snapshot.IterationId, token);
+            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                WriteIndented = false
+            });
 
-            var single = throughputAggregators.Single();
+            await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
 
-            var snapshot = await single.GetSnapshotAsync<ThroughputMetricSnapshot>(token);
-            return snapshot.RequestsCount;
+            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
+        }
+
+        private int GetRequestsCountAsync(CancellationToken token)
+        {
+            if (_metricDataStore.TryGetLatest(_httpIteration.Id, LPSMetricType.ResponseCode, out ThroughputMetricSnapshot snapshot))
+                return snapshot.RequestsCount;
+
+            return 0;
         }
         private class LPSDurationMetricSnapshotProtected : DataTransmissionMetricSnapshot
         {
@@ -212,6 +215,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class DataTransmissionMetricSnapshot : HttpMetricSnapshot
     {
+        public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
+
         public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
         public double DataSent { get; protected set; }
         public double DataReceived { get; protected set; }

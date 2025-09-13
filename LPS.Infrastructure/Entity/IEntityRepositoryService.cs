@@ -12,5 +12,6 @@ namespace LPS.Infrastructure.Entity
         public void Add<T>(T entity) where T : IDomainEntity;
         public T? Get<T>(Guid id) where T : IDomainEntity;
         public bool Remove<T>(Guid id) where T : IDomainEntity;
+        public IEnumerable<T> Query<T>(Func<T, bool>? predicate = null) where T : IDomainEntity;
     }
 }

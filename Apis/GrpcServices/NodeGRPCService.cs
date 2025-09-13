@@ -2,7 +2,6 @@
 using Grpc.Core;
 using LPS.Protos.Shared;
 using static LPS.Protos.Shared.NodeService;
-using Apis.Common;
 using LPS.Common.Interfaces;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.GRPCExtensions;

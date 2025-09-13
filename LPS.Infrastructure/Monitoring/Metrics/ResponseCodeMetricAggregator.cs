@@ -13,11 +13,13 @@ using System.Text.Json.Serialization;     // NEW
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net;
+using LPS.Infrastructure.Monitoring.MetricsServices;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public class ResponseCodeMetricAggregator : BaseMetricAggregator, IResponseMetricCollector
     {
+
         private const string MetricName = "ResponseCode";
 
         private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -33,7 +35,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService // NEW
-        ) : base(httpIteration, logger, runtimeOperationIdProvider)
+        , IMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
@@ -45,10 +47,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _httpIteration.HttpRequest.HttpMethod,
                 _httpIteration.HttpRequest.Url.Url,
                 _httpIteration.HttpRequest.HttpVersion);
-
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+            PushMetricAsync(default).Wait();
         }
 
         protected override IMetricShapshot Snapshot => _snapshot;
@@ -72,7 +74,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             finally
             {
-               if(isLockTaken) _semaphore.Release();
+                if (isLockTaken) _semaphore.Release();
             }
             return this;
         }
@@ -97,6 +99,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             });
 
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
+
+            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
         }
 
         private class ProtectedResponseCodeSnapshot : ResponseCodeMetricSnapshot
@@ -145,6 +149,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class ResponseCodeMetricSnapshot : HttpMetricSnapshot
     {
+        public override LPSMetricType MetricType => LPSMetricType.ResponseCode;
+
         public ResponseCodeMetricSnapshot()
         {
             _responseSummaries = new ConcurrentBag<HttpResponseSummary>();

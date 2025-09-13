@@ -15,10 +15,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
     /// </summary>
     public sealed class MetricAggregatorFactory : IMetricAggregatorFactory, IDisposable
     {
-        private readonly Lazy<IMetricsQueryService> _metricsQueryService;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _op;
         private readonly IMetricsVariableService _metricsVarSvc;
+        private readonly IMetricDataStore _metricDataStore;
 
         private sealed record Entry(HttpIteration Iteration, IReadOnlyList<IMetricAggregator> Aggregators);
 
@@ -26,15 +26,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             new(Environment.ProcessorCount, 31);
 
         public MetricAggregatorFactory(
-           Lazy<IMetricsQueryService> metricsQueryService,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricsVariableService metricsVariableService)
+            IMetricsVariableService metricsVariableService,
+            IMetricDataStore metricDataStore)
         {
-            _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException(nameof(metricsQueryService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVarSvc = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+            _metricDataStore = metricDataStore;
         }
 
         public IReadOnlyList<IMetricAggregator> GetOrCreate(HttpIteration iteration, string roundName)
@@ -88,18 +88,16 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 foreach (var e in entries) DisposeAggregators(e.Aggregators);
             }
         }
-
         private IReadOnlyList<IMetricAggregator> CreateAggregators(string roundName, HttpIteration httpIteration)
         {
             return new List<IMetricAggregator>
             {
-                new ResponseCodeMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc),
-                new DurationMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc),
-                new ThroughputMetricAggregator(httpIteration, roundName, _metricsQueryService.Value, _logger, _op, _metricsVarSvc),
-                new DataTransmissionMetricAggregator(httpIteration, roundName, _metricsQueryService.Value, _logger, _op, _metricsVarSvc)
+                new ResponseCodeMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
+                new DurationMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
+                new ThroughputMetricAggregator(httpIteration, roundName , _logger, _op, _metricsVarSvc, _metricDataStore),
+                new DataTransmissionMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore)
             };
         }
-
         private static void DisposeAggregators(IReadOnlyList<IMetricAggregator> aggregators)
         {
             foreach (var a in aggregators)

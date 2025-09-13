@@ -9,6 +9,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using LPS.Infrastructure.Monitoring.MetricsServices;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
@@ -20,7 +21,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private int _requestsCount;
         private readonly ProtectedConnectionSnapshot _snapshot;
         protected override IMetricShapshot Snapshot => _snapshot;
-        private readonly IMetricsQueryService _metricsQueryService;
 
         private readonly Stopwatch _throughputWatch;
         private Timer _timer;
@@ -34,14 +34,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public ThroughputMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
-            IMetricsQueryService metricsQueryService,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService // NEW
-        ) : base(httpIteration, logger, runtimeOperationIdProvider)
+        , IMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
-            _metricsQueryService = metricsQueryService ?? throw new ArgumentNullException(nameof(metricsQueryService));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
 
@@ -52,10 +50,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _httpIteration.HttpRequest.HttpMethod,
                 _httpIteration.HttpRequest.Url.Url,
                 _httpIteration.HttpRequest.HttpVersion);
-
             _throughputWatch = new Stopwatch();
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            PushMetricAsync(default).Wait();
         }
 
         private async ValueTask<bool> UpdateMetricsAsync(CancellationToken token)
@@ -71,19 +69,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             try
             {
-                var snapshot = await (await _metricsQueryService
-                                        .GetAsync<ResponseCodeMetricAggregator>(m => m.HttpIteration.Id == _httpIteration.Id, token))
-                                        .SingleOrDefault()
-                                        .GetSnapshotAsync<ResponseCodeMetricSnapshot>(token);
+                int successCount = 0;
+                int failedCount = 0;
+                if (_metricDataStore.TryGetLatest(_httpIteration.Id, LPSMetricType.ResponseCode, out ResponseCodeMetricSnapshot snapshot))
+                {
+                    successCount = snapshot
+                        .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
+                        .Sum(r => r.Count);
 
-                int successCount = snapshot
-                    .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
-                    .Sum(r => r.Count);
-
-                int failedCount = snapshot
-                    .ResponseSummaries.Where(r => HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
-                    .Sum(r => r.Count);
-
+                    failedCount = snapshot
+                        .ResponseSummaries.Where(r => HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
+                        .Sum(r => r.Count);
+                }
 
                 var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
                 var requestsRate = new RequestsRate(string.Empty, 0);
@@ -214,6 +211,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             });
 
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
+
+            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
         }
 
         private class ProtectedConnectionSnapshot : ThroughputMetricSnapshot
@@ -274,6 +273,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class ThroughputMetricSnapshot : HttpMetricSnapshot
     {
+        public override LPSMetricType MetricType => LPSMetricType.Throughput;
+
         public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
         public RequestsRate RequestsRate { get; protected set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }

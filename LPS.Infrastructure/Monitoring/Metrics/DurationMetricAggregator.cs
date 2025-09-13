@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using LPS.Infrastructure.Monitoring.MetricsServices;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
@@ -28,11 +29,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             string roundName,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricsVariableService metricsVariableService) // NEW
-            : base(httpIteration, logger, runtimeOperationIdProvider)
+            IMetricsVariableService metricsVariableService,
+            IMetricDataStore metricDataStore) // NEW
+            : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
-            _roundName = roundName?? throw new ArgumentNullException(nameof(roundName));
+            _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
             _histogram = new LongHistogram(1, 1000000, 3);
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
@@ -45,6 +47,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 httpIteration.HttpRequest.HttpMethod,
                 httpIteration.HttpRequest.Url.Url,
                 httpIteration.HttpRequest.HttpVersion);
+            PushMetricAsync(default).Wait();
+
         }
 
         protected override IMetricShapshot Snapshot => _snapshot;
@@ -89,7 +93,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        // NEW: Serialize and push to variable service
         private async Task PushMetricAsync(CancellationToken token)
         {
             var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
@@ -99,6 +102,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             });
 
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
+
+            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
         }
 
         private class LPSDurationMetricSnapshotProtected : DurationMetricSnapshot
@@ -141,6 +146,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class DurationMetricSnapshot : HttpMetricSnapshot
     {
+        public override LPSMetricType MetricType => LPSMetricType.ResponseTime;
+
         public double SumResponseTime { get; protected set; }
         public double AverageResponseTime { get; protected set; }
         public double MinResponseTime { get; protected set; }

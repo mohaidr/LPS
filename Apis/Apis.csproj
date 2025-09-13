@@ -7,16 +7,10 @@
   </PropertyGroup>
 
     <ItemGroup>
-    <ProjectReference Include="..\LPS.Common\LPS.Common.csproj" />
+    <ProjectReference Include="..\LPS.Common\LPS.UI.Common.csproj" />
     <ProjectReference Include="..\LPS.Domain\LPS.Domain.csproj" />
     <ProjectReference Include="..\LPS.Infrastructure\LPS.Infrastructure.csproj" />
     <ProjectReference Include="..\LPS.Protos.Shared\LPS.Protos.Shared.csproj" />
-  </ItemGroup>
-
-    <ItemGroup>
-    <Compile Update="Common\GlobalSettings.cs">
-      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
-    </Compile>
   </ItemGroup>
 
     <ItemGroup>
@@ -93,5 +87,9 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         <PrivateAssets>all</PrivateAssets>
       </PackageReference>
+    </ItemGroup>
+	
+    <ItemGroup>
+      <Folder Include="Common\" />
     </ItemGroup>
 </Project>

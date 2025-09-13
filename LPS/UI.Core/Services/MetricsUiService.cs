@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LPS.Infrastructure.Entity;
 
 namespace LPS.UI.Core.Services
 {
@@ -20,15 +21,18 @@ namespace LPS.UI.Core.Services
         private readonly IIterationStatusMonitor _status;
         private readonly IRuntimeOperationIdProvider _op;
         private readonly ILogger _logger;
+        IEntityRepositoryService _entityRepositoryService;
 
         public MetricsUiService(
             IMetricDataStore metricDataStore,
             IIterationStatusMonitor iterationStatusMonitor,
+            IEntityRepositoryService entityRepositoryService,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILogger logger)
         {
             _store = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
             _status = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
+            _entityRepositoryService = entityRepositoryService?? throw new ArgumentNullException(nameof(entityRepositoryService));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -47,7 +51,7 @@ namespace LPS.UI.Core.Services
             var results = new List<MetricDataDto>();
 
             // Iterate only the requested iteration if provided; otherwise, go over all
-            IEnumerable<HttpIteration> iterations = _store.Iterations;
+            IEnumerable<HttpIteration> iterations = _entityRepositoryService.Query<HttpIteration>();
             if (q.IterationId is Guid idFilter)
                 iterations = iterations.Where(i => i.Id == idFilter);
 
