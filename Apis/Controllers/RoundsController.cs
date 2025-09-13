@@ -1,39 +1,42 @@
-﻿// MetricsController.cs (refactored)
-using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Monitoring.MetricsServices;
-using LPS.Domain.Domain.Common.Enums;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using LPS.Common.Interfaces;
-using LPS.Infrastructure.Common.Interfaces;
-using ILogger = LPS.Domain.Common.Interfaces.ILogger;
+﻿// RoundsController.cs
+using AutoMapper;
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using LPS.Infrastructure.Entity;
+using LPS.UI.Common.DTOs;
 
 namespace Apis.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class RoundsController(IEntityRepositoryService entityRepo, CancellationTokenSource cts) : ControllerBase
+    [Route("api/rounds")]
+    [Produces("application/json")]
+    public class RoundsController(IEntityRepositoryService repo, IMapper mapper) : ControllerBase
     {
-        private readonly IEntityRepositoryService _repo = entityRepo;
-        private readonly CancellationToken _token = cts.Token;
+        private readonly IEntityRepositoryService _repo = repo;
+        private readonly IMapper _mapper = mapper;
 
+        // GET /api/rounds
         [HttpGet]
-        public IActionResult GetAllRounds()
-            => Ok(_repo.Query<Round>());
+        public IActionResult GetAll()
+            => Ok(_mapper.Map<IEnumerable<RoundDto>>(_repo.Query<Round>()));
 
-        [HttpGet("/api/plans/{planId:guid}/rounds")]
-        public IActionResult GetRoundsByPlan(Guid planId)
+        // GET /api/rounds/{roundId}
+        [HttpGet("{roundId:guid}")]
+        public IActionResult GetById(Guid roundId)
         {
-            var plan = _repo.Get<Plan>(planId);
-            return plan is not null ? Ok(plan.GetReadOnlyRounds()) : NotFound();
+            var round = _repo.Get<Round>(roundId);
+            return round is null ? NotFound() : Ok(_mapper.Map<RoundDto>(round));
         }
 
-        [HttpGet("{roundId:guid}")]
-        public IActionResult GetRoundById(Guid roundId)
-            => Ok(_repo.Get<Round>(roundId));
+        // GET /api/plans/{planId}/rounds   (nested resource)
+        [HttpGet("~/api/plans/{planId:guid}/rounds")]
+        public IActionResult GetByPlanId(Guid planId)
+        {
+            var plan = _repo.Get<Plan>(planId);
+            return plan is null
+                ? NotFound()
+                : Ok(_mapper.Map<IEnumerable<RoundDto>>(plan.GetReadOnlyRounds()));
+        }
     }
 }

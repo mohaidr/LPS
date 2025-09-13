@@ -1,5 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;

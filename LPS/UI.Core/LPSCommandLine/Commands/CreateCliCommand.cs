@@ -18,7 +18,7 @@ using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 using LPS.UI.Core.LPSValidators;
 using FluentValidation.Results;
 using LPS.UI.Common.Extensions;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 
 namespace LPS.UI.Core.LPSCommandLine.Commands
 {

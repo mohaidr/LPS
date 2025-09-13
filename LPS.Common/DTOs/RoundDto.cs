@@ -8,9 +8,9 @@ using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using YamlDotNet.Serialization;
 
-namespace LPS.DTOs
+namespace LPS.UI.Common.DTOs
 {
-    public class RoundDto : IDto<RoundDto>
+    public class RoundDto : DtoBase<RoundDto>
     {
         public RoundDto()
         {

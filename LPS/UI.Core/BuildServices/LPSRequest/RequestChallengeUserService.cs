@@ -1,5 +1,5 @@
 ﻿using LPS.Domain;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.UI.Common;
 using Spectre.Console;
 using System;

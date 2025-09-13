@@ -8,7 +8,7 @@ using LPS.Infrastructure.Common;
 using Spectre.Console;
 using LPS.UI.Core.LPSCommandLine;
 using LPS.Domain.Domain.Common.Interfaces;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.Infrastructure.Nodes;
 using Grpc.Net.Client;
 using LPS.Protos.Shared;

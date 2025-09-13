@@ -1,7 +1,9 @@
-﻿using Apis.GrpcServices;
+﻿using Apis.AutoMapper;
+using Apis.GrpcServices;
 using Apis.Services;
 using LPS.GrpcServices;
 using LPS.Infrastructure.Monitoring.GRPCServices;
+using System;
 
 namespace LPS.Apis
 {
@@ -11,6 +13,9 @@ namespace LPS.Apis
         {
             // Register gRPC
             services.AddGrpc();
+            services.AddAutoMapper(typeof(LpsMappingProfile));
+          
+
             // Register MVC Controllers
             services.AddControllersWithViews();
             services.AddControllers().AddJsonOptions(options =>

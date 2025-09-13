@@ -9,7 +9,7 @@ using FluentValidation.Results;
 using LPS.UI.Common;
 using System.Text;
 using Microsoft.AspNetCore.Http;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using System.CommandLine;
 using System.Linq.Expressions;
 using LPS.Infrastructure.Common;

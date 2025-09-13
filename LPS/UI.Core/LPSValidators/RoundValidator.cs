@@ -5,7 +5,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using FluentValidation;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 
 namespace LPS.UI.Core.LPSValidators
 {

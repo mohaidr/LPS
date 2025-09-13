@@ -1,5 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Text;

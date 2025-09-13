@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPS.DTOs
+namespace LPS.UI.Common.DTOs
 {
     public class PayloadDto
     {

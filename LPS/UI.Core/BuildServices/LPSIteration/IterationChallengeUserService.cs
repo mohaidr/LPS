@@ -1,6 +1,6 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSValidators;
 using Spectre.Console;

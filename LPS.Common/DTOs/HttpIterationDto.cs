@@ -3,9 +3,9 @@ using System;
 using System.Text.Json.Serialization;
 using YamlDotNet.Serialization;
 
-namespace LPS.DTOs
+namespace LPS.UI.Common.DTOs
 {
-    public class HttpIterationDto : IDto<HttpIterationDto>
+    public class HttpIterationDto : DtoBase<HttpIterationDto>
     {
         public HttpIterationDto()
         {

@@ -1,7 +1,7 @@
 ﻿using LPS.Domain.Domain.Common.Enums;
 
 
-namespace LPS.DTOs
+namespace LPS.UI.Common.DTOs
 {
     //TODO Create Domain entities for those so we can store them in DB once implemented.
     public class VariableDto : IDto<VariableDto>

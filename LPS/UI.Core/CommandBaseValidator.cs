@@ -10,7 +10,7 @@ using LPS.Infrastructure.Common;
 using Spectre.Console;
 using ValidationResult = FluentValidation.Results.ValidationResult;
 using System;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 
 namespace LPS.UI.Core
 {

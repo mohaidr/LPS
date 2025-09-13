@@ -6,9 +6,8 @@ using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.Domain.LPSRequest.LPSHttpRequest;
 using LPS.Domain.LPSSession;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.Infrastructure.Common;
-using System.Linq;
 using System.Net;
 
 

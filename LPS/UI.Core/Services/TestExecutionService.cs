@@ -5,7 +5,7 @@ using LPS.Domain.Common;
 using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSFlow.LPSHandlers;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.Infrastructure.Nodes;
 using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;

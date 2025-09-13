@@ -9,7 +9,7 @@ using System.Threading;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks.Dataflow;
 using LPS.Domain.Domain.Common.Enums;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using System.Net;
 
 namespace LPS.UI.Core.LPSValidators

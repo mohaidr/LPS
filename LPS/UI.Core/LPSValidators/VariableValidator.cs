@@ -1,5 +1,5 @@
 ﻿using FluentValidation;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.Domain.Common;
 using LPS.Infrastructure.VariableServices.VariableHolders;
 using LPS.Domain.Common.Interfaces;

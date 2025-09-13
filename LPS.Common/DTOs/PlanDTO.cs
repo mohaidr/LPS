@@ -1,8 +1,8 @@
 ﻿using LPS.Domain;
 
-namespace LPS.DTOs
+namespace LPS.UI.Common.DTOs
 {
-    public class PlanDto: IDto<PlanDto>
+    public class PlanDto: DtoBase<PlanDto>
     {
         public PlanDto()
         {

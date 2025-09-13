@@ -4,7 +4,7 @@ using System;
 using LPS.Domain.Common.Interfaces;
 using LPS.UI.Core.LPSValidators;
 using Spectre.Console;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 
 namespace LPS.UI.Core.Build.Services
 {

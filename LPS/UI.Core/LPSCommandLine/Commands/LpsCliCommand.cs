@@ -9,7 +9,7 @@ using LPS.UI.Core.LPSValidators;
 using Microsoft.Extensions.Options;
 using FluentValidation;
 using LPS.UI.Core.Services;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using AutoMapper;
 using LPS.Domain.Domain.Common.Interfaces;
 using System.CommandLine;

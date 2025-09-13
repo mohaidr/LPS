@@ -1,39 +1,49 @@
-﻿// MetricsController.cs (refactored)
-using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Monitoring.MetricsServices;
-using LPS.Domain.Domain.Common.Enums;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using LPS.Common.Interfaces;
-using LPS.Infrastructure.Common.Interfaces;
-using ILogger = LPS.Domain.Common.Interfaces.ILogger;
+﻿// IterationsController.cs
+using AutoMapper;
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using LPS.Infrastructure.Entity;
+using LPS.UI.Common.DTOs;
 
 namespace Apis.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class IterationsController(IEntityRepositoryService entityRepo, CancellationTokenSource cts) : ControllerBase
+    [Route("api/iterations")]
+    [Produces("application/json")]
+    public class IterationsController(IEntityRepositoryService repo, IMapper mapper) : ControllerBase
     {
-        private readonly IEntityRepositoryService _repo = entityRepo;
-        private readonly CancellationToken _token = cts.Token;
+        private readonly IEntityRepositoryService _repo = repo;
+        private readonly IMapper _mapper = mapper;
 
+        // GET /api/iterations
         [HttpGet]
-        public IActionResult GetAllIterations()
-            => Ok(_repo.Query<HttpIteration>());
+        public IActionResult GetAll()
+            => Ok(_mapper.Map<IEnumerable<HttpIterationDto>>(
+                _repo.Query<HttpIteration>().OfType<HttpIteration>()));
 
-        [HttpGet("/api/rounds/{roundId:guid}/iterations")]
-        public IActionResult GetIterationsByRound(Guid roundId)
+        // GET /api/iterations/{iterationId}
+        [HttpGet("{iterationId:guid}")]
+        public IActionResult GetById(Guid iterationId)
         {
-            var round = _repo.Get<Round>(roundId);
-            return round is not null ? Ok(round.GetReadOnlyIterations()) : NotFound();
+            var iter = _repo.Get<HttpIteration>(iterationId);
+            if (iter is null) return NotFound();
+
+            if (iter is HttpIteration httpIter)
+                return Ok(_mapper.Map<HttpIterationDto>(httpIter));
+
+            return Problem("Iteration type is not supported by the current DTO mapping.");
         }
 
-        [HttpGet("{iterationId:guid}")]
-        public IActionResult GetIterationById(Guid iterationId)
-            => Ok(_repo.Get<HttpIteration>(iterationId));
+        // GET /api/rounds/{roundId}/iterations   (nested resource)
+        [HttpGet("~/api/rounds/{roundId:guid}/iterations")]
+        public IActionResult GetByRoundId(Guid roundId)
+        {
+            var round = _repo.Get<Round>(roundId);
+            return round is null
+                ? NotFound()
+                : Ok(_mapper.Map<IEnumerable<HttpIterationDto>>(
+                    round.GetReadOnlyIterations().OfType<HttpIteration>()));
+        }
     }
 }

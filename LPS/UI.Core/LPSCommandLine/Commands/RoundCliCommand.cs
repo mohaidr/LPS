@@ -1,6 +1,6 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.Infrastructure.Common;
 using LPS.UI.Common;
 using LPS.UI.Common.Extensions;

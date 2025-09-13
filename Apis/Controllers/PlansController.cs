@@ -1,32 +1,32 @@
-﻿// MetricsController.cs (refactored)
-using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Monitoring.MetricsServices;
-using LPS.Domain.Domain.Common.Enums;
-using Microsoft.AspNetCore.Mvc;
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using LPS.Common.Interfaces;
-using LPS.Infrastructure.Common.Interfaces;
-using ILogger = LPS.Domain.Common.Interfaces.ILogger;
+﻿// PlansController.cs
+using AutoMapper;
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 using LPS.Infrastructure.Entity;
+using LPS.UI.Common.DTOs;
 
 namespace Apis.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")]
-    public class PlansController(IEntityRepositoryService entityRepo, CancellationTokenSource cts) : ControllerBase
+    [Route("api/plans")]
+    [Produces("application/json")]
+    public class PlansController(IEntityRepositoryService repo, IMapper mapper) : ControllerBase
     {
-        private readonly IEntityRepositoryService _repo = entityRepo;
-        private readonly CancellationToken _token = cts.Token;
+        private readonly IEntityRepositoryService _repo = repo;
+        private readonly IMapper _mapper = mapper;
 
+        // GET /api/plans
         [HttpGet]
-        public IActionResult GetAllPlans()
-            => Ok(_repo.Query<Plan>());
+        public IActionResult GetAll()
+            => Ok(_mapper.Map<IEnumerable<PlanDto>>(_repo.Query<Plan>()));
 
+        // GET /api/plans/{planId}
         [HttpGet("{planId:guid}")]
-        public IActionResult GetPlanById(Guid planId)
-            => Ok(_repo.Get<Plan>(planId));
+        public IActionResult GetById(Guid planId)
+        {
+            var plan = _repo.Get<Plan>(planId);
+            return plan is null ? NotFound() : Ok(_mapper.Map<PlanDto>(plan));
+        }
     }
 }

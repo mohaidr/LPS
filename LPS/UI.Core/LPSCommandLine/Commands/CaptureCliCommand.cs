@@ -1,6 +1,6 @@
 ﻿using FluentValidation;
 using LPS.Domain.Common.Interfaces;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSCommandLine.Bindings;
 using LPS.UI.Core.LPSValidators;

@@ -10,7 +10,7 @@ using System.CommandLine.Parsing;
 using LPS.UI.Common.Options;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Watchdog;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings

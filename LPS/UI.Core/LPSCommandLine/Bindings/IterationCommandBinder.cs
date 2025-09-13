@@ -8,7 +8,7 @@ using System.Linq;
 using System.Text;
 using System.CommandLine.Parsing;
 using LPS.Domain.Domain.Common.Enums;
-using LPS.DTOs;
+using LPS.UI.Common.DTOs;
 
 namespace LPS.UI.Core.LPSCommandLine.Bindings
 {

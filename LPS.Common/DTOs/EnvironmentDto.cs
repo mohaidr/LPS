@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LPS.DTOs
+namespace LPS.UI.Common.DTOs
 {
-    public class EnvironmentDto : IDto<EnvironmentDto>
+    public class EnvironmentDto : DtoBase<EnvironmentDto>
     {
         public EnvironmentDto()
         {
