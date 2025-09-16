@@ -37,17 +37,23 @@ namespace Apis.Controllers
         }
 
         /// <summary>GET /api/metrics/by-round/{roundName}</summary>
-        [HttpGet("by-round/{roundName}")]
+        [HttpGet("round/{roundName}")]
         public async Task<IActionResult> ByRound([FromRoute] string roundName)
             => Ok(await _ui.LatestForRoundAsync(roundName, _token));
 
         /// <summary>GET /api/metrics/by-iteration/{iterationId}</summary>
-        [HttpGet("by-iteration/{iterationId:guid}")]
+        [HttpGet("iteration/{iterationId:guid}")]
         public async Task<IActionResult> ByIteration([FromRoute] Guid iterationId)
             => Ok(await _ui.LatestForIterationAsync(iterationId, _token));
 
+        /// <summary>GET /api/metrics/by-iteration/{iterationId}</summary>
+        [HttpGet("type/{metricType}/iteration/{iterationId:guid}")]
+        public async Task<IActionResult> ByTypeByIteration([FromRoute] LPSMetricType metricType, [FromRoute] Guid iterationId)
+            => Ok((await _ui.LatestByMetricTypeAsync(metricType, _token))
+                .Where(m=>m.IterationId == iterationId));
+
         /// <summary>GET /api/metrics/by-type/{metricType}</summary>
-        [HttpGet("by-type/{metricType}")]
+        [HttpGet("type/{metricType}")]
         public async Task<IActionResult> ByType([FromRoute] LPSMetricType metricType)
             => Ok(await _ui.LatestByMetricTypeAsync(metricType, _token));
     }
