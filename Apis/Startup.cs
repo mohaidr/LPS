@@ -3,7 +3,10 @@ using Apis.GrpcServices;
 using Apis.Services;
 using LPS.GrpcServices;
 using LPS.Infrastructure.Monitoring.GRPCServices;
-using System;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace LPS.Apis
 {
@@ -11,18 +14,27 @@ namespace LPS.Apis
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            // Register gRPC
+            // CORS: allow any origin/method/header (no credentials)
+            services.AddCors(o =>
+            {
+                o.AddPolicy("AllowAll", p =>
+                    p.AllowAnyOrigin()
+                     .AllowAnyMethod()
+                     .AllowAnyHeader());
+            });
+
+            // gRPC
             services.AddGrpc();
             services.AddAutoMapper(typeof(LpsMappingProfile));
-          
 
-            // Register MVC Controllers
+            // MVC Controllers
             services.AddControllersWithViews();
-            services.AddControllers().AddJsonOptions(options =>
-            {
-                options.JsonSerializerOptions.PropertyNamingPolicy = null;
-                options.JsonSerializerOptions.DictionaryKeyPolicy = null;
-            });
+            services.AddControllers()
+                    .AddJsonOptions(options =>
+                    {
+                        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+                        options.JsonSerializerOptions.DictionaryKeyPolicy = null;
+                    });
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -35,11 +47,14 @@ namespace LPS.Apis
 
             app.UseStaticFiles();
             app.UseRouting();
+
+            app.UseCors("AllowAll");
+
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
-                // Register gRPC service
+                // gRPC services
                 endpoints.MapGrpcService<NodeGRPCService>();
                 endpoints.MapGrpcService<MetricsGrpcService>();
                 endpoints.MapGrpcService<EntityDiscoveryGrpcService>();
@@ -47,7 +62,7 @@ namespace LPS.Apis
                 endpoints.MapGrpcService<MetricsQueryGrpcService>();
                 endpoints.MapGrpcService<IterationTerminationGrpcService>();
 
-                // Register MVC routes
+                // MVC routes
                 endpoints.MapControllerRoute(
                     name: "default",
                     pattern: "{controller=Home}/{action=Index}/{id?}");
