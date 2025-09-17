@@ -161,10 +161,12 @@ namespace LPS.Domain
                 if (!rules.Any()) return true;
 
                 return rules.All(rule =>
-                    rule.ErrorStatusCodes != null && rule.MaxErrorRate != null && rule.GracePeriod != null &&
-                    ((rule.ErrorStatusCodes.Count == 0 && rule.MaxErrorRate == 0 && rule.GracePeriod == TimeSpan.Zero) ||
-                     (rule.MaxErrorRate > 0 &&  rule.GracePeriod> TimeSpan.Zero && rule.ErrorStatusCodes.Count > 0 &&
-                     rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code)))));
+
+                    rule.ErrorStatusCodes != null &&
+                    
+                    ((rule.MaxErrorRate > 0  && rule.ErrorStatusCodes.Count > 0 && rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code))) || rule.P90Greater >0 || rule.P10Greater > 0 || rule.P50Greater > 0 || rule.AVGGreater > 0)
+
+                    && rule.GracePeriod > TimeSpan.Zero);
             }
             #endregion
         }

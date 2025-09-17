@@ -87,22 +87,35 @@ namespace LPS.Domain
     }
     public readonly struct TerminationRule(
         ICollection<HttpStatusCode> errorStatusCodes,
-        double? maxErrorRate,
-        TimeSpan? gracePeriod)
+        TimeSpan? gracePeriod, 
+        double? maxErrorRate, 
+        double? p90Greater = null,
+        double? p50Greater = null,
+        double? p10Greater = null,
+        double? avgGreater = null)
     {
-        /// <summary>
-        /// Represents the status codes to consider as erroneous status codes
-        /// </summary>
+        /// <summary>Represents the status codes to consider as erroneous status codes</summary>
         public ICollection<HttpStatusCode> ErrorStatusCodes { get; } = errorStatusCodes;
-        /// <summary>
-        /// Represents the maximum error rate for a given grace period before the test is terminated
-        /// </summary>
+
+        /// <summary>Represents the maximum error rate for a given grace period before the test is terminated</summary>
         public double? MaxErrorRate { get; } = maxErrorRate;
+
         /// <summary>
-        /// The duration for which the error rate must remain above the threshold
-        /// before terminating the test. If the error rate recovers during this period,
-        /// termination is aborted.
+        /// The duration for which the threshold must remain above its value
+        /// before terminating the test. If it recovers during this period, termination is aborted.
         /// </summary>
         public TimeSpan? GracePeriod { get; } = gracePeriod;
+
+        /// <summary>Terminate if P90 response time stays >= this value during the grace period.</summary>
+        public double? P90Greater { get; } = p90Greater;
+
+        /// <summary>Terminate if P50 response time stays >= this value during the grace period.</summary>
+        public double? P50Greater { get; } = p50Greater;
+
+        /// <summary>Terminate if P10 response time stays >= this value during the grace period.</summary>
+        public double? P10Greater { get; } = p10Greater;
+
+        /// <summary>Terminate if Average response time stays >= this value during the grace period.</summary>
+        public double? AVGGreater { get; } = avgGreater;
     }
 }

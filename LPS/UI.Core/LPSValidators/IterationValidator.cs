@@ -243,24 +243,30 @@ namespace LPS.UI.Core.LPSValidators
              (
                  rule =>
                  {
-                     if (rule.ErrorStatusCodes == null || rule.MaxErrorRate == null || rule.GracePeriod == null)
+                     bool isErrorCriteriaEmpty = string.IsNullOrWhiteSpace(rule.MaxErrorRate)
+                                                 && string.IsNullOrWhiteSpace(rule.ErrorStatusCodes);
+
+                     bool isLatencyCriteriaEmpty = string.IsNullOrWhiteSpace(rule.AVGGreater)
+                                                      && string.IsNullOrWhiteSpace(rule.P10Greater)
+                                                      && string.IsNullOrWhiteSpace(rule.P50Greater)
+                                                      && string.IsNullOrWhiteSpace(rule.P90Greater);
+
+                     bool isGracePeriodEmpty = string.IsNullOrWhiteSpace(rule.GracePeriod);
+
+                     if ((isErrorCriteriaEmpty && isLatencyCriteriaEmpty) || isGracePeriodEmpty)
                          return false;
 
-                     if (rule.ErrorStatusCodes.StartsWith("$") || rule.MaxErrorRate.StartsWith("$") || rule.GracePeriod.StartsWith("$"))
-                         return true;
 
                      var codes = rule.ErrorStatusCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList();
-                     var validCodes = codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _));
-                     var validRate = double.TryParse(rule.MaxErrorRate, out var parsedValue);
-                     var validGrace = TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod);
+                     var validCodes = rule.ErrorStatusCodes.StartsWith("$") || (codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _)) && codes.Count > 0);
+                     var validGrace = rule.GracePeriod.StartsWith("$") || (TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod) && gracePeriod > TimeSpan.Zero);
+                     var validRate = (!string.IsNullOrWhiteSpace(rule.MaxErrorRate) && rule.MaxErrorRate.StartsWith("$")) || (double.TryParse(rule.MaxErrorRate, out var maxErrorRate) && maxErrorRate > 0);
+                     var validP90 = (!string.IsNullOrWhiteSpace(rule.P90Greater) && rule.P90Greater.StartsWith("$")) || (double.TryParse(rule.P90Greater, out var p90Greater) && p90Greater > 0);
+                     var validP10 = (!string.IsNullOrWhiteSpace(rule.P10Greater) && rule.P10Greater.StartsWith("$")) || (double.TryParse(rule.P10Greater, out var p10Greater) && p10Greater > 0);
+                     var validP50 = (!string.IsNullOrWhiteSpace(rule.P50Greater) && rule.P50Greater.StartsWith("$")) || (double.TryParse(rule.P50Greater, out var p50Greater) && p50Greater > 0);
+                     var validAVG = (!string.IsNullOrWhiteSpace(rule.AVGGreater) && rule.AVGGreater.StartsWith("$")) || (double.TryParse(rule.AVGGreater, out var avgGreater) && avgGreater > 0);
 
-                     // Inactive rule (all zero/empty) OR active rule (all valid and > 0)
-                     return
-                         validCodes && validRate && validGrace &&
-                         (
-                             (codes.Count > 0 && parsedValue > 0 && gracePeriod > TimeSpan.Zero) ||
-                             (codes.Count == 0 && parsedValue == 0 && gracePeriod == TimeSpan.Zero)
-                         );
+                     return validCodes && validGrace && (validRate || validAVG || validP90 || validP50 || validP10);
 
                  }
              );

@@ -50,9 +50,13 @@ namespace Apis.AutoMapper
                 .ForMember(d => d.TerminationRules, m => m.MapFrom(s => s.TerminationRules != null
                     ? s.TerminationRules.Select(tr => new TerminationRuleDto
                     {
-                        ErrorStatusCodes = tr.ErrorStatusCodes != null ? string.Join(",", tr.ErrorStatusCodes.Select(c => (int)c)) : null,
-                        MaxErrorRate = tr.MaxErrorRate.Value.ToString(),
-                        GracePeriod = tr.GracePeriod.Value.ToString()
+                        ErrorStatusCodes = tr.ErrorStatusCodes != null ? string.Join(",", tr.ErrorStatusCodes.Select(c => (int)c)) : string.Empty,
+                        MaxErrorRate = tr.MaxErrorRate != null ? tr.MaxErrorRate.Value.ToString(): string.Empty,
+                        GracePeriod = tr.GracePeriod!=null ? tr.GracePeriod.Value.ToString(): string.Empty,
+                        AVGGreater = tr.AVGGreater != null ? tr.AVGGreater.Value.ToString(): string.Empty,
+                        P90Greater = tr.P90Greater != null ? tr.P90Greater.Value.ToString(): string.Empty,
+                        P50Greater = tr.P50Greater != null ? tr.P50Greater.Value.ToString(): string.Empty,
+                        P10Greater = tr.P10Greater != null ? tr.P10Greater.Value.ToString(): string.Empty
                     }).ToList()
                     : new List<TerminationRuleDto>()))
                 .ForMember(d => d.HttpRequest, m => m.MapFrom(s => s.HttpRequest));

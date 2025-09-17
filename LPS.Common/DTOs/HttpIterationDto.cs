@@ -95,6 +95,15 @@ namespace LPS.UI.Common.DTOs
                         case "grace":
                             rule.GracePeriod = parts[1];
                             break;
+                        case "p90":
+                            rule.P90Greater = parts[1];
+                            break;
+                        case "p50":
+                            rule.P50Greater = parts[1];
+                            break;
+                        case "p10":
+                            rule.P10Greater = parts[1];
+                            break;
                     }
                 }
 
@@ -110,5 +119,13 @@ namespace LPS.UI.Common.DTOs
         public string ErrorStatusCodes { get; set; } // The user should provide them as comma separated to make it easier to define variables and reslove them
         public string MaxErrorRate { get; set; }
         public string GracePeriod { get; set; }
+        public string P90Greater { get; set; }
+
+        public string P50Greater { get; set; }
+
+        public string P10Greater { get; set; }
+
+        public string AVGGreater { get; set; }
+
     }
 }
