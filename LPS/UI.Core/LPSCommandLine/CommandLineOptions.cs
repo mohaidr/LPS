@@ -75,14 +75,12 @@ namespace LPS.UI.Core.LPSCommandLine
                 SaveResponse.AddAlias("-sr");
                 SupportH2C.AddAlias("-sh2c");
                 SupportH2C.AddAlias("-h2c");
-                MaxErrorRateOption.AddAlias("-mer");
-                ErrorStatusCodesOption.AddAlias("-esc");
+                FailureCriteriaOption.AddAlias("-fc");
                 TerminationRuleOption.AddAlias("-tr");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
-                AddCaseInsensitiveAliases(MaxErrorRateOption, "--maxerrorrate");
-                AddCaseInsensitiveAliases(ErrorStatusCodesOption, "--errorstatuscodes");
+                AddCaseInsensitiveAliases(FailureCriteriaOption, "--failurecriteria");
                 AddCaseInsensitiveAliases(TerminationRuleOption, "--terminationrule");
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
                 AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
@@ -115,23 +113,19 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false,
                 Arity = ArgumentArity.ExactlyOne
             };
-
-            public static Option<string> MaxErrorRateOption { get; } = new Option<string>(
-            "--maxErrorRate", "Max Error Rate")
+            // Add next to TerminationRuleOption
+            public static Option<string?> FailureCriteriaOption { get; } = new(
+                "--failureCriteria",
+                description:
+                "Failure criteria in the format 'codes=500,502;rate=0.05;maxp90=300;maxp50=200;maxp10=150;maxavg=220' (single field).")
             {
-                IsRequired = false,
-                Arity = ArgumentArity.ExactlyOne
+                AllowMultipleArgumentsPerToken = false,
+                IsRequired = false
             };
 
-            public static Option<string> ErrorStatusCodesOption { get; } = new Option<string>(
-                "--errorStatusCodes", "Error status codes to be used to calculate the max error rate")
-            {
-                IsRequired = false,
-                Arity = ArgumentArity.ExactlyOne
-            };
             public static Option<IList<string>> TerminationRuleOption { get; } = new(
                 "--terminationRule",
-                description: "Termination rule in the format 'codes=500,502;rate=0.3;grace=10s'. Repeat this option to define multiple rules.")
+                description: "Termination rule in the format 'codes=500,502;rate=0.3;grace=10s;maxp90;maxp50;maxp10;maxavg'. Repeat this option to define multiple rules.")
                         {
                             AllowMultipleArgumentsPerToken = true,
                             IsRequired = false

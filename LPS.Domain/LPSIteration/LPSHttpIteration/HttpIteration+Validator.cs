@@ -69,25 +69,31 @@ namespace LPS.Domain
 
                 RuleFor(c => c.SkipIf).Must(skipIf => _skipIfEvaluator.IsValidExpression(skipIf));
 
-                RuleFor(c => c)
-                    .Must(c =>
+                RuleFor(c => c.FailureCriteria)
+                    .Must(fc =>
                     {
-                        var rate = c.MaxErrorRate;
-                        var codes = c.ErrorStatusCodes;
+                        // Allow empty/default criteria (no thresholds at all)
+                        bool hasAnyThreshold =
+                            (fc.MaxErrorRate is > 0 && fc.ErrorStatusCodes is not null && fc.ErrorStatusCodes.Count > 0) ||
+                            (fc.MaxP90 is > 0) ||
+                            (fc.MaxP50 is > 0) ||
+                            (fc.MaxP10 is > 0) ||
+                            (fc.MaxAvg is > 0);
 
-                        // If MaxErrorRate is set and > 0, ensure ErrorStatusCodes has at least one entry
-                        if (rate.HasValue && rate.Value > 0)
-                        {
-                            return codes != null && codes.Count > 0;
-                        }
-                        else if (codes != null && codes.Count > 0)
-                        {
-                            return rate.HasValue && rate.Value > 0;
-                        }
+                        if (!hasAnyThreshold)
+                            return true;
 
-                        return true; // Valid if both are null or MaxErrorRate is 0
+                        bool hasRate = fc.MaxErrorRate is > 0;
+                        bool hasCodes = fc.ErrorStatusCodes != null && fc.ErrorStatusCodes.Count > 0;
+
+                        if (hasRate ^ hasCodes) // exactly one present -> invalid
+                            return false;
+
+                        return true;
+
                     })
-                    .WithMessage("If 'MaxErrorRate' is greater than 0, then 'ErrorStatusCodes' must have at least one value. If one is null, the other must be null.");
+                    .WithMessage("FailureCriteria: If MaxErrorRate > 0 then ErrorStatusCodes must be provided (and vice versa). At least one threshold (ErrorRate/P90/P50/P10/Avg) may be used.");
+
 
 
                 RuleFor(c => c.TerminationRules)
@@ -164,7 +170,7 @@ namespace LPS.Domain
 
                     rule.ErrorStatusCodes != null &&
                     
-                    ((rule.MaxErrorRate > 0  && rule.ErrorStatusCodes.Count > 0 && rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code))) || rule.P90Greater >0 || rule.P10Greater > 0 || rule.P50Greater > 0 || rule.AVGGreater > 0)
+                    ((rule.MaxErrorRate > 0  && rule.ErrorStatusCodes.Count > 0 && rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code))) || rule.MaxP90 >0 || rule.MaxP10 > 0 || rule.MaxP50 > 0 || rule.MaxAvg > 0)
 
                     && rule.GracePeriod > TimeSpan.Zero);
             }

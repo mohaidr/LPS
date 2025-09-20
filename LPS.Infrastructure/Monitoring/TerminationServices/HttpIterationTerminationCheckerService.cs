@@ -1,4 +1,4 @@
-﻿// HttpIterationTerminationCheckerService.cs (updated)
+﻿// HttpIterationTerminationCheckerService.cs (fully updated)
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
@@ -85,14 +85,12 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                     return await _grpcTermClient.IsTerminatedAsync(fqdn);
                 }
 
-                // Master: fetch metrics we need (response codes for error rate, duration for percentiles/avg)
+                // Master: fetch metrics
                 var metricsClient = _grpcClientFactory.GetClient<GrpcMetricsQueryServiceClient>(_clusterConfig.MasterNodeIP);
 
-                // Response codes: used for error rate rule
                 var respCodes = await metricsClient.GetResponseCodesAsync(fqdn, token);
                 var respSummaries = respCodes?.Responses?.SingleOrDefault()?.Summaries;
 
-                // Duration stats: used for p90/p50/p10/avg rules
                 var durations = await metricsClient.GetDurationAsync(fqdn, token);
                 var duration = durations?.Responses?.SingleOrDefault();
 
@@ -122,57 +120,91 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         if (await st.UpdateAndCheckRateAsync(total, errors, rule.MaxErrorRate.Value))
                         {
                             _terminatedIterations.TryAdd(httpIteration.Id, true);
+
+                            await LogTerminationAsync(httpIteration,
+                                "Error Rate",
+                                $"{(double)errors / total:P}",
+                                $"{rule.MaxErrorRate:P}",
+                                rule.GracePeriod.Value, token);
+
                             return true;
                         }
                     }
 
-                    // 2) Latency thresholds (P90/P50/P10/Average) — use fetched values; skip if no snapshot
                     if (duration is not null)
                     {
                         // P90
-                        if (rule.P90Greater is not null)
+                        if (rule.MaxP90 is not null)
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.P90);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P90ResponseTime, rule.P90Greater.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.P90ResponseTime, rule.MaxP90.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
+
+                                await LogTerminationAsync(httpIteration,
+                                    "P90 response time",
+                                    $"{duration.P90ResponseTime} ms",
+                                    $"{rule.MaxP90.Value} ms",
+                                    rule.GracePeriod.Value, token);
+
                                 return true;
                             }
                         }
 
                         // P50
-                        if (rule.P50Greater is not null)
+                        if (rule.MaxP50 is not null)
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.P50);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P50ResponseTime, rule.P50Greater.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.P50ResponseTime, rule.MaxP50.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
+
+                                await LogTerminationAsync(httpIteration,
+                                    "P50 response time",
+                                    $"{duration.P50ResponseTime} ms",
+                                    $"{rule.MaxP50.Value} ms",
+                                    rule.GracePeriod.Value, token);
+
                                 return true;
                             }
                         }
 
                         // P10
-                        if (rule.P10Greater is not null)
+                        if (rule.MaxP10 is not null)
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.P10);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P10ResponseTime, rule.P10Greater.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.P10ResponseTime, rule.MaxP10.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
+
+                                await LogTerminationAsync(httpIteration,
+                                    "P10 response time",
+                                    $"{duration.P10ResponseTime} ms",
+                                    $"{rule.MaxP10.Value} ms",
+                                    rule.GracePeriod.Value, token);
+
                                 return true;
                             }
                         }
 
                         // Average
-                        if (rule.AVGGreater is not null)
+                        if (rule.MaxAvg is not null)
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.Average);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.AverageResponseTime, rule.AVGGreater.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.AverageResponseTime, rule.MaxAvg.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
+
+                                await LogTerminationAsync(httpIteration,
+                                    "Average response time",
+                                    $"{duration.AverageResponseTime} ms",
+                                    $"{rule.MaxAvg.Value} ms",
+                                    rule.GracePeriod.Value, token);
+
                                 return true;
                             }
                         }
@@ -188,6 +220,15 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                     LPSLoggingLevel.Error, token);
                 return false;
             }
+        }
+
+        private async Task LogTerminationAsync(HttpIteration iteration, string metricName, string actual, string threshold, TimeSpan gracePeriod, CancellationToken token)
+        {
+            await _logger.LogAsync(
+                _runtimeOperationIdProvider.OperationId,
+                $"The iteration {iteration.Name} will be terminated because the '{metricName}' exceeded the threshold {threshold} (actual: {actual}) after a grace period of {gracePeriod.TotalSeconds}s.",
+                LPSLoggingLevel.Information,
+                token);
         }
     }
 }

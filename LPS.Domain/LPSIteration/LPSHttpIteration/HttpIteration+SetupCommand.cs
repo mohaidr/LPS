@@ -43,15 +43,14 @@ namespace LPS.Domain
             public int StartupDelay { get; set; }
             public virtual string Name { get; set; }
             public bool? MaximizeThroughput { get; set; }
-            public double? MaxErrorRate { get; set; }
-            public ICollection<HttpStatusCode> ErrorStatusCodes { get; set; }
-            public IterationMode? Mode { get; set; }
+            public IterationMode? Mode { get; set; } // nullable to enforce the client enter a value, otherwise, the first enum value will be the default value
             public int? RequestCount { get; set; }
             public int? Duration { get; set; }
             public int? BatchSize { get; set; }
             public int? CoolDownTime { get; set; }
             public string SkipIf {  get; set; }
-            public ICollection<TerminationRule> TerminationRules { get; private set; }
+            public FailureCriteria FailureCriteria { get; set; }
+            public ICollection<TerminationRule> TerminationRules { get; set; }
 
             [JsonIgnore]
             [YamlIgnore]
@@ -74,8 +73,7 @@ namespace LPS.Domain
                 targetCommand.CoolDownTime = this.CoolDownTime;
                 targetCommand.IsValid = this.IsValid;
                 targetCommand.TerminationRules = [.. this.TerminationRules];
-                targetCommand.MaxErrorRate = this.MaxErrorRate;
-                targetCommand.ErrorStatusCodes = this.ErrorStatusCodes;
+                targetCommand.FailureCriteria = this.FailureCriteria;
                 targetCommand.SkipIf = this.SkipIf;
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
@@ -100,9 +98,8 @@ namespace LPS.Domain
                 this.Duration = command.Duration;
                 this.CoolDownTime = command.CoolDownTime; ;
                 this.BatchSize = command.BatchSize;
-                this.MaxErrorRate = command.MaxErrorRate;
                 this.SkipIf = command.SkipIf;
-                this.ErrorStatusCodes = command.ErrorStatusCodes;
+                this.FailureCriteria = command.FailureCriteria;
                 this.TerminationRules = command.TerminationRules.ToList();
                 this.IsValid = true;
             }
@@ -129,8 +126,7 @@ namespace LPS.Domain
                 clone.BatchSize = this.BatchSize;
                 clone.MaximizeThroughput = this.MaximizeThroughput;
                 clone.TerminationRules = [.. this.TerminationRules];
-                clone.MaxErrorRate = this.MaxErrorRate;
-                clone.ErrorStatusCodes = this.ErrorStatusCodes;
+                clone.FailureCriteria = this.FailureCriteria;
                 clone.IsValid = true;
             }
             return clone;

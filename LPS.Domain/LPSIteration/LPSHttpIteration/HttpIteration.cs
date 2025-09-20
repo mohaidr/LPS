@@ -82,40 +82,58 @@ namespace LPS.Domain
         public IterationMode? Mode { get; private set; }
         public bool MaximizeThroughput { get; private set; }
         public HttpRequest HttpRequest { get; protected set; }
-        public ICollection<HttpStatusCode> ErrorStatusCodes { get; private set; }
+        public FailureCriteria FailureCriteria { get; private set; }
         public ICollection<TerminationRule> TerminationRules { get; private set; }
     }
+
+    public readonly struct FailureCriteria(
+    ICollection<HttpStatusCode> errorStatusCodes,
+    double? maxErrorRate,
+    double? maxP90 = null,
+    double? maxP50 = null,
+    double? maxP10 = null,
+    double? maxAvg = null)
+    {
+        public ICollection<HttpStatusCode> ErrorStatusCodes { get; } = errorStatusCodes;
+        public double? MaxErrorRate { get; } = maxErrorRate;
+        public double? MaxP90 { get; } = maxP90;
+        public double? MaxP50 { get; } = maxP50;
+        public double? MaxP10 { get; } = maxP10;
+        public double? MaxAvg { get; } = maxAvg;
+    }
+
+
     public readonly struct TerminationRule(
         ICollection<HttpStatusCode> errorStatusCodes,
         TimeSpan? gracePeriod, 
         double? maxErrorRate, 
-        double? p90Greater = null,
-        double? p50Greater = null,
-        double? p10Greater = null,
-        double? avgGreater = null)
+        double? maxP90 = null,
+        double? maxP50 = null,
+        double? maxP10 = null,
+        double? maxAvg = null)
     {
-        /// <summary>Represents the status codes to consider as erroneous status codes</summary>
-        public ICollection<HttpStatusCode> ErrorStatusCodes { get; } = errorStatusCodes;
-
-        /// <summary>Represents the maximum error rate for a given grace period before the test is terminated</summary>
-        public double? MaxErrorRate { get; } = maxErrorRate;
-
         /// <summary>
         /// The duration for which the threshold must remain above its value
         /// before terminating the test. If it recovers during this period, termination is aborted.
         /// </summary>
         public TimeSpan? GracePeriod { get; } = gracePeriod;
 
+        /// <summary>Represents the status codes to consider as erroneous status codes</summary>
+        public ICollection<HttpStatusCode> ErrorStatusCodes { get; } = errorStatusCodes;
+
+        /// <summary>Represents the maximum error rate for a given grace period before the test is terminated</summary>
+        public double? MaxErrorRate { get; } = maxErrorRate;
+
         /// <summary>Terminate if P90 response time stays >= this value during the grace period.</summary>
-        public double? P90Greater { get; } = p90Greater;
+        public double? MaxP90 { get; } = maxP90;
 
         /// <summary>Terminate if P50 response time stays >= this value during the grace period.</summary>
-        public double? P50Greater { get; } = p50Greater;
+        public double? MaxP50 { get; } = maxP50;
 
         /// <summary>Terminate if P10 response time stays >= this value during the grace period.</summary>
-        public double? P10Greater { get; } = p10Greater;
+        public double? MaxP10 { get; } = maxP10;
 
         /// <summary>Terminate if Average response time stays >= this value during the grace period.</summary>
-        public double? AVGGreater { get; } = avgGreater;
+        public double? MaxAvg { get; } = maxAvg;
     }
 }

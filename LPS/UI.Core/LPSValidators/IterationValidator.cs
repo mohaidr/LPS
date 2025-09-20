@@ -192,48 +192,58 @@ namespace LPS.UI.Core.LPSValidators
 
             RuleFor(dto => dto.TerminationRules)
                 .Must(BeValidTerminationRules).WithMessage("Ivalid Termination Rule");
-
-            RuleFor(dto => dto)
-                .Must(dto =>
+            
+            RuleFor(dto => dto.FailureCriteria)
+                .Must(fc =>
                 {
-                    var rate = dto.MaxErrorRate;
-                    var codes = dto.ErrorStatusCodes;
+                    // If everything is empty -> valid (no failure checks configured)
+                    bool hasAnyThreshold =
+                        IsPositiveNumberOrPlaceholder(fc.MaxErrorRate) ||
+                        IsPositiveNumberOrPlaceholder(fc.MaxP90) ||
+                        IsPositiveNumberOrPlaceholder(fc.MaxP50) ||
+                        IsPositiveNumberOrPlaceholder(fc.MaxP10) ||
+                        IsPositiveNumberOrPlaceholder(fc.MaxAvg);
 
-
-                    // Case 1: Both start with `$` — valid (placeholder case)
-                    if (!string.IsNullOrEmpty(rate) && rate.StartsWith("$") &&
-                        !string.IsNullOrEmpty(codes) && codes.StartsWith("$"))
+                    if (!hasAnyThreshold && string.IsNullOrWhiteSpace(fc.ErrorStatusCodes))
                         return true;
 
-                    // Case 2: If maxErrorRate > 0, errorStatusCodes must contain at least one valid HTTP status code and vice versa
-                    if (double.TryParse(rate, out var parsedRate) && parsedRate > 0)
+                    // Error-rate pairing: if one is provided, the other must be provided too
+                    bool hasRate = IsPositiveNumberOrPlaceholder(fc.MaxErrorRate);
+                    bool hasCodes = !string.IsNullOrWhiteSpace(fc.ErrorStatusCodes);
+
+                    if (hasRate ^ hasCodes) // exactly one present -> invalid
+                        return false;
+
+                    // If codes are provided, they must be placeholder or at least one valid HTTP status code int
+                    if (hasCodes && !fc.ErrorStatusCodes.StartsWith("$"))
                     {
-                        if (string.IsNullOrWhiteSpace(codes))
-                            return false;
+                        var parts = fc.ErrorStatusCodes
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                            .Select(p => p.Trim());
 
-                        var parts = codes.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                         .Select(p => p.Trim());
+                        if (!parts.Any()) return false;
 
-                        return parts.Any(code =>
-                            int.TryParse(code, out var statusCode) &&
-                            Enum.IsDefined(typeof(HttpStatusCode), statusCode));
-                    }
-                    else if (!string.IsNullOrWhiteSpace(codes) && codes.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                                         .Select(p => p.Trim()).Count() > 0)
-                    {
-                        return double.TryParse(rate, out parsedRate) && parsedRate > 0;
+                        // accept either numeric codes or named codes (e.g., "InternalServerError")
+                        bool anyValid = parts.Any(code =>
+                            int.TryParse(code, out var numeric) && Enum.IsDefined(typeof(HttpStatusCode), numeric) ||
+                            Enum.TryParse<HttpStatusCode>(code, true, out _));
+
+                        if (!anyValid) return false;
                     }
 
-                    return true; // All other cases are valid
+                    // Duration thresholds: placeholders or numeric > 0 are acceptable
+                    // No extra cross-field constraints required
+                    return true;
                 })
-                .WithMessage("If one of 'MaxErrorRate' or 'ErrorStatusCodes' is null, the other must be null. " +
-                             "If both start with '$', it's valid. If 'MaxErrorRate' > 0, then 'ErrorStatusCodes' must include at least one valid HTTP status code.");
+                .WithMessage("FailureCriteria is invalid: If MaxErrorRate is provided, ErrorStatusCodes must also be provided (and vice versa). Status codes must be a placeholder or valid HTTP codes.");
 
 
             RuleFor(dto => dto.HttpRequest)
                 .SetValidator(new RequestValidator(new HttpRequestDto()));
 
         }
+
+
         private bool BeValidTerminationRules(IEnumerable<TerminationRuleDto> rules)
         {
             if (rules == null) return false;
@@ -246,10 +256,10 @@ namespace LPS.UI.Core.LPSValidators
                      bool isErrorCriteriaEmpty = string.IsNullOrWhiteSpace(rule.MaxErrorRate)
                                                  && string.IsNullOrWhiteSpace(rule.ErrorStatusCodes);
 
-                     bool isLatencyCriteriaEmpty = string.IsNullOrWhiteSpace(rule.AVGGreater)
-                                                      && string.IsNullOrWhiteSpace(rule.P10Greater)
-                                                      && string.IsNullOrWhiteSpace(rule.P50Greater)
-                                                      && string.IsNullOrWhiteSpace(rule.P90Greater);
+                     bool isLatencyCriteriaEmpty = string.IsNullOrWhiteSpace(rule.MaxAvg)
+                                                      && string.IsNullOrWhiteSpace(rule.MaxP10)
+                                                      && string.IsNullOrWhiteSpace(rule.MaxP50)
+                                                      && string.IsNullOrWhiteSpace(rule.MaxP90);
 
                      bool isGracePeriodEmpty = string.IsNullOrWhiteSpace(rule.GracePeriod);
 
@@ -261,10 +271,10 @@ namespace LPS.UI.Core.LPSValidators
                      var validCodes = rule.ErrorStatusCodes.StartsWith("$") || (codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _)) && codes.Count > 0);
                      var validGrace = rule.GracePeriod.StartsWith("$") || (TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod) && gracePeriod > TimeSpan.Zero);
                      var validRate = (!string.IsNullOrWhiteSpace(rule.MaxErrorRate) && rule.MaxErrorRate.StartsWith("$")) || (double.TryParse(rule.MaxErrorRate, out var maxErrorRate) && maxErrorRate > 0);
-                     var validP90 = (!string.IsNullOrWhiteSpace(rule.P90Greater) && rule.P90Greater.StartsWith("$")) || (double.TryParse(rule.P90Greater, out var p90Greater) && p90Greater > 0);
-                     var validP10 = (!string.IsNullOrWhiteSpace(rule.P10Greater) && rule.P10Greater.StartsWith("$")) || (double.TryParse(rule.P10Greater, out var p10Greater) && p10Greater > 0);
-                     var validP50 = (!string.IsNullOrWhiteSpace(rule.P50Greater) && rule.P50Greater.StartsWith("$")) || (double.TryParse(rule.P50Greater, out var p50Greater) && p50Greater > 0);
-                     var validAVG = (!string.IsNullOrWhiteSpace(rule.AVGGreater) && rule.AVGGreater.StartsWith("$")) || (double.TryParse(rule.AVGGreater, out var avgGreater) && avgGreater > 0);
+                     var validP90 = (!string.IsNullOrWhiteSpace(rule.MaxP90) && rule.MaxP90.StartsWith("$")) || (double.TryParse(rule.MaxP90, out var p90Greater) && p90Greater > 0);
+                     var validP10 = (!string.IsNullOrWhiteSpace(rule.MaxP10) && rule.MaxP10.StartsWith("$")) || (double.TryParse(rule.MaxP10, out var p10Greater) && p10Greater > 0);
+                     var validP50 = (!string.IsNullOrWhiteSpace(rule.MaxP50) && rule.MaxP50.StartsWith("$")) || (double.TryParse(rule.MaxP50, out var p50Greater) && p50Greater > 0);
+                     var validAVG = (!string.IsNullOrWhiteSpace(rule.MaxAvg) && rule.MaxAvg.StartsWith("$")) || (double.TryParse(rule.MaxAvg, out var avgGreater) && avgGreater > 0);
 
                      return validCodes && validGrace && (validRate || validAVG || validP90 || validP50 || validP10);
 
@@ -273,6 +283,15 @@ namespace LPS.UI.Core.LPSValidators
 
 
         }
+
+        private static bool IsPositiveNumberOrPlaceholder(string s)
+        {
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            if (s.StartsWith("$")) return true;
+            return double.TryParse(s, out var d) && d > 0;
+        }
+
+
 
         public override HttpIterationDto Dto { get { return _iterationDto; } }
 

@@ -74,11 +74,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 if (_metricDataStore.TryGetLatest(_httpIteration.Id, LPSMetricType.ResponseCode, out ResponseCodeMetricSnapshot snapshot))
                 {
                     successCount = snapshot
-                        .ResponseSummaries.Where(r => !HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
+                        .ResponseSummaries.Where(r => HttpIteration.FailureCriteria.ErrorStatusCodes is null || !HttpIteration.FailureCriteria.ErrorStatusCodes.Contains(r.HttpStatusCode))
                         .Sum(r => r.Count);
 
                     failedCount = snapshot
-                        .ResponseSummaries.Where(r => HttpIteration.ErrorStatusCodes.Contains(r.HttpStatusCode))
+                        .ResponseSummaries.Where(r => HttpIteration.FailureCriteria.ErrorStatusCodes is not null && HttpIteration.FailureCriteria.ErrorStatusCodes.Contains(r.HttpStatusCode))
                         .Sum(r => r.Count);
                 }
 

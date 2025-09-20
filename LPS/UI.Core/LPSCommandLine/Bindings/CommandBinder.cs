@@ -38,9 +38,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string?> _arrivalDelayOption;
         private Option<string> _delayClientCreationOption;
         private Option<string> _runInParallerOption;
-        private Option<string> _maxErrorRateOption = CommandLineOptions.LPSCommandOptions.MaxErrorRateOption;
-        private Option<string> _errorStatusCodesOption = CommandLineOptions.LPSCommandOptions.ErrorStatusCodesOption;
-        private Option<IList<string>> _terminationRuleOption = CommandLineOptions.LPSCommandOptions.TerminationRuleOption;
+        private readonly Option<string?> _failureCriteriaOption;
+        private Option<IList<string>> _terminationRuleOption;
 
         public CommandBinder(
             Option<string>? nameOption = null,
@@ -64,7 +63,9 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<string>? payloadOption = null,
             Option<string>? downloadHtmlEmbeddedResourcesOption = null,
             Option<string>? saveResponseOption = null,
-            Option<string?>? supportH2C = null)
+            Option<string?>? supportH2C = null,
+            Option<string?> failureCriteriaOption = null,
+            Option<IList<string>> terminationRuleOption= null)
         {
             _nameOption = nameOption ?? CommandLineOptions.LPSCommandOptions.PlanNameOption;
             _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.RoundNameOption;
@@ -88,6 +89,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? CommandLineOptions.LPSCommandOptions.DownloadHtmlEmbeddedResources;
             _saveResponseOption = saveResponseOption ?? CommandLineOptions.LPSCommandOptions.SaveResponse;
             _supportH2C = supportH2C ?? CommandLineOptions.LPSCommandOptions.SupportH2C;
+            _failureCriteriaOption = failureCriteriaOption ?? CommandLineOptions.LPSCommandOptions.FailureCriteriaOption;
+            _terminationRuleOption = terminationRuleOption ?? CommandLineOptions.LPSCommandOptions.TerminationRuleOption;
         }
 
         protected override PlanDto GetBoundValue(BindingContext bindingContext)
@@ -96,6 +99,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             var terminationRules = terminationRulesRaw != null
                 ? HttpIterationDto.ParseTerminationRules(terminationRulesRaw)
                 : new List<TerminationRuleDto>();
+            var failureCriteriaRaw = bindingContext.ParseResult.GetValueForOption(_failureCriteriaOption);
+            var failureCriteria = HttpIterationDto.ParseFailureCriteria(failureCriteriaRaw);
 
             #pragma warning disable CS8601 // Possible null reference assignment.
             return new PlanDto()
@@ -122,8 +127,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                                 CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                                 BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
-                                MaxErrorRate = bindingContext.ParseResult.GetValueForOption(_maxErrorRateOption),
-                                ErrorStatusCodes = bindingContext.ParseResult.GetValueForOption(_errorStatusCodesOption),
+                                FailureCriteria = failureCriteria,
                                 TerminationRules = terminationRules,
                                 HttpRequest = new HttpRequestDto()
                                 {

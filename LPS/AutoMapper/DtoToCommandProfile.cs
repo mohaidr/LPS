@@ -60,25 +60,70 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.Duration, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.Duration).Result))
                 .ForMember(dest => dest.BatchSize, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.BatchSize).Result))
                 .ForMember(dest => dest.CoolDownTime, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.CoolDownTime).Result))
-                .ForMember(dest => dest.MaxErrorRate, opt => opt.MapFrom(src => ResolvePlaceholderAsync<double?>(src.MaxErrorRate).Result))
                 .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.SkipIf).Result))
-                .ForMember(dest=> dest.ErrorStatusCodes, opt=> opt.MapFrom(src=> ResolvePlaceholderAsync<string>(src.ErrorStatusCodes).Result.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result).ToList()))
-                .ForMember(dest => dest.TerminationRules, opt => opt.MapFrom(src => src.TerminationRules.Select(tr => 
-                    new TerminationRule(ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result).ToList(), 
-                                        ResolvePlaceholderAsync<TimeSpan?>(tr.GracePeriod).Result, 
-                                        ResolvePlaceholderAsync<double?>(tr.MaxErrorRate).Result ,
-                                        ResolvePlaceholderAsync<double?>(tr.P90Greater).Result, 
-                                        ResolvePlaceholderAsync<double?>(tr.P50Greater).Result,
-                                        ResolvePlaceholderAsync<double?>(tr.P10Greater).Result, 
-                                        ResolvePlaceholderAsync<double?>(tr.AVGGreater).Result))))
+                .ForMember(dest => dest.FailureCriteria, opt => opt.Ignore()) // we'll set it in AfterMap
+                .ForMember(dest => dest.TerminationRules, opt => opt.Ignore()) // we'll set it in AfterMap
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
-                .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());
+                .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore())
+                .AfterMap((HttpIterationDto src, HttpIteration.SetupCommand dest) =>
+                {
+                    // ----- FailureCriteria -----
+                    var maxErrorRate = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxErrorRate).Result;
+
+                    List<HttpStatusCode>? codes = null;
+                    var rawCodes = ResolvePlaceholderAsync<string>(src.FailureCriteria.ErrorStatusCodes).Result;
+                    if (!string.IsNullOrWhiteSpace(rawCodes) && !rawCodes.StartsWith("$"))
+                    {
+                        codes = rawCodes
+                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                            .Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result)
+                            .ToList();
+                    }
+
+                    var p90 = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxP90).Result;
+                    var p50 = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxP50).Result;
+                    var p10 = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxP10).Result;
+                    var avg = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxAvg).Result;
+
+                    dest.FailureCriteria = new FailureCriteria(codes, maxErrorRate, p90, p50, p10, avg);
+
+                    // ----- TerminationRules -----
+                    if (src.TerminationRules is not null && src.TerminationRules.Count > 0)
+                    {
+                        dest.TerminationRules = src.TerminationRules.Select(tr =>
+                        {
+                            List<HttpStatusCode>? trCodes = null;
+                            var rawTrCodes = ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result;
+                            if (!string.IsNullOrWhiteSpace(rawTrCodes) && !rawTrCodes.StartsWith("$"))
+                            {
+                                trCodes = rawTrCodes
+                                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                                    .Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result)
+                                    .ToList();
+                            }
+
+                            return new TerminationRule(
+                                trCodes,
+                                ResolvePlaceholderAsync<TimeSpan?>(tr.GracePeriod).Result,
+                                ResolvePlaceholderAsync<double?>(tr.MaxErrorRate).Result,
+                                ResolvePlaceholderAsync<double?>(tr.MaxP90).Result,
+                                ResolvePlaceholderAsync<double?>(tr.MaxP50).Result,
+                                ResolvePlaceholderAsync<double?>(tr.MaxP10).Result,
+                                ResolvePlaceholderAsync<double?>(tr.MaxAvg).Result
+                            );
+                        }).ToList();
+                    }
+                    else
+                    {
+                        dest.TerminationRules = new List<TerminationRule>();
+                    }
+                });
 
             // Map HttpRequestDto to HttpRequest.SetupCommand
             // Do not apply placeholder resolver on (HttpMethod, HttpVersion, URL, HttpHeaders); the values should be resolved instantly when sending the request.
             CreateMap<HttpRequestDto, HttpRequest.SetupCommand>()
-                .ForMember(dest => dest.Url, opt => opt.MapFrom(src => ResolveURLShemaAndHostName(new URL(src.URL)))) 
+                .ForMember(dest => dest.Url, opt => opt.MapFrom(src => ResolveURLShemaAndHostName(new URL(src.URL))))
                 .ForMember(dest => dest.HttpMethod, opt => opt.MapFrom(src => src.HttpMethod))
                 .ForMember(dest => dest.HttpVersion, opt => opt.MapFrom(src => src.HttpVersion))
                 .ForMember(dest => dest.HttpHeaders, opt => opt.MapFrom(src => src.HttpHeaders.ToDictionary(
@@ -127,8 +172,8 @@ namespace LPS.AutoMapper
             switch (payloadDto.Type)
             {
                 case Payload.PayloadType.Raw:
-                    return Payload.CreateRaw(payloadDto.Raw?? string.Empty); // do not use resolver here, we resolve the raw payload during the session
-                
+                    return Payload.CreateRaw(payloadDto.Raw ?? string.Empty); // do not use resolver here, we resolve the raw payload during the session
+
                 case Payload.PayloadType.Binary:
                     // Read the file content from the full path and create binary payload
                     string fullPath = Path.GetFullPath(ResolvePlaceholderAsync<string>(payloadDto.File).Result, AppConstants.EnvironmentCurrentDirectory);
@@ -136,9 +181,9 @@ namespace LPS.AutoMapper
                     {
                         throw new ArgumentException($"Invalid file path specified: {payloadDto.File}");
                     }
-                    var binaryContent =  File.ReadAllBytes(fullPath);
+                    var binaryContent = File.ReadAllBytes(fullPath);
                     return Payload.CreateBinary(binaryContent);
-                
+
                 case Payload.PayloadType.Multipart:
                     // Map fields and files for multipart content
                     var fields = payloadDto.Multipart?.Fields?
@@ -160,7 +205,7 @@ namespace LPS.AutoMapper
                             string contentType = ResolvePlaceholderAsync<string>(file.ContentType).Result;
 
                             if (string.IsNullOrEmpty(contentType))
-                            { 
+                            {
                                 contentType = MimeTypeExtensions.FromFileExtension(extension).ToContentType();
                             }
                             // Determine MIME type

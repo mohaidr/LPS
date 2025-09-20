@@ -44,22 +44,31 @@ namespace Apis.AutoMapper
                 .ForMember(d => d.Duration, m => m.MapFrom(s => s.Duration.HasValue ? s.Duration.Value.ToString() : null))
                 .ForMember(d => d.BatchSize, m => m.MapFrom(s => s.BatchSize.HasValue ? s.BatchSize.Value.ToString() : null))
                 .ForMember(d => d.CoolDownTime, m => m.MapFrom(s => s.CoolDownTime.HasValue ? s.CoolDownTime.Value.ToString() : null))
-                .ForMember(d => d.MaxErrorRate, m => m.MapFrom(s => s.MaxErrorRate.HasValue ? s.MaxErrorRate.Value.ToString() : null))
                 .ForMember(d => d.SkipIf, m => m.MapFrom(s => s.SkipIf))
-                .ForMember(d => d.ErrorStatusCodes, m => m.MapFrom(s => s.ErrorStatusCodes != null ? string.Join(",", s.ErrorStatusCodes.Select(c => (int)c)) : null))
                 .ForMember(d => d.TerminationRules, m => m.MapFrom(s => s.TerminationRules != null
                     ? s.TerminationRules.Select(tr => new TerminationRuleDto
                     {
                         ErrorStatusCodes = tr.ErrorStatusCodes != null ? string.Join(",", tr.ErrorStatusCodes.Select(c => (int)c)) : string.Empty,
                         MaxErrorRate = tr.MaxErrorRate != null ? tr.MaxErrorRate.Value.ToString(): string.Empty,
                         GracePeriod = tr.GracePeriod!=null ? tr.GracePeriod.Value.ToString(): string.Empty,
-                        AVGGreater = tr.AVGGreater != null ? tr.AVGGreater.Value.ToString(): string.Empty,
-                        P90Greater = tr.P90Greater != null ? tr.P90Greater.Value.ToString(): string.Empty,
-                        P50Greater = tr.P50Greater != null ? tr.P50Greater.Value.ToString(): string.Empty,
-                        P10Greater = tr.P10Greater != null ? tr.P10Greater.Value.ToString(): string.Empty
+                        MaxAvg = tr.MaxAvg != null ? tr.MaxAvg.Value.ToString(): string.Empty,
+                        MaxP90 = tr.MaxP90 != null ? tr.MaxP90.Value.ToString(): string.Empty,
+                        MaxP50 = tr.MaxP50 != null ? tr.MaxP50.Value.ToString(): string.Empty,
+                        MaxP10 = tr.MaxP10 != null ? tr.MaxP10.Value.ToString(): string.Empty
                     }).ToList()
                     : new List<TerminationRuleDto>()))
-                .ForMember(d => d.HttpRequest, m => m.MapFrom(s => s.HttpRequest));
+                .ForMember(d => d.HttpRequest, m => m.MapFrom(s => s.HttpRequest))
+                 .ForMember(d => d.FailureCriteria, m => m.MapFrom(s => new FailureCriteriaDto
+                 {
+                     MaxErrorRate = s.FailureCriteria.MaxErrorRate.HasValue ? s.FailureCriteria.MaxErrorRate.Value.ToString() : string.Empty,
+                     ErrorStatusCodes = s.FailureCriteria.ErrorStatusCodes != null
+                              ? string.Join(",", s.FailureCriteria.ErrorStatusCodes.Select(c => (int)c))
+                              : string.Empty,
+                     MaxP90 = s.FailureCriteria.MaxP90.HasValue ? s.FailureCriteria.MaxP90.Value.ToString() : string.Empty,
+                     MaxP50 = s.FailureCriteria.MaxP50.HasValue ? s.FailureCriteria.MaxP50.Value.ToString() : string.Empty,
+                     MaxP10 = s.FailureCriteria.MaxP10.HasValue ? s.FailureCriteria.MaxP10.Value.ToString() : string.Empty,
+                     MaxAvg = s.FailureCriteria.MaxAvg.HasValue ? s.FailureCriteria.MaxAvg.Value.ToString() : string.Empty
+                 }));
 
             // HttpRequest -> HttpRequestDto
             CreateMap<HttpRequest, HttpRequestDto>()
