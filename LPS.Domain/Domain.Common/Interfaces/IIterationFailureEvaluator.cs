@@ -9,6 +9,6 @@ namespace LPS.Domain.Domain.Common.Interfaces
 {
     public interface IIterationFailureEvaluator
     {
-        Task<bool> IsErrorRateExceededAsync(HttpIteration iteration, CancellationToken token = default);
+        Task<bool> EvaluateFailureAsync(HttpIteration iteration, CancellationToken token = default);
     }
 }

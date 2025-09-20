@@ -49,7 +49,7 @@ namespace LPS.Infrastructure.FailureEvaluator
         /// If both kinds are configured, exceeding either causes failure.
         /// Logs the reason when failure is determined.
         /// </summary>
-        public async Task<bool> IsErrorRateExceededAsync(HttpIteration iteration, CancellationToken token = default)
+        public async Task<bool> EvaluateFailureAsync(HttpIteration iteration, CancellationToken token = default)
         {
             try
             {

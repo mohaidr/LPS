@@ -78,7 +78,7 @@ namespace LPS.Domain
                 catch
                 {
                     _executionStatus = CommandExecutionStatus.Failed;
-                } // No exception should stop the iteration execution, termination rules and cancellations are the ways to stop ongoing execution
+                } // No exception should stop the iteration execution, termination rules and cancellation tokens are the ways to stop ongoing execution
                 finally
                 {
                     if (await _iterationStatusMonitor.IsTerminatedAsync(entity, token))

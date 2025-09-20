@@ -44,7 +44,7 @@ namespace LPS.Infrastructure.Monitoring.Status
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Terminated);
 
             // 3) Evaluate "Failed" (error rate exceeded) and cache if so.
-            if (await _iterationFailureEvaluator.IsErrorRateExceededAsync(httpIteration, token))
+            if (await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token))
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Failed);
 
             // 4) Aggregate command statuses
@@ -97,7 +97,7 @@ namespace LPS.Infrastructure.Monitoring.Status
             if (TryGetCachedTerminal(httpIteration, out var cached))
                 return cached == EntityExecutionStatus.Failed;
 
-            return await _iterationFailureEvaluator.IsErrorRateExceededAsync(httpIteration, token);
+            return await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token);
         }
 
         public bool IsCancelled(HttpIteration httpIteration)
