@@ -324,7 +324,7 @@ namespace LPS.UI.Core.Services
             // only master node writes snapshots to disk
             if (_nodeMetaData.NodeType != NodeType.Master) return;
 
-            var deadline = DateTime.UtcNow.AddSeconds(30);
+            var deadline = DateTime.UtcNow.AddSeconds(180);
             using var persistCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
             var persistToken = persistCts.Token;
 
