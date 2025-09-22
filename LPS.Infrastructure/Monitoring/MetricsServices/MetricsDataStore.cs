@@ -88,6 +88,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             return snapshots.Count > 0;
         }
 
+        // latest snapshot per metric type for the iteration
         public bool TryGetLatest<TSnapshot>(Guid iterationId, LPSMetricType metricType, out TSnapshot? snapshot)
             where TSnapshot : HttpMetricSnapshot
         {
@@ -105,7 +106,25 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             return false;
         }
 
-        // NEW #1: all snapshots across all metric types for the iteration
+        // latest snapshot of all metric types for the iteration
+        public bool TryGetLatest(Guid iterationId, out IReadOnlyList<HttpMetricSnapshot> snapshots)
+        {
+            snapshots = Array.Empty<HttpMetricSnapshot>();
+            if (!_store.TryGetValue(iterationId, out var entry)) return false;
+
+            var list = new List<HttpMetricSnapshot>(capacity: entry.Types.Count);
+            foreach (var per in entry.Types.Values)
+            {
+                var last = per.Latest;
+                if (last is not null) list.Add(last);
+            }
+
+            snapshots = list;
+            return list.Count > 0;
+        }
+
+
+        // all snapshots across all metric types for the iteration
         public bool TryGet(Guid iterationId, out IReadOnlyList<HttpMetricSnapshot> snapshots)
         {
             snapshots = Array.Empty<HttpMetricSnapshot>();
@@ -122,22 +141,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             return list.Count > 0;
         }
 
-        // NEW #2: latest snapshot per metric type for the iteration
-        public bool TryGetLatest(Guid iterationId, out IReadOnlyList<HttpMetricSnapshot> snapshots)
-        {
-            snapshots = Array.Empty<HttpMetricSnapshot>();
-            if (!_store.TryGetValue(iterationId, out var entry)) return false;
-
-            var list = new List<HttpMetricSnapshot>(capacity: entry.Types.Count);
-            foreach (var per in entry.Types.Values)
-            {
-                var last = per.Latest;
-                if (last is not null) list.Add(last);
-            }
-
-            snapshots = list;
-            return list.Count > 0;
-        }
 
         public IEnumerable<HttpIteration> Iterations =>
             _store.Values.Select(e => e.Iteration);

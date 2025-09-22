@@ -22,6 +22,11 @@ using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Extensions;
+using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Metrics;
+using System.Text.Json.Serialization;
+using System.Text.Json;
+using System.Globalization;
 
 namespace LPS.UI.Core.Services
 {
@@ -48,6 +53,9 @@ namespace LPS.UI.Core.Services
         public readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
         public readonly ISkipIfEvaluator _skipIfEvaluator;
         public readonly IVariableFactory _variableFactory;
+        private readonly INodeMetadata _nodeMetaData;
+        private readonly IMetricDataStore _metricStore;
+
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -67,6 +75,8 @@ namespace LPS.UI.Core.Services
             IIterationStatusMonitor iterationStatusMonitor,
             ISkipIfEvaluator skipIfEvaluator,
             IVariableFactory variableFactory,
+            IMetricDataStore metricStore,             // NEW
+            INodeMetadata nodeMetaData,               // NEW
             ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
             CancellationTokenSource cts)
         {
@@ -89,17 +99,15 @@ namespace LPS.UI.Core.Services
             _iterationStatusMonitor = iterationStatusMonitor;
             _skipIfEvaluator = skipIfEvaluator;
             _variableFactory = variableFactory;
+            _metricStore = metricStore;               // NEW
+            _nodeMetaData = nodeMetaData;             // NEW
             _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
-            // Create the AutoMapper configuration
+
             var mapperConfig = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile(new DtoToCommandProfile(placeholderResolverService, string.Empty));
             });
-
-            // Validate the configuration
             mapperConfig.AssertConfigurationIsValid();
-
-            // Create the mapper instance
             _mapper = mapperConfig.CreateMapper();
         }
 
@@ -199,6 +207,8 @@ namespace LPS.UI.Core.Services
                 await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
                     .ExecuteAsync(plan, _cts.Token);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
+                await PersistAllSnapshotsAsync(plan, _cts.Token);
+
             }
             else
             {
@@ -298,8 +308,7 @@ namespace LPS.UI.Core.Services
             throw new InvalidLPSEntityException($"Invalid Iteration {iterationDto.Name}, Please fix the validation errors and try again");
         }
 
-
-        public void RegisterEntities(Plan plan)
+        private void RegisterEntities(Plan plan)
         {
             var entityRegisterer = new EntityRegisterer(_clusterConfiguration,
                 _nodeRegistry.GetLocalNode().Metadata,
@@ -308,6 +317,101 @@ namespace LPS.UI.Core.Services
                 _entityRepositoryService,
                 _customGrpcClientFactory);
             entityRegisterer.RegisterEntities(plan);
+        }
+
+        private async Task PersistAllSnapshotsAsync(Plan plan, CancellationToken _)
+        {
+            // only master node writes snapshots to disk
+            if (_nodeMetaData.NodeType != NodeType.Master) return;
+
+            var deadline = DateTime.UtcNow.AddSeconds(30);
+            using var persistCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var persistToken = persistCts.Token;
+
+            try
+            {
+                var stamp = DateTimeOffset.Now.ToString("yyyy-MM-dd_HH-mm-ss_zzz", CultureInfo.InvariantCulture)
+                                              .Replace(":", ""); // remove ':' from offset for Windows
+                var root = Path.Combine("Metrics", $"{plan.Name}_{stamp}");
+                Directory.CreateDirectory(root);
+
+                var jsonOpts = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+                    Converters = { new JsonStringEnumConverter() }
+                };
+
+                foreach (var round in plan.GetReadOnlyRounds())
+                {
+                    if (DateTime.UtcNow >= deadline) break;
+
+                    // NEW: create a folder per round
+                    var roundDir = Path.Combine(root, SanitizeFileName(round.Name));
+                    Directory.CreateDirectory(roundDir);
+
+                    foreach (var iter in round.GetReadOnlyIterations())
+                    {
+                        if (DateTime.UtcNow >= deadline) break;
+
+                        foreach (var metric in Enum.GetValues(typeof(LPSMetricType)).Cast<LPSMetricType>())
+                        {
+                            if (DateTime.UtcNow >= deadline) break;
+
+                            if (!_metricStore.TryGet(iter.Id, metric, out var baseSnaps) || baseSnaps.Count == 0)
+                                continue;
+
+                            object payload = metric switch
+                            {
+                                LPSMetricType.Throughput => baseSnaps.OfType<ThroughputMetricSnapshot>().ToList(),
+                                LPSMetricType.ResponseTime => baseSnaps.OfType<DurationMetricSnapshot>().ToList(),
+                                LPSMetricType.DataTransmission => baseSnaps.OfType<DataTransmissionMetricSnapshot>().ToList(),
+                                LPSMetricType.ResponseCode => baseSnaps.OfType<ResponseCodeMetricSnapshot>().ToList(),
+                                _ => baseSnaps
+                            };
+
+                            var file = Path.Combine(
+                                roundDir, // write inside the round folder
+                                $"{SanitizeFileName(iter.Name)}_{SanitizeFileName(metric.ToString())}.json");
+
+                            var json = JsonSerializer.Serialize(payload, payload.GetType(), jsonOpts);
+                            await File.WriteAllTextAsync(file, json, persistToken);
+                        }
+                    }
+                }
+
+                if (persistCts.IsCancellationRequested || DateTime.UtcNow >= deadline)
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                        $"Metrics persistence timed out after 30s. Partial results saved under '{root}'.",
+                        LPSLoggingLevel.Warning);
+                }
+                else
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                        $"Metrics persisted under '{root}'.",
+                        LPSLoggingLevel.Information);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    "Metrics persistence canceled by 30s timeout. Partial results saved.",
+                    LPSLoggingLevel.Warning);
+            }
+            catch (Exception ex)
+            {
+                _logger.Log(_runtimeOperationIdProvider.OperationId,
+                    $"Failed to persist metrics snapshots: {ex}",
+                    LPSLoggingLevel.Error);
+            }
+        }
+
+        private static string SanitizeFileName(string name)
+        {
+            foreach (var c in Path.GetInvalidFileNameChars())
+                name = name.Replace(c, '_');
+            return name;
         }
     }
 }
