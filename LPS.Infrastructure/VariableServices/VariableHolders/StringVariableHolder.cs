@@ -180,6 +180,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 throw new InvalidOperationException($"Failed to apply regex pattern '{Pattern}'.", ex);
             }
         }
+        
+        //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
         public sealed class VBuilder : IVariableBuilder
         {
             private readonly StringVariableHolder _variableHolder;
