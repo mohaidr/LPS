@@ -32,7 +32,7 @@
       "RefreshRate": 5
     },
     "Cluster": {
-      "MasterNodeIP": "192.168.1.7",
+      "MasterNodeIP": "10.174.118.196",
       "MasterNodeIsWorker": true,
       "GRPCPort": 8999,
       "ExpectedNumberOfWorkers": 2

@@ -29,8 +29,14 @@ namespace LPS.UI.Common.DTOs
 
         public string StartupDelay { get; set; }
 
+
         // Number of clients (can be a variable)
-        public string NumberOfClients { get; set; }
+        private string _numberOfClients;
+        public string NumberOfClients
+        {
+            get => string.IsNullOrWhiteSpace(_numberOfClients) ? "1" : _numberOfClients;
+            set => _numberOfClients = value;
+        }
 
         // Arrival delay (can be a variable)
         public string ArrivalDelay { get; set; }
