@@ -1,37 +1,35 @@
 ﻿using FluentValidation.Results;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using LPS.Domain.Common.Interfaces;
 
-namespace LPS.UI.Common.Extensions
+public static class FluentValidationExtensions
 {
-    public static class FluentValidationExtensions
+    public static void PrintValidationErrors(this ValidationResult validationResult, ILogger? logger = null)
     {
-        public static void PrintValidationErrors(this ValidationResult validationResult)
-        {
-            var groupedErrors = validationResult.Errors
-                .GroupBy(error => error.PropertyName)
-                .ToDictionary(
-                    group => group.Key,
-                    group => group.Select(error => error.ErrorMessage).ToList()
-                );
+        var groupedErrors = validationResult.Errors
+            .GroupBy(error => error.PropertyName)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Select(error => error.ErrorMessage).ToList()
+            );
 
-            foreach (var kv in groupedErrors)
+        foreach (var kv in groupedErrors)
+        {
+            // Console output
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"{kv.Key}:");
+            Console.ResetColor();
+
+            // Logger output
+            logger?.Log($"{kv.Key}: validation failed", LPSLoggingLevel.Error);
+
+            foreach (var error in kv.Value)
             {
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"{kv.Key}:");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"- {error}");
                 Console.ResetColor();
 
-                foreach (var error in kv.Value)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine($"- {error}");
-                    Console.ResetColor();
-                }
+                logger?.Log( error, LPSLoggingLevel.Error);
             }
         }
     }
-
 }

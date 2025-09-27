@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using FluentValidation.Results;
 using LPS.Domain;
 using LPS.Domain.Common;
 using LPS.Domain.Domain.Common.Exceptions;
@@ -27,6 +28,7 @@ using LPS.Infrastructure.Monitoring.Metrics;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Globalization;
+using LPS.UI.Common.Extensions;
 
 namespace LPS.UI.Core.Services
 {
@@ -114,24 +116,42 @@ namespace LPS.UI.Core.Services
         public async Task ExecuteAsync(TestRunParameters parameters)
         {
             var localNode = _nodeRegistry.GetLocalNode();
-            var planDto = parameters.IsInline ? parameters.PlanDto : ConfigurationService.FetchConfiguration<PlanDto>(parameters.ConfigFile, _placeholderResolverService);
-            new PlanValidator(planDto).ValidateAndThrow(planDto);
+            var planDto = parameters.IsInline
+                ? parameters.PlanDto
+                : ConfigurationService.FetchConfiguration<PlanDto>(parameters.ConfigFile, _placeholderResolverService);
+
+            // --- PLAN VALIDATION ---
+            var planValidator = new PlanValidator(planDto);
+            var planResults = planValidator.Validate(planDto);
+            if (!planResults.IsValid)
+            {
+                planResults.PrintValidationErrors(_logger);
+                return;
+            }
+
             var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
             var plan = new Plan(planCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+
             if (plan.IsValid)
             {
                 var variableValidator = new VariableValidator();
                 var environmentValidator = new EnvironmentValidator();
 
-                // Global Variables
+                // --- GLOBAL VARIABLES ---
                 foreach (var variableDto in planDto.Variables)
                 {
-                    variableValidator.ValidateAndThrow(variableDto);
+                    var varResults = variableValidator.Validate(variableDto);
+                    if (!varResults.IsValid)
+                    {
+                        varResults.PrintValidationErrors(_logger);
+                        return;
+                    }
+
                     var variableHolder = await BuildVariableHolder(variableDto, true, parameters.CancellationToken);
                     _variableManager.PutAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
                 }
 
-                // Environment-Specific Variables
+                // --- ENVIRONMENT-SPECIFIC VARIABLES ---
                 foreach (var environmentName in parameters.Environments)
                 {
                     var environmentDto = planDto.Environments
@@ -139,19 +159,31 @@ namespace LPS.UI.Core.Services
 
                     if (environmentDto != null)
                     {
-                        environmentValidator.ValidateAndThrow(environmentDto);
+                        var envResults = environmentValidator.Validate(environmentDto);
+                        if (!envResults.IsValid)
+                        {
+                            envResults.PrintValidationErrors(_logger);
+                            return;
+                        }
 
                         foreach (var variableDto in environmentDto.Variables)
                         {
-                            variableValidator.ValidateAndThrow(variableDto);
-                            var variableHolder = await BuildVariableHolder(variableDto, false, parameters.CancellationToken);
+                            var varResults = variableValidator.Validate(variableDto);
+                            if (!varResults.IsValid)
+                            {
+                                varResults.PrintValidationErrors(_logger);
+                                return;
+                            }
 
+                            var variableHolder = await BuildVariableHolder(variableDto, false, parameters.CancellationToken);
                             _variableManager.PutAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
                         }
                     }
                     else
                     {
-                        _logger.Log(_runtimeOperationIdProvider.OperationId, $"Environment '{environmentName}' not found.", LPSLoggingLevel.Warning);
+                        _logger.Log(_runtimeOperationIdProvider.OperationId,
+                            $"Environment '{environmentName}' not found.",
+                            LPSLoggingLevel.Warning);
                     }
                 }
 
@@ -164,6 +196,14 @@ namespace LPS.UI.Core.Services
                     var roundCommand = _mapper.Map<Round.SetupCommand>(roundDto);
                     var roundEntity = new Round(roundCommand, _logger, _lpsMonitoringEnroller, _runtimeOperationIdProvider);
 
+                    var roundValidator = new RoundValidator(roundDto);
+                    var roundResults = roundValidator.Validate();
+                    if (!roundResults.IsValid)
+                    {
+                        roundResults.PrintValidationErrors();
+                        return;
+                    }
+
                     if (roundEntity.IsValid)
                     {
                         foreach (var iterationDto in roundDto.Iterations)
@@ -175,11 +215,10 @@ namespace LPS.UI.Core.Services
                             }
                         }
 
-
                         foreach (var referencedIteration in roundDto.ReferencedIterations)
                         {
-                            // Find the referenced iteration by name in the global iterations list
-                            var globalIteration = planDto.Iterations.FirstOrDefault(i => i.Name.Equals(referencedIteration, StringComparison.OrdinalIgnoreCase));
+                            var globalIteration = planDto.Iterations
+                                .FirstOrDefault(i => i.Name.Equals(referencedIteration, StringComparison.OrdinalIgnoreCase));
                             if (globalIteration != null)
                             {
                                 var iterationEntity = ProcessIteration(roundDto, globalIteration);
@@ -190,9 +229,12 @@ namespace LPS.UI.Core.Services
                             }
                             else
                             {
-                                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Referenced iteration '{referencedIteration}' not found.", LPSLoggingLevel.Warning);
+                                _logger.Log(_runtimeOperationIdProvider.OperationId,
+                                    $"Referenced iteration '{referencedIteration}' not found.",
+                                    LPSLoggingLevel.Warning);
                             }
                         }
+
                         plan.AddRound(roundEntity);
                     }
                 }
@@ -202,13 +244,16 @@ namespace LPS.UI.Core.Services
             {
                 RegisterEntities(plan);
                 await localNode.SetNodeStatus(NodeStatus.Running);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
                 _dashboardService.Start();
-                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager, _config, _httpIterationExecutionCommandStatusMonitor, _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
+                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager,
+                        _config, _httpIterationExecutionCommandStatusMonitor,
+                        _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
                     .ExecuteAsync(plan, _cts.Token);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
                 await PersistAllSnapshotsAsync(plan, _cts.Token);
-
             }
             else
             {
@@ -216,17 +261,16 @@ namespace LPS.UI.Core.Services
             }
         }
 
-        // This should change
+        // unchanged methods ...
         private async Task<IVariableHolder> BuildVariableHolder(
-           VariableDto variableDto,
-           bool isGlobal,
-           CancellationToken cancellationToken)
+            VariableDto variableDto,
+            bool isGlobal,
+            CancellationToken cancellationToken)
         {
             var variableType = variableDto.As.ToVariableType();
 
             switch (variableType)
             {
-                // String-based
                 case VariableType.String:
                 case VariableType.QString:
                 case VariableType.JsonString:
@@ -242,7 +286,6 @@ namespace LPS.UI.Core.Services
                         true,
                         cancellationToken);
 
-                // Numbers
                 case VariableType.Int:
                 case VariableType.Double:
                 case VariableType.Float:
@@ -253,7 +296,6 @@ namespace LPS.UI.Core.Services
                         true,
                         cancellationToken);
 
-                // Boolean
                 case VariableType.Boolean:
                     return await _variableFactory.CreateBooleanAsync(
                         variableDto.Value,
@@ -268,16 +310,23 @@ namespace LPS.UI.Core.Services
 
         private HttpIteration ProcessIteration(RoundDto roundDto, HttpIterationDto iterationDto)
         {
-            if (iterationDto.HttpRequest?.URL != null && roundDto?.BaseUrl != null && !iterationDto.HttpRequest.URL.StartsWith("http://") && !iterationDto.HttpRequest.URL.StartsWith("https://"))
+            if (iterationDto.HttpRequest?.URL != null &&
+                roundDto?.BaseUrl != null &&
+                !iterationDto.HttpRequest.URL.StartsWith("http://") &&
+                !iterationDto.HttpRequest.URL.StartsWith("https://"))
             {
                 if (iterationDto.HttpRequest.URL.StartsWith("$") && roundDto.BaseUrl.StartsWith("$"))
                 {
-                    throw new InvalidOperationException("Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. Consider setting the base URL as a global variable and reusing it in the local variable.");
+                    throw new InvalidOperationException(
+                        "Either the base URL or the local URL is defined as a variable, but runtime handling of both as variables is not supported. " +
+                        "Consider setting the base URL as a global variable and reusing it in the local variable.");
                 }
                 iterationDto.HttpRequest.URL = $"{roundDto.BaseUrl}{iterationDto.HttpRequest.URL}";
             }
+
             var iterationCommand = _mapper.Map<HttpIteration.SetupCommand>(iterationDto);
             var iterationEntity = new HttpIteration(iterationCommand, _skipIfEvaluator, _logger, _runtimeOperationIdProvider);
+
             if (iterationEntity.IsValid)
             {
                 var requestCommand = _mapper.Map<HttpRequest.SetupCommand>(iterationDto.HttpRequest);
@@ -294,23 +343,27 @@ namespace LPS.UI.Core.Services
                         }
                         else
                         {
-                            throw new InvalidLPSEntityException($"Invalid Capture handler defined in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
+                            throw new InvalidLPSEntityException(
+                                $"Invalid Capture handler defined in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
                         }
                     }
                     iterationEntity.SetHttpRequest(request);
                 }
                 else
                 {
-                    throw new InvalidLPSEntityException($"Invalid HttpRequest in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
+                    throw new InvalidLPSEntityException(
+                        $"Invalid HttpRequest in the iteration {iterationDto.Name}, Please fix the validation errors and try again");
                 }
                 return iterationEntity;
             }
-            throw new InvalidLPSEntityException($"Invalid Iteration {iterationDto.Name}, Please fix the validation errors and try again");
+            throw new InvalidLPSEntityException(
+                $"Invalid Iteration {iterationDto.Name}, Please fix the validation errors and try again");
         }
 
         private void RegisterEntities(Plan plan)
         {
-            var entityRegisterer = new EntityRegisterer(_clusterConfiguration,
+            var entityRegisterer = new EntityRegisterer(
+                _clusterConfiguration,
                 _nodeRegistry.GetLocalNode().Metadata,
                 _entityDiscoveryService,
                 _nodeRegistry,
@@ -321,7 +374,6 @@ namespace LPS.UI.Core.Services
 
         private async Task PersistAllSnapshotsAsync(Plan plan, CancellationToken _)
         {
-            // only master node writes snapshots to disk
             if (_nodeMetaData.NodeType != NodeType.Master) return;
 
             var deadline = DateTime.UtcNow.AddSeconds(180);
@@ -331,7 +383,7 @@ namespace LPS.UI.Core.Services
             try
             {
                 var stamp = DateTimeOffset.Now.ToString("yyyy-MM-dd_HH-mm-ss_zzz", CultureInfo.InvariantCulture)
-                                              .Replace(":", ""); // remove ':' from offset for Windows
+                                              .Replace(":", "");
                 var root = Path.Combine("Metrics", $"{plan.Name}_{stamp}");
                 Directory.CreateDirectory(root);
 
@@ -346,7 +398,6 @@ namespace LPS.UI.Core.Services
                 {
                     if (DateTime.UtcNow >= deadline) break;
 
-                    // NEW: create a folder per round
                     var roundDir = Path.Combine(root, SanitizeFileName(round.Name));
                     Directory.CreateDirectory(roundDir);
 
@@ -371,7 +422,7 @@ namespace LPS.UI.Core.Services
                             };
 
                             var file = Path.Combine(
-                                roundDir, // write inside the round folder
+                                roundDir,
                                 $"{SanitizeFileName(iter.Name)}_{SanitizeFileName(metric.ToString())}.json");
 
                             var json = JsonSerializer.Serialize(payload, payload.GetType(), jsonOpts);

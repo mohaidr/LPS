@@ -265,10 +265,12 @@ namespace LPS.UI.Core.LPSValidators
 
                      if ((isErrorCriteriaEmpty && isLatencyCriteriaEmpty) || isGracePeriodEmpty)
                          return false;
-
-
-                     var codes = rule.ErrorStatusCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList();
-                     var validCodes = rule.ErrorStatusCodes.StartsWith("$") || (codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _)) && codes.Count > 0);
+                     bool validCodes = false;
+                     if (!isErrorCriteriaEmpty)
+                     {
+                         var codes = rule.ErrorStatusCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList();
+                         validCodes = rule.ErrorStatusCodes.StartsWith("$") || (codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _)) && codes.Count > 0);
+                     }
                      var validGrace = rule.GracePeriod.StartsWith("$") || (TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod) && gracePeriod > TimeSpan.Zero);
                      var validRate = (!string.IsNullOrWhiteSpace(rule.MaxErrorRate) && rule.MaxErrorRate.StartsWith("$")) || (double.TryParse(rule.MaxErrorRate, out var maxErrorRate) && maxErrorRate > 0);
                      var validP90 = (!string.IsNullOrWhiteSpace(rule.MaxP90) && rule.MaxP90.StartsWith("$")) || (double.TryParse(rule.MaxP90, out var p90Greater) && p90Greater > 0);
@@ -276,7 +278,7 @@ namespace LPS.UI.Core.LPSValidators
                      var validP50 = (!string.IsNullOrWhiteSpace(rule.MaxP50) && rule.MaxP50.StartsWith("$")) || (double.TryParse(rule.MaxP50, out var p50Greater) && p50Greater > 0);
                      var validAVG = (!string.IsNullOrWhiteSpace(rule.MaxAvg) && rule.MaxAvg.StartsWith("$")) || (double.TryParse(rule.MaxAvg, out var avgGreater) && avgGreater > 0);
 
-                     return validCodes && validGrace && (validRate || validAVG || validP90 || validP50 || validP10);
+                     return (validCodes  || (validRate || validAVG || validP90 || validP50 || validP10)) && validGrace;
 
                  }
              );

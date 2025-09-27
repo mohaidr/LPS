@@ -61,7 +61,8 @@ namespace LPS.UI.Common.Extensions
                         fileLogger = new FileLogger(
                             loggingConfig,
                             serviceProvider.GetRequiredService<IConsoleLogger>(),
-                            serviceProvider.GetRequiredService<ILogFormatter>());
+                            serviceProvider.GetRequiredService<ILogFormatter>(),
+                            serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>());
                     }
 
                     LogAppliedConfiguration(fileLogger, !isValid || validOptions == null, "Logger Options", fileLogger);
@@ -228,7 +229,8 @@ namespace LPS.UI.Common.Extensions
             return new FileLogger(
                 new LoggingConfiguration(),
                 serviceProvider.GetRequiredService<IConsoleLogger>(),
-                serviceProvider.GetRequiredService<ILogFormatter>());
+                serviceProvider.GetRequiredService<ILogFormatter>(), 
+                serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>());
         }
 
         private static LoggingConfiguration MapToLoggingConfiguration(FileLoggerOptions options)
