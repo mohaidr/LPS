@@ -239,7 +239,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             {
                 token.ThrowIfCancellationRequested();
 
-                if (string.IsNullOrWhiteSpace(_rawValue))
+                if (string.IsNullOrEmpty(_rawValue))
                 {
                     await _logger.LogAsync(
                         _runtimeOperationIdProvider.OperationId,

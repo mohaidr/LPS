@@ -174,7 +174,6 @@ namespace LPS.UI.Core.Services
                                 varResults.PrintValidationErrors(_logger);
                                 return;
                             }
-
                             var variableHolder = await BuildVariableHolder(variableDto, false, parameters.CancellationToken);
                             _variableManager.PutAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
                         }

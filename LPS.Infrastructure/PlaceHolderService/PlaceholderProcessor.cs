@@ -44,8 +44,8 @@ namespace LPS.Infrastructure.PlaceHolderService
 
         public async Task<string> ProcessPlaceholderAsync(string placeholder, string sessionId, CancellationToken token)
         {
-            int openParenIndex = placeholder.IndexOf('(');
-            if (openParenIndex != -1)
+            bool isMethod = placeholder.EndsWith(")");
+            if (isMethod)
                 return await ProcessMethodAsync(placeholder, sessionId, token);
             else
                 return await ProcessVariableAsync(placeholder, sessionId, token);

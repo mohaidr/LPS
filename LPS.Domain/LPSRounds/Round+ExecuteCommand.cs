@@ -127,6 +127,7 @@ namespace LPS.Domain
         {
             // Preregister all commands so the iteration status can reflect the status correctly as it assumes all commands are registered. -> this should change but doing it for now to keep the development effort
             var commandQueue = new Queue<(HttpIteration.ExecuteCommand Cmd, HttpIteration Iter)>();
+            var httpClient = _lpsClientManager.DequeueClient() ?? _lpsClientManager.CreateInstance(_lpsClientConfig);
 
             foreach (var baseIteration in this.Iterations.Where(iteration => iteration.Type == IterationType.Http))
             {
@@ -134,7 +135,6 @@ namespace LPS.Domain
                 if (httpIteration == null || !httpIteration.IsValid)
                     continue;
 
-                var httpClient = _lpsClientManager.DequeueClient() ?? _lpsClientManager.CreateInstance(_lpsClientConfig);
 
                 var httpIterationCommand = new HttpIteration.ExecuteCommand(
                     httpClient,

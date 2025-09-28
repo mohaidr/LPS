@@ -166,13 +166,7 @@ namespace LPS.Domain
                 if (rules == null ) return false;
                 if (!rules.Any()) return true;
 
-                return rules.All(rule =>
-
-                    rule.ErrorStatusCodes != null &&
-                    
-                    ((rule.MaxErrorRate > 0  && rule.ErrorStatusCodes.Count > 0 && rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code))) || rule.MaxP90 >0 || rule.MaxP10 > 0 || rule.MaxP50 > 0 || rule.MaxAvg > 0)
-
-                    && rule.GracePeriod > TimeSpan.Zero);
+                return rules.All(rule =>  ((rule.ErrorStatusCodes != null &&  rule.MaxErrorRate > 0  && rule.ErrorStatusCodes.Count > 0 && rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code))) || rule.MaxP90 >0 || rule.MaxP10 > 0 || rule.MaxP50 > 0 || rule.MaxAvg > 0) && rule.GracePeriod > TimeSpan.Zero);
             }
             #endregion
         }

@@ -20,6 +20,9 @@ namespace LPS.Domain.Common.Interfaces
     {
         void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default);
         Task LogAsync(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default);
+        void Log(string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default);
+        Task LogAsync(string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default);
+
         void Flush();
         Task FlushAsync();
     }

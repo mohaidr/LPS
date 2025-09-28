@@ -16,15 +16,15 @@ namespace LPS.Infrastructure.Logger
         private readonly LoggingConfiguration _config;
         private readonly IConsoleLogger _consoleLogger;
         private readonly ILogFormatter _logFormatter;
-
+        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private static readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        public FileLogger(LoggingConfiguration config, IConsoleLogger consoleLogger, ILogFormatter logFormatter)
+        public FileLogger(LoggingConfiguration config, IConsoleLogger consoleLogger, ILogFormatter logFormatter, IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _consoleLogger = consoleLogger ?? throw new ArgumentNullException(nameof(consoleLogger));
             _logFormatter = logFormatter ?? throw new ArgumentNullException(nameof(logFormatter));
-
+            _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             SetLogFilePath(config.LogFilePath);
 
             string directory = Path.GetDirectoryName(_config.LogFilePath);
@@ -95,6 +95,15 @@ namespace LPS.Infrastructure.Logger
         public void Log(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default)
         {
            LogAsync(eventId, diagnosticMessage, level, token).Wait();
+        }
+        public async Task LogAsync(string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default)
+        {
+            await LogAsync(_runtimeOperationIdProvider.OperationId, diagnosticMessage, level, token);
+        }
+
+        public void Log(string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default)
+        {
+            LogAsync(_runtimeOperationIdProvider.OperationId, diagnosticMessage, level, token).Wait();
         }
 
         public void Flush()
