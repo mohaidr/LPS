@@ -7,6 +7,7 @@
   <ItemGroup>
     <PackageReference Include="AsyncKeyedLock" Version="7.1.6" />
     <PackageReference Include="CsvHelper" Version="33.0.1" />
+    <PackageReference Include="Flee" Version="2.0.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
     <PackageReference Include="HdrHistogram" Version="2.5.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.70" />
@@ -16,7 +17,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="9.0.7" />
-    <PackageReference Include="NCalcAsync" Version="5.5.0" />
     <PackageReference Include="Spectre.Console" Version="0.49.1" />
     <PackageReference Include="System.Management" Version="9.0.2" />
     <PackageReference Include="System.Net.Http" Version="4.3.4" />

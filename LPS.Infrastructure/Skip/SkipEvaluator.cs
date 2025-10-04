@@ -1,54 +1,76 @@
-﻿using LPS.Domain.Common.Interfaces;
-using System;
+﻿using System;
+using System.Globalization;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using NCalc;
-using System.Linq.Expressions;
+using Flee.PublicTypes;
+using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Nodes;
 
 namespace LPS.Infrastructure.Skip
 {
-    public class SkipIfEvaluator: ISkipIfEvaluator
+    public class SkipIfEvaluator : ISkipIfEvaluator
     {
         private readonly IPlaceholderResolverService _placeholderResolver;
         private readonly ILogger _logger;
-        IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        INodeMetadata _nodeMetadata;
-        public SkipIfEvaluator(IPlaceholderResolverService placeholderResolver, INodeMetadata nodeMetadata, IRuntimeOperationIdProvider runtimeOperationIdProvider, ILogger logger)
+        private readonly INodeMetadata _nodeMetadata;
+        ExpressionContext _ctx;
+        public SkipIfEvaluator(
+            IPlaceholderResolverService placeholderResolver,
+            INodeMetadata nodeMetadata,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider, // kept to match your ctor signature
+            ILogger logger)
         {
             _placeholderResolver = placeholderResolver;
             _logger = logger;
-            _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _nodeMetadata = nodeMetadata;
+            // 2) Prepare Flee context
+            _ctx = new ExpressionContext();
+
+            // (optional but recommended) invariant parsing for numbers/decimals
+            _ctx.Options.ParseCulture = CultureInfo.InvariantCulture;
+
+            // If expressions may need System.Math:
+            _ctx.Imports.AddType(typeof(Math));
+
+            // Enable overflow-checked arithmetic:
+            _ctx.Options.Checked = true;
+
+            //Make the type System.StringComparison available inside expressions
+            _ctx.Imports.AddType(typeof(System.StringComparison));
+
         }
 
-        //TODO: This must be smarter in the future, detect the string variable holders and ask to return them as quoted for correct comparison insted of forcing the user to define the variable as Q type
-        // This can happen by updating the placeholder to offer an option to ask for the value as qouted value if the variable holder it detected is string
+        // NOTE:
+        // Flee is synchronous. We keep the async signature to the interface and logging.
+        // Expressions MUST resolve to a boolean result.
         public async Task<bool> ShouldSkipAsync(string skipIfExpression, string sessionId, CancellationToken token)
         {
-
             if (string.IsNullOrWhiteSpace(skipIfExpression))
                 return false;
 
+            string resolved = string.Empty;
+
             try
             {
-                // Resolve placeholders first
-                var resolved = await _placeholderResolver.ResolvePlaceholdersAsync<string>(skipIfExpression, sessionId, token);
+                // 1) Resolve placeholders first (your existing flow)
+                resolved = await _placeholderResolver
+                    .ResolvePlaceholdersAsync<string>(skipIfExpression, sessionId, token)
+                    .ConfigureAwait(false);
 
-                if (string.IsNullOrWhiteSpace(resolved))
-                    return false;
 
-                // Evaluate the resolved expression using NCalcAsync
-                var expr = new AsyncExpression(resolved, ExpressionOptions.StrictTypeMatching);
-                var result = await expr.EvaluateAsync();
+                // IMPORTANT: We compile as boolean; non-boolean expressions will throw with a clear message.
+                var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
-                if (result is bool skip && skip)
+                bool skip = fleeExpr.Evaluate();
+
+                if (skip)
                 {
                     await _logger.LogAsync(
-                        _runtimeOperationIdProvider.OperationId,
-                        $"Iteration skipped due to evaluated condition: {resolved}. Node Details (Name: {_nodeMetadata.NodeName}, IP: {_nodeMetadata.NodeIP})",
-                        LPSLoggingLevel.Warning);
+                        $"Iteration skipped due to evaluated condition: {resolved}. " +
+                        $"Node Details (Name: {_nodeMetadata.NodeName}, IP: {_nodeMetadata.NodeIP})",
+                        LPSLoggingLevel.Warning).ConfigureAwait(false);
 
                     return true;
                 }
@@ -57,30 +79,26 @@ namespace LPS.Infrastructure.Skip
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to evaluate skipIf condition: {skipIfExpression} \n{ex}", LPSLoggingLevel.Error);
-                return false;
-            }
-        }
+                // Mirror your diagnostic style, updated to reflect Flee behavior.
+                var message =
+                    "Iteration skipped due to the below exception.\r\n" +
+                    "Failed to evaluate skipIf condition.\r\n" +
+                    "\r\n" +
+                    $"The Skip condition: {skipIfExpression}\r\n" +
+                    $"Resolved to: {resolved}\r\n" +
+                    "\r\n" +
+                    "Why?\r\n" +
+                    "\t1- If you use a placeholder, make sure it resolves properly.\r\n" +
+                    "\t2- Ensure string values are quoted (e.g., \"OK\").\r\n" +
+                    "\t3- Flee requires the expression to be boolean (true/false). Use comparisons or ternary to return bool.\r\n" +
+                    "\r\n" +
+                    $"Exception: {ex}";
 
-        public  bool IsValidExpression(string expressionText)
-        {
-            try
-            {
-                expressionText= expressionText?.Replace(".", "")
-                    .Replace("[", "").Replace("]", "")
-                    .Replace("{", "")
-                    .Replace("}", "")
-                    .Replace('/', ' ');
-                var expr = new AsyncExpression(expressionText, ExpressionOptions.AllowNullOrEmptyExpressions);
-                expr.EvaluateAsync();
+                await _logger.LogAsync(message, LPSLoggingLevel.Error).ConfigureAwait(false);
+
+                // Preserve your current behavior: on evaluation error, treat as 'skip = true'
                 return true;
             }
-            catch(Exception ex) 
-            {
-                Console.WriteLine(ex.ToString());
-                return false;
-            }
         }
-
     }
 }

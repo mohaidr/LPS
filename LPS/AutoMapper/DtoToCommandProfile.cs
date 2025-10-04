@@ -60,7 +60,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.Duration, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.Duration).Result))
                 .ForMember(dest => dest.BatchSize, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.BatchSize).Result))
                 .ForMember(dest => dest.CoolDownTime, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.CoolDownTime).Result))
-                .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.SkipIf).Result))
+                .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => src.SkipIf))
                 .ForMember(dest => dest.FailureCriteria, opt => opt.Ignore()) // we'll set it in AfterMap
                 .ForMember(dest => dest.TerminationRules, opt => opt.Ignore()) // we'll set it in AfterMap
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
@@ -187,7 +187,7 @@ namespace LPS.AutoMapper
                 case Payload.PayloadType.Multipart:
                     // Map fields and files for multipart content
                     var fields = payloadDto.Multipart?.Fields?
-                        .Select(field => new TextField(ResolvePlaceholderAsync<string>(field.Name).Result, ResolvePlaceholderAsync<string>(field.Value).Result, ResolvePlaceholderAsync<string>(field.ContentType).Result ?? "text/plain"))
+                        .Select(field => new TextField(field.Name, field.Value, string.IsNullOrWhiteSpace(field.ContentType) ? "text/plain": field.ContentType))
                         .ToList();
                     var files = payloadDto.Multipart?.Files
                         .Select(file =>
@@ -237,5 +237,4 @@ namespace LPS.AutoMapper
             return await _placeholderResolver.ResolvePlaceholdersAsync<T>(value, _sessionId, CancellationToken.None);
         }
     }
-
 }

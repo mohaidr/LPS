@@ -43,20 +43,20 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         public ValueTask<string> GetRawValueAsync(CancellationToken token)
         {
-            return (Type == VariableType.QString || Type == VariableType.QCsvString || Type == VariableType.QJsonString || Type == VariableType.QXmlString)  ? ValueTask.FromResult($"\"{Value}\"") : ValueTask.FromResult(Value);
+            return (Type == VariableType.QString || Type == VariableType.QCsvString || Type == VariableType.QJsonString || Type == VariableType.QXmlString) ? ValueTask.FromResult($"\"{Value}\"") : ValueTask.FromResult(Value);
         }
 
         public async ValueTask<string> GetValueAsync(string? path, string sessionId, CancellationToken token)
         {
             if (string.IsNullOrWhiteSpace(path))
             {
-                return await GetRawValueAsync(token); 
+                return await GetRawValueAsync(token);
             }
             else if (Type == VariableType.String || Type == VariableType.QString)
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"A variable of type string can't have path. Empty value will be returned", LPSLoggingLevel.Warning, token);
-                return Type== VariableType.QString ? "\"\"": string.Empty;
-            }    
+                return Type == VariableType.QString ? "\"\"" : string.Empty;
+            }
 
             var resolvedPath = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(path ?? string.Empty, sessionId, token);
             string extracted = Type switch
@@ -68,7 +68,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 VariableType.QXmlString => $"\"{await ExtractXmlValue(resolvedPath ?? "", sessionId, token)}\"",
                 VariableType.QCsvString => $"\"{await ExtractCsvValueAsync(resolvedPath ?? "", sessionId, token)}\"",
                 VariableType.QString => $"\"{Value}\"",
-                    VariableType.String => Value,
+                VariableType.String => Value,
                 _ => throw new NotSupportedException($"Format '{Type}' is not supported by StringVariableHolder.")
             };
 
@@ -180,7 +180,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 throw new InvalidOperationException($"Failed to apply regex pattern '{Pattern}'.", ex);
             }
         }
-        
+
         //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
         public sealed class VBuilder : IVariableBuilder
         {
@@ -219,13 +219,13 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
             public VBuilder WithPattern(string pattern)
             {
-                _pattern = pattern; // buffer locally
+                _pattern = pattern ?? string.Empty; // buffer locally
                 return this;
             }
 
             public VBuilder WithRawValue(string value)
             {
-                _rawValue = value; // buffer locally
+                _rawValue = value ?? string.Empty; // buffer locally
                 return this;
             }
 
@@ -239,15 +239,15 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             {
                 token.ThrowIfCancellationRequested();
 
-                if (string.IsNullOrEmpty(_rawValue))
+                if (_rawValue == null)
                 {
                     await _logger.LogAsync(
                         _runtimeOperationIdProvider.OperationId,
-                        "The raw value of the StringVariableHolder can't be null or empty.",
+                        "The raw value of the StringVariableHolder can't be null.",
                         LPSLoggingLevel.Error,
                         token);
 
-                    throw new InvalidOperationException("The raw value of the StringVariableHolder can't be null or empty.");
+                    throw new InvalidOperationException("The raw value of the StringVariableHolder can't be null.");
                 }
 
                 // Assign buffered values atomically to the pre-created holder

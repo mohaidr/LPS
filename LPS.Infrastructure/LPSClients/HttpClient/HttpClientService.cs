@@ -150,8 +150,17 @@ namespace LPS.Infrastructure.LPSClients
                                 }
                             }
 
-                            var responseVariableHolder = await _sessionManager.GetVariableAsync(this.SessionId, httpRequestEntity.Capture.To, token)
-                                ?? await _variableManager.GetAsync(httpRequestEntity.Capture.To, token);
+                            var responseVariableHolder =
+                                await _sessionManager.GetVariableAsync(this.SessionId, httpRequestEntity.Capture.To, token);
+
+                            if (responseVariableHolder is null)
+                            {
+                                if (await _variableManager.GetAsync(httpRequestEntity.Capture.To, token) is IHttpResponseVariableHolder httpResponseVariable) // check the variable type in the global in case there is a global variable already defined, our session variable not marked as global (or was never defined because of skip), hence a cast exception happen (on global you can define only premitive types like string int, number and so on)
+                                {
+                                    responseVariableHolder = httpResponseVariable;
+                                }
+                            }
+
                             var bodyVariableHolder = ((IHttpResponseVariableHolder)responseVariableHolder)?.Body;
 
                             var responseVariableBuilder = responseVariableHolder?.Builder != null ? ((HttpResponseVariableHolder.VBuilder)responseVariableHolder.Builder) :  new HttpResponseVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);

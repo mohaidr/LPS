@@ -31,6 +31,7 @@ namespace LPS.Domain.Domain.Common.Enums
         Cancelled = 6,
         Skipped = 7,
         PartiallySkipped = 8,
+        OngingScehduled = 9,
         Unkown = -1,
     }
 }

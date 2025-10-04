@@ -43,7 +43,7 @@ namespace LPS.Infrastructure.VariableServices
             var holder = await new StringVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider)
                 .WithType(type)
                 .WithRawValue(resolvedValue)
-                .WithPattern(pattern ?? string.Empty)
+                .WithPattern(pattern)
                 .SetGlobal(isGlobal)
                 .BuildAsync(token);
 

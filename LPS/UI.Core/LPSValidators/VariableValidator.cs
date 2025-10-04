@@ -16,10 +16,12 @@ namespace LPS.UI.Core.LPSValidators
                 .WithMessage("'Variable Name' must not be empty")
                 .Matches("^[a-zA-Z0-9]+$")
                 .WithMessage("'Variable Name' must only contain letters and numbers.");
-            
+
+            RuleFor(variable => variable.Name.ToLower())
+                .NotEqual("metrics").WithMessage("The 'Metrics' variable name is reserved");
+
             RuleFor(variable => variable.Value)
             .NotNull()
-            .NotEmpty()
             .WithMessage("'Variable Value' must not be empty");
 
             RuleFor(variable => variable.As)

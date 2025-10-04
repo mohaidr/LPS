@@ -61,14 +61,20 @@ namespace LPS.Infrastructure.Monitoring.Status
                 return EntityExecutionStatus.PartiallySkipped;
 
             // Ongoing (not terminal)
-            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing) && !_globalCts.IsCancellationRequested)
+            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing) 
+                && !_globalCts.IsCancellationRequested)
                 return EntityExecutionStatus.Ongoing;
 
             // Scheduled (not terminal)
-            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Scheduled) &&
-                !commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing) &&
+            if (commandsStatuses.Count != 0 && commandsStatuses.All(status => status == CommandExecutionStatus.Scheduled) &&
                 !_globalCts.IsCancellationRequested)
                 return EntityExecutionStatus.Scheduled;
+
+            // OngingScehduled (not terminal)
+            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Scheduled) &&
+                commandsStatuses.Any(status => status != CommandExecutionStatus.Scheduled) &&
+                !_globalCts.IsCancellationRequested)
+                return EntityExecutionStatus.OngingScehduled;
 
             // NotStarted (not terminal)
             if (!commandsStatuses.Any() && !_globalCts.IsCancellationRequested)

@@ -62,10 +62,10 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                         // Add fields
                         foreach (var field in httpRequest.Payload.Multipart.Fields)
                         {
-                            var content = new StringContent(field.Value ?? string.Empty);
-                            var contentType = string.IsNullOrEmpty(field.ContentType) ? "text/plain" : field.ContentType;
+                            var content = new StringContent((await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.Value, sessionId, token)) ?? string.Empty);
+                            var contentType = string.IsNullOrEmpty(await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.ContentType, sessionId, token)) ? "text/plain" : field.ContentType;
                             content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-                            multipartContent.Add(content, field.Name);
+                            multipartContent.Add(content, await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.Name, sessionId, token));
                         }
                         // Add files
                         foreach (var file in httpRequest.Payload.Multipart.Files)

@@ -67,8 +67,6 @@ namespace LPS.Domain
                     .Must(BeValidCoolDownTime)
                     .WithMessage(c => $"The 'CoolDownTime' {(c.Mode == IterationMode.DCB || c.Mode == IterationMode.CRB || c.Mode == IterationMode.CB ? $"must be specified and greater than 0{(c.Mode == IterationMode.DCB && c.Duration.HasValue ? ", it must be less than Duration*1000 as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
 
-                RuleFor(c => c.SkipIf).Must(skipIf => _skipIfEvaluator.IsValidExpression(skipIf));
-
                 RuleFor(c => c.FailureCriteria)
                     .Must(fc =>
                     {
