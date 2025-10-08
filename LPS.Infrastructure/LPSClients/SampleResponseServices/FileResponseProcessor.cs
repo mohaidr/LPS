@@ -31,7 +31,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         readonly IUrlSanitizationService _urlSanitizationService = urlSanitizationService;
         public string ResponseFilePath { get; private set; }
         readonly string _url = responseMessage?.RequestMessage?.RequestUri?.ToString();
-        readonly string _cacheKey = $"{CachePrefixes.SampleResponse}{responseMessage?.RequestMessage?.RequestUri?.ToString()}";
+        readonly string _cacheKey = $"{CachePrefixes.SampleResponse}{responseMessage.GetHashCode()}";
         /// <summary>
         /// Initializes the FileStream and updates the cache with no expiration.
         /// This method manages the semaphore internally.
@@ -60,7 +60,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
                     string sanitizedUrl = _urlSanitizationService.Sanitize(_url);
                     string directoryName = $"{sanitizedUrl}.{_runtimeOperationIdProvider.OperationId}.Resources";
                     Directory.CreateDirectory(directoryName);
-                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+                    string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff");
                     string filePath = Path.Combine(directoryName, $"{sanitizedUrl}_{timestamp}{fileExtension}");
 
                     _fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, useAsync: true);

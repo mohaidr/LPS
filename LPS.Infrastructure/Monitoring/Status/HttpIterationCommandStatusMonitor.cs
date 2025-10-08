@@ -93,7 +93,7 @@ namespace LPS.Infrastructure.Monitoring.Status
                 }
                 catch (RpcException rpcEx)
                 {
-                    _logger.Log(_operationIdProvider.OperationId, $"{rpcEx.Status}\n{rpcEx.Message}\n{rpcEx.InnerException} {rpcEx.StackTrace}", LPSLoggingLevel.Error);
+                    await _logger.LogAsync(_operationIdProvider.OperationId, $"{rpcEx.Status}\n{rpcEx.Message}\n{rpcEx.InnerException} {rpcEx.StackTrace}", LPSLoggingLevel.Error);
                     AnsiConsole.MarkupLine($"[Red][[Error]] {DateTime.Now} {rpcEx.Status}\n{rpcEx.Message}[/]");
                 }
             }

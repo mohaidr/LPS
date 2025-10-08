@@ -3,6 +3,7 @@ using System.Reflection;
 using LPS.Infrastructure.Watchdog;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.HeaderServices;
 
 namespace LPS.UI.Core.LPSCommandLine
 {
@@ -833,7 +834,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
         }
-
         public static class LPSHttpClientCommandOptions
         {
             static LPSHttpClientCommandOptions()
@@ -844,11 +844,20 @@ namespace LPS.UI.Core.LPSCommandLine
                 PoolConnectionIdleTimeoutOption.AddAlias("-pcit");
                 ClientTimeoutOption.AddAlias("-cto");
 
-                // Add case-insensitive aliases
+                HeaderValidationModeOption.AddAlias("-hvm");
+                AllowHostOverrideOption.AddAlias("-aho");
+
+                // Case-insensitive long aliases
                 AddCaseInsensitiveAliases(MaxConnectionsPerServerOption, "--maxconnectionsperserver");
                 AddCaseInsensitiveAliases(PoolConnectionLifetimeOption, "--poolconnectionlifetime");
                 AddCaseInsensitiveAliases(PoolConnectionIdleTimeoutOption, "--poolconnectionidletimeout");
                 AddCaseInsensitiveAliases(ClientTimeoutOption, "--clienttimeout");
+
+                AddCaseInsensitiveAliases(HeaderValidationModeOption, "--headervalidationmode");
+                AddCaseInsensitiveAliases(AllowHostOverrideOption, "--allowhostoverride");
+
+                // Helpful completions
+                HeaderValidationModeOption.AddCompletions("Strict", "Lenient", "RawPassthrough");
             }
 
             public static Option<int?> MaxConnectionsPerServerOption { get; } = new Option<int?>(
@@ -864,7 +873,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<int?> PoolConnectionIdleTimeoutOption { get; } = new Option<int?>(
-                "--poolconnectionidletimeout", "Pooled connection idle timeout")
+                "--poolconnectionidletimeout", "Pooled connection idle timeout in seconds")
             {
                 IsRequired = false
             };
@@ -874,8 +883,17 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false
             };
-        }
 
+            // NEW: Header validation policy (defaults to Lenient if not provided)
+            public static Option<HeaderValidationMode> HeaderValidationModeOption { get; } =
+                new Option<HeaderValidationMode>("--headervalidationmode",
+                    description: "Header validation policy: Strict | Lenient | RawPassthrough")
+                { IsRequired = false };
+
+            public static Option<bool?> AllowHostOverrideOption { get; } =
+                new Option<bool?>("--allowhostoverride", "Allow overriding the Host header") { IsRequired = false };
+
+        }
         public static class LPSWatchdogCommandOptions
         {
             static LPSWatchdogCommandOptions()

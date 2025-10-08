@@ -24,7 +24,9 @@
       "ClientTimeoutInSeconds": 60,
       "PooledConnectionLifeTimeInSeconds": 1500,
       "PooledConnectionIdleTimeoutInSeconds": 350,
-      "MaxConnectionsPerServer": 3000
+      "MaxConnectionsPerServer": 3000,
+      "HeaderValidationMode": "RawPassthrough",
+      "AllowHostOverride": false  
     },
     "Dashboard": {
       "BuiltInDashboard": true,
@@ -32,7 +34,7 @@
       "RefreshRate": 5
     },
     "Cluster": {
-      "MasterNodeIP": "192.168.1.14",
+      "MasterNodeIP": "192.168.1.4",
       "MasterNodeIsWorker": true,
       "GRPCPort": 8999,
       "ExpectedNumberOfWorkers": 2

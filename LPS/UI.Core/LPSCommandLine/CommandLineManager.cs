@@ -83,7 +83,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _clusterConfiguration = clusterConfiguration;
             _testTriggerNotifier = testTriggerNotifier;
             _logger = logger;
-            _command_args = command_args.Select(arg => arg.ToLowerInvariant()).ToArray();
+            _command_args = command_args.Select(arg => arg).ToArray();
             _config = config;
             _httpClientManager = httpClientManager;
             _watchdog = watchdog;
@@ -125,7 +125,6 @@ namespace LPS.UI.Core.LPSCommandLine
         public async Task RunAsync(CancellationToken cancellationToken)
         {
             string joinedCommand = string.Join(" ", _command_args);
-
             switch (joinedCommand.ToLowerInvariant())
             {
                 case string cmd when cmd.StartsWith("create"):

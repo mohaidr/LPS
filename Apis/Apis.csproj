@@ -65,6 +65,27 @@
         <Content Update="wwwroot\manifest.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
+        <Content Update="wwwroot\static\css\main.3b4b745f.css">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Update="wwwroot\static\js\265.fbc5e8ca.chunk.js">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Update="wwwroot\static\js\415.7d508b70.chunk.js">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Update="wwwroot\static\js\760.94bf1753.chunk.js">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Update="wwwroot\static\js\873.9eb7011e.chunk.js">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Update="wwwroot\static\js\main.a685629b.js">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Update="wwwroot\static\js\main.a685629b.js.LICENSE.txt">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
         <Content Update="wwwroot\static\media\nucleo-icons.4466aeec3386b965a232.ttf">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>

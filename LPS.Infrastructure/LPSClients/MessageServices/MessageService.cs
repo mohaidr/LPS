@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using LPS.Domain.LPSSession;
 using System.Net.Http.Headers;
 using LPS.Infrastructure.LPSClients.CachService;
+using System.Net.Mime;
 
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
@@ -54,20 +55,39 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                 switch (httpRequest.Payload.Type)
                 {
                     case Payload.PayloadType.Raw:
-                        var resolvedRawValue = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload.RawValue, sessionId, token);
-                        httpRequestMessage.Content = new StringContent(resolvedRawValue ?? string.Empty, Encoding.UTF8);
+
+                        var raw = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(
+                            httpRequest.Payload.RawValue, sessionId, token) ?? string.Empty;
+
+                        var bytes = Encoding.UTF8.GetBytes(raw);         // UTF-8, no BOM
+                        httpRequestMessage.Content = new ByteArrayContent(bytes); // no Content-Type header
+                                                                                  // Do NOT set ContentType here; your header service will.
                         break;
+
                     case Payload.PayloadType.Multipart:
                         var multipartContent = new MultipartFormDataContent();
                         // Add fields
                         foreach (var field in httpRequest.Payload.Multipart.Fields)
                         {
-                            var content = new StringContent((await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.Value, sessionId, token)) ?? string.Empty);
-                            var contentType = string.IsNullOrEmpty(await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.ContentType, sessionId, token)) ? "text/plain" : field.ContentType;
-                            content.Headers.ContentType = new MediaTypeHeaderValue(contentType);
-                            multipartContent.Add(content, await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.Name, sessionId, token));
+                            var name = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.Name, sessionId, token);
+                            var value = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.Value, sessionId, token) ?? string.Empty;
+
+                            var resolvedCt = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(field.ContentType, sessionId, token);
+                            var contentType = string.IsNullOrWhiteSpace(resolvedCt) ? "text/plain" : resolvedCt;
+
+                            var content = new StringContent(value, Encoding.UTF8); // adds text/plain; charset=utf-8
+                            if (MediaTypeHeaderValue.TryParse(contentType, out var mt))
+                            {
+                                // ensure charset for text/*
+                                // adding mt.CharSet is not recommended with application/json for example
+                                if (mt.MediaType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) == true && string.IsNullOrEmpty(mt.CharSet))
+                                    mt.CharSet = "utf-8";
+                                content.Headers.ContentType = mt;
+                            }
+
+                            multipartContent.Add(content, name);
                         }
-                        // Add files
+
                         foreach (var file in httpRequest.Payload.Multipart.Files)
                         {
                             HttpContent fileContent;
@@ -76,12 +96,31 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                             {
                                 // Use ByteArrayContent without copying the array
                                 fileContent = new ByteArrayContent(binaryContent);
+                                if (MediaTypeHeaderValue.TryParse(file.ContentType, out var mt))
+                                {
+                                    fileContent.Headers.ContentType = mt;
+                                }
+                                else
+                                {
+                                    fileContent.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                                }
                             }
                             else if (file.Content is string textContent)
                             {
                                 string multipartFileCacheKey = $"{CachePrefixes.Multipartfile}{file.Name}";
-                                // Use StringContent for text-based content
-                                fileContent = (await _dynamicTypeCacheService.GetItemAsync(multipartFileCacheKey)) as HttpContent ?? new StringContent(textContent);
+                                fileContent = (await _dynamicTypeCacheService.GetItemAsync(multipartFileCacheKey)) as HttpContent;
+                                if (fileContent is null)
+                                {
+                                    fileContent = new StringContent(textContent, Encoding.UTF8); // adds text/plain; charset=utf-8
+                                    if (MediaTypeHeaderValue.TryParse(file.ContentType, out var mt))
+                                    {
+                                        // ensure charset for text/*
+                                        // adding mt.CharSet is not recommended with application/json for example
+                                        if (mt.MediaType?.StartsWith("text/", StringComparison.OrdinalIgnoreCase) == true && string.IsNullOrEmpty(mt.CharSet))
+                                            mt.CharSet = "utf-8";
+                                        fileContent.Headers.ContentType = mt;
+                                    }
+                                }
                                 await _dynamicTypeCacheService.SetItemAsync(multipartFileCacheKey, fileContent, TimeSpan.FromMinutes(5));
                             }
                             else

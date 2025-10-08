@@ -75,7 +75,7 @@ namespace Apis.Services
             }
 
 
-            _metricsMonitor.Monitor(iteration=> iteration.Id == record.IterationId);
+            _metricsMonitor.MonitorAsync(iteration=> iteration.Id == record.IterationId);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"gRPC monitor request completed successfully: {request.FullyQualifiedName}", LPSLoggingLevel.Verbose);
 
             return Task.FromResult(new MonitorResponse

@@ -53,7 +53,7 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
                     await Task.Delay(TimeSpan.FromSeconds(httpIteration.StartupDelay), token);
                 }
 
-                _lpsMetricsDataMonitor?.Monitor(httpIteration);
+                _lpsMetricsDataMonitor?.MonitorAsync(httpIteration);
                 await httpIterationCommand.ExecuteAsync(httpIteration, token);
             }
             catch (OperationCanceledException) when (token.IsCancellationRequested)
@@ -63,7 +63,7 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             }
             finally
             {
-                _lpsMetricsDataMonitor?.Stop(httpIteration);
+                _lpsMetricsDataMonitor?.StopAsync(httpIteration);
             }
         }
     }

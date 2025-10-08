@@ -73,7 +73,7 @@ namespace LPS.Domain
                 }
 
                 Iterations.Add(iteration);
-                _lpsMetricsDataMonitor.TryRegister(this.Name, (HttpIteration)iteration);
+               _ = _lpsMetricsDataMonitor.TryRegisterAsync(this.Name, (HttpIteration)iteration).Result;
             }
             else {
                 _logger.Log(_runtimeOperationIdProvider.OperationId, $"In the Round '{roundName}', the referenced LPS Entity of type {typeof(HttpIteration)} is either null or invalid.", LPSLoggingLevel.Error);

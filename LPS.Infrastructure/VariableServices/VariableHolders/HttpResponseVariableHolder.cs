@@ -80,9 +80,9 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Body is not set on HttpResponseVariableHolder.", LPSLoggingLevel.Error, token);
                     throw new InvalidOperationException("Body is not set on HttpResponseVariableHolder.");
                 }
-
+                
                 // As requested: pass the path, sessionId, and token to Body
-                return await Body.GetValueAsync(resolvedPath, sessionId, token);
+                return await Body.GetValueAsync(resolvedPath.Substring(".Body".Length).Trim(), sessionId, token);
             }
 
             if (resolvedPath.Trim().Equals(".StatusReason", StringComparison.OrdinalIgnoreCase))

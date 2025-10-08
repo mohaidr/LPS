@@ -20,6 +20,7 @@ using LPS.Infrastructure.Nodes;
 using FluentValidation;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.GRPCClients.Factory;
+using System.Text.Json.Serialization;
 
 namespace LPS.UI.Common.Extensions
 {
@@ -203,6 +204,12 @@ namespace LPS.UI.Common.Extensions
             }
 
             var validationResult = validator.Validate(options);
+
+            if (!validationResult.IsValid)
+            {
+                validationResult.PrintValidationErrors();
+            }
+
             return validationResult.IsValid ? (options, true) : (null, false);
         }
 
@@ -218,7 +225,15 @@ namespace LPS.UI.Common.Extensions
         {
             if (isDefault)
             {
-                string jsonString = JsonSerializer.Serialize(configuration);
+                // serialize as strings (camelCase shown; remove arg if you want exact names)
+                var options = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                };
+                options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+                
+                string jsonString = JsonSerializer.Serialize(configuration, options);
                 AnsiConsole.MarkupLine($"[Magenta]Applied Default {configName}: {jsonString}[/]");
                 _logger.Log(AppConstants.emptyLogId, $"Applied Default {configName}: {jsonString}", LPSLoggingLevel.Warning);
             }
@@ -249,13 +264,15 @@ namespace LPS.UI.Common.Extensions
 
         private static HttpClientConfiguration MapToHttpClientConfiguration(HttpClientOptions options)
         {
-            #pragma warning disable CS8629 // Nullable value type may be null.
             return new HttpClientConfiguration(
-                TimeSpan.FromSeconds(options.PooledConnectionLifeTimeInSeconds.Value),
-                TimeSpan.FromSeconds(options.PooledConnectionIdleTimeoutInSeconds.Value),
-                options.MaxConnectionsPerServer.Value,
-                TimeSpan.FromSeconds(options.ClientTimeoutInSeconds.Value));
+                pooledConnectionLifetime: TimeSpan.FromSeconds(options.PooledConnectionLifeTimeInSeconds!.Value),
+                pooledConnectionIdleTimeout: TimeSpan.FromSeconds(options.PooledConnectionIdleTimeoutInSeconds!.Value),
+                maxConnectionsPerServer: options.MaxConnectionsPerServer!.Value,
+                timeout: TimeSpan.FromSeconds(options.ClientTimeoutInSeconds!.Value),
+                headerMode: options.HeaderValidationMode!.Value,
+                allowHostOverride: options.AllowHostOverride!.Value);
         }
+
 
         private static ClusterConfiguration MapToClusterConfiguration(ClusterConfigurationOptions options)
         {

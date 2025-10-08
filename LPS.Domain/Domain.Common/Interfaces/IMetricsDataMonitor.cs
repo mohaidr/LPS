@@ -8,10 +8,10 @@ namespace LPS.Domain.Common.Interfaces
 {
     public interface IMetricsDataMonitor
     {
-        public bool TryRegister(string roundName, HttpIteration lpsHttpIteration);
-        public void Monitor(HttpIteration lpsHttpIteration);
-        public void Monitor(Func<HttpIteration, bool> predicate);
-        public void Stop(HttpIteration lpsHttpIteration);
-        public void Stop(Func<HttpIteration, bool> predicate);
+        public ValueTask<bool> TryRegisterAsync(string roundName, HttpIteration lpsHttpIteration);
+        public ValueTask MonitorAsync(HttpIteration lpsHttpIteration);
+        public ValueTask MonitorAsync(Func<HttpIteration, bool> predicate);
+        public ValueTask StopAsync(HttpIteration lpsHttpIteration);
+        public ValueTask StopAsync(Func<HttpIteration, bool> predicate);
     }
 }

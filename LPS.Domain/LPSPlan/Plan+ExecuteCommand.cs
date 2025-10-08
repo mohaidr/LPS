@@ -90,7 +90,7 @@ namespace LPS.Domain
         {
             if (this.IsValid && this.Rounds.Count > 0)
             {
-                RegisterHttpIterationForMonitor(); // Optionally pre-register HTTP runs for monitoring to include them in the dashboard immediately, even with empty execution lists, rather than waiting for each run to start.
+               await RegisterHttpIterationForMonitorAsync(); // Optionally pre-register HTTP runs for monitoring to include them in the dashboard immediately, even with empty execution lists, rather than waiting for each run to start.
 
                 List<Task> awaitableTasks = new();
                 #region Loggin Round Details
@@ -112,7 +112,7 @@ namespace LPS.Domain
             }
         }
 
-        private void RegisterHttpIterationForMonitor()
+        private async ValueTask RegisterHttpIterationForMonitorAsync()
         {
             foreach (var round in Rounds)
             {
@@ -120,7 +120,7 @@ namespace LPS.Domain
                 {
                     if (iteration.Type == IterationType.Http)
                     {
-                        _lpsMetricsDataMonitor.TryRegister(round.Name, (HttpIteration)iteration);
+                       await _lpsMetricsDataMonitor.TryRegisterAsync(round.Name, (HttpIteration)iteration);
                     }
                 }
             }
