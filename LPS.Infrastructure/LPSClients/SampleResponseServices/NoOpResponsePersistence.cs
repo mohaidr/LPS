@@ -7,11 +7,11 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
 
 
-    public class NoOpResponseProcessor : IResponseProcessor
+    public class NoOpResponsePersistence : IResponsePersistence
     {
         public string ResponseFilePath => null;
 
-        public Task ProcessResponseChunkAsync(byte[] buffer, int offset, int count, CancellationToken token)
+        public Task PersistResponseChunkAsync(byte[] buffer, int offset, int count, CancellationToken token)
         {
             // Do nothing
             return Task.CompletedTask;

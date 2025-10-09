@@ -17,6 +17,8 @@ using LPS.Infrastructure.LPSClients.SessionManager;
 using System.Net;
 using LPS.Infrastructure.LPSClients.CachService;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Domain.LPSRequest.LPSHttpRequest;
+using AsyncKeyedLock;
 
 namespace LPS.Infrastructure.LPSClients.ResponseService
 {
@@ -24,15 +26,17 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         ICacheService<string> memoryCacheService,
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IResponseProcessorFactory responseProcessorFactory,
-        IMetricsService metricsService) : IResponseProcessingService
+        IResponsePersistenceFactory responsePersistenceFactory,
+        IMetricsService metricsService, IUrlSanitizationService urlSanitizationService) : IResponseProcessingService
     {
         private readonly ICacheService<string> _memoryCacheService = memoryCacheService;
         private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
-        private readonly IResponseProcessorFactory _responseProcessorFactory = responseProcessorFactory;
+        private readonly IResponsePersistenceFactory _responsePersistenceFactory = responsePersistenceFactory;
         private readonly ILogger _logger = logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-       private readonly IMetricsService _metricsService = metricsService;
+        private readonly IMetricsService _metricsService = metricsService;
+        private readonly IUrlSanitizationService _urlSanitizationService = urlSanitizationService;
+        private static readonly AsyncKeyedLocker<string> _locker = new();
         public async Task<(HttpResponse.SetupCommand command, double dataReceivedSize, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage responseMessage,
             HttpRequest httpRequest,
@@ -43,7 +47,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             Stopwatch overAllStopWatch = Stopwatch.StartNew();
             string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
             MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
-
+            IResponsePersistence responsePersistence = null;
             try
             {
                 string locationToResponse = string.Empty;
@@ -63,7 +67,8 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     using Stream contentStream = await responseMessage.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
                     MemoryStream memoryStream = null;
                     byte[] buffer = _bufferPool.Rent(64000);
-                    
+                    string sampleResponseCacheKey = $"{CachePrefixes.SampleResponse}{httpRequest.Id}";
+
                     try
                     {
                         // Initialize memoryStream if caching is needed
@@ -72,36 +77,43 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                             memoryStream = new MemoryStream();
                         }
 
-                        // Get the response processor
-                        IResponseProcessor responseProcessor = await _responseProcessorFactory.CreateResponseProcessorAsync(
-                            responseMessage, mimeType, httpRequest.SaveResponse, token);
-
-                        await using (responseProcessor.ConfigureAwait(false))
+                        using (await _locker.LockAsync(sampleResponseCacheKey, token))
                         {
-                            int bytesRead;
-                            streamStopwatch.Start();
-                            overAllStopWatch.Start();
-                            while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), token)) > 0)
+                            // Get the response processor
+                            if (httpRequest.SaveResponse && !_memoryCacheService.TryGetItem(sampleResponseCacheKey, out _))
                             {
-                                transferredSize += bytesRead;
-                                await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, streamStopwatch.ElapsedTicks, token);
-
-                                // Write to memoryStream for caching
-                                if (memoryStream != null)
-                                {
-                                    await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), token);
-                                }
-
-                                // Process the chunk with the responseProcessor
-                                await responseProcessor.ProcessResponseChunkAsync(buffer, 0, bytesRead, token);
-
-                                streamStopwatch.Restart();
+                                var destination = GetDestination(httpRequest, mimeType);
+                                responsePersistence = await _responsePersistenceFactory.CreateAsync(destination, PersistenceType.File, token);
+                                await _memoryCacheService.SetItemAsync(sampleResponseCacheKey, destination, TimeSpan.MaxValue); // once dispose is called (mening that all data written to the file we set it to the default to save after some time again)
                             }
+                        }
+
+                        int bytesRead;
+                        streamStopwatch.Start();
+                        overAllStopWatch.Start();
+                        while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), token)) > 0)
+                        {
+                            transferredSize += bytesRead;
+                            await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, streamStopwatch.ElapsedTicks, token);
+
+                            // Write to memoryStream for caching
+                            if (memoryStream != null)
+                            {
+                                await memoryStream.WriteAsync(buffer.AsMemory(0, bytesRead), token);
+                            }
+
+                            if (responsePersistence != null)
+                            {
+                                // Process the chunk with the responseProcessor
+                                await responsePersistence.PersistResponseChunkAsync(buffer, 0, bytesRead, token);
+                            }
+                            streamStopwatch.Restart();
+
 
                             streamStopwatch.Stop();
                             overAllStopWatch.Stop();
                             // Get the response file path if available
-                            locationToResponse = responseProcessor.ResponseFilePath;
+                            locationToResponse = responsePersistence?.ResponseFilePath;
                         }
 
                         // Cache the content once fully read
@@ -117,6 +129,11 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         if (memoryStream != null)
                         {
                             await memoryStream.DisposeAsync();
+                        }
+                        if (responsePersistence != null)
+                        {
+                            await _memoryCacheService.SetItemAsync(sampleResponseCacheKey, responsePersistence.ResponseFilePath); // All data written to the file, we now set it to the default to save after 30 seconds
+                            await responsePersistence.DisposeAsync();
                         }
                     }
 
@@ -139,6 +156,15 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Error in ProcessResponseAsync: {ex.Message}", LPSLoggingLevel.Error, token);
                 throw;
             }
+        }
+        private string GetDestination(HttpRequest httpRequest, MimeType mimeType)
+        {
+            string sanitizedUrl = _urlSanitizationService.Sanitize(httpRequest.Url.Url);
+            string directoryName = $"{sanitizedUrl}.{_runtimeOperationIdProvider.OperationId}.Resources";
+            Directory.CreateDirectory(directoryName);
+            string timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fff");
+            string destination = Path.Combine(directoryName, $"{sanitizedUrl}_{timestamp}{mimeType.ToFileExtension()}");
+            return destination;
         }
 
         private static long CalculateHeadersSize(HttpResponseMessage response)

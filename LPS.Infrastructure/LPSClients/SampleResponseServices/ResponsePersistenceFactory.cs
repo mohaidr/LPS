@@ -1,4 +1,5 @@
 ﻿// ResponseProcessingService.cs
+using LPS.Domain;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Caching;
@@ -10,14 +11,14 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
-    public class ResponseProcessorFactory : IResponseProcessorFactory
+    public class ResponsePersistenceFactory : IResponsePersistenceFactory
     {
         private readonly ICacheService<string> _memoryCache;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IUrlSanitizationService _urlSanitizationService;
 
-        public ResponseProcessorFactory(
+        public ResponsePersistenceFactory(
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ILogger logger,
             ICacheService<string> memoryCache,
@@ -29,25 +30,23 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
             _urlSanitizationService = urlSanitizationService;
         }
 
-        public async Task<IResponseProcessor> CreateResponseProcessorAsync(HttpResponseMessage responseMessage,MimeType responseContentType, bool saveResponse, CancellationToken token)
+        public async Task<IResponsePersistence> CreateAsync(string? destination, PersistenceType pType = PersistenceType.File, CancellationToken token = default)
         {
 
-            if (!saveResponse)
+            if (pType == PersistenceType.Memory)
             {
-                // Return a no-op processor
-                return new NoOpResponseProcessor();
+                // Return a no-op persistence
+                throw new NotImplementedException(nameof(pType.Memory));
             }
 
             // Create a processor that will handle response saving
-            var processor = new FileResponseProcessor(
-                responseMessage,
+            var persistence = new FileResponsePersistence(
                 _memoryCache,
                 _logger,
-                _runtimeOperationIdProvider, 
-                _urlSanitizationService);
+                _runtimeOperationIdProvider);
 
-            await processor.InitializeAsync(responseContentType.ToFileExtension(), token);
-            return processor;
+            await persistence.InitializeAsync(destination, token);
+            return persistence;
         }
     }
 }

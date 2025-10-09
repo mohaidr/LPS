@@ -9,7 +9,13 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
-    public interface IResponseProcessorFactory
+    public enum PersistenceType
+    {
+        Memory,
+        File
+    }
+
+    public interface IResponsePersistenceFactory
     {
         /// <summary>
         /// Creates a response processor for handling response processing logic.
@@ -18,6 +24,6 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         /// <param name="saveResponse">Indicates whether the response should be saved.</param>
         /// <param name="token">Cancellation token.</param>
         /// <returns>An instance of IResponseProcessor.</returns>
-        Task<IResponseProcessor> CreateResponseProcessorAsync(HttpResponseMessage message, MimeType responseType, bool saveResponse, CancellationToken token);
+        Task<IResponsePersistence> CreateAsync(string? destination, PersistenceType type, CancellationToken token);
     }
 }

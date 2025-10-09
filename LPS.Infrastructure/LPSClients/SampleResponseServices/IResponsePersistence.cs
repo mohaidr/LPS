@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace LPS.Infrastructure.LPSClients.SampleResponseServices
 {
 
-    public interface IResponseProcessor : IAsyncDisposable
+    public interface IResponsePersistence : IAsyncDisposable
     {
         /// <summary>
         /// Processes a chunk of the response data.
@@ -18,7 +18,7 @@ namespace LPS.Infrastructure.LPSClients.SampleResponseServices
         /// <param name="count">The number of bytes to process.</param>
         /// <param name="token">Cancellation token.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task ProcessResponseChunkAsync(byte[] buffer, int offset, int count, CancellationToken token);
+        Task PersistResponseChunkAsync(byte[] buffer, int offset, int count, CancellationToken token);
 
         /// <summary>
         /// Gets the file path where the response is saved, if applicable.

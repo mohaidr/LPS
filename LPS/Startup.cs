@@ -137,7 +137,7 @@ namespace LPS
                     services.AddSingleton<IUrlSanitizationService, UrlSanitizationService>();
                     services.AddSingleton<IMessageService, MessageService>();
                     services.AddSingleton<IResponseProcessingService, ResponseProcessingService>();
-                    services.AddSingleton<IResponseProcessorFactory, ResponseProcessorFactory>();
+                    services.AddSingleton<IResponsePersistenceFactory, ResponsePersistenceFactory>();
                     services.AddPlaceholderResolution();
                     services.AddSingleton<ISessionManager, SessionManager>();
                     services.AddSingleton<IVariableManager, VariableManager>();
