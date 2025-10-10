@@ -35,12 +35,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             {
                 var start = await _params.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
                 var reset = await _params.ExtractNumberAsync(parameters, "reset", 100000, sessionId, token);
-                var counterName = await _params.ExtractStringAsync(parameters, "counter", string.Empty, sessionId, token);
+                var counterName = await _params.ExtractStringAsync(parameters, "name", string.Empty, sessionId, token);
                 var step = await _params.ExtractNumberAsync(parameters, "step", 1, sessionId, token);
+                var isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
                 variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
 
                 var cacheKeySuffix = string.IsNullOrEmpty(counterName) ? string.Empty : $"_{counterName.Trim()}";
-                string cacheKey = string.IsNullOrEmpty(sessionId) || !int.TryParse(sessionId, out _)
+                string cacheKey = string.IsNullOrEmpty(sessionId)  || isGlobal
                     ? $"{CachePrefixes.GlobalCounter}{start}_{reset}{cacheKeySuffix}"
                     : $"{CachePrefixes.SessionCounter}{sessionId}_{start}_{reset}{cacheKeySuffix}";
 
@@ -60,7 +61,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                             if (current > reset)
                             {
                                 current = start;
-                                await _logger.LogAsync(_op.OperationId, $"iterate reset to start '{start}' for key '{cacheKey}'.", LPSLoggingLevel.Verbose, token);
+                                await _logger.LogAsync(_op.OperationId, $"The counter has reset to start '{start}' for key '{cacheKey}'.", LPSLoggingLevel.Verbose, token);
                             }
                         }
                         else
@@ -68,7 +69,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                             if (current < reset)
                             {
                                 current = start;
-                                await _logger.LogAsync(_op.OperationId, $"iterate reset to start '{start}' for key '{cacheKey}'.", LPSLoggingLevel.Verbose, token);
+                                await _logger.LogAsync(_op.OperationId, $"The counter has reset to start '{start}' for key '{cacheKey}'.", LPSLoggingLevel.Verbose, token);
                             }
                         }
                     }

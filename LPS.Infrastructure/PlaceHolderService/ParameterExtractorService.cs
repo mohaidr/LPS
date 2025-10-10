@@ -65,6 +65,25 @@ namespace LPS.Infrastructure.PlaceHolderService
 
             return defaultValue;
         }
+
+
+        public async Task<bool> ExtractBoolAsync(string parameters, string key, bool defaultValue, string sessionId, CancellationToken token)
+        {
+            if (string.IsNullOrEmpty(parameters))
+                return defaultValue;
+
+            var keyValuePairs = parameters.Split(',');
+            foreach (var pair in keyValuePairs)
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length == 2 && parts[0].Trim() == key)
+                {
+                    return await _resolver.Value.ResolvePlaceholdersAsync<bool>(parts[1].Trim(), sessionId, token);
+                }
+            }
+
+            return defaultValue;
+        }
     }
 
 }

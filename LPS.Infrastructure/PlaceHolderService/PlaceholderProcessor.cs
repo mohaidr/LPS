@@ -61,10 +61,10 @@ namespace LPS.Infrastructure.PlaceHolderService
             {
                 return await method.ExecuteAsync(args, sessionId, token);
             }
-            // alias support (e.g., datetime->timestamp, loopcounter->iterate)
+            // alias support (e.g., datetime->timestamp, loopcounter && counter ->iterate)
             if (string.Equals(name, "datetime", StringComparison.OrdinalIgnoreCase) && _methods.TryGetValue("timestamp", out var ts))
                 return await ts.ExecuteAsync(args, sessionId, token);
-            if (string.Equals(name, "loopcounter", StringComparison.OrdinalIgnoreCase) && _methods.TryGetValue("iterate", out var it))
+            if ((string.Equals(name, "counter", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "loopcounter", StringComparison.OrdinalIgnoreCase)) && _methods.TryGetValue("iterate", out var it))
                 return await it.ExecuteAsync(args, sessionId, token);
 
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Unknown function '{name}'.", LPSLoggingLevel.Warning, token);
@@ -85,6 +85,7 @@ namespace LPS.Infrastructure.PlaceHolderService
 
             var variableHolder = await _sessionManager.GetVariableAsync(sessionId, variableName, token)
                                  ?? await _variableManager.GetAsync(variableName, token);
+
 
             if (variableHolder == null)
             {
