@@ -1,38 +1,112 @@
-LPS Tool License Agreement
+# GNU AFFERO GENERAL PUBLIC LICENSE v3.0  
+### With Additional Non-Commercial Use Terms  
+**Version 3, 19 November 2007 (Modified 2025)**  
+**Copyright (C) 2025 Mohamad Moussa Haidar**
 
-Copyright (C) 2024 Mohamad Moussa Haidar
-All rights reserved.
+Everyone is permitted to copy and distribute verbatim copies of this license document, but changing it is not allowed.
 
-Overview:
-The LPS Tool is designed for Load, Performance, and Stress testing of web applications, featuring unique iteration modes. This software allows users to design, manage, and execute a variety of HTTP-based tests to assess application performance under simulated load conditions.
+---
 
-License Grant:
-This license permits individuals and organizations to use the software solely for non-commercial purposes. For the purpose of this license, "non-commercial" use includes:
-1. Personal use.
-2. Internal use within an organization to test its own web applications.
-3. Educational and research purposes.
+## Preamble
 
-"Commercial use," which requires prior written consent from the owner, refers to:
-1. Offering services to third parties that involve the use of the LPS Tool, including but not limited to load testing services for which a fee is charged.
-2. Distributing the software as a part of any service or product offered to third parties for commercial gain.
-3. Any use of the software that directly generates revenue.
+The **GNU Affero General Public License (AGPL)** is a free, copyleft license for software and other kinds of works, specifically designed to ensure cooperation in networked environments.
 
-Restrictions:
-1. Commercial Services: The use of the LPS Tool to provide commercial services, such as load testing for third parties for a fee, without prior written consent from the owner is strictly prohibited. For inquiries regarding such commercial uses or licensing, please contact business.mohaidar@gmail.com.
-2. Redistribution: You may not distribute this software without explicit permission from the copyright owner.
-3. Modification: You may modify this software for personal or internal organizational use; however, you may not distribute the modified software without prior consent.
+The goal of this license is to guarantee your freedom to share and modify the software — to make sure it remains free for all its users.  
+Unlike permissive licenses, the AGPL ensures that **any modified version used over a network must also be made available under the same license**.
 
-Copyright and Intellectual Property:
-The ideas and intellectual property contained in the LPS Tool, including the concept of iteration modes and the specifics of their functionality as described in the documentation, are protected under copyright law. Unauthorized use, copying, or distribution of any part of this software or its documentation is prohibited.
+This modified version of the AGPL introduces **additional terms** to restrict **commercial use** and enforce a **dual-licensing model**.
 
-Limitation of Liability:
-In no event shall the author or copyright holder be liable for any claim, damages, or other liability, whether in an action of contract, tort or otherwise, arising from, out of, or in connection with the software or the use or other dealings in the software.
+---
 
-Termination:
-This License is effective until terminated. It will terminate immediately without notice if you fail to comply with any term or provision of this License. Upon termination, you must destroy all copies of the software and all of its component parts.
+## 1. Standard AGPL Terms
 
-Governing Law:
-This License shall be governed by and construed in accordance with the laws of Jordan.
+This software is licensed under the **GNU Affero General Public License, Version 3 (AGPL-3.0)**.
 
-Acknowledgment:
-By downloading, installing, or using the LPS Tool, you acknowledge that you have read this License, understood it, and agree to be bound by its terms.
+Under the standard AGPL, you are free to:
+
+- Use, study, and modify the software.
+- Distribute copies or modified versions under the same license.
+- Run the software on your own systems or servers.
+
+However, **this modified license introduces additional restrictions and conditions** as stated below.
+
+For the full text of the original AGPL-3.0, visit:  
+https://www.gnu.org/licenses/agpl-3.0.en.html
+
+---
+
+## 2. Additional Non-Commercial Use Terms
+
+### 2.1 Permitted Use
+The software is free to use for:
+- Personal or educational purposes.
+- Research and academic work.
+- Internal evaluation and experimentation.
+- Non-profit or community-driven projects.
+
+### 2.2 Prohibited Use
+You **may not** use, modify, or distribute this software or its derivatives for **commercial purposes** without a valid commercial license from the copyright holder.
+
+"Commercial use" includes, but is not limited to:
+- Providing paid services that use this software.
+- Hosting or deploying the software as part of a paid product or platform.
+- Integrating the software (in whole or part) into any paid or monetized solution.
+- Using it in any business process that generates or supports revenue.
+
+### 2.3 Dual Licensing Model
+A **commercial license** is available for companies and organizations that wish to use this software for profit-making or revenue-generating purposes.
+
+To inquire about a commercial license, contact:  
+📧 **business.mohaidar@gmail.com**
+
+---
+
+## 3. Enforcement and Compliance
+
+- Users who fail to comply with the AGPL-3.0 and its additional terms are in **violation of the license** and must immediately **cease using the software**.
+- Unauthorized commercial use may result in **legal action** by the copyright holder.
+- The author reserves the right to grant, deny, or revoke commercial usage rights at any time.
+
+---
+
+## 4. Copyright and Intellectual Property
+
+- All rights to the **LPS Tool**, including its source code, algorithms, iteration modes, and related documentation, are protected under **international copyright law**.
+- Unauthorized copying, use, or distribution of the software or documentation, outside the permissions of this license, is prohibited.
+- This license does not transfer ownership of intellectual property — it grants usage rights under the terms stated.
+
+---
+
+## 5. Clarification of Terminology
+
+| Term | Meaning |
+|------|----------|
+| **"Software"** | The code, binaries, documentation, and design concepts included in this project. |
+| **"You" / "User"** | Any individual, group, or organization using the software. |
+| **"Non-commercial"** | Use that does not involve selling, licensing, renting, or monetizing the software. |
+| **"Commercial"** | Any use related to revenue generation or business benefit, whether direct or indirect. |
+
+---
+
+## 6. Disclaimer of Warranty
+
+This software is provided **“as is”**, without any express or implied warranty.  
+In no event shall the author or copyright holder be liable for any damages or other liability arising from its use.
+
+---
+
+## 7. Summary (Plain English)
+
+- ✅ You can use it freely for personal, educational, or open non-profit purposes.  
+- ✅ You can view, modify, and share the source code (with credit).  
+- ❌ You cannot sell, host, or use it commercially without permission.  
+- ⚖️ Commercial users must obtain a separate paid license.  
+- 💬 Contact **business.mohaidar@gmail.com** for commercial licensing.
+
+---
+
+### License Name
+**GNU Affero General Public License v3.0 (AGPL-3.0) with Additional Non-Commercial Terms**  
+
+© 2025 **Mohamad Moussa Haidar**. All Rights Reserved.
+
