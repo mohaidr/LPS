@@ -12,6 +12,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using AsyncKeyedLock;
+using System.Threading;
 
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
@@ -56,17 +57,16 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        public async ValueTask MonitorAsync(Func<HttpIteration, bool> predicate)
+        public async ValueTask MonitorAsync(Func<HttpIteration, bool> predicate, CancellationToken token)
         {
             var matches = _factory.Iterations.Where(predicate).ToList();
-            foreach (var it in matches) await MonitorAsync(it);
+            foreach (var it in matches) await MonitorAsync(it, token);
         }
 
-        public async ValueTask MonitorAsync(HttpIteration httpIteration)
+        public async ValueTask MonitorAsync(HttpIteration httpIteration, CancellationToken token)
         {
             using (await _iterationLock.LockAsync(httpIteration.Id))
             {
-
                 if (!_factory.TryGet(httpIteration.Id, out var aggregators))
                 {
                     await _logger.LogAsync(_op.OperationId, $"Monitoring can't start. Iteration {httpIteration.Name} is not registered.", LPSLoggingLevel.Error);
@@ -94,12 +94,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                         throw;
                     }
                 }
+                foreach (var metric in aggregators)
+                {
+                    await metric.StartAsync(token);
+                }
 
-                foreach (var metric in aggregators) metric.Start();
             }
         }
 
-        public async ValueTask StopAsync(HttpIteration httpIteration)
+        public async ValueTask StopAsync(HttpIteration httpIteration, CancellationToken token)
         {
             using (await _iterationLock.LockAsync(httpIteration.Id))
             {
@@ -109,18 +112,18 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     bool anyOngoing = await _commandStatusMonitor.IsAnyCommandOngoing(httpIteration);
                     if (!anyOngoing)
                     {
-                        foreach (var a in aggregators) a.Stop();
+                        foreach (var a in aggregators) await a.StopAsync(token);
                     }
                 }
             }
         }
 
-        public async ValueTask StopAsync(Func<HttpIteration, bool> predicate)
+        public async ValueTask StopAsync(Func<HttpIteration, bool> predicate, CancellationToken token)
         {
             var matches = _factory.Iterations.Where(predicate).ToList();
             foreach (var it in matches)
             {
-                await StopAsync(it);
+                await StopAsync(it, token);
             }
         }
 

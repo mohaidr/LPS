@@ -79,14 +79,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public override void Stop()
+        public override async ValueTask StopAsync(CancellationToken token)
         {
             if (IsStarted) IsStarted = false;
+            await ValueTask.CompletedTask;
         }
 
-        public override void Start()
+        public override async ValueTask StartAsync(CancellationToken token)
         {
             if (!IsStarted) IsStarted = true;
+            await ValueTask.CompletedTask;
         }
 
         // NEW: serialize and publish the dimension set to the variable system

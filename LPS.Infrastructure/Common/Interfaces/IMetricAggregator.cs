@@ -18,8 +18,8 @@ namespace LPS.Infrastructure.Common.Interfaces
         public string Stringify();
         public ValueTask<IMetricShapshot> GetSnapshotAsync(CancellationToken token);
         ValueTask<TDimensionSet> GetSnapshotAsync<TDimensionSet>(CancellationToken token) where TDimensionSet : IMetricShapshot;
-        public void Start();
-        public void Stop();
+        public ValueTask StartAsync(CancellationToken token);
+        public ValueTask StopAsync(CancellationToken token);
         public bool IsStarted { get; }
     }
 }

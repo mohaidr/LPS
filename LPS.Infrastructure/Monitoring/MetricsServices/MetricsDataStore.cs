@@ -57,8 +57,17 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
         public async ValueTask PushAsync(HttpIteration iteration, HttpMetricSnapshot snapshot, CancellationToken token = default)
         {
-            if (iteration is null) throw new ArgumentNullException(nameof(iteration));
-            if (snapshot is null) throw new ArgumentNullException(nameof(snapshot));
+            if (iteration is null)
+            {
+                await _logger.LogAsync("Iteration was not provided", LPSLoggingLevel.Error, token);
+                throw new ArgumentNullException(nameof(iteration));
+            }
+            if (snapshot is null)
+            {
+                await _logger.LogAsync("snapshot was not provided", LPSLoggingLevel.Error, token);
+
+                throw new ArgumentNullException(nameof(snapshot));
+            }
 
             var entry = _store.GetOrAdd(iteration.Id, _ => new Entry(iteration));
             var per = entry.Types.GetOrAdd(snapshot.MetricType, _ => new PerType());

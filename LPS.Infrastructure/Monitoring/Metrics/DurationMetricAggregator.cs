@@ -77,20 +77,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return UpdateAsync(httpResponse, token).Result;
         }
 
-        public override void Stop()
+        public override async ValueTask StopAsync(CancellationToken token)
         {
-            if (IsStarted)
-            {
-                IsStarted = false;
-            }
+            if (IsStarted) IsStarted = false;
+            await ValueTask.CompletedTask;
         }
 
-        public override void Start()
+        public override async ValueTask StartAsync(CancellationToken token)
         {
-            if (!IsStarted)
-            {
-                IsStarted = true;
-            }
+            if (!IsStarted) IsStarted = true;
+            await ValueTask.CompletedTask;
         }
 
         private async Task PushMetricAsync(CancellationToken token)

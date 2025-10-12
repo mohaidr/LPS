@@ -37,13 +37,13 @@ namespace LPS.Infrastructure.Nodes
                 {
                     _masterNode = node;
                 }
+
                 if (_nodeMetadata.NodeType == NodeType.Worker && _nodeMetadata.NodeIP == node.Metadata.NodeIP) // worker registering itself to master
                 {
                     var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
                     // Call the gRPC Service
-                    client.RegisterNode(node.Metadata.ToProto()); // register on the master node
+                   var result= client.RegisterNode(node.Metadata.ToProto()); // register on the master node
                 }
-                else
                 if (_nodeMetadata.NodeType == NodeType.Master && node.Metadata.NodeType == NodeType.Worker)// master regestering itself to worker
                 {
                     var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);

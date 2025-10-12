@@ -29,7 +29,7 @@ namespace LPS.UI.Core.Services
             _entityRepositoryService = entityRepositoryService;
         }
 
-        public void RegisterEntities(Plan plan)
+        public async ValueTask RegisterEntitiesAsync(Plan plan)
         {
             // TODO: This _entityRepositoryService registration logic na possibly the whole RegisterEntities logic should eventually called during the setup process not the execution.
             // For now, it remains here to maintain development momentum, since there’s no database logic or EF implementation yet.
@@ -65,7 +65,7 @@ namespace LPS.UI.Core.Services
                                     }
                                 };
 
-                                grpcClient.AddEntityDiscoveryRecord(request);// register on the master
+                               await grpcClient.AddEntityDiscoveryRecordAsync(request);// register on the master
                             }
                         }
                     }

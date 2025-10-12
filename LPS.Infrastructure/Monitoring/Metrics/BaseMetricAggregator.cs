@@ -59,8 +59,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public abstract void Stop();
+        public abstract ValueTask StopAsync(CancellationToken token);
 
-        public abstract void Start();
+        public abstract ValueTask StartAsync(CancellationToken token);
     }
 }

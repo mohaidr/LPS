@@ -52,6 +52,7 @@ namespace LPS.UI.Core.Services
             {
                 if (_clusterConfiguration.MasterNodeIsWorker)
                 {
+                    await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
                     await _testExecutionService.ExecuteAsync(parameters);
                 }
                 else

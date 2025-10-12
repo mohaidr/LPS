@@ -241,7 +241,7 @@ namespace LPS.UI.Core.Services
 
             if (plan.GetReadOnlyRounds().Any())
             {
-                RegisterEntities(plan);
+                await RegisterEntities(plan);
                 await localNode.SetNodeStatus(NodeStatus.Running);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
@@ -359,7 +359,7 @@ namespace LPS.UI.Core.Services
                 $"Invalid Iteration {iterationDto.Name}, Please fix the validation errors and try again");
         }
 
-        private void RegisterEntities(Plan plan)
+        private async ValueTask RegisterEntities(Plan plan)
         {
             var entityRegisterer = new EntityRegisterer(
                 _clusterConfiguration,
@@ -368,7 +368,7 @@ namespace LPS.UI.Core.Services
                 _nodeRegistry,
                 _entityRepositoryService,
                 _customGrpcClientFactory);
-            entityRegisterer.RegisterEntities(plan);
+           await entityRegisterer.RegisterEntitiesAsync(plan);
         }
 
         private async Task PersistAllSnapshotsAsync(Plan plan, CancellationToken _)

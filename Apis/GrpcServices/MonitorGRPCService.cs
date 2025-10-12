@@ -18,11 +18,13 @@ namespace Apis.Services
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         INodeMetadata _nodeMetadata;
+        CancellationTokenSource _cts;
         public MonitorGRPCService(
-            IEntityDiscoveryService discoveryService,
-            ICommandStatusMonitor<HttpIteration> statusMonitor,
-             IMetricsDataMonitor metricsMonitor, 
-             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, INodeMetadata nodeMetadata)
+                IEntityDiscoveryService discoveryService,
+                ICommandStatusMonitor<HttpIteration> statusMonitor,
+                IMetricsDataMonitor metricsMonitor, 
+                ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
+                INodeMetadata nodeMetadata, CancellationTokenSource cts)
         {
             _discoveryService = discoveryService;
             _statusMonitor = statusMonitor;
@@ -30,19 +32,18 @@ namespace Apis.Services
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _nodeMetadata = nodeMetadata;
+            _cts = cts;
         }
 
         public override async Task<StatusQueryResponse> QueryIterationStatuses(StatusQueryRequest request, ServerCallContext context)
         {
             // Discover entity by FQDN
-            var record = _discoveryService
-                .Discover(r => r.FullyQualifiedName == request.FullyQualifiedName && 
-                            r.Node.Metadata.NodeType == _nodeMetadata.NodeType)?.SingleOrDefault();
+            IEntityDiscoveryRecord? record = await GetRecordAsync(request.FullyQualifiedName);
 
             if (record == null)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"No entity found for FQDN: {request.FullyQualifiedName}", LPSLoggingLevel.Error);
-                throw new RpcException(new Status(StatusCode.NotFound, $"No entity found for FQDN: {request.FullyQualifiedName}"));
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"MonitorGRPCService.Monitor(): No entity found for FQDN: {request.FullyQualifiedName}", LPSLoggingLevel.Error);
+                throw new RpcException(new Status(StatusCode.NotFound, $"MonitorGRPCService.Monitor(): No entity found for FQDN: {request.FullyQualifiedName}"));
             }
 
             // Get statuses from status monitor
@@ -62,27 +63,57 @@ namespace Apis.Services
 
             return response;
         }
-        public override Task<MonitorResponse> Monitor(MonitorRequest request, ServerCallContext context)
+        public override async Task<MonitorResponse> Monitor(MonitorRequest request, ServerCallContext context)
         {
-            var record = _discoveryService
-                .Discover(r => r.FullyQualifiedName == request.FullyQualifiedName &&
-                            r.Node.Metadata.NodeType == _nodeMetadata.NodeType)?.SingleOrDefault();
+
+            IEntityDiscoveryRecord? record = await GetRecordAsync(request.FullyQualifiedName);
+
 
             if (record == null)
             {
-                _logger.Log(_runtimeOperationIdProvider.OperationId, $"Can't Monitor {request.FullyQualifiedName} - No entity found for FQDN: {request.FullyQualifiedName}", LPSLoggingLevel.Error);
-                throw new RpcException(new Status(StatusCode.NotFound, $"Can't Monitor {request.FullyQualifiedName} - No entity found for FQDN: {request.FullyQualifiedName}"));
+                _logger.Log(_runtimeOperationIdProvider.OperationId, $"MonitorGRPCService.QueryIterationStatuses(): Can't Monitor {request.FullyQualifiedName} - No entity found for FQDN: {request.FullyQualifiedName}", LPSLoggingLevel.Error);
+                throw new RpcException(new Status(StatusCode.NotFound, $"MonitorGRPCService.QueryIterationStatuses(): Can't Monitor {request.FullyQualifiedName} - No entity found for FQDN: {request.FullyQualifiedName}"));
             }
 
 
-            _metricsMonitor.MonitorAsync(iteration=> iteration.Id == record.IterationId);
+            await _metricsMonitor.MonitorAsync(iteration=> iteration.Id == record.IterationId, _cts.Token);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"gRPC monitor request completed successfully: {request.FullyQualifiedName}", LPSLoggingLevel.Verbose);
 
-            return Task.FromResult(new MonitorResponse
+            return new MonitorResponse
             {
                 Success = true,
                 Message = $"Monitoring started for: {record.FullyQualifiedName}"
-            });
+            };
         }
+        private async Task<IEntityDiscoveryRecord?> GetRecordAsync(string fullyQualifiedName)
+        {
+            var delaySeconds = 1;
+            var maxDelaySeconds = 32;
+            IEntityDiscoveryRecord? record = null;
+
+            while (record is null && delaySeconds <= maxDelaySeconds)
+            {
+                record = _discoveryService
+                    .Discover(r => r.FullyQualifiedName == fullyQualifiedName &&
+                                   r.Node.Metadata.NodeType == _nodeMetadata.NodeType)
+                    ?.SingleOrDefault();
+
+                if (record is not null)
+                    break;
+
+                await _logger.LogAsync(
+                    _runtimeOperationIdProvider.OperationId,
+                    $"GetRecordAsync(): No entity found for FQDN: {fullyQualifiedName}. Retrying in {delaySeconds} seconds...",
+                    LPSLoggingLevel.Verbose);
+                Console.WriteLine("BackOff");
+                await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+
+                // Exponential backoff: 1, 2,4, 8, 16, 32 (capped)
+                delaySeconds = Math.Min(delaySeconds * 2, maxDelaySeconds);
+            }
+            return record;
+        }
+
+
     }
 }
