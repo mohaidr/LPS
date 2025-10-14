@@ -64,8 +64,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             int cooldownPeriodMs = isCoolDown ? _httpIteration.CoolDownTime.Value : 1;
 
-            if (!IsStarted)
-                return false;
+            // We later should add a check if not started but now in the current design it causes exceptions or logical errors 
+
 
             try
             {

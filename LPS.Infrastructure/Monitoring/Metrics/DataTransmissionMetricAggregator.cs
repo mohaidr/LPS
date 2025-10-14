@@ -103,8 +103,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 await _semaphore.WaitAsync(token);
                 lockTaken = true;
-                if (!IsStarted) return;
-
+                 // We later should add a check if not started but now in the current design it causes exceptions or logical errors 
                 _totalSentBytes += (long)totalBytes;
                 _requestsCount = GetRequestsCount(); // optional; keep in sync with Throughput
             }
@@ -124,7 +123,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             try
             {
                 await _semaphore.WaitAsync(token); lockTaken = true;
-                if (!IsStarted) return;
+                // We later should add a check if not started but now in the current design it causes exceptions or logical errors 
 
                 _totalRecvBytes += (long)totalBytes;
                 _requestsCount = GetRequestsCount();
@@ -162,7 +161,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     if (_semaphore.CurrentCount == 0)
                         _semaphore.Release();
                 }
-            }, null, /*due*/ 1000, /*period*/ 1000);
+            }, null, /*due*/ 0, /*period*/ 1000);
         }
 
         // Under lock: compute lifetime metrics + push
