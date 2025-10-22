@@ -50,13 +50,11 @@ namespace LPS
             var host = Host.CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
-                    webBuilder
-                      .UseStartup<Apis.Startup>()
-                      .UseStaticWebAssets();
-
+                    webBuilder.UseStartup<Apis.Startup>();
                     var contentRoot = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
                     ArgumentNullException.ThrowIfNull(contentRoot);
                     webBuilder.UseContentRoot(contentRoot);
+
                     var webRoot = Path.Combine(contentRoot, "wwwroot");
                     webBuilder.UseWebRoot(webRoot);
 
@@ -153,6 +151,7 @@ namespace LPS
                     services.ConfigureWritable<FileLoggerOptions>(hostContext.Configuration.GetSection("LPSAppSettings:FileLogger"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Watchdog"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<HttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:HttpClient"), AppConstants.AppSettingsFileLocation);
+                    services.ConfigureWritable<ClusterConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Cluster"), AppConstants.AppSettingsFileLocation);
                     services.AddHostedService(isp => isp.ResolveWith<HostedService>(new { args }));
 
                     if (hostContext.HostingEnvironment.IsProduction())

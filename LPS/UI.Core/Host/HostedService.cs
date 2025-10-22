@@ -78,11 +78,9 @@ namespace LPS.UI.Core.Host
         {
             try
             {
-                RegisterLocalNodeAsync();
-                _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(cancellationToken); });
 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this iteration", LPSLoggingLevel.Information);
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
 
                 #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
                 Console.CancelKeyPress += CancelKeyPressHandler;
@@ -113,13 +111,7 @@ namespace LPS.UI.Core.Host
             }
         }
 
-        private void RegisterLocalNodeAsync()
-        {
-            Node node = _nodeMetadata.NodeType == NodeType.Master ? new MasterNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory) : new WorkerNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory);
-            // keep this line for the worker nodes to register the nodes locally
-            _nodeRegistry.RegisterNode(node); // register locally
-        }
-
+       
         private static void SavePlanToDisk(PlanDto planDto)
         {
             var jsonContent = SerializationHelper.Serialize(planDto);
@@ -136,9 +128,9 @@ namespace LPS.UI.Core.Host
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
 
-            var localNode = _nodeRegistry.GetLocalNode();
+            _nodeRegistry.TryGetLocalNode(out INode? localNode); 
 
-            if (localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
+            if (localNode?.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
             {
                 //TODO: Think about this approach
                 while (_nodeRegistry.GetNeighborNodes().Where(n => n.IsActive()).Count() > 0)
@@ -146,7 +138,9 @@ namespace LPS.UI.Core.Host
                     await Task.Delay(1000);
                 }
             }
-            await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
+             if(localNode!=null)
+                await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
+
             _nodeHealthMonitorBackgroundService.Stop();
 
             await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();

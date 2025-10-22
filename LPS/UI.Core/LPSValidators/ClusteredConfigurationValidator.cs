@@ -19,12 +19,13 @@ namespace LPS.UI.Core.LPSValidators
            
             RuleFor(config => config.MasterNodeIsWorker)
             .NotNull()
-            .WithMessage("MasterIsWorker is required.");
+            .WithMessage("MasterNodeIsWorker is required.");
 
-            RuleFor(config => config.GRPCPort)
-                .NotNull()
-                .GreaterThan(0)
-                .WithMessage("WorkerRegistrationPort must be a positive integer.");
+
+            RuleFor(c => c.GRPCPort)
+                .NotNull().WithMessage("GRPCPort is required.")
+                .InclusiveBetween(1, 65535).WithMessage("GRPCPort must be between 1 and 65535.");
+
 
             RuleFor(config => config.ExpectedNumberOfWorkers)
                 .NotNull()

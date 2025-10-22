@@ -1,3 +1,0 @@
-Next: Implement The Resource Usage Flag => think if you need to have it on the plan level or on the settings level
-Implement The Data Received and Sent Metrics
-Implement The DevOps Feature 

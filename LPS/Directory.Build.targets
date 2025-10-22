@@ -1,0 +1,27 @@
+<Project>
+  <!-- This block removes all Static Web Assets logic from every project -->
+  <Target Name="DisableStaticWebAssetsTargets" BeforeTargets="ResolveStaticWebAssetsInputs">
+    <PropertyGroup>
+      <DisableStaticWebAssets>true</DisableStaticWebAssets>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="RemoveStaticWebAssetsFiles" BeforeTargets="Pack">
+    <ItemGroup>
+      <None Remove="**\*.staticwebassets.runtime.json" />
+      <None Remove="**\*.staticwebassets.build.json" />
+      <None Remove="**\*.staticwebassets.endpoints.json" />
+      <None Remove="**\*.staticwebassets.xml" />
+      <Content Remove="**\*.staticwebassets.runtime.json" />
+      <Content Remove="**\*.staticwebassets.build.json" />
+      <Content Remove="**\*.staticwebassets.endpoints.json" />
+      <Content Remove="**\*.staticwebassets.xml" />
+    </ItemGroup>
+  </Target>
+
+  <PropertyGroup>
+    <!-- Prevent the SWA targets from even being imported -->
+    <DisableWebConfigGeneration>true</DisableWebConfigGeneration>
+    <IncludeStaticWebAssets>false</IncludeStaticWebAssets>
+  </PropertyGroup>
+</Project>

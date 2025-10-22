@@ -127,9 +127,9 @@ namespace LPS.UI.Core.LPSCommandLine
             public static Option<IList<string>> TerminationRuleOption { get; } = new(
                 "--terminationRule",
                 description: "Termination rule in the format 'codes=500,502;rate=0.3;grace=10s;maxp90;maxp50;maxp10;maxavg'. Repeat this option to define multiple rules.")
-                        {
-                            AllowMultipleArgumentsPerToken = true,
-                            IsRequired = false
+            {
+                AllowMultipleArgumentsPerToken = true,
+                IsRequired = false
             };
 
             public static Option<string> RoundNameOption { get; } = new Option<string>(
@@ -275,7 +275,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false,
                 Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
-            
+
             public static Option<string> PayloadOption { get; } = new Option<string>(
                 "--payload", () => string.Empty, "Request payload")
             {
@@ -413,8 +413,8 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> DelayClientCreation { get; } = new Option<string>(
-               name: "--delayclientcreation", 
-               description:"Delay client creation until needed",
+               name: "--delayclientcreation",
+               description: "Delay client creation until needed",
                 parseArgument: ParseBoolOptionArgument)
             {
                 IsRequired = false,
@@ -422,8 +422,8 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string?> RunInParallel { get; } = new Option<string?>(
-                name:"--runinparallel", 
-                description:"Execute your iterations in parallel",
+                name: "--runinparallel",
+                description: "Execute your iterations in parallel",
                 parseArgument: ParseBoolOptionArgument)
             {
                 IsRequired = false,
@@ -604,7 +604,7 @@ namespace LPS.UI.Core.LPSCommandLine
 
 
             public static Option<string> MakeGlobal { get; } = new Option<string>(
-                name:"--makeGlobal", 
+                name: "--makeGlobal",
                 description: "Store the response as a global variable",
                 parseArgument: ParseBoolOptionArgument)
             {
@@ -693,7 +693,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
             public static Option<string> MaximizeThroughputOption { get; } = new Option<string>(
-                name:"--maximizethroughput", 
+                name: "--maximizethroughput",
                 description: "Maximize test throughput. Maximizing test throughput may lead to significantly higher CPU and memory usage.",
                 parseArgument: ParseBoolOptionArgument)
             {
@@ -736,7 +736,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
             public static Option<string> DownloadHtmlEmbeddedResources { get; } = new Option<string>(
-                name: "--downloadhtmlembeddedresources", 
+                name: "--downloadhtmlembeddedresources",
                 description: "Download HTML embedded resources",
                 parseArgument: ParseBoolOptionArgument)
             {
@@ -744,7 +744,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<string> SaveResponse { get; } = new Option<string>(
-                name: "--saveresponse", 
+                name: "--saveresponse",
                 description: "Save HTTP response",
                 parseArgument: ParseBoolOptionArgument)
             {
@@ -752,7 +752,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
             };
             public static Option<string?> SupportH2C { get; } = new Option<string?>(
-                name: "--supporth2c", 
+                name: "--supporth2c",
                 description: "Enables support for HTTP/2 over clear text. If used with a non-HTTP/2 protocol, it will override the protocol setting and enforce HTTP/2.",
                 parseArgument: ParseBoolOptionArgument)
             {
@@ -983,6 +983,43 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
         }
+
+
+
+        public static class LPSClusterCommandOptions
+        {
+            static LPSClusterCommandOptions()
+            {
+                MasterNodeIPOption.AddAlias("-mip");
+                GRPCPortOption.AddAlias("-gp");
+                ExpectedWorkersOption.AddAlias("-ew");
+                MasterNodeIsWorkerOption.AddAlias("-miw");
+
+                AddCaseInsensitiveAliases(MasterNodeIPOption, "--masternodeip");
+                AddCaseInsensitiveAliases(GRPCPortOption, "--grpcport");
+                AddCaseInsensitiveAliases(ExpectedWorkersOption, "--expectednumberofworkers");
+                AddCaseInsensitiveAliases(MasterNodeIsWorkerOption, "--masternodeisworker");
+            }
+
+            public static Option<string?> MasterNodeIPOption { get; } =
+                new("--masternodeip", "Master node IP or hostname") { IsRequired = false };
+
+            public static Option<int?> GRPCPortOption { get; } =
+                new("--grpcport", "gRPC port for cluster communication") { IsRequired = false };
+
+            public static Option<int?> ExpectedWorkersOption { get; } =
+                new("--expectednumberofworkers", "Expected number of worker nodes") { IsRequired = false };
+
+            public static Option<bool?> MasterNodeIsWorkerOption { get; } =
+                new("--masternodeisworker", "Treat master as a worker node as well") { IsRequired = false };
+
+            private static void AddCaseInsensitiveAliases<T>(Option<T> opt, params string[] aliases)
+            {
+                foreach (var a in aliases) opt.AddAlias(a);
+            }
+        }
+
+
         public static string ParseBoolOptionArgument(System.CommandLine.Parsing.ArgumentResult result)
         {
             if (result.Tokens.Count == 0)

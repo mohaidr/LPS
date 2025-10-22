@@ -63,7 +63,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     PooledConnectionLifeTimeInSeconds = updatedClientOptions.PooledConnectionLifeTimeInSeconds ?? _clientOptions.Value.PooledConnectionLifeTimeInSeconds,
                     PooledConnectionIdleTimeoutInSeconds = updatedClientOptions.PooledConnectionIdleTimeoutInSeconds ?? _clientOptions.Value.PooledConnectionIdleTimeoutInSeconds,
                     ClientTimeoutInSeconds = updatedClientOptions.ClientTimeoutInSeconds ?? _clientOptions.Value.ClientTimeoutInSeconds,
-                    HeaderValidationMode =   updatedClientOptions.HeaderValidationMode ?? _clientOptions.Value.HeaderValidationMode,
+                    HeaderValidationMode = updatedClientOptions.HeaderValidationMode ?? _clientOptions.Value.HeaderValidationMode,
                     AllowHostOverride = updatedClientOptions.AllowHostOverride ?? _clientOptions.Value.AllowHostOverride
                 };
 

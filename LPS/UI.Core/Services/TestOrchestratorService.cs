@@ -4,6 +4,7 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.GRPCClients;
 using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Infrastructure.Nodes;
+using LPS.Infrastructure.Services;
 using LPS.Protos.Shared;
 using LPS.UI.Common;
 using LPS.UI.Core.LPSCommandLine;
@@ -12,8 +13,11 @@ using System.Collections.Generic;
 using System.CommandLine;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Node = LPS.Infrastructure.Nodes.Node;
+using NodeType = LPS.Infrastructure.Nodes.NodeType;
 
 namespace LPS.UI.Core.Services
 {
@@ -26,15 +30,19 @@ namespace LPS.UI.Core.Services
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly ITestExecutionService _testExecutionService;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
+        readonly NodeHealthMonitorBackgroundService _nodeHealthMonitorBackgroundService;
+        INodeMetadata _nodeMetadata;
         TestRunParameters _parameters;
         public TestOrchestratorService(
+            NodeHealthMonitorBackgroundService nodeHealthMonitorBackgroundService,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             INodeRegistry nodeRegistry,
             IClusterConfiguration clusterConfiguration,
             ITestExecutionService testExecutionService,
             ITestTriggerNotifier testTriggerNotifier,
-            ICustomGrpcClientFactory customGrpcClientFactory)
+            ICustomGrpcClientFactory customGrpcClientFactory,
+            INodeMetadata nodeMetadata)
         {
             _clusterConfiguration = clusterConfiguration;
             _testTriggerNotifier = testTriggerNotifier;
@@ -43,9 +51,14 @@ namespace LPS.UI.Core.Services
             _nodeRegistry = nodeRegistry;
             _customGrpcClientFactory = customGrpcClientFactory;
             _logger = logger;
+            _nodeHealthMonitorBackgroundService = nodeHealthMonitorBackgroundService;
+            _nodeMetadata = nodeMetadata;
         } 
         public async Task RunAsync(TestRunParameters parameters)
         {
+            RegisterLocalNode();
+            _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(parameters.CancellationToken); });
+
             _parameters = parameters;
             var localNode = _nodeRegistry.GetLocalNode();
             if (localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
@@ -84,6 +97,12 @@ namespace LPS.UI.Core.Services
                     _testTriggerNotifier.RegisterObserver(this);
                 }
             }
+        }
+        private void RegisterLocalNode()
+        {
+            Node node = _nodeMetadata.NodeType == NodeType.Master ? new MasterNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory) : new WorkerNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory);
+            // keep this line for the worker nodes to register the nodes locally
+            _nodeRegistry.RegisterNode(node); // register locally
         }
 
         public async Task OnTestTriggered()

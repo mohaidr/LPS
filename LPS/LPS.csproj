@@ -1,16 +1,42 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Version>3.0.0</Version>
-		<AssemblyVersion>3.0.0.0</AssemblyVersion>
-		<FileVersion>3.0.0.0</FileVersion>
-		<InformationalVersion>3.0.0</InformationalVersion>
+		<!-- Versions (align all to 3.0.1) -->
+		<Version>3.0.1</Version>
+		<AssemblyVersion>3.0.1.0</AssemblyVersion>
+		<FileVersion>3.0.1.0</FileVersion>
+		<InformationalVersion>3.0.1</InformationalVersion>
+
+		<!-- Target -->
 		<OutputType>Exe</OutputType>
 		<TargetFramework>net8.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-	</PropertyGroup>
 
+		<!-- .NET Global Tool -->
+		<PackAsTool>true</PackAsTool>
+		<ToolCommandName>lps</ToolCommandName>
+
+		<!-- NuGet metadata -->
+		<PackageId>lps</PackageId>
+		<Authors>Mohamad Haidar</Authors>
+		<Description>Load, Performance and Stress (LPS) CLI tool.</Description>
+		<PackageProjectUrl>https://lpsload.io/</PackageProjectUrl>
+		<PackageTags>load-testing;performance;stress;cli;lps</PackageTags>
+
+		<!-- Custom license file -->
+		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+
+		<!-- Optional niceties -->
+		<IsPackable>true</IsPackable>
+		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+		<!-- <RepositoryUrl>https://github.com/your/repo</RepositoryUrl> -->
+		<!-- <PackageReadmeFile>README.md</PackageReadmeFile> -->
+		<!-- <PackageIcon>icon.png</PackageIcon> -->
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="LICENSE.txt" Pack="true" PackagePath="" />
+	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="bin\**" />
 		<EmbeddedResource Remove="bin\**" />
@@ -48,6 +74,31 @@
 		<ProjectReference Include="..\LPS.Domain\LPS.Domain.csproj" />
 		<ProjectReference Include="..\LPS.Infrastructure\LPS.Infrastructure.csproj" />
 		<ProjectReference Include="..\LPS.Protos.Shared\LPS.Protos.Shared.csproj" />
+	</ItemGroup>
+
+	<!-- 🔹 NEW: Bring Apis/wwwroot into the tool package so static files are portable -->
+	<ItemGroup>
+		<Content Include="..\Apis\wwwroot\**\*">
+			<!-- Place them under this project's wwwroot at build/pack -->
+			<Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+			<Pack>true</Pack>
+			<PackageCopyToOutput>true</PackageCopyToOutput>
+		</Content>
+	</ItemGroup>
+
+	<!-- Put your default file at LPS/config/lpsSettings.json in the repo -->
+	<ItemGroup>
+		<None Include="config\lpsSettings.json" Pack="true" PackagePath="tools/net8.0/any/config/lpsSettings.json" CopyToOutputDirectory="PreserveNewest" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="config\lpsSettings.json">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
+		<None Update="LICENSE.txt">
+		  <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</None>
 	</ItemGroup>
 
 </Project>

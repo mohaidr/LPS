@@ -45,6 +45,7 @@ namespace LPS.UI.Core.LPSCommandLine
         LoggerCliCommand _loggerCliCommand;
         WatchDogCliCommand _watchdogCliCommand;
         HttpClientCliCommand _httpClientCliCommand;
+        ClusterCliCommand _clusterCliCommand;
         readonly AppSettingsWritableOptions _appSettings;
         readonly IMetricsDataMonitor _lpsMonitoringEnroller;
         readonly CancellationTokenSource _cts;
@@ -115,12 +116,14 @@ namespace LPS.UI.Core.LPSCommandLine
             _roundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _iterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _runCliCommand = new RunCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _testOrchestratorService);
-            _loggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSFileLoggerOptions);
-            _httpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSHttpClientOptions);
-            _watchdogCliCommand = new WatchDogCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.LPSWatchdogOptions);
+            _loggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.FileLoggerOptions);
+            _httpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.HttpClientOptions);
+            _watchdogCliCommand = new WatchDogCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.WatchdogOptions);
             _variableCliCommand = new VariableCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _captureCliCommand = new CaptureCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+            _clusterCliCommand = new ClusterCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.ClusterConfigurationOptions);
         }
+
 
         public async Task RunAsync(CancellationToken cancellationToken)
         {
@@ -155,6 +158,9 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 case string cmd when cmd.StartsWith("watchdog"):
                     _watchdogCliCommand.SetHandler(cancellationToken);
+                    break;
+                case string cmd when cmd.StartsWith("cluster"):
+                    _clusterCliCommand.SetHandler(cancellationToken);
                     break;
                 default:
                     _lpsCliCommand.SetHandler(cancellationToken);

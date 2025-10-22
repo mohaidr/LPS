@@ -1,7 +1,6 @@
 {
-  "LPSAppSettings": 
-  {
-    "LPSFileLoggerConfiguration": {
+  "LPSAppSettings": {
+    "FileLogger": {
       "LogFilePath": "logs/lpslog.log",
       "ConsoleLogingLevel": 1,
       "EnableConsoleLogging": true,
@@ -9,26 +8,29 @@
       "DisableFileLogging": false,
       "LoggingLevel": 0
     },
-    "LPSWatchdogConfiguration": {
-      "MaxMemoryMB": 7000,
+    "Watchdog": {
+      "MaxMemoryMB": 5000,
       "CoolDownMemoryMB": 4000,
-      "MaxCPUPercentage": 70,
-      "CoolDownCPUPercentage": 50,
+      "MaxCPUPercentage": 80,
+      "CoolDownCPUPercentage": 60,
       "CoolDownRetryTimeInSeconds": 1,
-      "MaxConcurrentConnectionsCountPerHostName": 1000,
-      "CoolDownConcurrentConnectionsCountPerHostName": 700,
+      "MaxConcurrentConnectionsCountPerHostName": 3000,
+      "CoolDownConcurrentConnectionsCountPerHostName": 1500,
+      "MaxCoolingPeriod": 30,
+      "ResumeCoolingAfter": 90,
       "SuspensionMode": 0
     },
-    "LPSHttpClientConfiguration": {
-      "ClientTimeoutInSeconds": 300,
+    "HttpClient": {
+      "ClientTimeoutInSeconds": 60,
       "PooledConnectionLifeTimeInSeconds": 1500,
       "PooledConnectionIdleTimeoutInSeconds": 350,
-      "MaxConnectionsPerServer": 3000
+      "MaxConnectionsPerServer": 3000,
+      "HeaderValidationMode": "RawPassthrough",
+      "AllowHostOverride": false  
     },
-	  "LPSDashboardConfiguration":
-    {
+    "Dashboard": {
       "BuiltInDashboard": true,
-      "Port":8008,
+      "Port": 8009,
       "RefreshRate": 5
     }
   }
