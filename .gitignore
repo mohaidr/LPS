@@ -65,3 +65,9 @@ net8.0
 /LPS/obj/Debug/net6.0/.NETCoreApp,Version=v6.0.AssemblyAttributes.cs
 /LPS/obj/Debug/net6.0/LPS.AssemblyInfo.cs
 /LPS/publish
+/LPS/logs/lpslog.log
+/LPS.Common/bin/Release
+/LPS.Domain/bin/Release
+/LPS.Infrastructure/bin/Release
+/LPS.Protos.Shared/bin/Release
+/LPS/bin/Release

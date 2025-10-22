@@ -5,6 +5,7 @@ using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Protos.Shared;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -76,6 +77,28 @@ namespace LPS.Infrastructure.Nodes
         {
             _localNode ??= _nodes.FirstOrDefault(n => IsLocalNode(n));
             return _localNode ?? throw new InvalidOperationException("No local node found.");
+        }
+
+        public bool TryGetMasterNode([NotNullWhen(true)] out INode? masterNode)
+        {
+            masterNode = _masterNode ?? _nodes.FirstOrDefault(n => n.Metadata.NodeType == NodeType.Master);
+            if (masterNode is not null)
+            {
+                _masterNode = masterNode; // cache
+                return true;
+            }
+            return false;
+        }
+
+        public bool TryGetLocalNode([NotNullWhen(true)] out INode? localNode)
+        {
+            localNode = _localNode ?? _nodes.FirstOrDefault(IsLocalNode);
+            if (localNode is not null)
+            {
+                _localNode = localNode; // cache
+                return true;
+            }
+            return false;
         }
 
         public IEnumerable<INode> GetNeighborNodes()

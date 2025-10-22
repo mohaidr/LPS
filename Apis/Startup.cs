@@ -45,6 +45,7 @@ namespace LPS.Apis
                 app.UseHsts();
             }
 
+            app.UseDefaultFiles(); 
             app.UseStaticFiles();
             app.UseRouting();
 
