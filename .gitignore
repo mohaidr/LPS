@@ -71,3 +71,6 @@ net8.0
 /LPS.Infrastructure/bin/Release
 /LPS.Protos.Shared/bin/Release
 /LPS/bin/Release
+/.vs/LPS/v17
+/.vs/VSWorkspaceState.json
+/LPS/.vs/LPS/v18

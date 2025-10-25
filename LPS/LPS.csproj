@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<!-- Versions (align all to 3.0.1) -->
-		<Version>3.0.1</Version>
-		<AssemblyVersion>3.0.1.0</AssemblyVersion>
-		<FileVersion>3.0.1.0</FileVersion>
-		<InformationalVersion>3.0.1</InformationalVersion>
+		<!-- Versions (align all to 3.0.2) -->
+		<Version>3.0.2.1</Version>
+		<AssemblyVersion>3.0.2.1</AssemblyVersion>
+		<FileVersion>3.0.2.1</FileVersion>
+		<InformationalVersion>3.0.2.1</InformationalVersion>
 
 		<!-- Target -->
 		<OutputType>Exe</OutputType>
@@ -54,7 +54,7 @@
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-		<PackageReference Include="AutoMapper" Version="13.0.1" />
+		<PackageReference Include="AutoMapper" Version="13.0.2" />
 		<PackageReference Include="FluentValidation" Version="11.10.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
