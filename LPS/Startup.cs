@@ -101,6 +101,7 @@ namespace LPS
                 .ConfigureServices((hostContext, services) =>
                 {
                     services.AddSingleton<ICustomGrpcClientFactory, CustomGrpcClientFactory>();
+                    services.AddSingleton<IWarmUpService, WarmUpService>();
                     services.AddSingleton<IEntityRepositoryService, EntityRepositoryService>();
                     services.AddSingleton<IEntityDiscoveryService, EntityDiscoveryService>();
                     services.AddSingleton<IMetricAggregatorFactory, MetricAggregatorFactory>();

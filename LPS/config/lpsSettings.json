@@ -31,7 +31,7 @@
     "Dashboard": {
       "BuiltInDashboard": true,
       "Port": 8009,
-      "RefreshRate": 5
+      "RefreshRate": 3
     }
   }
 }

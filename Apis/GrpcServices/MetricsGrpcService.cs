@@ -51,8 +51,8 @@ namespace Apis.Services
         {
 
             var success = request.IsSent
-                ? await _metricsService.TryUpdateDataSentAsync(Guid.Parse(request.RequestId), request.DataSize, request.TimeTaken, _cts.Token)
-                : await _metricsService.TryUpdateDataReceivedAsync(Guid.Parse(request.RequestId), request.DataSize, request.TimeTaken, _cts.Token);
+                ? await _metricsService.TryUpdateDataSentAsync(Guid.Parse(request.RequestId), request.DataSize, _cts.Token)
+                : await _metricsService.TryUpdateDataReceivedAsync(Guid.Parse(request.RequestId), request.DataSize, _cts.Token);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update data transmission metrics completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
 
             return new UpdateDataTransmissionResponse { Success = success };

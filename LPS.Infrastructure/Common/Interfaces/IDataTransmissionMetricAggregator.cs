@@ -14,7 +14,7 @@ public interface IDataTransmissionMetricAggregator
     /// <param name="uploadTime">The time taken to upload the data, in milliseconds.</param>
     /// <param name="token">A cancellation token to observe for task cancellation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public ValueTask UpdateDataSentAsync(double dataSize, double uploadTime, CancellationToken token);
+    public ValueTask UpdateDataSentAsync(double dataSize, CancellationToken token);
 
     /// <summary>
     /// Updates the metrics for data received, including the size of the data and the time taken to download it.
@@ -23,5 +23,5 @@ public interface IDataTransmissionMetricAggregator
     /// <param name="DownloadTime">The time taken to download the data, in milliseconds.</param>
     /// <param name="token">A cancellation token to observe for task cancellation.</param>
     /// <returns>A task representing the asynchronous operation.</returns>
-    public ValueTask UpdateDataReceivedAsync(double dataSize, double DownloadTime, CancellationToken token);
+    public ValueTask UpdateDataReceivedAsync(double dataSize, CancellationToken token);
 }

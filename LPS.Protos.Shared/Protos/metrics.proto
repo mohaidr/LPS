@@ -34,8 +34,7 @@ message UpdateResponseMetricsResponse {
 message UpdateDataTransmissionRequest {
     string request_id = 1;
     double data_size = 2;
-    double time_taken = 3;
-    bool is_sent = 4;  // true = sent, false = received
+    bool is_sent = 3;  // true = sent, false = received
 }
 
 message UpdateDataTransmissionResponse {

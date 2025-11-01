@@ -147,7 +147,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             return updated.Value;
         }
 
-        public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double totalBytes, double elapsedTicks, CancellationToken token)
+        public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double totalBytes, CancellationToken token)
         {
             bool? updated = null;
             if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
@@ -156,7 +156,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 {
                     RequestId = requestId.ToString(),
                     DataSize = totalBytes,
-                    TimeTaken = elapsedTicks,
                     IsSent = true
                 });
                 updated = response.Success;
@@ -174,13 +173,13 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                await ((IDataTransmissionMetricAggregator)metric).UpdateDataSentAsync(totalBytes, elapsedTicks, token);
+                await ((IDataTransmissionMetricAggregator)metric).UpdateDataSentAsync(totalBytes, token);
             }
             updated ??= true;
             return updated.Value;
         }
 
-        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double totalBytes, double elapsedTicks, CancellationToken token)
+        public async ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double totalBytes, CancellationToken token)
         {
             bool? updated = null;
 
@@ -190,7 +189,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 {
                     RequestId = requestId.ToString(),
                     DataSize = totalBytes,
-                    TimeTaken = elapsedTicks,
                     IsSent = false
                 });
                 updated = response.Success;
@@ -208,7 +206,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                await((IDataTransmissionMetricAggregator)metric).UpdateDataReceivedAsync(totalBytes, elapsedTicks, token);
+                await((IDataTransmissionMetricAggregator)metric).UpdateDataReceivedAsync(totalBytes, token);
             }
             updated ??= false;
             return updated.Value;

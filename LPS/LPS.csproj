@@ -39,8 +39,11 @@
 	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="bin\**" />
+		<Compile Remove="publish\**" />
 		<EmbeddedResource Remove="bin\**" />
+		<EmbeddedResource Remove="publish\**" />
 		<None Remove="bin\**" />
+		<None Remove="publish\**" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -54,7 +57,7 @@
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-		<PackageReference Include="AutoMapper" Version="13.0.2" />
+		<PackageReference Include="AutoMapper" Version="14.0.0" />
 		<PackageReference Include="FluentValidation" Version="11.10.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.67.0" />

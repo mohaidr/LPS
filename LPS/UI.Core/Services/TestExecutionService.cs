@@ -1,16 +1,12 @@
 ﻿using AutoMapper;
 using FluentValidation;
-using FluentValidation.Results;
 using LPS.Domain;
-using LPS.Domain.Common;
 using LPS.Domain.Domain.Common.Exceptions;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSFlow.LPSHandlers;
 using LPS.UI.Common.DTOs;
 using LPS.Infrastructure.Nodes;
-using LPS.UI.Common.Options;
 using LPS.UI.Core.LPSValidators;
-using Microsoft.Extensions.Options;
 using LPS.Domain.Common.Interfaces;
 using LPS.UI.Core.LPSCommandLine;
 using LPS.AutoMapper;
@@ -18,9 +14,7 @@ using LPS.UI.Core.Host;
 using LPS.UI.Common;
 using LPS.Infrastructure.Entity;
 using LPS.Infrastructure.GRPCClients.Factory;
-using LPS.Infrastructure.VariableServices;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
-using LPS.Infrastructure.VariableServices.VariableHolders;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Extensions;
 using LPS.Infrastructure.Common.Interfaces;
@@ -28,7 +22,6 @@ using LPS.Infrastructure.Monitoring.Metrics;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Globalization;
-using LPS.UI.Common.Extensions;
 
 namespace LPS.UI.Core.Services
 {
@@ -57,7 +50,7 @@ namespace LPS.UI.Core.Services
         public readonly IVariableFactory _variableFactory;
         private readonly INodeMetadata _nodeMetaData;
         private readonly IMetricDataStore _metricStore;
-
+        private readonly IWarmUpService _warmupService;
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -80,6 +73,7 @@ namespace LPS.UI.Core.Services
             IMetricDataStore metricStore,             // NEW
             INodeMetadata nodeMetaData,               // NEW
             ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
+            IWarmUpService warmUpService,
             CancellationTokenSource cts)
         {
             _logger = logger;
@@ -101,8 +95,9 @@ namespace LPS.UI.Core.Services
             _iterationStatusMonitor = iterationStatusMonitor;
             _skipIfEvaluator = skipIfEvaluator;
             _variableFactory = variableFactory;
-            _metricStore = metricStore;               // NEW
-            _nodeMetaData = nodeMetaData;             // NEW
+            _metricStore = metricStore;
+            _nodeMetaData = nodeMetaData;
+            _warmupService = warmUpService;
             _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
 
             var mapperConfig = new MapperConfiguration(cfg =>
@@ -241,6 +236,9 @@ namespace LPS.UI.Core.Services
 
             if (plan.GetReadOnlyRounds().Any())
             {
+                var hosts = plan.GetReadOnlyRounds().SelectMany(r => r.GetReadOnlyIterations().Select(iteration =>  ((HttpIteration)iteration).HttpRequest.Url.BaseUrl));
+                await _warmupService.TryWarmUpAsync(hosts.Distinct(), ct: parameters.CancellationToken);
+                
                 await RegisterEntities(plan);
                 await localNode.SetNodeStatus(NodeStatus.Running);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,

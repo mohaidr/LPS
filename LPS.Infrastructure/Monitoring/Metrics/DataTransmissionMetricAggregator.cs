@@ -96,7 +96,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         /// Called on every uploaded chunk (e.g., every 65 KB).
         /// 'elapsedTicks' is ignored in lifetime approach (we base on wall-clock).
         /// </summary>
-        public async ValueTask UpdateDataSentAsync(double totalBytes, double elapsedTicks, CancellationToken token = default)
+        public async ValueTask UpdateDataSentAsync(double totalBytes, CancellationToken token = default)
         {
             bool lockTaken = false;
             try
@@ -117,7 +117,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         /// Called on every downloaded chunk (e.g., every 65 KB).
         /// 'elapsedTicks' is ignored in lifetime approach (we base on wall-clock).
         /// </summary>
-        public async ValueTask UpdateDataReceivedAsync(double totalBytes, double elapsedTicks, CancellationToken token = default)
+        public async ValueTask UpdateDataReceivedAsync(double totalBytes, CancellationToken token = default)
         {
             bool lockTaken = false;
             try

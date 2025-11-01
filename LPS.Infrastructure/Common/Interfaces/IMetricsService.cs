@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.Common.Interfaces
         /// The elapsed time, in ticks, taken to upload the total bytes.
         /// This represents the duration of the data transmission.
         /// </param>
-        ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double totalBytes, double elapsedTicks, CancellationToken token);
+        ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double totalBytes, CancellationToken token);
 
         /// <summary>
         /// Attempts to update the metrics for data received for the specified request.
@@ -50,7 +50,7 @@ namespace LPS.Infrastructure.Common.Interfaces
         /// The elapsed time, in ticks, taken to download the total bytes.
         /// This represents the duration of the data reception.
         /// </param>
-        ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double totalBytes, double elapsedTicks, CancellationToken token);
+        ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double totalBytes, CancellationToken token);
     }
 
 }

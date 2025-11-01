@@ -89,12 +89,12 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         }
 
                         int bytesRead;
-                        streamStopwatch.Start();
-                        overAllStopWatch.Start();
+                        streamStopwatch.Restart();
+                        overAllStopWatch.Restart();
                         while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), token)) > 0)
                         {
                             transferredSize += bytesRead;
-                            await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, streamStopwatch.ElapsedTicks, token);
+                            await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, token);
 
                             // Write to memoryStream for caching
                             if (memoryStream != null)
@@ -107,15 +107,12 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                                 // Process the chunk with the responseProcessor
                                 await responsePersistence.PersistResponseChunkAsync(buffer, 0, bytesRead, token);
                             }
+
                             streamStopwatch.Restart();
-
-
-                            streamStopwatch.Stop();
-                            overAllStopWatch.Stop();
                             // Get the response file path if available
                             locationToResponse = responsePersistence?.ResponseFilePath;
                         }
-
+                        overAllStopWatch.Stop();
                         // Cache the content once fully read
                         if (memoryStream != null)
                         {

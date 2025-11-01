@@ -19,6 +19,8 @@ using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Extensions;
+using System.Net.Security;
+using System.Net.Sockets;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -68,6 +70,22 @@ namespace LPS.Infrastructure.LPSClients
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 5,
                 EnableMultipleHttp2Connections = true,
+                ConnectCallback = async (context, cancellationToken) =>
+                {
+                    // Measure DNS + TCP connect
+                    var swConnect = Stopwatch.StartNew();
+                    var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+                    await socket.ConnectAsync(context.DnsEndPoint, cancellationToken);
+                    swConnect.Stop();
+                    // Measure SSL handshake
+                    var swSsl = Stopwatch.StartNew();
+                    var networkStream = new NetworkStream(socket, ownsSocket: true);
+                    var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false, userCertificateValidationCallback: (_, __, ___, ____) => true);
+                    await sslStream.AuthenticateAsClientAsync(context.DnsEndPoint.Host);
+                    swSsl.Stop();
+                    return sslStream;
+                    // return the encrypted stream
+                }
             };
             httpClient = new HttpClient(socketsHandler)
             {
@@ -118,7 +136,6 @@ namespace LPS.Infrastructure.LPSClients
                         // TODO: Test moving the download and upload bytes metric to the ProgressContent and the  ResponseProcessingService Service to let the dashboard reflect them instantly for large payloads
                         (HttpResponse.SetupCommand command, double dataReceivedSize, streamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, httpRequestEntity, cacheResponse, linkedCts.Token));
                         HttpResponse.SetupCommand responseCommand = command;
-
                         #region Capture Response
                         if (captureResponse)
                         {
@@ -163,8 +180,8 @@ namespace LPS.Infrastructure.LPSClients
 
                             var bodyVariableHolder = ((IHttpResponseVariableHolder)responseVariableHolder)?.Body;
 
-                            var responseVariableBuilder = responseVariableHolder?.Builder != null ? ((HttpResponseVariableHolder.VBuilder)responseVariableHolder.Builder) :  new HttpResponseVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
-                            var stringVariableBuiler = bodyVariableHolder?.Builder!=null ? ((StringVariableHolder.VBuilder)bodyVariableHolder?.Builder) : new StringVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
+                            var responseVariableBuilder = responseVariableHolder?.Builder != null ? ((HttpResponseVariableHolder.VBuilder)responseVariableHolder.Builder) : new HttpResponseVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
+                            var stringVariableBuiler = bodyVariableHolder?.Builder != null ? ((StringVariableHolder.VBuilder)bodyVariableHolder?.Builder) : new StringVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
 
 
                             bodyVariableHolder = rawContent != null ?
@@ -201,7 +218,6 @@ namespace LPS.Infrastructure.LPSClients
                         // Download Html Embdedded Resources, conditonally
                         (bool hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, linkedCts.Token);
                         responseCommand.TotalTime = initialResponseWatch.Elapsed + htmlDownloadTime + streamTime; // set the response time after the complete payload is read.
-
                         lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
                         lpsHttpResponse.SetHttpRequest(httpRequestEntity);
 
@@ -256,7 +272,7 @@ namespace LPS.Infrastructure.LPSClients
             Stopwatch uploadWatch = new();
             var progress = new Progress<long>(async (bytesRead) =>
             {
-                await _metricsService.TryUpdateDataSentAsync(request.Id, bytesRead, uploadWatch.ElapsedTicks, token);
+                await _metricsService.TryUpdateDataSentAsync(request.Id, bytesRead, token);
                 uploadWatch.Restart();
                 // TODO: We Need to log the number of read bytes to a different log file (stream.log)
             });
