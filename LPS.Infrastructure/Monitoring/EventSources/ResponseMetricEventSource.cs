@@ -66,7 +66,7 @@ namespace LPS.Infrastructure.Monitoring.EventSources
             }
 
         }
-        public void WriteResponseTimeMetrics(double responseTime)
+        public void WriteTimeMetrics(double responseTime)
         {
             if (IsEnabled())
             {

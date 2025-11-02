@@ -22,7 +22,7 @@ namespace LPS.UI.Common.DTOs
         public string ExecutionStatus { get; init; } = string.Empty;
 
         public ResponseCodeMetricSnapshot? ResponseBreakDownMetrics { get; init; }
-        public DurationMetricSnapshot? ResponseTimeMetrics { get; init; }
+        public DurationMetricSnapshot? TimeMetrics { get; init; }
         public ThroughputMetricSnapshot? ConnectionMetrics { get; init; }
         public DataTransmissionMetricSnapshot? DataTransmissionMetrics { get; init; }
     }

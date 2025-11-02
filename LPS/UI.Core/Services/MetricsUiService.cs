@@ -87,7 +87,7 @@ namespace LPS.UI.Core.Services
                 if (q.MetricType is LPSMetricType only)
                 {
                     if (only != LPSMetricType.ResponseCode) respCode = null;
-                    if (only != LPSMetricType.ResponseTime) duration = null;
+                    if (only != LPSMetricType.Time) duration = null;
                     if (only != LPSMetricType.Throughput) throughput = null;
                     if (only != LPSMetricType.DataTransmission) dataTx = null;
                 }
@@ -118,7 +118,7 @@ namespace LPS.UI.Core.Services
                     Endpoint = $"{any?.IterationName ?? iteration.Name} {any?.URL ?? iteration.HttpRequest?.Url?.Url} HTTP/{any?.HttpVersion ?? iteration.HttpRequest?.HttpVersion}",
 
                     ResponseBreakDownMetrics = respCode,
-                    ResponseTimeMetrics = duration,
+                    TimeMetrics = duration,
                     ConnectionMetrics = throughput,
                     DataTransmissionMetrics = dataTx
                 };

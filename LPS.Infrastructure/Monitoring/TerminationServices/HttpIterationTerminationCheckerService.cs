@@ -138,13 +138,13 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.P90);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P90ResponseTime, rule.MaxP90.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.P90TotalTime, rule.MaxP90.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
 
                                 await LogTerminationAsync(httpIteration,
                                     "P90 response time",
-                                    $"{duration.P90ResponseTime} ms",
+                                    $"{duration.P90TotalTime} ms",
                                     $"{rule.MaxP90.Value} ms",
                                     rule.GracePeriod.Value, token);
 
@@ -157,13 +157,13 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.P50);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P50ResponseTime, rule.MaxP50.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.P50TotalTime, rule.MaxP50.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
 
                                 await LogTerminationAsync(httpIteration,
                                     "P50 response time",
-                                    $"{duration.P50ResponseTime} ms",
+                                    $"{duration.P50TotalTime} ms",
                                     $"{rule.MaxP50.Value} ms",
                                     rule.GracePeriod.Value, token);
 
@@ -176,13 +176,13 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.P10);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P10ResponseTime, rule.MaxP10.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.P10TotalTime, rule.MaxP10.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
 
                                 await LogTerminationAsync(httpIteration,
                                     "P10 response time",
-                                    $"{duration.P10ResponseTime} ms",
+                                    $"{duration.P10TotalTime} ms",
                                     $"{rule.MaxP10.Value} ms",
                                     rule.GracePeriod.Value, token);
 
@@ -195,13 +195,13 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         {
                             var key = (httpIteration.Id, rule, TerminationMetricKind.Average);
                             var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.AverageResponseTime, rule.MaxAvg.Value))
+                            if (await st.UpdateAndCheckValueAsync(duration.AverageTotalTime, rule.MaxAvg.Value))
                             {
                                 _terminatedIterations.TryAdd(httpIteration.Id, true);
 
                                 await LogTerminationAsync(httpIteration,
                                     "Average response time",
-                                    $"{duration.AverageResponseTime} ms",
+                                    $"{duration.AverageTotalTime} ms",
                                     $"{rule.MaxAvg.Value} ms",
                                     rule.GracePeriod.Value, token);
 

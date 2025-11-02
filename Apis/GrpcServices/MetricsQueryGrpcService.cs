@@ -47,13 +47,13 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                 response.Responses.Add(new DurationMetricResponse
                 {
                     Metadata = BuildMetadata(s),
-                    SumResponseTime = s.SumResponseTime,
-                    AverageResponseTime = s.AverageResponseTime,
-                    MinResponseTime = s.MinResponseTime,
-                    MaxResponseTime = s.MaxResponseTime,
-                    P90ResponseTime = s.P90ResponseTime,
-                    P50ResponseTime = s.P50ResponseTime,
-                    P10ResponseTime = s.P10ResponseTime
+                    SumTotalTime = s.SumTotalTime,
+                    AverageTotalTime = s.AverageTotalTime,
+                    MinTotalTime = s.MinTotalTime,
+                    MaxTotalTime = s.MaxTotalTime,
+                    P90TotalTime = s.P90TotalTime,
+                    P50TotalTime = s.P50TotalTime,
+                    P10TotalTime = s.P10TotalTime
                 });
             }
 

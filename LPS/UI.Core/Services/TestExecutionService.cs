@@ -412,7 +412,7 @@ namespace LPS.UI.Core.Services
                             object payload = metric switch
                             {
                                 LPSMetricType.Throughput => baseSnaps.OfType<ThroughputMetricSnapshot>().ToList(),
-                                LPSMetricType.ResponseTime => baseSnaps.OfType<DurationMetricSnapshot>().ToList(),
+                                LPSMetricType.Time => baseSnaps.OfType<DurationMetricSnapshot>().ToList(),
                                 LPSMetricType.DataTransmission => baseSnaps.OfType<DataTransmissionMetricSnapshot>().ToList(),
                                 LPSMetricType.ResponseCode => baseSnaps.OfType<ResponseCodeMetricSnapshot>().ToList(),
                                 _ => baseSnaps

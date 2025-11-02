@@ -134,41 +134,41 @@ namespace LPS.Infrastructure.FailureEvaluator
 
                     if (duration is not null)
                     {
-                        if (fc.MaxP90 is > 0 && duration.P90ResponseTime > fc.MaxP90.Value)
+                        if (fc.MaxP90 is > 0 && duration.P90TotalTime > fc.MaxP90.Value)
                         {
                             await _logger.LogAsync(
                                 _runtimeOperationIdProvider.OperationId,
-                                $"Iteration '{iteration.Name}' determined as FAILED: P90 response time exceeded. Actual={duration.P90ResponseTime} ms, Threshold={fc.MaxP90.Value} ms.",
+                                $"Iteration '{iteration.Name}' determined as FAILED: P90 response time exceeded. Actual={duration.P90TotalTime} ms, Threshold={fc.MaxP90.Value} ms.",
                                 LPSLoggingLevel.Information,
                                 token);
                             return true;
                         }
 
-                        if (fc.MaxP50 is > 0 && duration.P50ResponseTime > fc.MaxP50.Value)
+                        if (fc.MaxP50 is > 0 && duration.P50TotalTime > fc.MaxP50.Value)
                         {
                             await _logger.LogAsync(
                                 _runtimeOperationIdProvider.OperationId,
-                                $"Iteration '{iteration.Name}' determined as FAILED: P50 response time exceeded. Actual={duration.P50ResponseTime} ms, Threshold={fc.MaxP50.Value} ms.",
+                                $"Iteration '{iteration.Name}' determined as FAILED: P50 response time exceeded. Actual={duration.P50TotalTime} ms, Threshold={fc.MaxP50.Value} ms.",
                                 LPSLoggingLevel.Information,
                                 token);
                             return true;
                         }
 
-                        if (fc.MaxP10 is > 0 && duration.P10ResponseTime > fc.MaxP10.Value)
+                        if (fc.MaxP10 is > 0 && duration.P10TotalTime > fc.MaxP10.Value)
                         {
                             await _logger.LogAsync(
                                 _runtimeOperationIdProvider.OperationId,
-                                $"Iteration '{iteration.Name}' determined as FAILED: P10 response time exceeded. Actual={duration.P10ResponseTime} ms, Threshold={fc.MaxP10.Value} ms.",
+                                $"Iteration '{iteration.Name}' determined as FAILED: P10 response time exceeded. Actual={duration.P10TotalTime} ms, Threshold={fc.MaxP10.Value} ms.",
                                 LPSLoggingLevel.Information,
                                 token);
                             return true;
                         }
 
-                        if (fc.MaxAvg is > 0 && duration.AverageResponseTime > fc.MaxAvg.Value)
+                        if (fc.MaxAvg is > 0 && duration.AverageTotalTime > fc.MaxAvg.Value)
                         {
                             await _logger.LogAsync(
                                 _runtimeOperationIdProvider.OperationId,
-                                $"Iteration '{iteration.Name}' determined as FAILED: Average response time exceeded. Actual={duration.AverageResponseTime} ms, Threshold={fc.MaxAvg.Value} ms.",
+                                $"Iteration '{iteration.Name}' determined as FAILED: Average response time exceeded. Actual={duration.AverageTotalTime} ms, Threshold={fc.MaxAvg.Value} ms.",
                                 LPSLoggingLevel.Information,
                                 token);
                             return true;

@@ -47,13 +47,13 @@ message HttpResponseSummary {
 // Duration Metric
 message DurationMetricResponse {
   HttpMetricMetadata metadata = 1;
-  double sumResponseTime = 2;
-  double averageResponseTime = 3;
-  double minResponseTime = 4;
-  double maxResponseTime = 5;
-  double p90ResponseTime = 6;
-  double p50ResponseTime = 7;
-  double p10ResponseTime = 8;
+  double sumTotalTime = 2;
+  double averageTotalTime = 3;
+  double minTotalTime = 4;
+  double maxTotalTime = 5;
+  double p90TotalTime = 6;
+  double p50TotalTime = 7;
+  double p10TotalTime = 8;
 }
 
 message DurationMetricSearchResponse {

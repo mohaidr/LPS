@@ -53,7 +53,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         protected override IMetricShapshot Snapshot => _snapshot;
 
-        public override LPSMetricType MetricType => LPSMetricType.ResponseTime;
+        public override LPSMetricType MetricType => LPSMetricType.Time;
 
         public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse.SetupCommand response, CancellationToken token)
         {
@@ -61,7 +61,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             try
             {
                 _snapshot.Update(response.TotalTime.TotalMilliseconds, _histogram);
-                _eventSource.WriteResponseTimeMetrics(response.TotalTime.TotalMilliseconds);
+                _eventSource.WriteTimeMetrics(response.TotalTime.TotalMilliseconds);
 
                 await PushMetricAsync(token);
             }
@@ -122,34 +122,34 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             public void Update(double responseTime, LongHistogram histogram)
             {
-                double averageDenominator = AverageResponseTime != 0
-                    ? (SumResponseTime / AverageResponseTime) + 1
+                double averageDenominator = AverageTotalTime != 0
+                    ? (SumTotalTime / AverageTotalTime) + 1
                     : 1;
 
                 TimeStamp = DateTime.UtcNow;
-                MaxResponseTime = Math.Max(responseTime, MaxResponseTime);
-                MinResponseTime = MinResponseTime == 0 ? responseTime : Math.Min(responseTime, MinResponseTime);
-                SumResponseTime += responseTime;
-                AverageResponseTime = SumResponseTime / averageDenominator;
+                MaxTotalTime = Math.Max(responseTime, MaxTotalTime);
+                MinTotalTime = MinTotalTime == 0 ? responseTime : Math.Min(responseTime, MinTotalTime);
+                SumTotalTime += responseTime;
+                AverageTotalTime = SumTotalTime / averageDenominator;
 
                 histogram.RecordValue((long)responseTime);
-                P10ResponseTime = histogram.GetValueAtPercentile(10);
-                P50ResponseTime = histogram.GetValueAtPercentile(50);
-                P90ResponseTime = histogram.GetValueAtPercentile(90);
+                P10TotalTime = histogram.GetValueAtPercentile(10);
+                P50TotalTime = histogram.GetValueAtPercentile(50);
+                P90TotalTime = histogram.GetValueAtPercentile(90);
             }
         }
     }
 
     public class DurationMetricSnapshot : HttpMetricSnapshot
     {
-        public override LPSMetricType MetricType => LPSMetricType.ResponseTime;
+        public override LPSMetricType MetricType => LPSMetricType.Time;
 
-        public double SumResponseTime { get; protected set; }
-        public double AverageResponseTime { get; protected set; }
-        public double MinResponseTime { get; protected set; }
-        public double MaxResponseTime { get; protected set; }
-        public double P90ResponseTime { get; protected set; }
-        public double P50ResponseTime { get; protected set; }
-        public double P10ResponseTime { get; protected set; }
+        public double SumTotalTime { get; protected set; }
+        public double AverageTotalTime { get; protected set; }
+        public double MinTotalTime { get; protected set; }
+        public double MaxTotalTime { get; protected set; }
+        public double P90TotalTime { get; protected set; }
+        public double P50TotalTime { get; protected set; }
+        public double P10TotalTime { get; protected set; }
     }
 }

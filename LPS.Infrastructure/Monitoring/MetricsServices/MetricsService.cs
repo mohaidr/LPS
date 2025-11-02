@@ -141,7 +141,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
             await QueryMetricsAsync(requestId, token);
             var responseMetrics = _aggregators[requestId.ToString()]
-                .Where(metric => metric.MetricType == LPSMetricType.ResponseTime || metric.MetricType == LPSMetricType.ResponseCode);
+                .Where(metric => metric.MetricType == LPSMetricType.Time || metric.MetricType == LPSMetricType.ResponseCode);
             var result= await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse, token)));
             updated ??= true;
             return updated.Value;

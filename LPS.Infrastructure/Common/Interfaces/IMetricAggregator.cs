@@ -6,7 +6,7 @@ namespace LPS.Infrastructure.Common.Interfaces
 {
     public enum LPSMetricType
     {
-        ResponseTime,
+        Time,
         ResponseCode,
         Throughput,
         DataTransmission
