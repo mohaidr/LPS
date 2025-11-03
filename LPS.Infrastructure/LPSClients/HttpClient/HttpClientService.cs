@@ -77,13 +77,26 @@ namespace LPS.Infrastructure.LPSClients
                     var socket = new Socket(SocketType.Stream, ProtocolType.Tcp);
                     await socket.ConnectAsync(context.DnsEndPoint, cancellationToken);
                     swConnect.Stop();
-                    // Measure SSL handshake
-                    var swSsl = Stopwatch.StartNew();
-                    var networkStream = new NetworkStream(socket, ownsSocket: true);
-                    var sslStream = new SslStream(networkStream, leaveInnerStreamOpen: false, userCertificateValidationCallback: (_, __, ___, ____) => true);
-                    await sslStream.AuthenticateAsClientAsync(context.DnsEndPoint.Host);
-                    swSsl.Stop();
-                    return sslStream;
+                    var netStream = new NetworkStream(socket, ownsSocket: true);
+
+                    // Decide TLS only for HTTPS
+                    bool isHttps =
+                        string.Equals(context.InitialRequestMessage?.RequestUri?.Scheme,
+                                      Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+                        || context.DnsEndPoint.Port == 443; // fallback heuristic
+
+                    if (!isHttps)
+                    {
+                        // HTTP: return cleartext (no TLS handshake)
+                        return netStream;
+                    }
+
+                    // HTTPS: do TLS
+                    var ssl = new SslStream(netStream, leaveInnerStreamOpen: false,
+                                            userCertificateValidationCallback: (_, __, ___, ____) => true);
+                    await ssl.AuthenticateAsClientAsync(context.DnsEndPoint.Host);
+                    return ssl;
+
                     // return the encrypted stream
                 }
             };

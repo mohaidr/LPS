@@ -2,10 +2,10 @@
 
 	<PropertyGroup>
 		<!-- Versions (align all to 3.0.2) -->
-		<Version>3.0.2.1</Version>
-		<AssemblyVersion>3.0.2.1</AssemblyVersion>
-		<FileVersion>3.0.2.1</FileVersion>
-		<InformationalVersion>3.0.2.1</InformationalVersion>
+		<Version>3.0.2.2</Version>
+		<AssemblyVersion>3.0.2.2</AssemblyVersion>
+		<FileVersion>3.0.2.2</FileVersion>
+		<InformationalVersion>3.0.2.2</InformationalVersion>
 
 		<!-- Target -->
 		<OutputType>Exe</OutputType>
@@ -26,6 +26,7 @@
 
 		<!-- Custom license file -->
 		<PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
+		<PackageReadmeFile>readme.md</PackageReadmeFile>
 
 		<!-- Optional niceties -->
 		<IsPackable>true</IsPackable>
@@ -45,7 +46,9 @@
 		<None Remove="bin\**" />
 		<None Remove="publish\**" />
 	</ItemGroup>
-
+	<ItemGroup>
+		<None Include="..\readme.md" Pack="true" PackagePath="" />
+	</ItemGroup>
 	<ItemGroup>
 		<Compile Remove="UIUtilities\HttpConcurrentTestUtility.cs" />
 	</ItemGroup>
