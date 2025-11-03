@@ -48,6 +48,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
             MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
             IResponsePersistence responsePersistence = null;
+            long transferredSize = 0;
             try
             {
                 string locationToResponse = string.Empty;
@@ -56,7 +57,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     throw new InvalidOperationException("Response content is null.");
                 }
                 var statusLine = $"HTTP/{responseMessage.Version} {(int)responseMessage.StatusCode} {responseMessage.ReasonPhrase}\r\n";
-                long transferredSize = Encoding.UTF8.GetByteCount(statusLine);
+                transferredSize = Encoding.UTF8.GetByteCount(statusLine);
                 if (!(responseMessage.StatusCode == HttpStatusCode.NotModified || responseMessage.StatusCode == HttpStatusCode.NoContent))
                 {
                     // Calculate the headers size (both response and content headers)
@@ -150,8 +151,15 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Error in ProcessResponseAsync: {ex.Message}", LPSLoggingLevel.Error, token);
-                throw;
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Error in ProcessResponseAsync: {ex.Message}", LPSLoggingLevel.Error, token);     
+                return (new HttpResponse.SetupCommand
+                {
+                    StatusCode = 0,
+                    StatusMessage = ex?.InnerException?.Message ?? ex?.Message,
+                    LocationToResponse = string.Empty,
+                    IsSuccessStatusCode = false,
+                    HttpRequestId = httpRequest.Id,
+                }, transferredSize, overAllStopWatch.Elapsed);
             }
         }
         private string GetDestination(HttpRequest httpRequest, MimeType mimeType)

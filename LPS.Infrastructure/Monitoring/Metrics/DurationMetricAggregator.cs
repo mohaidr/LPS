@@ -57,7 +57,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public async Task<IResponseMetricCollector> UpdateAsync(HttpResponse.SetupCommand response, CancellationToken token)
         {
-            await _semaphore.WaitAsync();
+            await _semaphore.WaitAsync(token);
             try
             {
                 _snapshot.Update(response.TotalTime.TotalMilliseconds, _histogram);

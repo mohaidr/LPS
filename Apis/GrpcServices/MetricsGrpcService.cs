@@ -40,7 +40,7 @@ namespace Apis.Services
         {
             var success = await _metricsService.TryUpdateResponseMetricsAsync(
                 Guid.Parse(request.RequestId),
-                new LPS.Domain.HttpResponse.SetupCommand { StatusCode = (HttpStatusCode)request.ResponseCode, StatusMessage = request.StatusReason, TotalTime = request.ResponseTime.ToTimeSpan() },
+                new LPS.Domain.HttpResponse.SetupCommand { StatusCode = (HttpStatusCode)request.ResponseCode, StatusMessage = request.StatusReason, TotalTime = request.TotalTime.ToTimeSpan() },
                 _cts.Token)  ;
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update response metrics completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
 

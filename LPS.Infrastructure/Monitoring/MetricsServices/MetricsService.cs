@@ -123,7 +123,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     RequestId = requestId.ToString(),
                     ResponseCode = (int)lpsResponse.StatusCode,
                     StatusReason = lpsResponse.StatusMessage,
-                    ResponseTime = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(lpsResponse.TotalTime)
+                    TotalTime = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(lpsResponse.TotalTime)
                 });
                 updated= response.Success;
             }
