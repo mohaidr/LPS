@@ -29,7 +29,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly Stopwatch _watch = new();
         private Timer _timer;
 
-        private readonly LPSDurationMetricSnapshotProtected _snapshot;
+        private readonly DataTransmissionMetricSnapshot _snapshot;
         protected override IMetricShapshot Snapshot => _snapshot;
 
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
@@ -49,7 +49,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
 
-            _snapshot = new LPSDurationMetricSnapshotProtected(
+            _snapshot = new DataTransmissionMetricSnapshot(
                 _roundName,
                 httpIteration.Id,
                 httpIteration.Name,
@@ -205,68 +205,70 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return 0;
         }
 
-        private class LPSDurationMetricSnapshotProtected : DataTransmissionMetricSnapshot
-        {
-            [JsonIgnore] public bool StopUpdate { get; set; }
-
-            public LPSDurationMetricSnapshotProtected(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
-            {
-                RoundName = roundName;
-                IterationId = iterationId;
-                IterationName = iterationName;
-                HttpMethod = httpMethod;
-                URL = url;
-                HttpVersion = httpVersion;
-            }
-
-            public void UpdateDataSent(double totalDataSent, double averageDataSentPerRequest, double upstreamThroughputBps, double totalDataTransmissionTimeInMilliseconds)
-            {
-                if (StopUpdate) return;
-                TimeStamp = DateTime.UtcNow;
-                DataSent = totalDataSent;
-                AverageDataSent = averageDataSentPerRequest;
-                UpstreamThroughputBps = upstreamThroughputBps;
-                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
-            }
-
-            public void UpdateDataReceived(double totalDataReceived, double averageDataReceivedPerRequest, double downstreamThroughputBps, double totalDataTransmissionTimeInMilliseconds)
-            {
-                if (StopUpdate) return;
-                TimeStamp = DateTime.UtcNow;
-                DataReceived = totalDataReceived;
-                AverageDataReceived = averageDataReceivedPerRequest;
-                DownstreamThroughputBps = downstreamThroughputBps;
-                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
-            }
-
-            public void UpdateAverageBytes(double averageBytesPerSecond, double totalDataTransmissionTimeInMilliseconds)
-            {
-                if (StopUpdate) return;
-                TimeStamp = DateTime.UtcNow;
-                ThroughputBps = averageBytesPerSecond;
-                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
-            }
-        }
+ 
     }
 
     public class DataTransmissionMetricSnapshot : HttpMetricSnapshot
     {
+        [JsonIgnore] public bool StopUpdate { get; set; }
+
+        public DataTransmissionMetricSnapshot(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
+        {
+            RoundName = roundName;
+            IterationId = iterationId;
+            IterationName = iterationName;
+            HttpMethod = httpMethod;
+            URL = url;
+            HttpVersion = httpVersion;
+        }
+
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
 
         // Wall-clock elapsed for the active lifetime (ms)
-        public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
+        public double TotalDataTransmissionTimeInMilliseconds { get; private set; }
 
         // Totals
-        public double DataSent { get; protected set; }
-        public double DataReceived { get; protected set; }
+        public double DataSent { get; private set; }
+        public double DataReceived { get; private set; }
 
         // Per-request averages (lifetime)
-        public double AverageDataSent { get; protected set; }
-        public double AverageDataReceived { get; protected set; }
+        public double AverageDataSent { get; private set; }
+        public double AverageDataReceived { get; private set; }
 
         // Lifetime (wall-clock) throughput
-        public double UpstreamThroughputBps { get; protected set; }
-        public double DownstreamThroughputBps { get; protected set; }
-        public double ThroughputBps { get; protected set; }
+        public double UpstreamThroughputBps { get; private set; }
+        public double DownstreamThroughputBps { get; private set; }
+        public double ThroughputBps { get; private set; }
+
+
+
+
+        public void UpdateDataSent(double totalDataSent, double averageDataSentPerRequest, double upstreamThroughputBps, double totalDataTransmissionTimeInMilliseconds)
+        {
+            if (StopUpdate) return;
+            TimeStamp = DateTime.UtcNow;
+            DataSent = totalDataSent;
+            AverageDataSent = averageDataSentPerRequest;
+            UpstreamThroughputBps = upstreamThroughputBps;
+            TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
+        }
+
+        public void UpdateDataReceived(double totalDataReceived, double averageDataReceivedPerRequest, double downstreamThroughputBps, double totalDataTransmissionTimeInMilliseconds)
+        {
+            if (StopUpdate) return;
+            TimeStamp = DateTime.UtcNow;
+            DataReceived = totalDataReceived;
+            AverageDataReceived = averageDataReceivedPerRequest;
+            DownstreamThroughputBps = downstreamThroughputBps;
+            TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
+        }
+
+        public void UpdateAverageBytes(double averageBytesPerSecond, double totalDataTransmissionTimeInMilliseconds)
+        {
+            if (StopUpdate) return;
+            TimeStamp = DateTime.UtcNow;
+            ThroughputBps = averageBytesPerSecond;
+            TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
+        }
     }
 }

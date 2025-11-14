@@ -24,7 +24,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly ResponseMetricEventSource _eventSource;
-        private ProtectedResponseCodeSnapshot _snapshot { get; set; }
+        private ResponseCodeMetricSnapshot _snapshot { get; set; }
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
@@ -40,7 +40,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
-            _snapshot = new ProtectedResponseCodeSnapshot(
+            _snapshot = new ResponseCodeMetricSnapshot(
                 roundName,
                 _httpIteration.Id,
                 _httpIteration.Name,
@@ -105,41 +105,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
         }
 
-        private class ProtectedResponseCodeSnapshot : ResponseCodeMetricSnapshot
-        {
-            public ProtectedResponseCodeSnapshot(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
-            {
-                IterationId = iterationId;
-                RoundName = roundName;
-                IterationName = iterationName;
-                HttpMethod = httpMethod;
-                URL = url;
-                HttpVersion = httpVersion;
-            }
 
-            public void Update(HttpResponse.SetupCommand response)
-            {
-                var summary = _responseSummaries.FirstOrDefault(rs =>
-                    rs.HttpStatusCode == response.StatusCode &&
-                    rs.HttpStatusReason == response.StatusMessage);
-
-                if (summary != null)
-                {
-                    summary.Count += 1;
-                }
-                else
-                {
-                    var instance = new HttpResponseSummary(
-                        response.StatusCode,
-                        response.StatusMessage,
-                        1
-                    );
-                    _responseSummaries.Add(instance);
-                }
-
-                TimeStamp = DateTime.UtcNow;
-            }
-        }
     }
 
     public class HttpResponseSummary(HttpStatusCode httpStatusCode, string httpStatusReason, int count)
@@ -151,14 +117,44 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class ResponseCodeMetricSnapshot : HttpMetricSnapshot
     {
-        public override LPSMetricType MetricType => LPSMetricType.ResponseCode;
-
-        public ResponseCodeMetricSnapshot()
+        public ResponseCodeMetricSnapshot(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
         {
+            IterationId = iterationId;
+            RoundName = roundName;
+            IterationName = iterationName;
+            HttpMethod = httpMethod;
+            URL = url;
+            HttpVersion = httpVersion;
             _responseSummaries = new ConcurrentBag<HttpResponseSummary>();
+
         }
 
-        protected ConcurrentBag<HttpResponseSummary> _responseSummaries { get; set; }
+        public void Update(HttpResponse.SetupCommand response)
+        {
+            var summary = _responseSummaries.FirstOrDefault(rs =>
+                rs.HttpStatusCode == response.StatusCode &&
+                rs.HttpStatusReason == response.StatusMessage);
+
+            if (summary != null)
+            {
+                summary.Count += 1;
+            }
+            else
+            {
+                var instance = new HttpResponseSummary(
+                    response.StatusCode,
+                    response.StatusMessage,
+                    1
+                );
+                _responseSummaries.Add(instance);
+            }
+
+            TimeStamp = DateTime.UtcNow;
+        }
+        public override LPSMetricType MetricType => LPSMetricType.ResponseCode;
+
+ 
+        protected ConcurrentBag<HttpResponseSummary> _responseSummaries { get; private set; }
 
         public IList<HttpResponseSummary> ResponseSummaries => _responseSummaries.ToList();
     }

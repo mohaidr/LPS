@@ -19,7 +19,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private int _activeRequestsCount;
         private int _requestsCount;
-        private readonly ProtectedConnectionSnapshot _snapshot;
+        private readonly ThroughputMetricSnapshot _snapshot;
         protected override IMetricShapshot Snapshot => _snapshot;
 
         private readonly Stopwatch _throughputWatch;
@@ -43,7 +43,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
 
-            _snapshot = new ProtectedConnectionSnapshot(
+            _snapshot = new ThroughputMetricSnapshot(
                 roundName,
                 _httpIteration.Id,
                 _httpIteration.Name,
@@ -227,47 +227,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
         }
 
-        private class ProtectedConnectionSnapshot : ThroughputMetricSnapshot
-        {
-            [JsonIgnore]
-            public bool StopUpdate { get; set; }
-
-            public ProtectedConnectionSnapshot(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
-            {
-                IterationId = iterationId;
-                RoundName = roundName;
-                IterationName = iterationName;
-                HttpMethod = httpMethod;
-                URL = url;
-                HttpVersion = httpVersion;
-            }
-
-            public void Update(
-                int activeRequestsCount,
-                int requestsCount = default,
-                int successfulRequestsCount = default,
-                int failedRequestsCount = default,
-                double totalDataTransmissionTimeInMilliseconds = default,
-                RequestsRate requestsRate = default,
-                RequestsRate requestsRatePerCoolDown = default)
-            {
-                if (!StopUpdate)
-                {
-                    TimeStamp = DateTime.UtcNow;
-                    RequestsCount = requestsCount.Equals(default) ? RequestsCount : requestsCount;
-                    ActiveRequestsCount = activeRequestsCount;
-                    SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? SuccessfulRequestCount : successfulRequestsCount;
-                    FailedRequestsCount = failedRequestsCount.Equals(default) ? FailedRequestsCount : failedRequestsCount;
-                    TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds.Equals(default)
-                        ? TotalDataTransmissionTimeInMilliseconds
-                        : totalDataTransmissionTimeInMilliseconds;
-                    RequestsRate = requestsRate.Equals(default(RequestsRate)) ? RequestsRate : requestsRate;
-                    RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate))
-                        ? RequestsRatePerCoolDownPeriod
-                        : requestsRatePerCoolDown;
-                }
-            }
-        }
     }
 
     public readonly struct RequestsRate(string every, double value) : IEquatable<RequestsRate>
@@ -285,15 +244,54 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
     public class ThroughputMetricSnapshot : HttpMetricSnapshot
     {
+        [JsonIgnore]
+        public bool StopUpdate { get; set; }
+
+        public ThroughputMetricSnapshot(string roundName, Guid iterationId, string iterationName, string httpMethod, string url, string httpVersion)
+        {
+            IterationId = iterationId;
+            RoundName = roundName;
+            IterationName = iterationName;
+            HttpMethod = httpMethod;
+            URL = url;
+            HttpVersion = httpVersion;
+        }
+
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
 
-        public double TotalDataTransmissionTimeInMilliseconds { get; protected set; }
-        public RequestsRate RequestsRate { get; protected set; }
-        public RequestsRate RequestsRatePerCoolDownPeriod { get; protected set; }
-        public int RequestsCount { get; protected set; }
-        public int ActiveRequestsCount { get; protected set; }
-        public int SuccessfulRequestCount { get; protected set; }
-        public int FailedRequestsCount { get; protected set; }
+        public double TotalDataTransmissionTimeInMilliseconds { get; private set; }
+        public RequestsRate RequestsRate { get; private set; }
+        public RequestsRate RequestsRatePerCoolDownPeriod { get; private set; }
+        public int RequestsCount { get; private set; }
+        public int ActiveRequestsCount { get; private set; }
+        public int SuccessfulRequestCount { get; private set; }
+        public int FailedRequestsCount { get; private set; }
         public double ErrorRate => FailedRequestsCount / (RequestsCount - ActiveRequestsCount != 0 ? (double)RequestsCount - ActiveRequestsCount : 1);
+
+        public void Update(
+        int activeRequestsCount,
+        int requestsCount = default,
+        int successfulRequestsCount = default,
+        int failedRequestsCount = default,
+        double totalDataTransmissionTimeInMilliseconds = default,
+        RequestsRate requestsRate = default,
+        RequestsRate requestsRatePerCoolDown = default)
+        {
+            if (!StopUpdate)
+            {
+                TimeStamp = DateTime.UtcNow;
+                RequestsCount = requestsCount.Equals(default) ? RequestsCount : requestsCount;
+                ActiveRequestsCount = activeRequestsCount;
+                SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? SuccessfulRequestCount : successfulRequestsCount;
+                FailedRequestsCount = failedRequestsCount.Equals(default) ? FailedRequestsCount : failedRequestsCount;
+                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds.Equals(default)
+                    ? TotalDataTransmissionTimeInMilliseconds
+                    : totalDataTransmissionTimeInMilliseconds;
+                RequestsRate = requestsRate.Equals(default(RequestsRate)) ? RequestsRate : requestsRate;
+                RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate))
+                    ? RequestsRatePerCoolDownPeriod
+                    : requestsRatePerCoolDown;
+            }
+        }
     }
 }

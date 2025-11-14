@@ -123,7 +123,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     RequestId = requestId.ToString(),
                     ResponseCode = (int)lpsResponse.StatusCode,
                     StatusReason = lpsResponse.StatusMessage,
-                    TotalTime = Google.Protobuf.WellKnownTypes.Duration.FromTimeSpan(lpsResponse.TotalTime)
                 });
                 updated= response.Success;
             }
@@ -142,11 +141,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             await QueryMetricsAsync(requestId, token);
             var responseMetrics = _aggregators[requestId.ToString()]
                 .Where(metric => metric.MetricType == LPSMetricType.Time || metric.MetricType == LPSMetricType.ResponseCode);
-            var result= await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse, token)));
+            var result= await Task.WhenAll(responseMetrics.Select(metric => ((IDurationMetricCollector)metric).UpdateTotalTimeAsync(lpsResponse.TotalTime.TotalMilliseconds, token)));
             updated ??= true;
             return updated.Value;
         }
-
+        
         public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double totalBytes, CancellationToken token)
         {
             bool? updated = null;
