@@ -51,6 +51,16 @@ namespace LPS.Infrastructure.Common.Interfaces
         /// This represents the duration of the data reception.
         /// </param>
         ValueTask<bool> TryUpdateDataReceivedAsync(Guid requestId, double totalBytes, CancellationToken token);
+        /// <summary>
+        /// Attempts to update a single duration metric (for example total time, downstream time, upstream time,
+        /// upstream time, TLS handshake time, or TCP handshake time) for the specified request.
+        /// </summary>
+        /// <param name="requestId">The identifier of the HTTP request.</param>
+        /// <param name="metricType">The type of duration metric being updated.</param>
+        /// <param name="valueMs">The metric value in milliseconds.</param>
+        /// <param name="token">Cancellation token.</param>
+        /// <returns><c>true</c> if the metric was successfully updated; otherwise, <c>false</c>.</returns>
+        ValueTask<bool> TryUpdateDurationMetricAsync(Guid requestId, DurationMetricType metricType, double valueMs, CancellationToken token);
     }
 
 }

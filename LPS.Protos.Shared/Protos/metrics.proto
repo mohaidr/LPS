@@ -9,6 +9,7 @@ service MetricsProtoService {
     rpc UpdateConnections(UpdateConnectionsRequest) returns (UpdateConnectionsResponse);
     rpc UpdateResponseMetrics(UpdateResponseMetricsRequest) returns (UpdateResponseMetricsResponse);
     rpc UpdateDataTransmission(UpdateDataTransmissionRequest) returns (UpdateDataTransmissionResponse);
+    rpc UpdateDurationMetric(UpdateDurationMetricRequest) returns (UpdateDurationMetricResponse);
 }
 
 message UpdateConnectionsRequest {
@@ -39,3 +40,25 @@ message UpdateDataTransmissionRequest {
 message UpdateDataTransmissionResponse {
     bool success = 1;
 }
+
+
+enum DurationMetricType {
+    TOTAL_TIME = 0;
+    RECEIVING_TIME = 1;        // Renamed from DOWNSTREAM_TIME
+    SENDING_TIME = 2;          // Renamed from UPSTREAM_TIME
+    TLS_HANDSHAKE_TIME = 3;
+    TCP_HANDSHAKE_TIME = 4;
+    TIME_TO_FIRST_BYTE = 5;
+    WAITING_TIME = 6;          // NEW: TTFB - TCP - TLS
+}
+
+message UpdateDurationMetricRequest {
+    string request_id = 1;
+    DurationMetricType metric_type = 2;
+    double value_ms = 3;
+}
+
+message UpdateDurationMetricResponse {
+    bool success = 1;
+}
+

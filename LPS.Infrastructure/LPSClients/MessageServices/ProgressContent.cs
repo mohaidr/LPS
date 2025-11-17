@@ -10,6 +10,9 @@ using System.Buffers;
 using System.Threading;
 using YamlDotNet.Core.Tokens;
 using System.Diagnostics;
+using LPS.Infrastructure.Common.Interfaces;
+using LPS.Domain;
+using LPS.Infrastructure.Monitoring.Metrics;
 
 namespace LPS.Infrastructure.LPSClients.MessageServices
 {
@@ -17,15 +20,17 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
     {
         private readonly HttpContent _originalContent;
         private readonly IProgress<long> _progress;
+        private readonly HttpRequestMessage _httpRequestMessage;
         private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
         CancellationToken _token;
-        Stopwatch _uploadWatch;
-        public ProgressContent(HttpContent content, IProgress<long> progress, Stopwatch stopwatch, CancellationToken token)
+        
+        public ProgressContent(HttpContent content, IProgress<long> progress, HttpRequestMessage httpRequestMessage, CancellationToken token)
         {
             _token = token;
-            _uploadWatch = stopwatch;
             _originalContent = content ?? throw new ArgumentNullException(nameof(content));
             _progress = progress ?? throw new ArgumentNullException(nameof(progress));
+            _httpRequestMessage = httpRequestMessage ?? throw new ArgumentNullException(nameof(httpRequestMessage));
+            
             foreach (var header in _originalContent.Headers)
             {
                 Headers.Add(header.Key, header.Value);
@@ -37,17 +42,25 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             var buffer = _bufferPool.Rent(64000); // Rent 64 KB buffer
             try
             {
-                _uploadWatch.Start();
+                // Start measuring upload time
+                Stopwatch uploadWatch = Stopwatch.StartNew();
                 using var contentStream = await _originalContent.ReadAsStreamAsync(_token);
                 long totalBytesRead = 0;
                 int bytesRead;
+                
                 while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), _token)) > 0)
                 {
                     await stream.WriteAsync(buffer, 0, bytesRead, _token);
                     totalBytesRead += bytesRead;
                     _progress.Report(bytesRead);
                 }
-                _uploadWatch.Stop();
+                
+                // Stop timing and store in HttpRequestOptions
+                uploadWatch.Stop();
+                _httpRequestMessage.Options.Set(
+                    new HttpRequestOptionsKey<double>("UploadTime"), 
+                    uploadWatch.Elapsed.TotalMilliseconds
+                );
             }
             finally
             {

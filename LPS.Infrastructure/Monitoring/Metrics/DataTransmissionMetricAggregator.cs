@@ -225,7 +225,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;
 
         // Wall-clock elapsed for the active lifetime (ms)
-        public double TotalDataTransmissionTimeInMilliseconds { get; private set; }
+        public double TimeElpased { get; private set; }
 
         // Totals
         public double DataSent { get; private set; }
@@ -243,32 +243,32 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
 
 
-        public void UpdateDataSent(double totalDataSent, double averageDataSentPerRequest, double upstreamThroughputBps, double totalDataTransmissionTimeInMilliseconds)
+        public void UpdateDataSent(double totalDataSent, double averageDataSentPerRequest, double upstreamThroughputBps, double timeElpased)
         {
             if (StopUpdate) return;
             TimeStamp = DateTime.UtcNow;
             DataSent = totalDataSent;
             AverageDataSent = averageDataSentPerRequest;
             UpstreamThroughputBps = upstreamThroughputBps;
-            TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
+            TimeElpased = timeElpased;
         }
 
-        public void UpdateDataReceived(double totalDataReceived, double averageDataReceivedPerRequest, double downstreamThroughputBps, double totalDataTransmissionTimeInMilliseconds)
+        public void UpdateDataReceived(double totalDataReceived, double averageDataReceivedPerRequest, double downstreamThroughputBps, double timeElapsed)
         {
             if (StopUpdate) return;
             TimeStamp = DateTime.UtcNow;
             DataReceived = totalDataReceived;
             AverageDataReceived = averageDataReceivedPerRequest;
             DownstreamThroughputBps = downstreamThroughputBps;
-            TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
+            TimeElpased = timeElapsed;
         }
 
-        public void UpdateAverageBytes(double averageBytesPerSecond, double totalDataTransmissionTimeInMilliseconds)
+        public void UpdateAverageBytes(double averageBytesPerSecond, double timeElapsed)
         {
             if (StopUpdate) return;
             TimeStamp = DateTime.UtcNow;
             ThroughputBps = averageBytesPerSecond;
-            TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds;
+            TimeElpased = timeElapsed;
         }
     }
 }

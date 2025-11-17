@@ -172,7 +172,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             bool isLockTaken = false;
             try
             {
-                await _semaphore.WaitAsync(token);
+                await _semaphore.WaitAsync(token); // Keep the is lock taken as a best practice - do not move the await _semaphore.WaitAsync(token); before the try immediatly and remove the isLockTaken
                 isLockTaken = true;
                 --_activeRequestsCount;
                 await UpdateMetricsAsync(token);
@@ -205,7 +205,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _snapshot.StopUpdate = true;
                 try
                 {
-                    _throughputWatch?.Stop();
+                    //Removed the throughputWatch?.Stop();
+                    //TODO: Do we need to stop the watch here (that measure something like troughput) 
+                    // Or Do we need just to calculate the actual number of requests sent per second
+                    // Or should we just send metric buckets (like metrics for the current 10 seconds and then the next and so on?) -> this makes more sense to me
                     _timer?.Dispose();
                 }
                 finally { }
@@ -259,7 +262,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
 
-        public double TotalDataTransmissionTimeInMilliseconds { get; private set; }
+        public double TimeElapsed { get; private set; }
         public RequestsRate RequestsRate { get; private set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; private set; }
         public int RequestsCount { get; private set; }
@@ -273,7 +276,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         int requestsCount = default,
         int successfulRequestsCount = default,
         int failedRequestsCount = default,
-        double totalDataTransmissionTimeInMilliseconds = default,
+        double timeElpased = default,
         RequestsRate requestsRate = default,
         RequestsRate requestsRatePerCoolDown = default)
         {
@@ -284,9 +287,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 ActiveRequestsCount = activeRequestsCount;
                 SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? SuccessfulRequestCount : successfulRequestsCount;
                 FailedRequestsCount = failedRequestsCount.Equals(default) ? FailedRequestsCount : failedRequestsCount;
-                TotalDataTransmissionTimeInMilliseconds = totalDataTransmissionTimeInMilliseconds.Equals(default)
-                    ? TotalDataTransmissionTimeInMilliseconds
-                    : totalDataTransmissionTimeInMilliseconds;
+                TimeElapsed = timeElpased.Equals(default)
+                    ? TimeElapsed
+                    : timeElpased;
                 RequestsRate = requestsRate.Equals(default(RequestsRate)) ? RequestsRate : requestsRate;
                 RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate))
                     ? RequestsRatePerCoolDownPeriod

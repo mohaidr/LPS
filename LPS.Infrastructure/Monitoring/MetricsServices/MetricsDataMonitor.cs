@@ -80,7 +80,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     var fqdn = _entityDiscoveryService.Discover(r => r.IterationId == httpIteration.Id).Single().FullyQualifiedName;
                     try
                     {
-                        await _logger.LogAsync(_op.OperationId, $"Sending Monitor request for {fqdn}", LPSLoggingLevel.Information);
+                        await _logger.LogAsync(_op.OperationId, $"Sending Monitor request for {fqdn}", LPSLoggingLevel.Verbose);
                         await monitorClient.MonitorAsync(fqdn).ConfigureAwait(false); // CHANGED: async/await
                     }
                     catch (InvalidOperationException invalidOpEx) when (invalidOpEx.InnerException is RpcException rpcEx)

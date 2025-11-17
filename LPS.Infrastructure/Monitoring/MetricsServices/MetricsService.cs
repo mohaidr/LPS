@@ -14,6 +14,10 @@ using static LPS.Protos.Shared.MetricsProtoService;
 using LPS.Protos.Shared;
 using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Infrastructure.GRPCClients;
+using LPS.Infrastructure.Monitoring.Metrics;
+using ProtoDurationMetricType = LPS.Protos.Shared.DurationMetricType;
+using DurationMetricType = LPS.Infrastructure.Monitoring.Metrics.DurationMetricType;
+
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
@@ -63,7 +67,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 });
                 updated = response.Success;
             }
-            else 
+            else
             {
                 requestId = await DiscoverRequestIdOnMaster(requestId, token);
             }
@@ -124,7 +128,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     ResponseCode = (int)lpsResponse.StatusCode,
                     StatusReason = lpsResponse.StatusMessage,
                 });
-                updated= response.Success;
+                updated = response.Success;
             }
             else
             {
@@ -137,15 +141,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 updated ??= false;
                 return updated.Value;
             }
-
             await QueryMetricsAsync(requestId, token);
             var responseMetrics = _aggregators[requestId.ToString()]
-                .Where(metric => metric.MetricType == LPSMetricType.Time || metric.MetricType == LPSMetricType.ResponseCode);
-            var result= await Task.WhenAll(responseMetrics.Select(metric => ((IDurationMetricCollector)metric).UpdateTotalTimeAsync(lpsResponse.TotalTime.TotalMilliseconds, token)));
+                .Where(metric =>  metric.MetricType == LPSMetricType.ResponseCode);
+           
+            var result = await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse, token)));
             updated ??= true;
             return updated.Value;
         }
-        
+
         public async ValueTask<bool> TryUpdateDataSentAsync(Guid requestId, double totalBytes, CancellationToken token)
         {
             bool? updated = null;
@@ -205,9 +209,94 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                await((IDataTransmissionMetricAggregator)metric).UpdateDataReceivedAsync(totalBytes, token);
+                await ((IDataTransmissionMetricAggregator)metric).UpdateDataReceivedAsync(totalBytes, token);
             }
             updated ??= false;
+            return updated.Value;
+        }
+
+
+        public async ValueTask<bool> TryUpdateDurationMetricAsync(Guid requestId, DurationMetricType metricType, double valueMs, CancellationToken token)
+        {
+            
+            bool? updated = null;
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
+            {
+                var response = await _grpcClient.UpdateDurationMetricAsync(new UpdateDurationMetricRequest
+                {
+                    RequestId = requestId.ToString(),
+                    MetricType = metricType switch
+                    {
+                        DurationMetricType.TotalTime => ProtoDurationMetricType.TotalTime,
+                        DurationMetricType.ReceivingTime => ProtoDurationMetricType.ReceivingTime,   // RENAMED
+                        DurationMetricType.SendingTime => ProtoDurationMetricType.SendingTime,       // RENAMED
+                        DurationMetricType.TLSHandshakeTime => ProtoDurationMetricType.TlsHandshakeTime,
+                        DurationMetricType.TCPHandshakeTime => ProtoDurationMetricType.TcpHandshakeTime,
+                        DurationMetricType.TimeToFirstByte => ProtoDurationMetricType.TimeToFirstByte,
+                        DurationMetricType.WaitingTime => ProtoDurationMetricType.WaitingTime,       // NEW
+                        _ => ProtoDurationMetricType.TotalTime
+                    },
+                    ValueMs = valueMs
+                });
+                updated = response.Success;
+            }
+            else
+            {
+                requestId = await DiscoverRequestIdOnMaster(requestId, token);
+            }
+
+            if (requestId == Guid.Empty)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update duration metrics because the requestId was empty", LPSLoggingLevel.Warning, token);
+                updated ??= false;
+                return updated.Value;
+            }
+            await QueryMetricsAsync(requestId, token);
+
+            if (!_aggregators.TryGetValue(requestId.ToString(), out var metrics))
+            {
+                updated ??= false;
+                return updated.Value;
+            }
+            var durationCollectors = metrics
+                .Where(metric => metric.MetricType == LPSMetricType.Time)
+                .OfType<IDurationMetricCollector>()
+                .ToList();
+            if (durationCollectors.Count == 0)
+            {
+                updated ??= false;
+                return updated.Value;
+            }
+
+            foreach (var collector in durationCollectors)
+            {
+                switch (metricType)
+                {
+                    case DurationMetricType.TotalTime:
+                        await collector.UpdateTotalTimeAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.ReceivingTime: // RENAMED
+                        await collector.UpdateReceivingTimeAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.SendingTime:   // RENAMED
+                        await collector.UpdateSendingTimeAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.TLSHandshakeTime:
+                        await collector.UpdateTLSHandshakeTimeAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.TCPHandshakeTime:
+                        await collector.UpdateTCPHandshakeTimeAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.TimeToFirstByte:
+                        await collector.UpdateTimeToFirstByteAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.WaitingTime: // NEW
+                        await collector.UpdateWaitingTimeAsync(valueMs, token);
+                        break;
+                }
+            }
+
+            updated ??= true;
             return updated.Value;
         }
 
@@ -240,12 +329,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 {
                     var fullyQualifiedName = entityDiscoveryRecord.FullyQualifiedName;
                     var record = _entityDiscoveryService.Discover(r => r.Node.Metadata.NodeType == Nodes.NodeType.Master && r.FullyQualifiedName == fullyQualifiedName)?.SingleOrDefault();
-                    var matchingRequestId = record?.RequestId?? Guid.Empty; // Empty means it was registered by the worker but was not defined in the plan executing on the master
+                    var matchingRequestId = record?.RequestId ?? Guid.Empty; // Empty means it was registered by the worker but was not defined in the plan executing on the master
                     if (record != null)
                     {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Found a matching HTTP request for '{requestId}' on the master node (ID: {matchingRequestId})", LPSLoggingLevel.Warning, token);
                     }
-                    else 
+                    else
                     {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"No matching HTTP request for '{requestId}' on the master node (ID: {matchingRequestId})", LPSLoggingLevel.Warning, token);
                     }

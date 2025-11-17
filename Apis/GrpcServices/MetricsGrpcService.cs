@@ -2,10 +2,13 @@
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Protos.Shared;
+using LPS.Infrastructure.Monitoring.Metrics;
+using ProtoDurationMetricType = LPS.Protos.Shared.DurationMetricType;
 using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using DurationMetricType = LPS.Infrastructure.Monitoring.Metrics.DurationMetricType;
 namespace Apis.Services
 {
     public class MetricsGrpcService : MetricsProtoService.MetricsProtoServiceBase
@@ -41,7 +44,7 @@ namespace Apis.Services
             var success = await _metricsService.TryUpdateResponseMetricsAsync(
                 Guid.Parse(request.RequestId),
                 new LPS.Domain.HttpResponse.SetupCommand { StatusCode = (HttpStatusCode)request.ResponseCode, StatusMessage = request.StatusReason },
-                _cts.Token)  ;
+                _cts.Token);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update response metrics completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
 
             return new UpdateResponseMetricsResponse { Success = success };
@@ -57,5 +60,35 @@ namespace Apis.Services
 
             return new UpdateDataTransmissionResponse { Success = success };
         }
+
+        public override async Task<UpdateDurationMetricResponse> UpdateDurationMetric(UpdateDurationMetricRequest request, ServerCallContext context)
+        {
+            var metricType = request.MetricType switch
+            {
+                ProtoDurationMetricType.TotalTime => DurationMetricType.TotalTime,
+                ProtoDurationMetricType.ReceivingTime => DurationMetricType.ReceivingTime,     // RENAMED
+                ProtoDurationMetricType.SendingTime => DurationMetricType.SendingTime,         // RENAMED
+                ProtoDurationMetricType.TlsHandshakeTime => DurationMetricType.TLSHandshakeTime,
+                ProtoDurationMetricType.TcpHandshakeTime => DurationMetricType.TCPHandshakeTime,
+                ProtoDurationMetricType.TimeToFirstByte => DurationMetricType.TimeToFirstByte,
+                ProtoDurationMetricType.WaitingTime => DurationMetricType.WaitingTime,         // NEW
+                _ => DurationMetricType.TotalTime
+            };
+
+            var success = await _metricsService.TryUpdateDurationMetricAsync(
+                Guid.Parse(request.RequestId),
+                metricType,
+                request.ValueMs,
+                _cts.Token);
+
+            await _logger.LogAsync(
+                _runtimeOperationIdProvider.OperationId,
+                $"Update duration metric completed successfully for {request.RequestId} ({metricType}, value: {request.ValueMs} ms)",
+                LPSLoggingLevel.Verbose,
+                _cts.Token);
+
+            return new UpdateDurationMetricResponse { Success = success };
+        }
+
     }
 }

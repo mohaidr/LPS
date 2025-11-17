@@ -15,13 +15,15 @@ using static LPS.Infrastructure.Monitoring.Metrics.DurationMetricSnapshot;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-   public enum DurationMetricType
+    public enum DurationMetricType
     {
         TotalTime,
-        DownStreamTime,
-        UpStreamTime,
+        ReceivingTime,      // Renamed from DownStreamTime
+        SendingTime,        // Renamed from UpStreamTime
         TLSHandshakeTime,
-        TCPHandshakeTime
+        TCPHandshakeTime,
+        TimeToFirstByte,
+        WaitingTime         // NEW: TTFB - TCP - TLS
     }
 
     public class DurationMetricAggregator : BaseMetricAggregator, IDurationMetricCollector
@@ -30,7 +32,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private readonly DurationMetricSnapshot _snapshot;
-        private readonly LongHistogram _histogram;
         private readonly ResponseMetricEventSource _eventSource;
         private readonly IMetricsVariableService _metricsVariableService; // NEW
         private readonly string _roundName;
@@ -45,7 +46,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
-            _histogram = new LongHistogram(1, 1000000, 3);
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
@@ -70,7 +70,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
-                await _snapshot.UpdateAsync(DurationMetricType.TotalTime, totalTime, _histogram, token);
+                await _snapshot.UpdateAsync(DurationMetricType.TotalTime, totalTime, token);
                 _eventSource.WriteTimeMetrics(totalTime);
 
                 await PushMetricAsync(token);
@@ -82,12 +82,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public async Task<IDurationMetricCollector> UpdateDownStreamTimeAsync(double downStreamTime, CancellationToken token)
+        public async Task<IDurationMetricCollector> UpdateReceivingTimeAsync(double receivingTime, CancellationToken token)
         {
             await _semaphore.WaitAsync(token);
             try
             {
-                await _snapshot.UpdateAsync(DurationMetricType.DownStreamTime, downStreamTime, _histogram, token);
+                await _snapshot.UpdateAsync(DurationMetricType.ReceivingTime, receivingTime, token);
                 await PushMetricAsync(token);
             }
             finally
@@ -97,12 +97,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public async Task<IDurationMetricCollector> UpdateUpStreamTimeAsync(double upStreamTime, CancellationToken token)
+        public async Task<IDurationMetricCollector> UpdateSendingTimeAsync(double sendingTime, CancellationToken token)
         {
             await _semaphore.WaitAsync(token);
             try
             {
-                await _snapshot.UpdateAsync(DurationMetricType.UpStreamTime, upStreamTime, _histogram, token);
+                await _snapshot.UpdateAsync(DurationMetricType.SendingTime, sendingTime, token);
                 await PushMetricAsync(token);
             }
             finally
@@ -117,7 +117,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
-                await _snapshot.UpdateAsync(DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, _histogram, token);
+                await _snapshot.UpdateAsync(DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, token);
                 await PushMetricAsync(token);
             }
             finally
@@ -132,7 +132,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
-                await _snapshot.UpdateAsync(DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, _histogram, token);
+                await _snapshot.UpdateAsync(DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, token);
                 _eventSource.WriteTimeMetrics(tcpHandshakeTime);
 
                 await PushMetricAsync(token);
@@ -144,6 +144,35 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
+        public async Task<IDurationMetricCollector> UpdateTimeToFirstByteAsync(double timeToFirstByte, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try
+            {
+                await _snapshot.UpdateAsync(DurationMetricType.TimeToFirstByte, timeToFirstByte, token);
+                await PushMetricAsync(token);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateWaitingTimeAsync(double waitingTime, CancellationToken token) // NEW METHOD
+        {
+            await _semaphore.WaitAsync(token);
+            try
+            {
+                await _snapshot.UpdateAsync(DurationMetricType.WaitingTime, waitingTime, token);
+                await PushMetricAsync(token);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+            return this;
+        }
 
         public override async ValueTask StopAsync(CancellationToken token)
         {
@@ -192,7 +221,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             this._logger = logger;
         }
 
-        public async ValueTask UpdateAsync(DurationMetricType metricType, double totalTime, LongHistogram histogram, CancellationToken token)
+        public async ValueTask UpdateAsync(DurationMetricType metricType, double totalTime, CancellationToken token)
         {
             try
             {
@@ -201,19 +230,25 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 switch (metricType)
                 {
                     case DurationMetricType.TotalTime:
-                        TotalTimeMetrics.Update(totalTime, histogram);
+                        TotalTimeMetrics.Update(totalTime);
                         break;
-                    case DurationMetricType.DownStreamTime:
-                        DownStreamTimeMetrics.Update(totalTime, histogram);
+                    case DurationMetricType.ReceivingTime: // RENAMED
+                        ReceivingTimeMetrics.Update(totalTime);
                         break;
-                    case DurationMetricType.UpStreamTime:
-                        UpStreamTimeMetrics.Update(totalTime, histogram);
+                    case DurationMetricType.SendingTime:   // RENAMED
+                        SendingTimeMetrics.Update(totalTime);
                         break;
                     case DurationMetricType.TLSHandshakeTime:
-                        SSLHandshakeTimeMetrics.Update(totalTime, histogram);
+                        SSLHandshakeTimeMetrics.Update(totalTime);
                         break;
                     case DurationMetricType.TCPHandshakeTime:
-                        TCPHandshakeTimeMetrics.Update(totalTime, histogram);
+                        TCPHandshakeTimeMetrics.Update(totalTime);
+                        break;
+                    case DurationMetricType.TimeToFirstByte:
+                        TimeToFirstByteMetrics.Update(totalTime);
+                        break;
+                    case DurationMetricType.WaitingTime: // NEW: TTFB - TCP - TLS
+                        WaitingTimeMetrics.Update(totalTime);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(metricType), $"Unsupported DurationMetricType: {metricType}");
@@ -228,22 +263,28 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         }
         public override LPSMetricType MetricType => LPSMetricType.Time;
         public TotalTime TotalTimeMetrics { get; private set; } = new();
-        public DownStreamTime DownStreamTimeMetrics { get; private set; } = new();
-        public UpStreamTime UpStreamTimeMetrics { get; private set; } = new();
-        public SSLHandshakeTime SSLHandshakeTimeMetrics { get; private set; } = new();
         public TCPHandshakeTime TCPHandshakeTimeMetrics { get; private set; } = new();
-        
+        public SSLHandshakeTime SSLHandshakeTimeMetrics { get; private set; } = new();
+        public TimeToFirstByte TimeToFirstByteMetrics { get;private set; } = new();
+        public WaitingTime WaitingTimeMetrics { get; private set; } = new();
+        public ReceivingTime ReceivingTimeMetrics { get; private set; } = new(); // RENAMED
+        public SendingTime SendingTimeMetrics { get; private set; } = new();     // RENAMED
+
+
         public class MetricTime
         {
+            private readonly LongHistogram _histogram = new(1, 1000000, 3);  // Each instance has its own
+
             public double Sum { get; private set; }
             public double Average { get; private set; }
             public double Min { get; private set; }
             public double Max { get; private set; }
-            public double P90 { get; private set; }
             public double P50 { get; private set; }
-            public double P10 { get; private set; }
+            public double P90 { get; private set; }
+            public double P95 { get; private set; }
+            public double P99 { get; private set; }
 
-            public void Update(double valueMs, LongHistogram histogram)
+            public void Update(double valueMs)
             {
                 // incremental mean without keeping a counter field:
                 // Average != 0 implies we've had N = Sum/Average samples so far
@@ -253,20 +294,20 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 Sum += valueMs;
                 Average = Sum / (n + 1);
 
-                histogram.RecordValue((long)valueMs);
-                P10 = histogram.GetValueAtPercentile(10);
-                P50 = histogram.GetValueAtPercentile(50);
-                P90 = histogram.GetValueAtPercentile(90);
+                _histogram.RecordValue((long)valueMs);
+                P50 = _histogram.GetValueAtPercentile(50);
+                P90 = _histogram.GetValueAtPercentile(90);
+                P95 = _histogram.GetValueAtPercentile(95);
+                P99 = _histogram.GetValueAtPercentile(99);
             }
         }
-        public class TotalTime: MetricTime {}
-        public class DownStreamTime: MetricTime {}
-
-        public class UpStreamTime : MetricTime {}
-
-        public class SSLHandshakeTime: MetricTime {}
-
-        public class TCPHandshakeTime: MetricTime {}
-
+        public class TotalTime : MetricTime { }
+        public class SSLHandshakeTime : MetricTime { }
+        public class TCPHandshakeTime : MetricTime { }
+        public class TimeToFirstByte : MetricTime { }
+        public class WaitingTime : MetricTime { }
+        public class ReceivingTime : MetricTime { } // RENAMED
+        public class SendingTime : MetricTime { }   // RENAMED
+                                                    
     }
-}
+}   

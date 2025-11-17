@@ -44,7 +44,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             CancellationToken token)
         {
             Stopwatch streamStopwatch = Stopwatch.StartNew();
-            Stopwatch overAllStopWatch = Stopwatch.StartNew();
+            Stopwatch downStreamWatch = Stopwatch.StartNew();
             string contentType = responseMessage?.Content?.Headers?.ContentType?.MediaType;
             MimeType mimeType = MimeTypeExtensions.FromContentType(contentType);
             IResponsePersistence responsePersistence = null;
@@ -91,7 +91,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
 
                         int bytesRead;
                         streamStopwatch.Restart();
-                        overAllStopWatch.Restart();
+                        downStreamWatch.Restart();
                         while ((bytesRead = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), token)) > 0)
                         {
                             transferredSize += bytesRead;
@@ -113,7 +113,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                             // Get the response file path if available
                             locationToResponse = responsePersistence?.ResponseFilePath;
                         }
-                        overAllStopWatch.Stop();
+                        downStreamWatch.Stop();
                         // Cache the content once fully read
                         if (memoryStream != null)
                         {
@@ -147,7 +147,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     ResponseHeaders = responseMessage.Headers?.ToDictionary(header => header.Key, header => string.Join(", ", header.Value)),
                     ContentType = mimeType,
                     HttpRequestId = httpRequest.Id,
-                }, transferredSize, overAllStopWatch.Elapsed);
+                }, transferredSize, downStreamWatch.Elapsed);
             }
             catch (Exception ex)
             {
@@ -159,7 +159,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
                     HttpRequestId = httpRequest.Id,
-                }, transferredSize, overAllStopWatch.Elapsed);
+                }, transferredSize, downStreamWatch.Elapsed);
             }
         }
         private string GetDestination(HttpRequest httpRequest, MimeType mimeType)

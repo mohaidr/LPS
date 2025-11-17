@@ -53,7 +53,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                     MaxTotalTime = s.TotalTimeMetrics.Max,
                     P90TotalTime = s.TotalTimeMetrics.P90,
                     P50TotalTime = s.TotalTimeMetrics.P50,
-                    P10TotalTime = s.TotalTimeMetrics.P10
+                    P10TotalTime = s.TotalTimeMetrics.P99
                 });
             }
 
@@ -70,7 +70,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                 response.Responses.Add(new DataTransmissionMetricResponse
                 {
                     Metadata = BuildMetadata(s),
-                    TotalDataTransmissionTimeInMilliseconds = s.TotalDataTransmissionTimeInMilliseconds,
+                    TotalDataTransmissionTimeInMilliseconds = s.TimeElpased,
                     DataSent = s.DataSent,
                     DataReceived = s.DataReceived,
                     AverageDataSent = s.AverageDataSent,
@@ -94,7 +94,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                 response.Responses.Add(new ThroughputMetricResponse
                 {
                     Metadata = BuildMetadata(s),
-                    TotalDataTransmissionTimeInMilliseconds = s.TotalDataTransmissionTimeInMilliseconds,
+                    TotalDataTransmissionTimeInMilliseconds = s.TimeElapsed,
                     RequestsCount = s.RequestsCount,
                     ActiveRequestsCount = s.ActiveRequestsCount,
                     SuccessfulRequestCount = s.SuccessfulRequestCount,
