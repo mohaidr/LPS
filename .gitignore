@@ -85,3 +85,4 @@ examples
 *.db-wal
 *.db-shm
 *.md
+/lps-docs

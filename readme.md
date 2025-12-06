@@ -6,6 +6,8 @@
 > 
 > ⚠️ **Note:** Version **2.x is NOT backward compatible** with 1.x.
 
+> **🔄 Breaking Change in v3.0.2.6:** The `failureCriteria` property and old `terminationRules` format have been **permanently removed**. If you are upgrading from v3.0.2.5 or earlier, please see the [Migration Guide](https://github.com/mohaidr/lps-docs/blob/main/articles/10.MigrationGuide.md) for details on migrating to the new `failureRules` and `terminationRules` inline metric expression format.
+
 ---
 
 # 🚀 Introduction
