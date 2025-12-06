@@ -6,7 +6,7 @@
   "compilationOptions": {},
   "targets": {
     ".NETCoreApp,Version=v8.0": {
-      "LPS/3.0.2.5": {
+      "LPS/3.0.2.6": {
         "dependencies": {
           "Apis": "1.0.0",
           "AutoMapper": "14.0.0",
@@ -804,7 +804,7 @@
     }
   },
   "libraries": {
-    "LPS/3.0.2.5": {
+    "LPS/3.0.2.6": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
