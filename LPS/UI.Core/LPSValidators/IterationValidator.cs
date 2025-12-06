@@ -366,8 +366,8 @@ namespace LPS.UI.Core.LPSValidators
                 return false;
 
             // Pattern: operator value [and value2]
-            // Examples: ">= 500", "between 400 and 499", "= 429"
-            var pattern = @"^(?<operator>>|<|>=|<=|!=|=|between)\s*(?<value1>\d{3})(\s+and\s+(?<value2>\d{3}))?$";
+            // Examples: ">= 500", "between 400 and 499", "= 429", ">= 0" (connection failures)
+            var pattern = @"^(?<operator>>|<|>=|<=|!=|=|between)\s*(?<value1>\d{1,3})(\s+and\s+(?<value2>\d{1,3}))?$";
             var match = Regex.Match(expression.Trim(), pattern, RegexOptions.IgnoreCase);
 
             if (!match.Success)
@@ -380,11 +380,13 @@ namespace LPS.UI.Core.LPSValidators
             if (operatorStr == "between" && !value2Group.Success)
                 return false;
 
-            // Validate status codes are in valid HTTP range (100-599)
-            if (!int.TryParse(match.Groups["value1"].Value, out var code1) || code1 < 100 || code1 > 599)
+            // Validate status codes are in valid range: 0 (connectivity failure) or 100-599 (HTTP codes)
+            // Note: 0 represents connectivity failures (DNS, connection refused, timeout, etc.)
+            // Codes 1-99 are not valid HTTP status codes
+            if (!int.TryParse(match.Groups["value1"].Value, out var code1) || (code1 != 0 && (code1 < 100 || code1 > 599)))
                 return false;
 
-            if (value2Group.Success && (!int.TryParse(value2Group.Value, out var code2) || code2 < 100 || code2 > 599))
+            if (value2Group.Success && (!int.TryParse(value2Group.Value, out var code2) || (code2 != 0 && (code2 < 100 || code2 > 599))))
                 return false;
 
             return true;

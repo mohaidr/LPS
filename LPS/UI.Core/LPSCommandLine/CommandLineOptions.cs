@@ -76,12 +76,12 @@ namespace LPS.UI.Core.LPSCommandLine
                 SaveResponse.AddAlias("-sr");
                 SupportH2C.AddAlias("-sh2c");
                 SupportH2C.AddAlias("-h2c");
-                FailureCriteriaOption.AddAlias("-fc");
+                FailureRuleOption.AddAlias("-fr");
                 TerminationRuleOption.AddAlias("-tr");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
-                AddCaseInsensitiveAliases(FailureCriteriaOption, "--failurecriteria");
+                AddCaseInsensitiveAliases(FailureRuleOption, "--failurerule");
                 AddCaseInsensitiveAliases(TerminationRuleOption, "--terminationrule");
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundname");
                 AddCaseInsensitiveAliases(StartupDelayOption, "--startupdelay");
@@ -115,18 +115,37 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
             // Add next to TerminationRuleOption
-            public static Option<string?> FailureCriteriaOption { get; } = new(
-                "--failureCriteria",
-                description:
-                "Failure criteria in the format 'codes=500,502;rate=0.05;maxp90=300;maxp50=200;maxp10=150;maxavg=220' (single field).")
+            /// <summary>
+            /// Failure rule using inline expression syntax.
+            /// Format: "metric;[errorStatusCodes]" where metric is like "ErrorRate > 0.05" or "TotalTime.P95 > 5000"
+            /// Examples:
+            ///   --failurerule "ErrorRate > 0.05"
+            ///   --failurerule "ErrorRate > 0.05;>= 500"
+            ///   --failurerule "TotalTime.P95 > 5000"
+            /// </summary>
+            public static Option<IList<string>> FailureRuleOption { get; } = new(
+                "--failurerule",
+                description: "Failure rule with inline expression. Format: 'metric[;errorStatusCodes]'. " +
+                             "Examples: 'ErrorRate > 0.05', 'ErrorRate > 0.05;>= 500', 'TotalTime.P95 > 5000'. " +
+                             "Repeat to define multiple rules.")
             {
-                AllowMultipleArgumentsPerToken = false,
+                AllowMultipleArgumentsPerToken = true,
                 IsRequired = false
             };
 
+            /// <summary>
+            /// Termination rule using inline expression syntax.
+            /// Format: "metric;gracePeriod;[errorStatusCodes]" where metric is like "ErrorRate > 0.10"
+            /// Examples:
+            ///   --terminationrule "ErrorRate > 0.10;00:05:00"
+            ///   --terminationrule "ErrorRate > 0.10;00:05:00;>= 500"
+            ///   --terminationrule "TotalTime.P90 > 3000;00:02:00"
+            /// </summary>
             public static Option<IList<string>> TerminationRuleOption { get; } = new(
-                "--terminationRule",
-                description: "Termination rule in the format 'codes=500,502;rate=0.3;grace=10s;maxp90;maxp50;maxp10;maxavg'. Repeat this option to define multiple rules.")
+                "--terminationrule",
+                description: "Termination rule with inline expression. Format: 'metric;gracePeriod[;errorStatusCodes]'. " +
+                             "Examples: 'ErrorRate > 0.10;00:05:00', 'TotalTime.P90 > 3000;00:02:00'. " +
+                             "Repeat to define multiple rules.")
             {
                 AllowMultipleArgumentsPerToken = true,
                 IsRequired = false

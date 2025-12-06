@@ -39,15 +39,11 @@ namespace LPS.Infrastructure.Monitoring.Status
             if (TryGetCachedTerminal(httpIteration, out var cached))
                 return cached;
 
-            // 2) Evaluate "Terminated" and cache if so.
+            // 2) Evaluate "Terminated" first - this can happen at any time during execution
             if (await _terminationChecker.IsTerminationRequiredAsync(httpIteration, token))
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Terminated);
 
-            // 3) Evaluate "Failed" (error rate exceeded) and cache if so.
-            if (await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token))
-                return CacheAndReturn(httpIteration, EntityExecutionStatus.Failed);
-
-            // 4) Aggregate command statuses
+            // 3) Aggregate command statuses to determine current state
             var commandsStatuses = await _commandStatusMonitor.QueryAsync(httpIteration);
 
             // Skipped (all skipped) -> terminal
@@ -84,8 +80,21 @@ namespace LPS.Infrastructure.Monitoring.Status
             if (_globalCts.IsCancellationRequested)
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Cancelled);
 
-            // Success -> terminal
-            return CacheAndReturn(httpIteration, EntityExecutionStatus.Success);
+            // 4) All commands completed - NOW evaluate failure rules
+            // Explicit check ensures this block only runs when all commands are done,
+            // regardless of code ordering above
+            bool allCompleted = commandsStatuses.Count != 0 &&
+                                commandsStatuses.All(s => s == CommandExecutionStatus.Completed);
+
+            if (allCompleted && await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token))
+                return CacheAndReturn(httpIteration, EntityExecutionStatus.Failed);
+
+            // Success -> terminal (only if all completed)
+            if (allCompleted)
+                return CacheAndReturn(httpIteration, EntityExecutionStatus.Success);
+
+            // Fallback: should not normally reach here, but return Ongoing as safe default
+            return EntityExecutionStatus.Ongoing;
         }
 
         public async Task<bool> IsTerminatedAsync(HttpIteration httpIteration, CancellationToken token = default)

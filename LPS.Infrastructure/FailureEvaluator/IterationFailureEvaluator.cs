@@ -62,11 +62,19 @@ namespace LPS.Infrastructure.FailureEvaluator
             try
             {
                 // Do not evaluate while commands are still running/scheduled
-                // NOTE: We DO evaluate after completion even if status is "Ongoing"
+                // Failure evaluation should only happen AFTER all commands have completed
                 var commandStatuses = await _commandStatusMonitor.QueryAsync(iteration);
-                if (commandStatuses.Any(status => status == CommandExecutionStatus.Scheduled))
+                
+                // Don't evaluate if no commands yet
+                if (!commandStatuses.Any())
                 {
-                    // Don't evaluate if commands haven't started yet
+                    return false;
+                }
+                
+                // Don't evaluate if any commands are still scheduled or ongoing
+                if (commandStatuses.Any(status => status == CommandExecutionStatus.Scheduled || 
+                                                   status == CommandExecutionStatus.Ongoing))
+                {
                     return false;
                 }
 

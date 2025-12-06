@@ -38,6 +38,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string?> _arrivalDelayOption;
         private Option<string> _delayClientCreationOption;
         private Option<string> _runInParallerOption;
+        private Option<IList<string>> _failureRuleOption;
+        private Option<IList<string>> _terminationRuleOption;
 
         public CommandBinder(
             Option<string>? nameOption = null,
@@ -61,7 +63,9 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<string>? payloadOption = null,
             Option<string>? downloadHtmlEmbeddedResourcesOption = null,
             Option<string>? saveResponseOption = null,
-            Option<string?>? supportH2C = null)
+            Option<string?>? supportH2C = null,
+            Option<IList<string>>? failureRuleOption = null,
+            Option<IList<string>>? terminationRuleOption = null)
         {
             _nameOption = nameOption ?? CommandLineOptions.LPSCommandOptions.PlanNameOption;
             _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.RoundNameOption;
@@ -85,10 +89,20 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _downloadHtmlEmbeddedResourcesOption = downloadHtmlEmbeddedResourcesOption ?? CommandLineOptions.LPSCommandOptions.DownloadHtmlEmbeddedResources;
             _saveResponseOption = saveResponseOption ?? CommandLineOptions.LPSCommandOptions.SaveResponse;
             _supportH2C = supportH2C ?? CommandLineOptions.LPSCommandOptions.SupportH2C;
+            _failureRuleOption = failureRuleOption ?? CommandLineOptions.LPSCommandOptions.FailureRuleOption;
+            _terminationRuleOption = terminationRuleOption ?? CommandLineOptions.LPSCommandOptions.TerminationRuleOption;
         }
 
         protected override PlanDto GetBoundValue(BindingContext bindingContext)
         {
+            // Parse failure rules from CLI
+            var failureRulesRaw = bindingContext.ParseResult.GetValueForOption(_failureRuleOption);
+            var failureRules = ParseFailureRules(failureRulesRaw);
+
+            // Parse termination rules from CLI
+            var terminationRulesRaw = bindingContext.ParseResult.GetValueForOption(_terminationRuleOption);
+            var terminationRules = ParseTerminationRules(terminationRulesRaw);
+
             #pragma warning disable CS8601 // Possible null reference assignment.
             return new PlanDto()
             {
@@ -114,6 +128,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                 Duration = bindingContext.ParseResult.GetValueForOption(_duration),
                                 CoolDownTime = bindingContext.ParseResult.GetValueForOption(_coolDownTime),
                                 BatchSize = bindingContext.ParseResult.GetValueForOption(_batchSize),
+                                FailureRules = failureRules,
+                                TerminationRules = terminationRules,
                                 HttpRequest = new HttpRequestDto()
                                 {
                                     HttpMethod = bindingContext.ParseResult.GetValueForOption(_httpMethodOption),
@@ -131,6 +147,71 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 }
             };
             #pragma warning restore CS8601 // Possible null reference assignment.
+        }
+
+        /// <summary>
+        /// Parses failure rules from CLI arguments.
+        /// Format: "metric[;errorStatusCodes]"
+        /// Examples: "ErrorRate > 0.05", "ErrorRate > 0.05;>= 500", "TotalTime.P95 > 5000"
+        /// </summary>
+        private static List<FailureRuleDto> ParseFailureRules(IList<string>? ruleInputs)
+        {
+            var rules = new List<FailureRuleDto>();
+            if (ruleInputs == null || ruleInputs.Count == 0)
+                return rules;
+
+            foreach (var input in ruleInputs)
+            {
+                if (string.IsNullOrWhiteSpace(input))
+                    continue;
+
+                // Split by semicolon: "metric;errorStatusCodes"
+                var parts = input.Split(';', 2, StringSplitOptions.TrimEntries);
+                
+                rules.Add(new FailureRuleDto
+                {
+                    Metric = parts[0],
+                    ErrorStatusCodes = parts.Length > 1 ? parts[1] : null
+                });
+            }
+
+            return rules;
+        }
+
+        /// <summary>
+        /// Parses termination rules from CLI arguments.
+        /// Format: "metric;gracePeriod[;errorStatusCodes]"
+        /// Examples: "ErrorRate > 0.10;00:05:00", "ErrorRate > 0.10;00:05:00;>= 500", "TotalTime.P90 > 3000;00:02:00"
+        /// </summary>
+        private static List<TerminationRuleDto> ParseTerminationRules(IList<string>? ruleInputs)
+        {
+            var rules = new List<TerminationRuleDto>();
+            if (ruleInputs == null || ruleInputs.Count == 0)
+                return rules;
+
+            foreach (var input in ruleInputs)
+            {
+                if (string.IsNullOrWhiteSpace(input))
+                    continue;
+
+                // Split by semicolon: "metric;gracePeriod;errorStatusCodes"
+                var parts = input.Split(';', 3, StringSplitOptions.TrimEntries);
+                
+                if (parts.Length < 2)
+                {
+                    // Invalid format - need at least metric and gracePeriod
+                    continue;
+                }
+
+                rules.Add(new TerminationRuleDto
+                {
+                    Metric = parts[0],
+                    GracePeriod = parts[1],
+                    ErrorStatusCodes = parts.Length > 2 ? parts[2] : null
+                });
+            }
+
+            return rules;
         }
     }
 }
