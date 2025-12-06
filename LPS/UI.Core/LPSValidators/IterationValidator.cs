@@ -11,12 +11,47 @@ using System.Threading.Tasks.Dataflow;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.UI.Common.DTOs;
 using System.Net;
+using LPS.Infrastructure.Monitoring;  // For MetricParser and ComparisonOperator
 
 namespace LPS.UI.Core.LPSValidators
 {
     internal partial class IterationValidator : CommandBaseValidator<HttpIterationDto>
     {
         readonly HttpIterationDto _iterationDto;
+
+        // Supported metrics for validation (same as Domain validator)
+        private static readonly HashSet<string> SupportedMetrics = new(StringComparer.OrdinalIgnoreCase)
+        {
+            // Scalar metrics
+            "errorrate",
+            // TotalTime
+            "totaltime",
+            // TTFB
+            "ttfb", "timetofirstbyte",
+            // WaitingTime
+            "waitingtime", "waiting",
+            // TCP
+            "tcphandshake", "tcp",
+            // TLS
+            "tlshandshake", "tls", "ssl", "sslhandshake",
+            // SendingTime
+            "sendingtime", "sending", "upload", "upstream",
+            // ReceivingTime
+            "receivingtime", "receiving", "download", "downstream"
+        };
+
+        // Supported aggregations for timing metrics
+        private static readonly HashSet<string> SupportedAggregations = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "p50", "p90", "p95", "p99", "average", "avg", "min", "max", "sum"
+        };
+
+        // Scalar metrics that don't support aggregations
+        private static readonly HashSet<string> ScalarMetrics = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "errorrate"
+        };
+
         public IterationValidator(HttpIterationDto iterationDto)
         {
             ArgumentNullException.ThrowIfNull(iterationDto);
@@ -189,108 +224,170 @@ namespace LPS.UI.Core.LPSValidators
                  return bool.TryParse(maximizeThroughput, out _) || string.IsNullOrEmpty(maximizeThroughput) || maximizeThroughput.StartsWith("$");
              })
              .WithMessage("The 'MaximizeThroughput' must be a valid boolean");
-
-            RuleFor(dto => dto.TerminationRules)
-                .Must(BeValidTerminationRules).WithMessage("Ivalid Termination Rule");
             
-            RuleFor(dto => dto.FailureCriteria)
-                .Must(fc =>
-                {
-                    // If everything is empty -> valid (no failure checks configured)
-                    bool hasAnyThreshold =
-                        IsPositiveNumberOrPlaceholder(fc.MaxErrorRate) ||
-                        IsPositiveNumberOrPlaceholder(fc.MaxP90) ||
-                        IsPositiveNumberOrPlaceholder(fc.MaxP50) ||
-                        IsPositiveNumberOrPlaceholder(fc.MaxP10) ||
-                        IsPositiveNumberOrPlaceholder(fc.MaxAvg);
-
-                    if (!hasAnyThreshold && string.IsNullOrWhiteSpace(fc.ErrorStatusCodes))
-                        return true;
-
-                    // Error-rate pairing: if one is provided, the other must be provided too
-                    bool hasRate = IsPositiveNumberOrPlaceholder(fc.MaxErrorRate);
-                    bool hasCodes = !string.IsNullOrWhiteSpace(fc.ErrorStatusCodes);
-
-                    if (hasRate ^ hasCodes) // exactly one present -> invalid
-                        return false;
-
-                    // If codes are provided, they must be placeholder or at least one valid HTTP status code int
-                    if (hasCodes && !fc.ErrorStatusCodes.StartsWith("$"))
-                    {
-                        var parts = fc.ErrorStatusCodes
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries)
-                            .Select(p => p.Trim());
-
-                        if (!parts.Any()) return false;
-
-                        // accept either numeric codes or named codes (e.g., "InternalServerError")
-                        bool anyValid = parts.Any(code =>
-                            int.TryParse(code, out var numeric) && Enum.IsDefined(typeof(HttpStatusCode), numeric) ||
-                            Enum.TryParse<HttpStatusCode>(code, true, out _));
-
-                        if (!anyValid) return false;
-                    }
-
-                    // Duration thresholds: placeholders or numeric > 0 are acceptable
-                    // No extra cross-field constraints required
-                    return true;
-                })
-                .WithMessage("FailureCriteria is invalid: If MaxErrorRate is provided, ErrorStatusCodes must also be provided (and vice versa). Status codes must be a placeholder or valid HTTP codes.");
-
+            RuleFor(dto => dto.TerminationRules)
+                .Must(BeValidTerminationRules)
+                .WithMessage("Termination rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000') and positive grace periods.");
+            
+            RuleFor(dto => dto.FailureRules)
+                .Must(BeValidFailureRules)
+                .WithMessage("Failure rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000'). Use 'errorStatusCodes' to filter by status codes.");
 
             RuleFor(dto => dto.HttpRequest)
                 .SetValidator(new RequestValidator(new HttpRequestDto()));
 
         }
 
-
         private bool BeValidTerminationRules(IEnumerable<TerminationRuleDto> rules)
         {
-            if (rules == null) return false;
+            if (rules == null) return true;
             if (!rules.Any()) return true;
 
-            return rules.All
-             (
-                 rule =>
-                 {
-                     bool isErrorCriteriaEmpty = string.IsNullOrWhiteSpace(rule.MaxErrorRate)
-                                                 && string.IsNullOrWhiteSpace(rule.ErrorStatusCodes);
+            return rules.All(rule =>
+            {
+                // Validate GracePeriod
+                if (string.IsNullOrWhiteSpace(rule.GracePeriod))
+                    return false;
 
-                     bool isLatencyCriteriaEmpty = string.IsNullOrWhiteSpace(rule.MaxAvg)
-                                                      && string.IsNullOrWhiteSpace(rule.MaxP10)
-                                                      && string.IsNullOrWhiteSpace(rule.MaxP50)
-                                                      && string.IsNullOrWhiteSpace(rule.MaxP90);
+                bool validGrace = rule.GracePeriod.StartsWith("$") ||
+                                  (TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod) && gracePeriod > TimeSpan.Zero);
 
-                     bool isGracePeriodEmpty = string.IsNullOrWhiteSpace(rule.GracePeriod);
+                if (!validGrace)
+                    return false;
 
-                     if ((isErrorCriteriaEmpty && isLatencyCriteriaEmpty) || isGracePeriodEmpty)
-                         return false;
-                     bool validCodes = false;
-                     if (!isErrorCriteriaEmpty)
-                     {
-                         var codes = rule.ErrorStatusCodes.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(c => c.Trim()).ToList();
-                         validCodes = rule.ErrorStatusCodes.StartsWith("$") || (codes.All(code => Enum.TryParse<HttpStatusCode>(code, out _)) && codes.Count > 0);
-                     }
-                     var validGrace = rule.GracePeriod.StartsWith("$") || (TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod) && gracePeriod > TimeSpan.Zero);
-                     var validRate = (!string.IsNullOrWhiteSpace(rule.MaxErrorRate) && rule.MaxErrorRate.StartsWith("$")) || (double.TryParse(rule.MaxErrorRate, out var maxErrorRate) && maxErrorRate > 0);
-                     var validP90 = (!string.IsNullOrWhiteSpace(rule.MaxP90) && rule.MaxP90.StartsWith("$")) || (double.TryParse(rule.MaxP90, out var p90Greater) && p90Greater > 0);
-                     var validP10 = (!string.IsNullOrWhiteSpace(rule.MaxP10) && rule.MaxP10.StartsWith("$")) || (double.TryParse(rule.MaxP10, out var p10Greater) && p10Greater > 0);
-                     var validP50 = (!string.IsNullOrWhiteSpace(rule.MaxP50) && rule.MaxP50.StartsWith("$")) || (double.TryParse(rule.MaxP50, out var p50Greater) && p50Greater > 0);
-                     var validAVG = (!string.IsNullOrWhiteSpace(rule.MaxAvg) && rule.MaxAvg.StartsWith("$")) || (double.TryParse(rule.MaxAvg, out var avgGreater) && avgGreater > 0);
+                // Validate Metric expression
+                if (string.IsNullOrWhiteSpace(rule.Metric))
+                    return false;
 
-                     return (validCodes  || (validRate || validAVG || validP90 || validP50 || validP10)) && validGrace;
+                // If it's a placeholder, accept it
+                if (rule.Metric.StartsWith("$"))
+                    return true;
 
-                 }
-             );
+                // Validate metric expression format and content
+                if (!IsValidMetricExpression(rule.Metric))
+                    return false;
 
+                // Validate ErrorStatusCodes if provided (for ErrorRate metrics)
+                if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                {
+                    if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                        return false;
+                }
 
+                return true;
+            });
         }
 
-        private static bool IsPositiveNumberOrPlaceholder(string s)
+        private bool BeValidFailureRules(IEnumerable<FailureRuleDto> rules)
         {
-            if (string.IsNullOrWhiteSpace(s)) return false;
-            if (s.StartsWith("$")) return true;
-            return double.TryParse(s, out var d) && d > 0;
+            if (rules == null) return true;
+            if (!rules.Any()) return true;
+
+            return rules.All(rule =>
+            {
+                if (string.IsNullOrWhiteSpace(rule.Metric))
+                    return false;
+
+                if (rule.Metric.StartsWith("$"))
+                    return true;
+
+                // Validate metric expression format and content
+                if (!IsValidMetricExpression(rule.Metric))
+                    return false;
+
+                // Validate ErrorStatusCodes if provided (for ErrorRate metrics)
+                if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                {
+                    if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                        return false;
+                }
+
+                return true;
+            });
+        }
+
+        /// <summary>
+        /// Validates a metric expression format and content.
+        /// Supported formats:
+        /// - "ErrorRate > 0.1"
+        /// - "TotalTime.P95 > 5000"
+        /// - "TTFB.Average < 1000"
+        /// - "TotalTime.P50 between 100 and 500"
+        /// </summary>
+        private static bool IsValidMetricExpression(string metricExpression)
+        {
+            if (string.IsNullOrWhiteSpace(metricExpression))
+                return false;
+
+            // First try to parse with MetricParser to validate syntax
+            if (!MetricParser.TryParse(metricExpression, out var parsed))
+                return false;
+
+            var (fullMetricName, op, threshold, thresholdMax) = parsed;
+
+            // For 'between' operator, ensure both values are present
+            if (op == ComparisonOperator.Between && !thresholdMax.HasValue)
+                return false;
+
+            // Parse metric name and aggregation
+            var parts = fullMetricName.Split('.');
+            var metricName = parts[0].ToLower();
+            var aggregation = parts.Length > 1 ? parts[1].ToLower() : null;
+
+            // Validate metric name is supported
+            if (!SupportedMetrics.Contains(metricName))
+                return false;
+
+            // Validate aggregation rules
+            bool isScalarMetric = ScalarMetrics.Contains(metricName);
+            
+            if (aggregation != null)
+            {
+                // Scalar metrics (ErrorRate) don't support aggregations
+                if (isScalarMetric)
+                    return false;
+                    
+                // For timing metrics, aggregation must be valid
+                if (!SupportedAggregations.Contains(aggregation))
+                    return false;
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Validates an error status codes expression.
+        /// This is the operator + value portion (not including "StatusCode").
+        /// Examples: ">= 500", "between 400 and 499", "= 429"
+        /// </summary>
+        private static bool IsValidStatusCodeExpression(string expression)
+        {
+            if (string.IsNullOrWhiteSpace(expression))
+                return false;
+
+            // Pattern: operator value [and value2]
+            // Examples: ">= 500", "between 400 and 499", "= 429"
+            var pattern = @"^(?<operator>>|<|>=|<=|!=|=|between)\s*(?<value1>\d{3})(\s+and\s+(?<value2>\d{3}))?$";
+            var match = Regex.Match(expression.Trim(), pattern, RegexOptions.IgnoreCase);
+
+            if (!match.Success)
+                return false;
+
+            var operatorStr = match.Groups["operator"].Value.ToLower();
+            var value2Group = match.Groups["value2"];
+
+            // Validate 'between' operator has two values
+            if (operatorStr == "between" && !value2Group.Success)
+                return false;
+
+            // Validate status codes are in valid HTTP range (100-599)
+            if (!int.TryParse(match.Groups["value1"].Value, out var code1) || code1 < 100 || code1 > 599)
+                return false;
+
+            if (value2Group.Success && (!int.TryParse(value2Group.Value, out var code2) || code2 < 100 || code2 > 599))
+                return false;
+
+            return true;
         }
 
 

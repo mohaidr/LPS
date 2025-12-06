@@ -17,21 +17,15 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.TerminationServices
 {
-    internal enum TerminationMetricKind
-    {
-        ErrorRate,
-        P90,
-        P50,
-        P10,
-        Average
-    }
-
     public class HttpIterationTerminationCheckerService : ITerminationCheckerService
     {
-        // Track grace state per (iteration, rule, metric kind)
-        private readonly ConcurrentDictionary<(Guid, TerminationRule, TerminationMetricKind), GracePeriodState> _state = new();
+        // Track grace state per (iteration, metric expression)
+        private readonly ConcurrentDictionary<(Guid, string), GracePeriodState> _stateV2 = new();
 
         private readonly ConcurrentDictionary<Guid, bool> _terminatedIterations = new();
+
+        // Cache parsed metric expressions to avoid repeated regex parsing
+        private readonly ConcurrentDictionary<string, (string MetricName, ComparisonOperator Op, double Threshold, double? ThresholdMax)> _parsedMetricCache = new();
 
         private readonly IEntityDiscoveryService _discoveryService;
         private readonly ICustomGrpcClientFactory _grpcClientFactory;
@@ -39,6 +33,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
         private readonly INodeMetadata _nodeMetadata;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        private readonly IMetricFetcher _metricFetcher;
 
         private readonly GrpcIterationTerminationServiceClient _grpcTermClient;
 
@@ -48,7 +43,8 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             IClusterConfiguration clusterConfig,
             INodeMetadata nodeMetadata,
             ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMetricFetcher metricFetcher)
         {
             _discoveryService = discoveryService;
             _grpcClientFactory = grpcClientFactory;
@@ -56,6 +52,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             _nodeMetadata = nodeMetadata;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _metricFetcher = metricFetcher ?? throw new ArgumentNullException(nameof(metricFetcher));
 
             _grpcTermClient = _grpcClientFactory.GetClient<GrpcIterationTerminationServiceClient>(_clusterConfig.MasterNodeIP);
         }
@@ -70,9 +67,6 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                 if (_terminatedIterations.ContainsKey(httpIteration.Id))
                     return true;
 
-                if (httpIteration.TerminationRules == null || !httpIteration.TerminationRules.Any())
-                    return false;
-
                 var fqdn = _discoveryService
                     .Discover(r => r.IterationId == httpIteration.Id)
                     .FirstOrDefault()?.FullyQualifiedName;
@@ -85,132 +79,13 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                     return await _grpcTermClient.IsTerminatedAsync(fqdn);
                 }
 
-                // Master: fetch metrics
-                var metricsClient = _grpcClientFactory.GetClient<GrpcMetricsQueryServiceClient>(_clusterConfig.MasterNodeIP);
-
-                var respCodes = await metricsClient.GetResponseCodesAsync(fqdn, token);
-                var respSummaries = respCodes?.Responses?.SingleOrDefault()?.Summaries;
-
-                var durations = await metricsClient.GetDurationAsync(fqdn, token);
-                var duration = durations?.Responses?.SingleOrDefault();
-
-                foreach (var rule in httpIteration.TerminationRules)
+                // Check if using inline operator syntax (V2)
+                if (httpIteration.TerminationRules != null && httpIteration.TerminationRules.Count > 0)
                 {
-                    if (rule.GracePeriod is null)
-                        continue;
-
-                    // 1) Error Rate
-                    if (rule.MaxErrorRate is not null && respSummaries is not null && respSummaries.Count > 0)
-                    {
-                        int total = 0, errors = 0;
-                        foreach (var s in respSummaries)
-                        {
-                            int count = s.Count;
-                            total += count;
-                            if (Enum.TryParse<HttpStatusCode>(s.HttpStatusCode, true, out var code) &&
-                                rule.ErrorStatusCodes.Contains(code))
-                            {
-                                errors += count;
-                            }
-                        }
-
-                        var key = (httpIteration.Id, rule, TerminationMetricKind.ErrorRate);
-                        var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-
-                        if (await st.UpdateAndCheckRateAsync(total, errors, rule.MaxErrorRate.Value))
-                        {
-                            _terminatedIterations.TryAdd(httpIteration.Id, true);
-
-                            await LogTerminationAsync(httpIteration,
-                                "Error Rate",
-                                $"{(double)errors / total:P}",
-                                $"{rule.MaxErrorRate:P}",
-                                rule.GracePeriod.Value, token);
-
-                            return true;
-                        }
-                    }
-
-                    if (duration is not null)
-                    {
-                        // P90
-                        if (rule.MaxP90 is not null)
-                        {
-                            var key = (httpIteration.Id, rule, TerminationMetricKind.P90);
-                            var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P90TotalTime, rule.MaxP90.Value))
-                            {
-                                _terminatedIterations.TryAdd(httpIteration.Id, true);
-
-                                await LogTerminationAsync(httpIteration,
-                                    "P90 response time",
-                                    $"{duration.P90TotalTime} ms",
-                                    $"{rule.MaxP90.Value} ms",
-                                    rule.GracePeriod.Value, token);
-
-                                return true;
-                            }
-                        }
-
-                        // P50
-                        if (rule.MaxP50 is not null)
-                        {
-                            var key = (httpIteration.Id, rule, TerminationMetricKind.P50);
-                            var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P50TotalTime, rule.MaxP50.Value))
-                            {
-                                _terminatedIterations.TryAdd(httpIteration.Id, true);
-
-                                await LogTerminationAsync(httpIteration,
-                                    "P50 response time",
-                                    $"{duration.P50TotalTime} ms",
-                                    $"{rule.MaxP50.Value} ms",
-                                    rule.GracePeriod.Value, token);
-
-                                return true;
-                            }
-                        }
-
-                        // P10
-                        if (rule.MaxP10 is not null)
-                        {
-                            var key = (httpIteration.Id, rule, TerminationMetricKind.P10);
-                            var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.P10TotalTime, rule.MaxP10.Value))
-                            {
-                                _terminatedIterations.TryAdd(httpIteration.Id, true);
-
-                                await LogTerminationAsync(httpIteration,
-                                    "P10 response time",
-                                    $"{duration.P10TotalTime} ms",
-                                    $"{rule.MaxP10.Value} ms",
-                                    rule.GracePeriod.Value, token);
-
-                                return true;
-                            }
-                        }
-
-                        // Average
-                        if (rule.MaxAvg is not null)
-                        {
-                            var key = (httpIteration.Id, rule, TerminationMetricKind.Average);
-                            var st = _state.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod.Value));
-                            if (await st.UpdateAndCheckValueAsync(duration.AverageTotalTime, rule.MaxAvg.Value))
-                            {
-                                _terminatedIterations.TryAdd(httpIteration.Id, true);
-
-                                await LogTerminationAsync(httpIteration,
-                                    "Average response time",
-                                    $"{duration.AverageTotalTime} ms",
-                                    $"{rule.MaxAvg.Value} ms",
-                                    rule.GracePeriod.Value, token);
-
-                                return true;
-                            }
-                        }
-                    }
+                    return await EvaluateInlineTerminationRulesAsync(httpIteration, fqdn, token);
                 }
 
+                // No rules configured
                 return false;
             }
             catch (Exception ex)
@@ -222,6 +97,69 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             }
         }
 
+        /// <summary>
+        /// NEW: Evaluates termination rules using inline operator syntax (V2).
+        /// </summary>
+        private async Task<bool> EvaluateInlineTerminationRulesAsync(HttpIteration iteration, string fqdn, CancellationToken token)
+        {
+            try
+            {
+                foreach (var rule in iteration.TerminationRules)
+                {
+                    try
+                    {
+                        // Parse the metric expression (cached to avoid repeated regex parsing)
+                        var (metricName, op, threshold, thresholdMax) = GetOrParseCached(rule.Metric);
+
+                        // Use injected MetricFetcher - pass ErrorStatusCodes for ErrorRate metrics
+                        double currentValue = await _metricFetcher.GetMetricValueAsync(fqdn, metricName, rule.ErrorStatusCodes, token);
+
+                        // Check if condition is met (threshold violated)
+                        bool conditionMet = MetricParser.EvaluateCondition(currentValue, op, threshold, thresholdMax);
+
+                        // Use grace period tracking
+                        var key = (iteration.Id, rule.Metric);
+                        var graceState = _stateV2.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod));
+
+                        if (await graceState.UpdateAndCheckValueAsync(conditionMet ? 1 : 0, 0.5))
+                        {
+                            _terminatedIterations.TryAdd(iteration.Id, true);
+
+                            var statusCodesInfo = !string.IsNullOrEmpty(rule.ErrorStatusCodes) 
+                                ? $" (ErrorStatusCodes: {rule.ErrorStatusCodes})" 
+                                : "";
+                            await _logger.LogAsync(
+                                _runtimeOperationIdProvider.OperationId,
+                                $"The iteration '{iteration.Name}' will be terminated because the rule '{rule.Metric}'{statusCodesInfo} was violated " +
+                                $"for the entire grace period of {rule.GracePeriod.TotalSeconds}s. Current value: {currentValue}",
+                                LPSLoggingLevel.Warning,
+                                token);
+                            return true;
+                        }
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        await _logger.LogAsync(
+                            _runtimeOperationIdProvider.OperationId,
+                            $"Invalid termination rule '{rule.Metric}': {ex.Message}",
+                            LPSLoggingLevel.Error,
+                            token);
+                    }
+                }
+
+                return false;
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(
+                    _runtimeOperationIdProvider.OperationId,
+                    $"Failed to evaluate inline termination rules: {ex.Message}",
+                    LPSLoggingLevel.Error,
+                    token);
+                return false;
+            }
+        }
+
         private async Task LogTerminationAsync(HttpIteration iteration, string metricName, string actual, string threshold, TimeSpan gracePeriod, CancellationToken token)
         {
             await _logger.LogAsync(
@@ -229,6 +167,14 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                 $"The iteration {iteration.Name} will be terminated because the '{metricName}' exceeded the threshold {threshold} (actual: {actual}) after a grace period of {gracePeriod.TotalSeconds}s.",
                 LPSLoggingLevel.Information,
                 token);
+        }
+
+        /// <summary>
+        /// Gets a cached parsed metric expression or parses and caches it.
+        /// </summary>
+        private (string MetricName, ComparisonOperator Op, double Threshold, double? ThresholdMax) GetOrParseCached(string metricExpression)
+        {
+            return _parsedMetricCache.GetOrAdd(metricExpression, expr => MetricParser.Parse(expr));
         }
     }
 }

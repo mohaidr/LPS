@@ -37,6 +37,21 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
             HttpVersion = s.HttpVersion
         };
 
+        /// <summary>
+        /// Helper to build TimingMetricStats from a MetricTime object
+        /// </summary>
+        private static TimingMetricStats BuildTimingStats(DurationMetricSnapshot.MetricTime m) => new()
+        {
+            Sum = m.Sum,
+            Average = m.Average,
+            Min = m.Min,
+            Max = m.Max,
+            P50 = m.P50,
+            P90 = m.P90,
+            P95 = m.P95,
+            P99 = m.P99
+        };
+
         public override Task<DurationMetricSearchResponse> GetDurationMetrics(MetricRequest request, ServerCallContext context)
         {
             var snapshots = FilterLatestSnapshots<DurationMetricSnapshot>(request, MetricTypesFor<DurationMetricSnapshot>());
@@ -47,13 +62,13 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                 response.Responses.Add(new DurationMetricResponse
                 {
                     Metadata = BuildMetadata(s),
-                    SumTotalTime = s.TotalTimeMetrics.Sum,
-                    AverageTotalTime = s.TotalTimeMetrics.Average,
-                    MinTotalTime = s.TotalTimeMetrics.Min,
-                    MaxTotalTime = s.TotalTimeMetrics.Max,
-                    P90TotalTime = s.TotalTimeMetrics.P90,
-                    P50TotalTime = s.TotalTimeMetrics.P50,
-                    P10TotalTime = s.TotalTimeMetrics.P99
+                    TotalTime = BuildTimingStats(s.TotalTimeMetrics),
+                    TimeToFirstByte = BuildTimingStats(s.TimeToFirstByteMetrics),
+                    WaitingTime = BuildTimingStats(s.WaitingTimeMetrics),
+                    TcpHandshakeTime = BuildTimingStats(s.TCPHandshakeTimeMetrics),
+                    TlsHandshakeTime = BuildTimingStats(s.SSLHandshakeTimeMetrics),
+                    SendingTime = BuildTimingStats(s.SendingTimeMetrics),
+                    ReceivingTime = BuildTimingStats(s.ReceivingTimeMetrics)
                 });
             }
 

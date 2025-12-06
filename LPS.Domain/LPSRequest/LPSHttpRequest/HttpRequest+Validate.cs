@@ -38,9 +38,9 @@ namespace LPS.Domain
                     .WithMessage("The 'HttpVersion' cannot be null or empty.")
                     .Must(version => string.IsNullOrEmpty(version)
                         || version.StartsWith("$")
-                        || version == "1.0"
-                        || version == "1.1"
-                        || version == "2.0")
+                        || version == "1.0" || version.ToUpper() == "HTTP/1.0"
+                        || version == "1.1" || version.ToUpper() == "HTTP/1.1"
+                        || version == "2.0" || version.ToUpper() == "HTTP/2.0" || version.ToUpper() == "HTTP/2")
                     .WithMessage("The accepted 'Http Versions' are (\"1.0\", \"1.1\", \"2.0\") or placeholders starting with '$'")
                     .Must((command, version) =>
                         string.IsNullOrEmpty(version)
@@ -119,14 +119,14 @@ namespace LPS.Domain
                         .WithMessage("The 'Multipart' object must contain at least one file or one field.");
 
                         RuleFor(command => command.Payload.Multipart)
-                        .Must(multipart => multipart == null 
-                            || multipart?.Files == null 
-                            || multipart.Files.All(file => !string.IsNullOrWhiteSpace(file.Name) && file.Content!= null && !string.IsNullOrWhiteSpace(file.ContentType)))
+                        .Must(multipart => multipart == null
+                            || multipart?.Files == null
+                            || multipart.Files.All(file => !string.IsNullOrWhiteSpace(file.Name) && file.Content != null && !string.IsNullOrWhiteSpace(file.ContentType)))
                         .WithMessage("All files in the Multipart must have both field name and value.");
 
                         RuleFor(command => command.Payload.Multipart)
-                        .Must(multipart => multipart == null 
-                            || multipart?.Fields== null 
+                        .Must(multipart => multipart == null
+                            || multipart?.Fields == null
                             || multipart.Fields.All(field => !string.IsNullOrWhiteSpace(field.Name) && !string.IsNullOrWhiteSpace(field.Value) && !string.IsNullOrWhiteSpace(field.ContentType)))
                         .WithMessage("All fields in the Multipart must have both field name and value.");
                     }

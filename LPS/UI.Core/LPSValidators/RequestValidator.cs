@@ -36,9 +36,9 @@ namespace LPS.UI.Core.LPSValidators
                     // Allow valid HTTP versions or placeholders
                     return string.IsNullOrEmpty(version)
                         || version.StartsWith("$")
-                        || version == "1.0"
-                        || version == "1.1"
-                        || version == "2.0";
+                        || version == "1.0" || version.ToUpper() == "HTTP/1.0"
+                        || version == "1.1" || version.ToUpper() == "HTTP/1.1"
+                        || version == "2.0" || version.ToUpper() == "HTTP/2.0" || version.ToUpper() == "HTTP/2";
                 })
                 .WithMessage("The accepted 'Http Versions' are (\"1.0\", \"1.1\", \"2.0\") or placeholders starting with '$'")
                 .Must((dto, version) =>

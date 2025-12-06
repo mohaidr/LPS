@@ -61,57 +61,41 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.BatchSize, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.BatchSize).Result))
                 .ForMember(dest => dest.CoolDownTime, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.CoolDownTime).Result))
                 .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => src.SkipIf))
-                .ForMember(dest => dest.FailureCriteria, opt => opt.Ignore()) // we'll set it in AfterMap
+                .ForMember(dest => dest.FailureRules, opt => opt.Ignore())     // we'll set it in AfterMap
                 .ForMember(dest => dest.TerminationRules, opt => opt.Ignore()) // we'll set it in AfterMap
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
                 .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore())
                 .AfterMap((HttpIterationDto src, HttpIteration.SetupCommand dest) =>
                 {
-                    // ----- FailureCriteria -----
-                    var maxErrorRate = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxErrorRate).Result;
-
-                    List<HttpStatusCode>? codes = null;
-                    var rawCodes = ResolvePlaceholderAsync<string>(src.FailureCriteria.ErrorStatusCodes).Result;
-                    if (!string.IsNullOrWhiteSpace(rawCodes) && !rawCodes.StartsWith("$"))
+                    // ----- FailureRules (Inline Operators) -----
+                    if (src.FailureRules is not null && src.FailureRules.Count > 0)
                     {
-                        codes = rawCodes
-                            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                            .Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result)
-                            .ToList();
+                        dest.FailureRules = src.FailureRules.Select(fr =>
+                        {
+                            var resolvedMetric = ResolvePlaceholderAsync<string>(fr.Metric).Result;
+                            var resolvedErrorStatusCodes = !string.IsNullOrWhiteSpace(fr.ErrorStatusCodes)
+                                ? ResolvePlaceholderAsync<string>(fr.ErrorStatusCodes).Result
+                                : null;
+                            return new FailureRule(resolvedMetric, resolvedErrorStatusCodes);
+                        }).ToList();
+                    }
+                    else
+                    {
+                        dest.FailureRules = new List<FailureRule>();
                     }
 
-                    var p90 = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxP90).Result;
-                    var p50 = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxP50).Result;
-                    var p10 = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxP10).Result;
-                    var avg = ResolvePlaceholderAsync<double?>(src.FailureCriteria.MaxAvg).Result;
-
-                    dest.FailureCriteria = new FailureCriteria(codes, maxErrorRate, p90, p50, p10, avg);
-
-                    // ----- TerminationRules -----
+                    // ----- TerminationRules (Inline Operators) -----
                     if (src.TerminationRules is not null && src.TerminationRules.Count > 0)
                     {
                         dest.TerminationRules = src.TerminationRules.Select(tr =>
                         {
-                            List<HttpStatusCode>? trCodes = null;
-                            var rawTrCodes = ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result;
-                            if (!string.IsNullOrWhiteSpace(rawTrCodes) && !rawTrCodes.StartsWith("$"))
-                            {
-                                trCodes = rawTrCodes
-                                    .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                    .Select(code => ResolvePlaceholderAsync<HttpStatusCode>(code).Result)
-                                    .ToList();
-                            }
-
-                            return new TerminationRule(
-                                trCodes,
-                                ResolvePlaceholderAsync<TimeSpan?>(tr.GracePeriod).Result,
-                                ResolvePlaceholderAsync<double?>(tr.MaxErrorRate).Result,
-                                ResolvePlaceholderAsync<double?>(tr.MaxP90).Result,
-                                ResolvePlaceholderAsync<double?>(tr.MaxP50).Result,
-                                ResolvePlaceholderAsync<double?>(tr.MaxP10).Result,
-                                ResolvePlaceholderAsync<double?>(tr.MaxAvg).Result
-                            );
+                            var resolvedMetric = ResolvePlaceholderAsync<string>(tr.Metric).Result;
+                            var resolvedGracePeriod = ResolvePlaceholderAsync<TimeSpan>(tr.GracePeriod).Result;
+                            var resolvedErrorStatusCodes = !string.IsNullOrWhiteSpace(tr.ErrorStatusCodes)
+                                ? ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result
+                                : null;
+                            return new TerminationRule(resolvedMetric, resolvedGracePeriod, resolvedErrorStatusCodes);
                         }).ToList();
                     }
                     else

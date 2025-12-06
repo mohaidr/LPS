@@ -80,3 +80,8 @@ CopilotSnapshots
 ProjectEvaluation
 /LPS/.vs/LPS/CopilotIndices/18.0.911.22890
 /LPS/.vs/LPS/copilot-chat/e14714e3/sessions
+examples
+*.db
+*.db-wal
+*.db-shm
+*.md

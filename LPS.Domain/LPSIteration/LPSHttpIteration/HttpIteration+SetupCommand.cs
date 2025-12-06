@@ -28,6 +28,7 @@ namespace LPS.Domain
             {
                 MaximizeThroughput = false;
                 TerminationRules = [];
+                FailureRules = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
 
@@ -43,14 +44,18 @@ namespace LPS.Domain
             public int StartupDelay { get; set; }
             public virtual string Name { get; set; }
             public bool? MaximizeThroughput { get; set; }
-            public IterationMode? Mode { get; set; } // nullable to enforce the client enter a value, otherwise, the first enum value will be the default value
+            public IterationMode? Mode { get; set; }
             public int? RequestCount { get; set; }
             public int? Duration { get; set; }
             public int? BatchSize { get; set; }
             public int? CoolDownTime { get; set; }
             public string SkipIf {  get; set; }
-            public FailureCriteria FailureCriteria { get; set; }
+            
+            // Inline operator support for termination
             public ICollection<TerminationRule> TerminationRules { get; set; }
+            
+            // Inline operator support for failure rules
+            public ICollection<FailureRule> FailureRules { get; set; }
 
             [JsonIgnore]
             [YamlIgnore]
@@ -73,7 +78,7 @@ namespace LPS.Domain
                 targetCommand.CoolDownTime = this.CoolDownTime;
                 targetCommand.IsValid = this.IsValid;
                 targetCommand.TerminationRules = [.. this.TerminationRules];
-                targetCommand.FailureCriteria = this.FailureCriteria;
+                targetCommand.FailureRules = [.. this.FailureRules];
                 targetCommand.SkipIf = this.SkipIf;
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
@@ -86,7 +91,7 @@ namespace LPS.Domain
         private void Setup(SetupCommand command)
         {
             //Set the inherited properties through the parent entity setupcommand
-            var IterationSetUpCommand = new Iteration.SetupCommand() { Id = command.Id, Name = command.Name }; // if there are fields has to be set, then pass them here.
+            var IterationSetUpCommand = new Iteration.SetupCommand() { Id = command.Id, Name = command.Name };
             base.Setup(IterationSetUpCommand);
             var validator = new Validator(this, command, _skipIfEvaluator, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && IterationSetUpCommand.IsValid)
@@ -96,10 +101,10 @@ namespace LPS.Domain
                 this.Mode = command.Mode;
                 this.RequestCount = command.RequestCount;
                 this.Duration = command.Duration;
-                this.CoolDownTime = command.CoolDownTime; ;
+                this.CoolDownTime = command.CoolDownTime;
                 this.BatchSize = command.BatchSize;
                 this.SkipIf = command.SkipIf;
-                this.FailureCriteria = command.FailureCriteria;
+                this.FailureRules = command.FailureRules.ToList();
                 this.TerminationRules = command.TerminationRules.ToList();
                 this.IsValid = true;
             }
@@ -122,11 +127,11 @@ namespace LPS.Domain
                 clone.Mode = this.Mode;
                 clone.HttpRequest = (HttpRequest)this.HttpRequest.Clone();
                 clone.Duration = this.Duration;
-                clone.CoolDownTime = this.CoolDownTime; ;
+                clone.CoolDownTime = this.CoolDownTime;
                 clone.BatchSize = this.BatchSize;
                 clone.MaximizeThroughput = this.MaximizeThroughput;
                 clone.TerminationRules = [.. this.TerminationRules];
-                clone.FailureCriteria = this.FailureCriteria;
+                clone.FailureRules = [.. this.FailureRules];
                 clone.IsValid = true;
             }
             return clone;

@@ -48,27 +48,15 @@ namespace Apis.AutoMapper
                 .ForMember(d => d.TerminationRules, m => m.MapFrom(s => s.TerminationRules != null
                     ? s.TerminationRules.Select(tr => new TerminationRuleDto
                     {
-                        ErrorStatusCodes = tr.ErrorStatusCodes != null ? string.Join(",", tr.ErrorStatusCodes.Select(c => (int)c)) : string.Empty,
-                        MaxErrorRate = tr.MaxErrorRate != null ? tr.MaxErrorRate.Value.ToString(): string.Empty,
-                        GracePeriod = tr.GracePeriod!=null ? tr.GracePeriod.Value.ToString(): string.Empty,
-                        MaxAvg = tr.MaxAvg != null ? tr.MaxAvg.Value.ToString(): string.Empty,
-                        MaxP90 = tr.MaxP90 != null ? tr.MaxP90.Value.ToString(): string.Empty,
-                        MaxP50 = tr.MaxP50 != null ? tr.MaxP50.Value.ToString(): string.Empty,
-                        MaxP10 = tr.MaxP10 != null ? tr.MaxP10.Value.ToString(): string.Empty
+                        Metric = tr.Metric,
+                        GracePeriod = tr.GracePeriod.ToString(),
+                        ErrorStatusCodes = tr.ErrorStatusCodes
                     }).ToList()
                     : new List<TerminationRuleDto>()))
-                .ForMember(d => d.HttpRequest, m => m.MapFrom(s => s.HttpRequest))
-                 .ForMember(d => d.FailureCriteria, m => m.MapFrom(s => new FailureCriteriaDto
-                 {
-                     MaxErrorRate = s.FailureCriteria.MaxErrorRate.HasValue ? s.FailureCriteria.MaxErrorRate.Value.ToString() : string.Empty,
-                     ErrorStatusCodes = s.FailureCriteria.ErrorStatusCodes != null
-                              ? string.Join(",", s.FailureCriteria.ErrorStatusCodes.Select(c => (int)c))
-                              : string.Empty,
-                     MaxP90 = s.FailureCriteria.MaxP90.HasValue ? s.FailureCriteria.MaxP90.Value.ToString() : string.Empty,
-                     MaxP50 = s.FailureCriteria.MaxP50.HasValue ? s.FailureCriteria.MaxP50.Value.ToString() : string.Empty,
-                     MaxP10 = s.FailureCriteria.MaxP10.HasValue ? s.FailureCriteria.MaxP10.Value.ToString() : string.Empty,
-                     MaxAvg = s.FailureCriteria.MaxAvg.HasValue ? s.FailureCriteria.MaxAvg.Value.ToString() : string.Empty
-                 }));
+                .ForMember(d => d.FailureRules, m => m.MapFrom(s => s.FailureRules != null
+                    ? s.FailureRules.Select(fr => new FailureRuleDto { Metric = fr.Metric, ErrorStatusCodes = fr.ErrorStatusCodes }).ToList()
+                    : new List<FailureRuleDto>()))
+                .ForMember(d => d.HttpRequest, m => m.MapFrom(s => s.HttpRequest));
 
             // HttpRequest -> HttpRequestDto
             CreateMap<HttpRequest, HttpRequestDto>()
@@ -94,5 +82,8 @@ namespace Apis.AutoMapper
     }
 
 }
+
+
+
 
 

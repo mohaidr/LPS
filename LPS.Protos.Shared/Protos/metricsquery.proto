@@ -44,16 +44,33 @@ message HttpResponseSummary {
   int32 count = 3;
 }
 
-// Duration Metric
+// Timing metric stats - reusable for all timing types
+message TimingMetricStats {
+  double sum = 1;
+  double average = 2;
+  double min = 3;
+  double max = 4;
+  double p50 = 5;
+  double p90 = 6;
+  double p95 = 7;
+  double p99 = 8;
+}
+
+// Duration Metric - comprehensive timing stats for all metric types
 message DurationMetricResponse {
   HttpMetricMetadata metadata = 1;
-  double sumTotalTime = 2;
-  double averageTotalTime = 3;
-  double minTotalTime = 4;
-  double maxTotalTime = 5;
-  double p90TotalTime = 6;
-  double p50TotalTime = 7;
-  double p10TotalTime = 8;
+  
+  // Reserved field numbers 2-8 (previously legacy fields, now removed)
+  reserved 2, 3, 4, 5, 6, 7, 8;
+  
+  // Comprehensive timing stats for all metric types
+  TimingMetricStats totalTime = 10;
+  TimingMetricStats timeToFirstByte = 11;      // TTFB
+  TimingMetricStats waitingTime = 12;          // Server processing: TTFB - TCP - TLS
+  TimingMetricStats tcpHandshakeTime = 13;     // TCP connection setup
+  TimingMetricStats tlsHandshakeTime = 14;     // SSL/TLS negotiation
+  TimingMetricStats sendingTime = 15;          // Request upload time
+  TimingMetricStats receivingTime = 16;        // Response download time
 }
 
 message DurationMetricSearchResponse {

@@ -23,6 +23,7 @@ namespace LPS.Domain
         {
             Type = IterationType.Http;
             TerminationRules = [];
+            FailureRules = [];  
         }
         ISkipIfEvaluator _skipIfEvaluator;
         private HttpIteration(
@@ -34,6 +35,8 @@ namespace LPS.Domain
             _skipIfEvaluator = skipIfEvaluator;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            TerminationRules = [];
+            FailureRules = [];  
         }
 
 
@@ -82,58 +85,53 @@ namespace LPS.Domain
         public IterationMode? Mode { get; private set; }
         public bool MaximizeThroughput { get; private set; }
         public HttpRequest HttpRequest { get; protected set; }
-        public FailureCriteria FailureCriteria { get; private set; }
+        
+        // Inline operator support for termination rules
         public ICollection<TerminationRule> TerminationRules { get; private set; }
+        
+        // Inline operator support for failure rules
+        public ICollection<FailureRule> FailureRules { get; private set; }
     }
 
-    public readonly struct FailureCriteria(
-    ICollection<HttpStatusCode> errorStatusCodes,
-    double? maxErrorRate,
-    double? maxP90 = null,
-    double? maxP50 = null,
-    double? maxP10 = null,
-    double? maxAvg = null)
+    // Termination rule with inline operator support
+    public readonly struct TerminationRule
     {
-        public ICollection<HttpStatusCode> ErrorStatusCodes { get; } = errorStatusCodes;
-        public double? MaxErrorRate { get; } = maxErrorRate;
-        public double? MaxP90 { get; } = maxP90;
-        public double? MaxP50 { get; } = maxP50;
-        public double? MaxP10 { get; } = maxP10;
-        public double? MaxAvg { get; } = maxAvg;
-    }
+        public TerminationRule(string metric, TimeSpan gracePeriod, string errorStatusCodes = null)
+        {
+            Metric = metric ?? throw new ArgumentNullException(nameof(metric));
+            GracePeriod = gracePeriod;
+            ErrorStatusCodes = errorStatusCodes;
+        }
 
+        public string Metric { get; }
+        public TimeSpan GracePeriod { get; }
 
-    public readonly struct TerminationRule(
-        ICollection<HttpStatusCode> errorStatusCodes,
-        TimeSpan? gracePeriod, 
-        double? maxErrorRate, 
-        double? maxP90 = null,
-        double? maxP50 = null,
-        double? maxP10 = null,
-        double? maxAvg = null)
-    {
         /// <summary>
-        /// The duration for which the threshold must remain above its value
-        /// before terminating the test. If it recovers during this period, termination is aborted.
+        /// For ErrorRate metrics: defines which HTTP status codes count as errors.
+        /// Uses the same operator syntax as StatusCode rules.
+        /// Examples: ">= 500", ">= 400", "= 429", "between 500 and 599"
+        /// If not specified for ErrorRate, defaults to ">= 400".
         /// </summary>
-        public TimeSpan? GracePeriod { get; } = gracePeriod;
+        public string ErrorStatusCodes { get; }
+    }
 
-        /// <summary>Represents the status codes to consider as erroneous status codes</summary>
-        public ICollection<HttpStatusCode> ErrorStatusCodes { get; } = errorStatusCodes;
+    // Failure rule with inline operator support
+    public readonly struct FailureRule
+    {
+        public FailureRule(string metric, string errorStatusCodes = null)
+        {
+            Metric = metric ?? throw new ArgumentNullException(nameof(metric));
+            ErrorStatusCodes = errorStatusCodes;
+        }
 
-        /// <summary>Represents the maximum error rate for a given grace period before the test is terminated</summary>
-        public double? MaxErrorRate { get; } = maxErrorRate;
+        public string Metric { get; }
 
-        /// <summary>Terminate if P90 response time stays >= this value during the grace period.</summary>
-        public double? MaxP90 { get; } = maxP90;
-
-        /// <summary>Terminate if P50 response time stays >= this value during the grace period.</summary>
-        public double? MaxP50 { get; } = maxP50;
-
-        /// <summary>Terminate if P10 response time stays >= this value during the grace period.</summary>
-        public double? MaxP10 { get; } = maxP10;
-
-        /// <summary>Terminate if Average response time stays >= this value during the grace period.</summary>
-        public double? MaxAvg { get; } = maxAvg;
+        /// <summary>
+        /// For ErrorRate metrics: defines which HTTP status codes count as errors.
+        /// Uses the same operator syntax as StatusCode rules.
+        /// Examples: ">= 500", ">= 400", "= 401", "between 400 and 599"
+        /// If not specified for ErrorRate, defaults to ">= 400" (all client and server errors).
+        /// </summary>
+        public string ErrorStatusCodes { get; }
     }
 }

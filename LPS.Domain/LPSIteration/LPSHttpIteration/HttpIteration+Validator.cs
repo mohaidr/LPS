@@ -23,6 +23,33 @@ namespace LPS.Domain
             private readonly HttpIteration _entity;
             ISkipIfEvaluator _skipIfEvaluator;
 
+            // Supported metrics for validation
+            private static readonly HashSet<string> SupportedMetrics = new(StringComparer.OrdinalIgnoreCase)
+            {
+                // Scalar metrics
+                "errorrate",
+                // TotalTime
+                "totaltime",
+                // TTFB
+                "ttfb", "timetofirstbyte",
+                // WaitingTime
+                "waitingtime", "waiting",
+                // TCP
+                "tcphandshake", "tcp",
+                // TLS
+                "tlshandshake", "tls", "ssl", "sslhandshake",
+                // SendingTime
+                "sendingtime", "sending", "upload", "upstream",
+                // ReceivingTime
+                "receivingtime", "receiving", "download", "downstream"
+            };
+
+            // Supported aggregations for timing metrics
+            private static readonly HashSet<string> SupportedAggregations = new(StringComparer.OrdinalIgnoreCase)
+            {
+                "p50", "p90", "p95", "p99", "average", "avg", "min", "max", "sum"
+            };
+
             public Validator(HttpIteration entity, SetupCommand command, 
                 ISkipIfEvaluator skipIfEvaluator,
                 ILogger logger, 
@@ -67,36 +94,14 @@ namespace LPS.Domain
                     .Must(BeValidCoolDownTime)
                     .WithMessage(c => $"The 'CoolDownTime' {(c.Mode == IterationMode.DCB || c.Mode == IterationMode.CRB || c.Mode == IterationMode.CB ? $"must be specified and greater than 0{(c.Mode == IterationMode.DCB && c.Duration.HasValue ? ", it must be less than Duration*1000 as well" : ".")}" : "must be not be provided")} for Mode '{c.Mode}'.");
 
-                RuleFor(c => c.FailureCriteria)
-                    .Must(fc =>
-                    {
-                        // Allow empty/default criteria (no thresholds at all)
-                        bool hasAnyThreshold =
-                            (fc.MaxErrorRate is > 0 && fc.ErrorStatusCodes is not null && fc.ErrorStatusCodes.Count > 0) ||
-                            (fc.MaxP90 is > 0) ||
-                            (fc.MaxP50 is > 0) ||
-                            (fc.MaxP10 is > 0) ||
-                            (fc.MaxAvg is > 0);
-
-                        if (!hasAnyThreshold)
-                            return true;
-
-                        bool hasRate = fc.MaxErrorRate is > 0;
-                        bool hasCodes = fc.ErrorStatusCodes != null && fc.ErrorStatusCodes.Count > 0;
-
-                        if (hasRate ^ hasCodes) // exactly one present -> invalid
-                            return false;
-
-                        return true;
-
-                    })
-                    .WithMessage("FailureCriteria: If MaxErrorRate > 0 then ErrorStatusCodes must be provided (and vice versa). At least one threshold (ErrorRate/P90/P50/P10/Avg) may be used.");
-
-
-
                 RuleFor(c => c.TerminationRules)
                     .Must(BeValidTerminationRules)
-                    .WithMessage("Termination rules must have valid HTTP status codes and a MaxErrorRate greater than 0.");
+                    .WithMessage("Termination rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000') and positive grace periods.");
+
+                RuleFor(c => c.FailureRules)
+                    .Must(BeValidFailureRules)
+                    .WithMessage("Failure rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000'). Use 'errorStatusCodes' to filter by status codes.");
+
                 #endregion
 
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)
@@ -161,10 +166,114 @@ namespace LPS.Domain
 
             private bool BeValidTerminationRules(IEnumerable<TerminationRule> rules)
             {
-                if (rules == null ) return false;
+                if (rules == null) return true;
                 if (!rules.Any()) return true;
 
-                return rules.All(rule =>  ((rule.ErrorStatusCodes != null &&  rule.MaxErrorRate > 0  && rule.ErrorStatusCodes.Count > 0 && rule.ErrorStatusCodes.All(code => Enum.IsDefined(typeof(HttpStatusCode), code))) || rule.MaxP90 >0 || rule.MaxP10 > 0 || rule.MaxP50 > 0 || rule.MaxAvg > 0) && rule.GracePeriod > TimeSpan.Zero);
+                return rules.All(rule =>
+                    rule.GracePeriod > TimeSpan.Zero &&
+                    !string.IsNullOrWhiteSpace(rule.Metric) &&
+                    IsValidMetricExpression(rule.Metric) &&
+                    (string.IsNullOrWhiteSpace(rule.ErrorStatusCodes) || IsValidStatusCodeExpression(rule.ErrorStatusCodes)));
+            }
+
+            private bool BeValidFailureRules(IEnumerable<FailureRule> rules)
+            {
+                if (rules == null) return true;
+                if (!rules.Any()) return true;
+
+                return rules.All(rule => 
+                    !string.IsNullOrWhiteSpace(rule.Metric) &&
+                    IsValidMetricExpression(rule.Metric) &&
+                    (string.IsNullOrWhiteSpace(rule.ErrorStatusCodes) || IsValidStatusCodeExpression(rule.ErrorStatusCodes)));
+            }
+
+            /// <summary>
+            /// Validates a metric expression format.
+            /// Supported formats:
+            /// - "ErrorRate > 0.1"
+            /// - "TotalTime.P95 > 5000"
+            /// - "TTFB.Average < 1000"
+            /// - "TotalTime.P50 between 100 and 500"
+            /// </summary>
+            private bool IsValidMetricExpression(string metricExpression)
+            {
+                if (string.IsNullOrWhiteSpace(metricExpression))
+                    return false;
+
+                // Pattern: MetricName[.Aggregation] <operator> value [and value2]
+                var pattern = @"^(?<metric>[\w]+)(\.(?<aggregation>[\w]+))?\s*(?<operator>>|<|>=|<=|!=|=|between)\s*(?<value1>-?[\d\.]+)(\s+and\s+(?<value2>-?[\d\.]+))?$";
+                var match = Regex.Match(metricExpression.Trim(), pattern, RegexOptions.IgnoreCase);
+
+                if (!match.Success)
+                    return false;
+
+                var metricName = match.Groups["metric"].Value.ToLower();
+                var aggregation = match.Groups["aggregation"].Success ? match.Groups["aggregation"].Value.ToLower() : null;
+                var operatorStr = match.Groups["operator"].Value.ToLower();
+                var value2Group = match.Groups["value2"];
+
+                // Validate metric name
+                if (!SupportedMetrics.Contains(metricName))
+                    return false;
+
+                // Validate aggregation for timing metrics (not required for ErrorRate)
+                bool isScalarMetric = metricName == "errorrate";
+                if (aggregation != null)
+                {
+                    if (isScalarMetric)
+                        return false; // Scalar metrics don't support aggregations
+                    if (!SupportedAggregations.Contains(aggregation))
+                        return false;
+                }
+
+                // Validate 'between' operator has two values
+                if (operatorStr == "between" && !value2Group.Success)
+                    return false;
+
+                // Validate value1 is a valid number
+                if (!double.TryParse(match.Groups["value1"].Value, out _))
+                    return false;
+
+                // Validate value2 if present
+                if (value2Group.Success && !double.TryParse(value2Group.Value, out _))
+                    return false;
+
+                return true;
+            }
+
+            /// <summary>
+            /// Validates an error status codes expression.
+            /// This is the operator + value portion (not including "StatusCode").
+            /// Examples: ">= 500", "between 400 and 499", "= 429"
+            /// </summary>
+            private bool IsValidStatusCodeExpression(string expression)
+            {
+                if (string.IsNullOrWhiteSpace(expression))
+                    return false;
+
+                // Pattern: operator value [and value2]
+                // Examples: ">= 500", "between 400 and 499", "= 429"
+                var pattern = @"^(?<operator>>|<|>=|<=|!=|=|between)\s*(?<value1>\d{3})(\s+and\s+(?<value2>\d{3}))?$";
+                var match = Regex.Match(expression.Trim(), pattern, RegexOptions.IgnoreCase);
+
+                if (!match.Success)
+                    return false;
+
+                var operatorStr = match.Groups["operator"].Value.ToLower();
+                var value2Group = match.Groups["value2"];
+
+                // Validate 'between' operator has two values
+                if (operatorStr == "between" && !value2Group.Success)
+                    return false;
+
+                // Validate status codes are in valid HTTP range (100-599)
+                if (!int.TryParse(match.Groups["value1"].Value, out var code1) || code1 < 100 || code1 > 599)
+                    return false;
+
+                if (value2Group.Success && (!int.TryParse(value2Group.Value, out var code2) || code2 < 100 || code2 > 599))
+                    return false;
+
+                return true;
             }
             #endregion
         }

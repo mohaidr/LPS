@@ -35,6 +35,7 @@ using Newtonsoft.Json;
 using LPS.Infrastructure.Services;
 using LPS.Infrastructure.Monitoring.TerminationServices;
 using LPS.Infrastructure.FailureEvaluator;
+using LPS.Infrastructure.Monitoring;  // For MetricFetcher
 using LPS.Infrastructure.Skip;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices;
@@ -142,6 +143,10 @@ namespace LPS
                     services.AddSingleton<IVariableManager, VariableManager>();
                     services.AddSingleton<ITestExecutionService, TestExecutionService>();
                     services.AddSingleton<ITestOrchestratorService, TestOrchestratorService>();
+                    
+                    // NEW: Register MetricFetcher for shared metric retrieval
+                    services.AddSingleton<IMetricFetcher, MetricFetcher>();
+                    
                     services.AddSingleton<ITerminationCheckerService, HttpIterationTerminationCheckerService>();
                     services.AddSingleton<IIterationFailureEvaluator, IterationFailureEvaluator>();
                     services.AddSingleton<ISkipIfEvaluator, SkipIfEvaluator>();

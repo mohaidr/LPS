@@ -13,7 +13,7 @@ namespace LPS.UI.Common.DTOs
             Name = string.Empty;
             HttpRequest = new HttpRequestDto();
             TerminationRules = [];
-            FailureCriteria = new FailureCriteriaDto();
+            FailureRules = [];
         }
 
         // Name of the iteration
@@ -56,9 +56,10 @@ namespace LPS.UI.Common.DTOs
         // Evaluator condition (can be a variable)
         public string SkipIf { get; set; }
 
-        // New: consolidated failure criteria (replaces legacy MaxErrorRate/ErrorStatusCodes on DTO)
-        public FailureCriteriaDto FailureCriteria { get; set; }
-
+        // Inline operator support for failure rules
+        public List<FailureRuleDto> FailureRules { get; set; }
+        
+        // Inline operator support for termination rules
         public List<TerminationRuleDto> TerminationRules { get; set; }
 
         // Deep copy method to create a new instance with the same data
@@ -76,132 +77,63 @@ namespace LPS.UI.Common.DTOs
                 CoolDownTime = this.CoolDownTime,
                 SkipIf = this.SkipIf,
                 TerminationRules = [.. this.TerminationRules],
-                FailureCriteria = this.FailureCriteria // value-copy for struct; for class, shallow copy is fine
+                FailureRules = [.. this.FailureRules]
             };
 
             // Deep copy HttpRequest
             HttpRequest.DeepCopy(out HttpRequestDto? copiedHttpRequest);
             targetDto.HttpRequest = copiedHttpRequest;
         }
-
-        public static List<TerminationRuleDto> ParseTerminationRules(IEnumerable<string> ruleInputs)
-        {
-            var parsedRules = new List<TerminationRuleDto>();
-
-            foreach (var input in ruleInputs)
-            {
-                var rule = new TerminationRuleDto();
-                var segments = input.Split(';', StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var segment in segments)
-                {
-                    var parts = segment.Split('=', 2, StringSplitOptions.TrimEntries);
-                    if (parts.Length != 2) continue;
-
-                    switch (parts[0].ToLower())
-                    {
-                        case "codes":
-                            rule.ErrorStatusCodes = parts[1];
-                            break;
-                        case "rate":
-                            rule.MaxErrorRate = parts[1];
-                            break;
-                        case "grace":
-                            rule.GracePeriod = parts[1];
-                            break;
-                        case "maxp90":
-                        case "p90":
-                            rule.MaxP90 = parts[1];
-                            break;
-                        case "maxp50":
-                        case "p50":
-                            rule.MaxP50 = parts[1];
-                            break;
-                        case "maxp10":
-                        case "p10":
-                            rule.MaxP10 = parts[1];
-                            break;
-                        case "avg":
-                        case "maxavg":
-                            rule.MaxAvg = parts[1];
-                            break;
-                    }
-                }
-
-                parsedRules.Add(rule);
-            }
-
-            return parsedRules;
-        }
-        public static FailureCriteriaDto ParseFailureCriteria(string? input)
-        {
-            var fc = new FailureCriteriaDto();
-
-            if (string.IsNullOrWhiteSpace(input))
-                return fc;
-
-            var segments = input.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-            foreach (var segment in segments)
-            {
-                // accept tokens with or without '=' (e.g., "maxp90=300" or "maxp90=300ms" if your resolver supports units)
-                var parts = segment.Split('=', 2, StringSplitOptions.TrimEntries);
-                var key = parts[0].ToLowerInvariant();
-                var val = parts.Length == 2 ? parts[1] : string.Empty;
-
-                switch (key)
-                {
-                    case "codes":
-                        fc.ErrorStatusCodes = val;
-                        break;
-                    case "rate":
-                        fc.MaxErrorRate = val;
-                        break;
-                    case "maxp90":
-                    case "p90":
-                        fc.MaxP90 = val;
-                        break;
-                    case "maxp50":
-                    case "p50":
-                        fc.MaxP50 = val;
-                        break;
-                    case "maxp10":
-                    case "p10":
-                        fc.MaxP10 = val;
-                        break;
-                    case "avg":
-                    case "maxavg":
-                        fc.MaxAvg = val;
-                        break;
-                }
-            }
-
-            return fc;
-        }
     }
 
-    // New DTO for FailureCriteria (string-based for variable support)
-    public struct FailureCriteriaDto
+    // Failure rule with inline operator
+    /// <summary>
+    /// DTO for failure rules using inline operator syntax.
+    /// Example: { Metric: "ErrorRate > 0.05", ErrorStatusCodes: ">= 500" }
+    /// </summary>
+    public struct FailureRuleDto
     {
-        // If provided, must pair with ErrorStatusCodes (or both placeholders)
-        public string MaxErrorRate { get; set; }
-        public string ErrorStatusCodes { get; set; } // comma-separated or placeholder
+        /// <summary>
+        /// Metric expression with inline operator.
+        /// Examples: "ErrorRate > 0.05", "StatusCode >= 500", "TotalTime.P95 between 100 and 500"
+        /// </summary>
+        public string Metric { get; set; }
 
-        // Optional latency thresholds (ms)
-        public string MaxP90 { get; set; }
-        public string MaxP50 { get; set; }
-        public string MaxP10 { get; set; }
-        public string MaxAvg { get; set; }
+        /// <summary>
+        /// For ErrorRate metrics: defines which HTTP status codes count as errors.
+        /// Uses the same operator syntax as StatusCode rules.
+        /// Examples: ">= 500", ">= 400", "= 401", "between 400 and 599"
+        /// If not specified for ErrorRate, defaults to ">= 400" (all client and server errors).
+        /// Ignored for non-ErrorRate metrics.
+        /// </summary>
+        public string ErrorStatusCodes { get; set; }
     }
 
+    // Termination rule V2 with inline operator
+    /// <summary>
+    /// DTO for termination rules using inline operator syntax with grace period.
+    /// Example: { Metric: "ErrorRate > 0.10", GracePeriod: "00:05:00", ErrorStatusCodes: ">= 500" }
+    /// </summary>
     public struct TerminationRuleDto
     {
-        public string ErrorStatusCodes { get; set; } // The user should provide them as comma separated to make it easier to define variables and resolve them
-        public string MaxErrorRate { get; set; }
+        /// <summary>
+        /// Metric expression with inline operator.
+        /// Examples: "ErrorRate > 0.10", "TotalTime.P90 > 1000", "StatusCode >= 500"
+        /// </summary>
+        public string Metric { get; set; }
+
+        /// <summary>
+        /// Grace period duration. Format: "00:05:00" (TimeSpan string)
+        /// </summary>
         public string GracePeriod { get; set; }
-        public string MaxP90 { get; set; }
-        public string MaxP50 { get; set; }
-        public string MaxP10 { get; set; }
-        public string MaxAvg { get; set; }
+
+        /// <summary>
+        /// For ErrorRate metrics: defines which HTTP status codes count as errors.
+        /// Uses the same operator syntax as StatusCode rules.
+        /// Examples: ">= 500", ">= 400", "= 429", "between 500 and 599"
+        /// If not specified for ErrorRate, defaults to ">= 400" (all client and server errors).
+        /// Ignored for non-ErrorRate metrics.
+        /// </summary>
+        public string ErrorStatusCodes { get; set; }
     }
 }
