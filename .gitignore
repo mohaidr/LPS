@@ -3,6 +3,10 @@
 *.v2
 *.CopyComplete
 *.BuildWithSkipAnalyzers
+
+# Build outputs (never commit)
+**/bin/
+**/obj/
 netcoreapp3.1
 net6.0
 obj
