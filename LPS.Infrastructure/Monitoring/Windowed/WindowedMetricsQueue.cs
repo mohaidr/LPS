@@ -14,6 +14,10 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
         public WindowedMetricsQueue(int capacity = 1000)
         {
+            // TODO: Enhance to stop queuing on worker nodes.
+            // Currently coordinators run on all nodes (master + workers), but only master consumes queues.
+            // Workers enqueue snapshots that are never consumed, relying on DropOldest to limit to 1000.
+            // Should gate coordinator registration by NodeType.Master to prevent unnecessary queuing on workers.
             // Bounded channel to prevent unbounded memory growth
             _channel = Channel.CreateBounded<WindowedIterationSnapshot>(
                 new BoundedChannelOptions(capacity)
