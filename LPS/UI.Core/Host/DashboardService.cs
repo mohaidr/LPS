@@ -43,7 +43,7 @@ namespace LPS.UI.Core.Host
         }
         public async Task EnsureDashboardUpdateBeforeExitAsync()
         {
-            var refreshInterval = _dashboardConfig.Value.RefreshRate.HasValue ? _dashboardConfig.Value.RefreshRate.Value + 1 : 6;
+            var refreshInterval = _dashboardConfig.Value.RefreshRate.HasValue ? _dashboardConfig.Value.RefreshRate.Value * 2 : 10;
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Looks like the test is done — hang tight while we finalize things before exiting!", LPSLoggingLevel.Information);
             await Task.Delay(TimeSpan.FromSeconds(refreshInterval));
         }
