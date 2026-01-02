@@ -17,7 +17,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
         protected IMetricDataStore _metricDataStore = metricDataStore;
         public HttpIteration HttpIteration => _httpIteration;
-        public bool IsStarted { get; protected set; }
 
         public abstract LPSMetricType MetricType { get; }
 
@@ -58,9 +57,5 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 throw new InvalidCastException($"Dimension set of type {typeof(TDimensionSet)} is not supported");
             }
         }
-
-        public abstract ValueTask StopAsync(CancellationToken token);
-
-        public abstract ValueTask StartAsync(CancellationToken token);
     }
 }

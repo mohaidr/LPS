@@ -12,7 +12,7 @@ using LPS.Infrastructure.Monitoring.MetricsServices;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class DataTransmissionMetricAggregator : BaseMetricAggregator, IDataTransmissionMetricAggregator
+    public class DataTransmissionMetricAggregator : BaseMetricAggregator, IDataTransmissionMetricAggregator, IDisposable
     {
         private const string MetricName = "DataTransmission";
 
@@ -28,6 +28,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         // Lifetime active wall-clock (resumes across Start/Stop)
         private readonly Stopwatch _watch = new();
         private Timer _timer;
+        private bool _isStarted;
+        private bool _disposed;
 
         private readonly DataTransmissionMetricSnapshot _snapshot;
         protected override IMetricShapshot Snapshot => _snapshot;
@@ -61,40 +63,21 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _ = PushMetricAsync(CancellationToken.None);
         }
 
-        public override async ValueTask StartAsync(CancellationToken token)
+        /// <summary>
+        /// Lazy start: starts the stopwatch and timer on first call.
+        /// Called internally when first data is recorded.
+        /// </summary>
+        private void EnsureStarted()
         {
-            if (IsStarted) { await ValueTask.CompletedTask; return; }
-
-            IsStarted = true;
+            if (_isStarted || _disposed) return;
+            _isStarted = true;
             _snapshot.StopUpdate = false;
-
-            _watch.Start(); // resumes (doesn't reset)
-
-            ScheduleMetricsUpdate(); // 1s cadence like Throughput
-            await ValueTask.CompletedTask;
-        }
-
-        public override async ValueTask StopAsync(CancellationToken token)
-        {
-            if (!IsStarted) { await ValueTask.CompletedTask; return; }
-
-            IsStarted = false;
-            _snapshot.StopUpdate = true;
-            try
-            {
-                _watch.Stop();       // pauses, keeps elapsed
-                _timer?.Dispose();   // stop periodic ticks
-                _timer = null;
-
-                // Final publish for this active segment
-                await UpdateAndPushAsync(CancellationToken.None);
-            }
-            finally { }
+            _watch.Start();
+            ScheduleMetricsUpdate();
         }
 
         /// <summary>
         /// Called on every uploaded chunk (e.g., every 65 KB).
-        /// 'elapsedTicks' is ignored in lifetime approach (we base on wall-clock).
         /// </summary>
         public async ValueTask UpdateDataSentAsync(double totalBytes, CancellationToken token = default)
         {
@@ -103,9 +86,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 await _semaphore.WaitAsync(token);
                 lockTaken = true;
-                 // We later should add a check if not started but now in the current design it causes exceptions or logical errors 
+                
+                // Lazy start on first data
+                EnsureStarted();
+                
                 _totalSentBytes += (long)totalBytes;
-                _requestsCount = GetRequestsCount(); // optional; keep in sync with Throughput
+                _requestsCount = GetRequestsCount();
             }
             finally
             {
@@ -115,15 +101,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         /// <summary>
         /// Called on every downloaded chunk (e.g., every 65 KB).
-        /// 'elapsedTicks' is ignored in lifetime approach (we base on wall-clock).
         /// </summary>
         public async ValueTask UpdateDataReceivedAsync(double totalBytes, CancellationToken token = default)
         {
             bool lockTaken = false;
             try
             {
-                await _semaphore.WaitAsync(token); lockTaken = true;
-                // We later should add a check if not started but now in the current design it causes exceptions or logical errors 
+                await _semaphore.WaitAsync(token);
+                lockTaken = true;
+                
+                // Lazy start on first data
+                EnsureStarted();
 
                 _totalRecvBytes += (long)totalBytes;
                 _requestsCount = GetRequestsCount();
@@ -141,7 +129,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             _timer = new Timer(_ =>
             {
-                if (!IsStarted) return;
+                if (!_isStarted || _disposed) return;
 
                 try
                 {
@@ -205,7 +193,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return 0;
         }
 
- 
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _snapshot.StopUpdate = true;
+            _watch.Stop();
+            _timer?.Dispose();
+            _timer = null;
+            _semaphore.Dispose();
+        }
     }
 
     public class DataTransmissionMetricSnapshot : HttpMetricSnapshot
@@ -227,7 +224,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         // Wall-clock elapsed for the active lifetime (ms)
         public double TimeElpased { get; private set; }
 
-        // Totals
+        // Cumulative totals (never reset)
         public double DataSent { get; private set; }
         public double DataReceived { get; private set; }
 
@@ -239,9 +236,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public double UpstreamThroughputBps { get; private set; }
         public double DownstreamThroughputBps { get; private set; }
         public double ThroughputBps { get; private set; }
-
-
-
 
         public void UpdateDataSent(double totalDataSent, double averageDataSentPerRequest, double upstreamThroughputBps, double timeElpased)
         {

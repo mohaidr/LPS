@@ -6,12 +6,15 @@ using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Metrics;
+using LPS.Infrastructure.Monitoring.Windowed;
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
     /// <summary>
     /// Thread-safe factory+cache for metric aggregators per iteration.
     /// Uses iteration.Id (Guid) as stable key.
+    /// Creates both cumulative and windowed aggregators.
+    /// Collectors are created separately by MetricsDataMonitor.
     /// </summary>
     public sealed class MetricAggregatorFactory : IMetricAggregatorFactory, IDisposable
     {
@@ -34,7 +37,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVarSvc = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
-            _metricDataStore = metricDataStore;
+            _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
         }
 
         public IReadOnlyList<IMetricAggregator> GetOrCreate(HttpIteration iteration, string roundName)
@@ -83,21 +86,42 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             var entries = _cache.Values.Where(v => v.IsValueCreated).Select(v => v.Value).ToList();
             _cache.Clear();
+
             if (dispose)
             {
                 foreach (var e in entries) DisposeAggregators(e.Aggregators);
             }
         }
+
         private IReadOnlyList<IMetricAggregator> CreateAggregators(string roundName, HttpIteration httpIteration)
         {
-            return new List<IMetricAggregator>
+            // Cumulative aggregators (these write to the metric data store)
+            // Note: Stopwatches in ThroughputMetricAggregator and DataTransmissionMetricAggregator
+            // are started lazily on first data record, not at creation time.
+            var cumulative = new List<IMetricAggregator>
             {
                 new ResponseCodeMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
                 new DurationMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
                 new ThroughputMetricAggregator(httpIteration, roundName , _logger, _op, _metricsVarSvc, _metricDataStore),
                 new DataTransmissionMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore)
             };
+
+            // Windowed aggregators (lightweight - no queue/coordinator dependency)
+            var windowed = new List<IMetricAggregator>
+            {
+                new WindowedDurationAggregator(httpIteration, roundName),
+                new WindowedThroughputAggregator(httpIteration, roundName),
+                new WindowedResponseCodeAggregator(httpIteration, roundName),
+                new WindowedDataTransmissionAggregator(httpIteration, roundName)
+            };
+
+            // Return all aggregators
+            var all = new List<IMetricAggregator>(cumulative.Count + windowed.Count);
+            all.AddRange(cumulative);
+            all.AddRange(windowed);
+            return all;
         }
+
         private static void DisposeAggregators(IReadOnlyList<IMetricAggregator> aggregators)
         {
             foreach (var a in aggregators)

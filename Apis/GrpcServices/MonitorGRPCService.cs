@@ -75,8 +75,8 @@ namespace Apis.Services
                 throw new RpcException(new Status(StatusCode.NotFound, $"MonitorGRPCService.QueryIterationStatuses(): Can't Monitor {request.FullyQualifiedName} - No entity found for FQDN: {request.FullyQualifiedName}"));
             }
 
-
-            await _metricsMonitor.MonitorAsync(iteration=> iteration.Id == record.IterationId, _cts.Token);
+            // Metrics collectors are self-managing via IIterationStatusMonitor
+            // They start on registration (TryRegisterAsync) and stop when iteration reaches terminal status
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"gRPC monitor request completed successfully: {request.FullyQualifiedName}", LPSLoggingLevel.Verbose);
 
             return new MonitorResponse

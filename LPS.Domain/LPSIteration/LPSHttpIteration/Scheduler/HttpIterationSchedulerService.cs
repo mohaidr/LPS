@@ -79,7 +79,8 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
                     return;
                 }
 
-                await _lpsMetricsDataMonitor.MonitorAsync(httpIteration, linkedToken);
+                // Metrics collectors are self-managing via IIterationStatusMonitor
+                // They start on registration and stop when iteration reaches terminal status
                 await httpIterationCommand.ExecuteAsync(httpIteration, linkedToken);
             }
             catch (OperationCanceledException) when (iterationCts.IsCancellationRequested && !token.IsCancellationRequested)
@@ -92,10 +93,6 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Scheduled execution of '{httpIteration.Name}' has been cancelled", LPSLoggingLevel.Warning);
-            }
-            finally
-            {
-                await _lpsMetricsDataMonitor.StopAsync(httpIteration, token);
             }
         }
 

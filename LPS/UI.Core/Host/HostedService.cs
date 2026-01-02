@@ -23,6 +23,8 @@ using LPS.Infrastructure.Services;
 using NodeType = LPS.Infrastructure.Nodes.NodeType;
 using Node = LPS.Infrastructure.Nodes.Node;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
+using LPS.Infrastructure.Monitoring.Windowed;
+using LPS.Infrastructure.Monitoring.Cumulative;
 
 namespace LPS.UI.Core.Host
 {
@@ -46,9 +48,10 @@ namespace LPS.UI.Core.Host
         IPlaceholderResolverService placeholderResolverService,
         ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
         AppSettingsWritableOptions appSettings,
-                ITestTriggerNotifier testTriggerNotifier,
-                                ITestExecutionService testExecutionService,
-
+        ITestTriggerNotifier testTriggerNotifier,
+        ITestExecutionService testExecutionService,
+        IWindowedMetricsCoordinator windowedMetricsCoordinator,
+        ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,
         CancellationTokenSource cts) : IHostedService
     {
         readonly NodeHealthMonitorBackgroundService _nodeHealthMonitorBackgroundService = nodeHealthMonitorBackgroundService;
@@ -71,6 +74,8 @@ namespace LPS.UI.Core.Host
         readonly IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
         readonly ITestExecutionService _testExecutionService = testExecutionService;
         readonly ITestOrchestratorService _testOrchestratorService = testOrchestratorService;
+        readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator = windowedMetricsCoordinator;
+        readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator = cumulativeMetricsCoordinator;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
 
@@ -78,9 +83,12 @@ namespace LPS.UI.Core.Host
         {
             try
             {
-
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
+                
+                // Start metrics coordinators (they fire events for collectors to push data)
+                await _windowedMetricsCoordinator.StartAsync(_cts.Token);
+                await _cumulativeMetricsCoordinator.StartAsync(_cts.Token);
 
                 #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
                 Console.CancelKeyPress += CancelKeyPressHandler;
@@ -130,15 +138,20 @@ namespace LPS.UI.Core.Host
 
             _nodeRegistry.TryGetLocalNode(out INode? localNode); 
 
-            if (localNode?.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
+            if (localNode?.Metadata.NodeType == NodeType.Master)
             {
-                //TODO: Think about this approach
+                // Wait for all workers to complete before stopping coordinators
                 while (_nodeRegistry.GetNeighborNodes().Where(n => n.IsActive()).Count() > 0)
                 {
-                    await Task.Delay(1000);
+                    await Task.Delay(500);
                 }
             }
-             if(localNode!=null)
+            
+            // Stop coordinators - they fire final events so collectors push final state
+            await _windowedMetricsCoordinator.StopAsync(_cts.Token);
+            await _cumulativeMetricsCoordinator.StopAsync(_cts.Token);
+            
+            if(localNode!=null)
                 await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
 
             _nodeHealthMonitorBackgroundService.Stop();

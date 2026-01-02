@@ -1,5 +1,6 @@
 ﻿using Apis.AutoMapper;
 using Apis.GrpcServices;
+using Apis.Hubs;
 using Apis.Services;
 using LPS.GrpcServices;
 using LPS.Infrastructure.Monitoring.GRPCServices;
@@ -14,18 +15,27 @@ namespace LPS.Apis
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            // CORS: allow any origin/method/header (no credentials)
+            // CORS: allow any origin/method/header (with credentials for SignalR)
             services.AddCors(o =>
             {
                 o.AddPolicy("AllowAll", p =>
-                    p.AllowAnyOrigin()
+                    p.SetIsOriginAllowed(_ => true)
                      .AllowAnyMethod()
-                     .AllowAnyHeader());
+                     .AllowAnyHeader()
+                     .AllowCredentials());
             });
 
             // gRPC
             services.AddGrpc();
             services.AddAutoMapper(typeof(LpsMappingProfile));
+
+            // SignalR for real-time windowed metrics
+            services.AddSignalR()
+                .AddJsonProtocol(options =>
+                {
+                    options.PayloadSerializerOptions.PropertyNamingPolicy = null;
+                    options.PayloadSerializerOptions.DictionaryKeyPolicy = null;
+                });
 
             // MVC Controllers
             services.AddControllersWithViews();
@@ -35,6 +45,13 @@ namespace LPS.Apis
                         options.JsonSerializerOptions.PropertyNamingPolicy = null;
                         options.JsonSerializerOptions.DictionaryKeyPolicy = null;
                     });
+
+            // Windowed metrics SignalR pusher (reads from queue, pushes to SignalR hub)
+            services.AddHostedService<WindowedMetricsSignalRPusher>();
+            
+            // Cumulative metrics SignalR pusher (reads from queue, pushes to SignalR hub)
+            // Cumulative data is pushed at its own interval (RefreshRate), separate from windowed data
+            services.AddHostedService<CumulativeMetricsSignalRPusher>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -55,6 +72,9 @@ namespace LPS.Apis
 
             app.UseEndpoints(endpoints =>
             {
+                // SignalR hub for real-time metrics (cumulative and windowed)
+                endpoints.MapHub<WindowedMetricsHub>("/hubs/metrics");
+
                 // gRPC services
                 endpoints.MapGrpcService<NodeGRPCService>();
                 endpoints.MapGrpcService<MetricsGrpcService>();

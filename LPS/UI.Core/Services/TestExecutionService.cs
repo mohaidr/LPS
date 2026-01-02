@@ -19,6 +19,9 @@ using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Extensions;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Metrics;
+using LPS.Infrastructure.Monitoring.Windowed;
+using LPS.Infrastructure.Monitoring.Cumulative;
+using LPS.Infrastructure.Monitoring.MetricsServices;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Globalization;
@@ -51,6 +54,9 @@ namespace LPS.UI.Core.Services
         private readonly INodeMetadata _nodeMetaData;
         private readonly IMetricDataStore _metricStore;
         private readonly IWarmUpService _warmupService;
+        private readonly IGrafanaCloudPusher _grafanaCloudPusher;
+        private readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator;
+        private readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator;
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -72,6 +78,9 @@ namespace LPS.UI.Core.Services
             IVariableFactory variableFactory,
             IMetricDataStore metricStore,             // NEW
             INodeMetadata nodeMetaData,               // NEW
+            IGrafanaCloudPusher grafanaCloudPusher,   // NEW
+            IWindowedMetricsCoordinator windowedMetricsCoordinator,  // NEW: Windowed metrics coordinator
+            ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,  // NEW: Cumulative metrics coordinator
             ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
             IWarmUpService warmUpService,
             CancellationTokenSource cts)
@@ -98,6 +107,9 @@ namespace LPS.UI.Core.Services
             _metricStore = metricStore;
             _nodeMetaData = nodeMetaData;
             _warmupService = warmUpService;
+            _grafanaCloudPusher = grafanaCloudPusher;
+            _windowedMetricsCoordinator = windowedMetricsCoordinator;
+            _cumulativeMetricsCoordinator = cumulativeMetricsCoordinator;
             _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
 
             var mapperConfig = new MapperConfiguration(cfg =>
@@ -244,10 +256,18 @@ namespace LPS.UI.Core.Services
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
                 _dashboardService.Start();
+                
+                // When the Grafana logic is ready, here we call await _grafanaCloudPusher.StartAsync(_cts.Token);
+                
                 await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager,
                         _config, _httpIterationExecutionCommandStatusMonitor,
                         _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
                     .ExecuteAsync(plan, _cts.Token);
+                    
+                // When the Grafana logic is ready, here we call await _grafanaCloudPusher.DisposeAsync();
+                
+                // Coordinators are stopped in HostedService.StopAsync after waiting for all workers to complete
+                
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
                 await PersistAllSnapshotsAsync(plan, _cts.Token);

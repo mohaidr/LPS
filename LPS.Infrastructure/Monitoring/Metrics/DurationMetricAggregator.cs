@@ -174,18 +174,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public override async ValueTask StopAsync(CancellationToken token)
-        {
-            if (IsStarted) IsStarted = false;
-            await ValueTask.CompletedTask;
-        }
-
-        public override async ValueTask StartAsync(CancellationToken token)
-        {
-            if (!IsStarted) IsStarted = true;
-            await ValueTask.CompletedTask;
-        }
-
         private async Task PushMetricAsync(CancellationToken token)
         {
             var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
@@ -232,10 +220,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     case DurationMetricType.TotalTime:
                         TotalTimeMetrics.Update(totalTime);
                         break;
-                    case DurationMetricType.ReceivingTime: // RENAMED
+                    case DurationMetricType.ReceivingTime:
                         ReceivingTimeMetrics.Update(totalTime);
                         break;
-                    case DurationMetricType.SendingTime:   // RENAMED
+                    case DurationMetricType.SendingTime:
                         SendingTimeMetrics.Update(totalTime);
                         break;
                     case DurationMetricType.TLSHandshakeTime:
@@ -247,7 +235,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     case DurationMetricType.TimeToFirstByte:
                         TimeToFirstByteMetrics.Update(totalTime);
                         break;
-                    case DurationMetricType.WaitingTime: // NEW: TTFB - TCP - TLS
+                    case DurationMetricType.WaitingTime:
                         WaitingTimeMetrics.Update(totalTime);
                         break;
                     default:
@@ -262,13 +250,15 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         }
         public override LPSMetricType MetricType => LPSMetricType.Time;
+        
+        // Cumulative metrics (never reset - for final summary)
         public TotalTime TotalTimeMetrics { get; private set; } = new();
         public TCPHandshakeTime TCPHandshakeTimeMetrics { get; private set; } = new();
         public SSLHandshakeTime SSLHandshakeTimeMetrics { get; private set; } = new();
         public TimeToFirstByte TimeToFirstByteMetrics { get;private set; } = new();
         public WaitingTime WaitingTimeMetrics { get; private set; } = new();
-        public ReceivingTime ReceivingTimeMetrics { get; private set; } = new(); // RENAMED
-        public SendingTime SendingTimeMetrics { get; private set; } = new();     // RENAMED
+        public ReceivingTime ReceivingTimeMetrics { get; private set; } = new();
+        public SendingTime SendingTimeMetrics { get; private set; } = new();
 
 
         public class MetricTime
@@ -301,13 +291,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 P99 = _histogram.GetValueAtPercentile(99);
             }
         }
+
         public class TotalTime : MetricTime { }
         public class SSLHandshakeTime : MetricTime { }
         public class TCPHandshakeTime : MetricTime { }
         public class TimeToFirstByte : MetricTime { }
         public class WaitingTime : MetricTime { }
-        public class ReceivingTime : MetricTime { } // RENAMED
-        public class SendingTime : MetricTime { }   // RENAMED
-                                                    
+        public class ReceivingTime : MetricTime { }
+        public class SendingTime : MetricTime { }
     }
 }   

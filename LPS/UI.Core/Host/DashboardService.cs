@@ -38,8 +38,7 @@ namespace LPS.UI.Core.Host
             if (_dashboardConfig.Value.BuiltInDashboard.HasValue && _dashboardConfig.Value.BuiltInDashboard.Value)
             {
                 var port = _dashboardConfig.Value?.Port ?? GlobalSettings.DefaultDashboardPort;
-                var queryParams = $"refreshrate={_dashboardConfig.Value?.RefreshRate ?? 5}";
-                OpenBrowser($"http://{_clusterConfiguration?.MasterNodeIP ?? "127.0.0.1"}:{port}?{queryParams}");
+                OpenBrowser($"http://{_clusterConfiguration?.MasterNodeIP ?? "127.0.0.1"}:{port}");
             }
         }
         public async Task EnsureDashboardUpdateBeforeExitAsync()

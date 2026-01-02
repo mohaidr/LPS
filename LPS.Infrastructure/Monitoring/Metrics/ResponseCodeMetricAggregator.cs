@@ -3,13 +3,13 @@ using LPS.Domain;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Monitoring.EventSources;
-using LPS.Infrastructure.Monitoring.MetricsVariables; // NEW
+using LPS.Infrastructure.Monitoring.MetricsVariables;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;                    // NEW
-using System.Text.Json.Serialization;     // NEW
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Net;
@@ -79,18 +79,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
-        public override async ValueTask StopAsync(CancellationToken token)
-        {
-            if (IsStarted) IsStarted = false;
-            await ValueTask.CompletedTask;
-        }
-
-        public override async ValueTask StartAsync(CancellationToken token)
-        {
-            if (!IsStarted) IsStarted = true;
-            await ValueTask.CompletedTask;
-        }
-
         // NEW: serialize and publish the dimension set to the variable system
         private async Task PushMetricAsync(CancellationToken token)
         {
@@ -126,7 +114,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             URL = url;
             HttpVersion = httpVersion;
             _responseSummaries = new ConcurrentBag<HttpResponseSummary>();
-
         }
 
         public void Update(HttpResponse.SetupCommand response)
@@ -151,9 +138,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             TimeStamp = DateTime.UtcNow;
         }
+
         public override LPSMetricType MetricType => LPSMetricType.ResponseCode;
 
- 
         protected ConcurrentBag<HttpResponseSummary> _responseSummaries { get; private set; }
 
         public IList<HttpResponseSummary> ResponseSummaries => _responseSummaries.ToList();

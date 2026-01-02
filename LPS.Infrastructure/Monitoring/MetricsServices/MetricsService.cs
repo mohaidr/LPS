@@ -79,11 +79,14 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return updated.Value;
             }
             await QueryMetricsAsync(requestId, token);
-            var throughputMetric = _aggregators[requestId.ToString()]
-                .Single(metric => metric.MetricType == LPSMetricType.Throughput);
+            var throughputMetrics = _aggregators[requestId.ToString()]
+                .OfType<IThroughputMetricCollector>();
 
-            var result = await ((IThroughputMetricCollector)throughputMetric).IncreaseConnectionsCount(token);
-            updated ??= result;
+            foreach (var metric in throughputMetrics)
+            {
+                await metric.IncreaseConnectionsCount(token);
+            }
+            updated ??= true;
             return updated.Value;
         }
 
@@ -110,10 +113,13 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 return updated.Value;
             }
             await QueryMetricsAsync(requestId, token);
-            var throughputMetric = _aggregators[requestId.ToString()]
-                .Single(metric => metric.MetricType == LPSMetricType.Throughput);
-            var result = await ((IThroughputMetricCollector)throughputMetric).DecreseConnectionsCount(token);
-            updated ??= result;
+            var throughputMetrics = _aggregators[requestId.ToString()]
+                .OfType<IThroughputMetricCollector>();
+            foreach (var metric in throughputMetrics)
+            {
+                await metric.DecreseConnectionsCount(token);
+            }
+            updated ??= true;
             return updated.Value;
         }
 
@@ -143,9 +149,9 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
             await QueryMetricsAsync(requestId, token);
             var responseMetrics = _aggregators[requestId.ToString()]
-                .Where(metric =>  metric.MetricType == LPSMetricType.ResponseCode);
+                .OfType<IResponseMetricCollector>();
            
-            var result = await Task.WhenAll(responseMetrics.Select(metric => ((IResponseMetricCollector)metric).UpdateAsync(lpsResponse, token)));
+            var result = await Task.WhenAll(responseMetrics.Select(metric => metric.UpdateAsync(lpsResponse, token)));
             updated ??= true;
             return updated.Value;
         }
@@ -176,7 +182,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                await ((IDataTransmissionMetricAggregator)metric).UpdateDataSentAsync(totalBytes, token);
+                await metric.UpdateDataSentAsync(totalBytes, token);
             }
             updated ??= true;
             return updated.Value;
@@ -209,7 +215,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var dataTransmissionMetrics = await GetDataTransmissionMetricsAsync(requestId, token);
             foreach (var metric in dataTransmissionMetrics)
             {
-                await ((IDataTransmissionMetricAggregator)metric).UpdateDataReceivedAsync(totalBytes, token);
+                await metric.UpdateDataReceivedAsync(totalBytes, token);
             }
             updated ??= false;
             return updated.Value;
@@ -300,11 +306,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             return updated.Value;
         }
 
-        private async ValueTask<IEnumerable<IMetricAggregator>> GetDataTransmissionMetricsAsync(Guid requestId, CancellationToken token)
+        private async ValueTask<IEnumerable<IDataTransmissionMetricAggregator>> GetDataTransmissionMetricsAsync(Guid requestId, CancellationToken token)
         {
             await QueryMetricsAsync(requestId, token);
             return _aggregators[requestId.ToString()]
-                .Where(metric => metric.MetricType == LPSMetricType.DataTransmission);
+                .OfType<IDataTransmissionMetricAggregator>();
         }
 
         private async Task QueryMetricsAsync(Guid requestId, CancellationToken token) // call this so in case the request id was sent by the worker to be translated to the matching one on the master

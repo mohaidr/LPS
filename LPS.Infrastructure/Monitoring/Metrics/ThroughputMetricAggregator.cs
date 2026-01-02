@@ -15,7 +15,7 @@ using LPS.Infrastructure.Monitoring.MetricsServices;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class ThroughputMetricAggregator : BaseMetricAggregator, IThroughputMetricCollector
+    public class ThroughputMetricAggregator : BaseMetricAggregator, IThroughputMetricCollector, IDisposable
     {
         private const string MetricName = "Throughput";
 
@@ -27,6 +27,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly Stopwatch _throughputWatch;
         private Timer _timer;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
+        private bool _isStarted;
+        private bool _disposed;
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
@@ -191,7 +193,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _timer?.Dispose(); // To avoid multuple timers running at the same time.
             _timer = new Timer(_ =>
             {
-                if (!IsStarted) return;
+                if (!_isStarted || _disposed) return;
 
                 try
                 {
@@ -216,6 +218,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }, state: null, dueTime: 0, period: 1000); // first tick after 1s is fine
         }
 
+        /// <summary>
+        /// Lazy start: starts the stopwatch and timer on first call.
+        /// Called internally when first request is recorded.
+        /// </summary>
+        private void EnsureStarted()
+        {
+            if (_isStarted || _disposed) return;
+            _isStarted = true;
+            _throughputWatch.Start();
+            _snapshot.StopUpdate = false;
+            ScheduleMetricsUpdate();
+        }
 
         public async ValueTask<bool> IncreaseConnectionsCount(CancellationToken token)
         {
@@ -224,6 +238,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 await _semaphore.WaitAsync(token);
                 isLockTaken = true;
+                
+                // Lazy start on first request
+                EnsureStarted();
+                
                 ++_activeRequestsCount;
                 ++_requestsCount;
                 await UpdateMetricsAsync(token);
@@ -254,35 +272,15 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public override async ValueTask StartAsync(CancellationToken token)
+        public void Dispose()
         {
-            if (!IsStarted)
-            {
-                IsStarted = true;
-                _throughputWatch.Start();
-                _snapshot.StopUpdate = false;
-                ScheduleMetricsUpdate();
-            }
-            await ValueTask.CompletedTask;
-        }
-
-        public override async ValueTask StopAsync(CancellationToken token)
-        {
-            if (IsStarted)
-            {
-                IsStarted = false;
-                _snapshot.StopUpdate = true;
-                try
-                {
-                    //Removed the throughputWatch?.Stop();
-                    //TODO: Do we need to stop the watch here (that measure something like troughput) 
-                    // Or Do we need just to calculate the actual number of requests sent per second
-                    // Or should we just send metric buckets (like metrics for the current 10 seconds and then the next and so on?) -> this makes more sense to me
-                    _timer?.Dispose();
-                }
-                finally { }
-            }
-            await ValueTask.CompletedTask;
+            if (_disposed) return;
+            _disposed = true;
+            _snapshot.StopUpdate = true;
+            _throughputWatch.Stop();
+            _timer?.Dispose();
+            _timer = null;
+            _semaphore.Dispose();
         }
 
         // NEW: Serialize and push to Metrics variable system
@@ -331,6 +329,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
 
+        // Cumulative metrics (never reset)
         public double TimeElapsed { get; private set; }
         public RequestsRate RequestsRate { get; private set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; private set; }
@@ -352,13 +351,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             if (!StopUpdate)
             {
                 TimeStamp = DateTime.UtcNow;
+                
+                // Update cumulative
                 RequestsCount = requestsCount.Equals(default) ? RequestsCount : requestsCount;
                 ActiveRequestsCount = activeRequestsCount;
                 SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? SuccessfulRequestCount : successfulRequestsCount;
                 FailedRequestsCount = failedRequestsCount.Equals(default) ? FailedRequestsCount : failedRequestsCount;
-                TimeElapsed = timeElpased.Equals(default)
-                    ? TimeElapsed
-                    : timeElpased;
+                TimeElapsed = timeElpased.Equals(default) ? TimeElapsed : timeElpased;
                 RequestsRate = requestsRate.Equals(default(RequestsRate)) ? RequestsRate : requestsRate;
                 RequestsRatePerCoolDownPeriod = requestsRatePerCoolDown.Equals(default(RequestsRate))
                     ? RequestsRatePerCoolDownPeriod

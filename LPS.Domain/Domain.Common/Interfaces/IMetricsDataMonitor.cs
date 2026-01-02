@@ -1,18 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 
 namespace LPS.Domain.Common.Interfaces
 {
+    /// <summary>
+    /// Registers iterations for metrics collection.
+    /// Collectors self-manage their lifecycle via IIterationStatusMonitor.
+    /// </summary>
     public interface IMetricsDataMonitor
     {
-        public ValueTask<bool> TryRegisterAsync(string roundName, HttpIteration lpsHttpIteration);
-        public ValueTask MonitorAsync(HttpIteration lpsHttpIteration, CancellationToken token);
-        public ValueTask MonitorAsync(Func<HttpIteration, bool> predicate, CancellationToken token);
-        public ValueTask StopAsync(HttpIteration lpsHttpIteration, CancellationToken token);
-        public ValueTask StopAsync(Func<HttpIteration, bool> predicate, CancellationToken token);
+        /// <summary>
+        /// Registers an iteration for metrics collection. 
+        /// The collectors are created and automatically start listening to coordinator events.
+        /// </summary>
+        ValueTask<bool> TryRegisterAsync(string roundName, HttpIteration lpsHttpIteration);
     }
 }

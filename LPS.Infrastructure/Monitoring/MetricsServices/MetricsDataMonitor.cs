@@ -1,53 +1,108 @@
-﻿using Grpc.Core;
+﻿#nullable enable
 using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.GRPCClients;
-using LPS.Infrastructure.GRPCClients.Factory;
-using LPS.Infrastructure.Nodes;
-using LPS.Infrastructure.VariableServices.GlobalVariableManager;
-using Spectre.Console;
+using LPS.Infrastructure.Monitoring.Cumulative;
+using LPS.Infrastructure.Monitoring.Windowed;
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using AsyncKeyedLock;
-using System.Threading;
-
 
 namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
-    public class MetricsDataMonitor(
-        ILogger logger,
-        IRuntimeOperationIdProvider runtimeOperationIdProvider,
-        IMetricAggregatorFactory aggregatorFactory,                // CHANGED
-        ICommandStatusMonitor<HttpIteration> commandStatusMonitor,
-        INodeMetadata nodeMetadata,
-        ICustomGrpcClientFactory customGrpcClientFactory,
-        IClusterConfiguration clusterConfiguration,
-        IEntityDiscoveryService entityDiscoveryService) : IMetricsDataMonitor, IDisposable
+    /// <summary>
+    /// Monitor that registers iterations for metrics collection.
+    /// Creates both aggregators (via factory) and collectors (windowed + cumulative).
+    /// Collectors self-manage their lifecycle via IIterationStatusMonitor:
+    /// - They start collecting immediately on registration
+    /// - They check iteration status on each coordinator tick
+    /// - They auto-stop and flush when iteration reaches a terminal status
+    /// </summary>
+    public class MetricsDataMonitor : IMetricsDataMonitor, IDisposable
     {
-        private readonly ILogger _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        private readonly IRuntimeOperationIdProvider _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-        private readonly IMetricAggregatorFactory _factory = aggregatorFactory ?? throw new ArgumentNullException(nameof(aggregatorFactory));
-        private readonly ICommandStatusMonitor<HttpIteration> _commandStatusMonitor = commandStatusMonitor ?? throw new ArgumentNullException(nameof(commandStatusMonitor));
-        private readonly INodeMetadata _nodeMetadata = nodeMetadata ?? throw new ArgumentNullException(nameof(nodeMetadata));
-        private readonly ICustomGrpcClientFactory _customGrpcClientFactory = customGrpcClientFactory ?? throw new ArgumentNullException(nameof(customGrpcClientFactory));
-        private readonly IClusterConfiguration _clusterConfiguration = clusterConfiguration ?? throw new ArgumentNullException(nameof(clusterConfiguration));
-        private readonly IEntityDiscoveryService _entityDiscoveryService = entityDiscoveryService ?? throw new ArgumentNullException(nameof(entityDiscoveryService));
-        private readonly AsyncKeyedLocker<Guid> _iterationLock = new();
+        private readonly ILogger _logger;
+        private readonly IRuntimeOperationIdProvider _op;
+        private readonly IMetricAggregatorFactory _factory;
+        private readonly IWindowedMetricsQueue _windowedQueue;
+        private readonly IWindowedMetricsCoordinator _windowedCoordinator;
+        private readonly ICumulativeMetricsQueue _cumulativeQueue;
+        private readonly ICumulativeMetricsCoordinator _cumulativeCoordinator;
+        private readonly IMetricDataStore _metricDataStore;
+        private readonly IIterationStatusMonitor _iterationStatusMonitor;
 
+        // Track collectors for lifecycle management
+        private readonly ConcurrentDictionary<Guid, WindowedIterationMetricsCollector> _windowedCollectors = new();
+        private readonly ConcurrentDictionary<Guid, CumulativeIterationMetricsCollector> _cumulativeCollectors = new();
+
+        public MetricsDataMonitor(
+            ILogger logger,
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            IMetricAggregatorFactory aggregatorFactory,
+            IWindowedMetricsQueue windowedQueue,
+            IWindowedMetricsCoordinator windowedCoordinator,
+            ICumulativeMetricsQueue cumulativeQueue,
+            ICumulativeMetricsCoordinator cumulativeCoordinator,
+            IMetricDataStore metricDataStore,
+            IIterationStatusMonitor iterationStatusMonitor)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
+            _factory = aggregatorFactory ?? throw new ArgumentNullException(nameof(aggregatorFactory));
+            _windowedQueue = windowedQueue ?? throw new ArgumentNullException(nameof(windowedQueue));
+            _windowedCoordinator = windowedCoordinator ?? throw new ArgumentNullException(nameof(windowedCoordinator));
+            _cumulativeQueue = cumulativeQueue ?? throw new ArgumentNullException(nameof(cumulativeQueue));
+            _cumulativeCoordinator = cumulativeCoordinator ?? throw new ArgumentNullException(nameof(cumulativeCoordinator));
+            _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
+            _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
+        }
+
+        /// <summary>
+        /// Registers an iteration for metrics collection. 
+        /// Creates aggregators via factory and collectors for windowed + cumulative metrics.
+        /// Collectors automatically start listening to coordinator events.
+        /// They will self-manage their lifecycle based on IIterationStatusMonitor.
+        /// </summary>
         public async ValueTask<bool> TryRegisterAsync(string roundName, HttpIteration httpIteration)
         {
             try
             {
+                // Check if already registered
                 if (_factory.TryGet(httpIteration.Id, out _))
                 {
                     await _logger.LogAsync(_op.OperationId, $"Iteration already registered.\nRound: {roundName}\nIteration: {httpIteration.Name}", LPSLoggingLevel.Verbose);
                     return false;
                 }
 
-                _ = _factory.GetOrCreate(httpIteration, roundName);
+                // Get or create all aggregators from factory
+                var aggregators = _factory.GetOrCreate(httpIteration, roundName);
+
+                // Extract windowed aggregators by type
+                var windowedDuration = aggregators.OfType<WindowedDurationAggregator>().FirstOrDefault();
+                var windowedThroughput = aggregators.OfType<WindowedThroughputAggregator>().FirstOrDefault();
+                var windowedResponseCode = aggregators.OfType<WindowedResponseCodeAggregator>().FirstOrDefault();
+                var windowedDataTransmission = aggregators.OfType<WindowedDataTransmissionAggregator>().FirstOrDefault();
+
+                // Create windowed collector and wire up aggregators
+                var windowedCollector = new WindowedIterationMetricsCollector(
+                    httpIteration, roundName, _windowedQueue, _windowedCoordinator, _iterationStatusMonitor)
+                {
+                    DurationAggregator = windowedDuration,
+                    ThroughputAggregator = windowedThroughput,
+                    ResponseCodeAggregator = windowedResponseCode,
+                    DataTransmissionAggregator = windowedDataTransmission
+                };
+
+                // Create cumulative collector (reads from metric data store)
+                var cumulativeCollector = new CumulativeIterationMetricsCollector(
+                    httpIteration, roundName, _cumulativeQueue, _cumulativeCoordinator, _metricDataStore, _iterationStatusMonitor);
+
+                // Store collectors for lifecycle management
+                _windowedCollectors[httpIteration.Id] = windowedCollector;
+                _cumulativeCollectors[httpIteration.Id] = cumulativeCollector;
+
                 return true;
             }
             catch (Exception ex)
@@ -57,76 +112,19 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        public async ValueTask MonitorAsync(Func<HttpIteration, bool> predicate, CancellationToken token)
+        public void Dispose()
         {
-            var matches = _factory.Iterations.Where(predicate).ToList();
-            foreach (var it in matches) await MonitorAsync(it, token);
+            // Dispose collectors
+            foreach (var collector in _windowedCollectors.Values)
+                collector.Dispose();
+            _windowedCollectors.Clear();
+
+            foreach (var collector in _cumulativeCollectors.Values)
+                collector.Dispose();
+            _cumulativeCollectors.Clear();
+
+            // Dispose aggregators via factory
+            _factory.Clear(dispose: true);
         }
-
-        public async ValueTask MonitorAsync(HttpIteration httpIteration, CancellationToken token)
-        {
-            using (await _iterationLock.LockAsync(httpIteration.Id))
-            {
-                if (!_factory.TryGet(httpIteration.Id, out var aggregators))
-                {
-                    await _logger.LogAsync(_op.OperationId, $"Monitoring can't start. Iteration {httpIteration.Name} is not registered.", LPSLoggingLevel.Error);
-                    return;
-                }
-
-                // Ensure master is monitoring (from worker)
-                if (_nodeMetadata.NodeType == NodeType.Worker)
-                {
-                    var monitorClient = _customGrpcClientFactory.GetClient<GrpcMonitorClient>(_clusterConfiguration.MasterNodeIP);
-                    var fqdn = _entityDiscoveryService.Discover(r => r.IterationId == httpIteration.Id).Single().FullyQualifiedName;
-                    try
-                    {
-                        await _logger.LogAsync(_op.OperationId, $"Sending Monitor request for {fqdn}", LPSLoggingLevel.Verbose);
-                        await monitorClient.MonitorAsync(fqdn).ConfigureAwait(false); // CHANGED: async/await
-                    }
-                    catch (InvalidOperationException invalidOpEx) when (invalidOpEx.InnerException is RpcException rpcEx)
-                    {
-                        await _logger.LogAsync(_op.OperationId, $"{rpcEx.Status}\n{rpcEx.Message}\n{rpcEx.InnerException} {rpcEx.StackTrace}", LPSLoggingLevel.Error);
-                        AnsiConsole.MarkupLine($"[Red][[Error]] {DateTime.Now} {rpcEx.Status}\n{rpcEx.Message}[/]");
-                    }
-                    catch (Exception ex)
-                    {
-                        await _logger.LogAsync(_op.OperationId, $"{ex.Message}\n\t{ex.InnerException}", LPSLoggingLevel.Error);
-                        throw;
-                    }
-                }
-                foreach (var metric in aggregators)
-                {
-                    await metric.StartAsync(token);
-                }
-
-            }
-        }
-
-        public async ValueTask StopAsync(HttpIteration httpIteration, CancellationToken token)
-        {
-            using (await _iterationLock.LockAsync(httpIteration.Id))
-            {
-
-                if (_factory.TryGet(httpIteration.Id, out var aggregators))
-                {
-                    bool anyOngoing = await _commandStatusMonitor.IsAnyCommandOngoing(httpIteration);
-                    if (!anyOngoing)
-                    {
-                        foreach (var a in aggregators) await a.StopAsync(token);
-                    }
-                }
-            }
-        }
-
-        public async ValueTask StopAsync(Func<HttpIteration, bool> predicate, CancellationToken token)
-        {
-            var matches = _factory.Iterations.Where(predicate).ToList();
-            foreach (var it in matches)
-            {
-                await StopAsync(it, token);
-            }
-        }
-
-        public void Dispose() => _factory.Clear(dispose: true);
     }
 }

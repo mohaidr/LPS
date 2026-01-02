@@ -42,7 +42,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 }
             }
         }
-
         public static class LPSCommandOptions
         {
             static LPSCommandOptions()
@@ -301,7 +300,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
         }
-
         public static class LPSRunCommandOptions
         {
             static LPSRunCommandOptions()
@@ -342,7 +340,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
         }
-
         public static class LPSCreateCommandOptions
         {
             static LPSCreateCommandOptions()
@@ -365,7 +362,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
         }
-
         public static class LPSRoundCommandOptions
         {
             static LPSRoundCommandOptions()
@@ -456,7 +452,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 AllowMultipleArgumentsPerToken = true
             };
         }
-
         public static class RefCommandOptions
         {
             static RefCommandOptions()
@@ -489,7 +484,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
         }
-
         public static class VariableCommandOptions
         {
             static VariableCommandOptions()
@@ -559,7 +553,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
         }
-
         public static class CaptureCommandOptions
         {
             static CaptureCommandOptions()
@@ -795,7 +788,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
         }
-
         public static class LPSLoggerCommandOptions
         {
             static LPSLoggerCommandOptions()
@@ -1002,9 +994,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
         }
-
-
-
         public static class LPSClusterCommandOptions
         {
             static LPSClusterCommandOptions()
@@ -1037,8 +1026,6 @@ namespace LPS.UI.Core.LPSCommandLine
                 foreach (var a in aliases) opt.AddAlias(a);
             }
         }
-
-
         public static string ParseBoolOptionArgument(System.CommandLine.Parsing.ArgumentResult result)
         {
             if (result.Tokens.Count == 0)
@@ -1050,7 +1037,6 @@ namespace LPS.UI.Core.LPSCommandLine
 
             throw new ArgumentException("Unexpected number of tokens for the option.");
         }
-
         public static void AddOptionsToCommand(Command command, Type optionsType)
         {
             var properties = optionsType.GetProperties(
