@@ -22,6 +22,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly IRuntimeOperationIdProvider _op;
         private readonly IMetricsVariableService _metricsVarSvc;
         private readonly IMetricDataStore _metricDataStore;
+        private readonly IFailureRulesService _failureRulesService;
 
         private sealed record Entry(HttpIteration Iteration, IReadOnlyList<IMetricAggregator> Aggregators);
 
@@ -32,12 +33,14 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
-            IMetricDataStore metricDataStore)
+            IMetricDataStore metricDataStore,
+            IFailureRulesService failureRulesService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVarSvc = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
+            _failureRulesService = failureRulesService ?? throw new ArgumentNullException(nameof(failureRulesService));
         }
 
         public IReadOnlyList<IMetricAggregator> GetOrCreate(HttpIteration iteration, string roundName)
@@ -102,16 +105,22 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             {
                 new ResponseCodeMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
                 new DurationMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
-                new ThroughputMetricAggregator(httpIteration, roundName , _logger, _op, _metricsVarSvc, _metricDataStore),
+                new ThroughputMetricAggregator(httpIteration, roundName , _logger, _op, _metricsVarSvc, _failureRulesService, _metricDataStore),
                 new DataTransmissionMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore)
             };
 
             // Windowed aggregators (lightweight - no queue/coordinator dependency)
+            var windowedThroughput = new WindowedThroughputAggregator(httpIteration, roundName);
+            var windowedResponseCode = new WindowedResponseCodeAggregator(httpIteration, roundName, _failureRulesService);
+            
+            // Wire up response code -> throughput for success/failure tracking based on failure rules
+            windowedResponseCode.SetThroughputAggregator(windowedThroughput);
+            
             var windowed = new List<IMetricAggregator>
             {
                 new WindowedDurationAggregator(httpIteration, roundName),
-                new WindowedThroughputAggregator(httpIteration, roundName),
-                new WindowedResponseCodeAggregator(httpIteration, roundName),
+                windowedThroughput,
+                windowedResponseCode,
                 new WindowedDataTransmissionAggregator(httpIteration, roundName)
             };
 

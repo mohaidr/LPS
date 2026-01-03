@@ -21,6 +21,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private readonly string _roundName;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private bool _disposed;
+        private WindowedThroughputAggregator? _throughputAggregator;
+        private readonly IFailureRulesService _failureRulesService;
 
         // Response code counters (resettable)
         private Dictionary<HttpStatusCode, (string Reason, int Count)> _statusCodes = new();
@@ -30,10 +32,21 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
         public WindowedResponseCodeAggregator(
             HttpIteration httpIteration,
-            string roundName)
+            string roundName,
+            IFailureRulesService failureRulesService)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
+            _failureRulesService = failureRulesService ?? throw new ArgumentNullException(nameof(failureRulesService));
+        }
+
+        /// <summary>
+        /// Sets the throughput aggregator to update with success/failure counts.
+        /// Should be called during initialization.
+        /// </summary>
+        public void SetThroughputAggregator(WindowedThroughputAggregator? throughputAggregator)
+        {
+            _throughputAggregator = throughputAggregator;
         }
 
         /// <summary>
@@ -122,6 +135,28 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                 else
                 {
                     _statusCodes[statusCode] = (existing.Reason, existing.Count + 1);
+                }
+
+                // Update throughput aggregator with success/failure counts based on failure rules
+                if (_throughputAggregator != null)
+                {
+                    int successCount = 0;
+                    int failedCount = 0;
+
+                    foreach (var kvp in _statusCodes)
+                    {
+                        int code = (int)kvp.Key;
+                        if (_failureRulesService.IsErrorStatusCode(_httpIteration, _roundName, code))
+                        {
+                            failedCount += kvp.Value.Count;
+                        }
+                        else
+                        {
+                            successCount += kvp.Value.Count;
+                        }
+                    }
+
+                    _throughputAggregator.UpdateSuccessFailure(successCount, failedCount);
                 }
             }
             finally { _semaphore.Release(); }

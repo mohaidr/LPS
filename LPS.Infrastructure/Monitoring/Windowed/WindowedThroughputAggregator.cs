@@ -100,6 +100,9 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         /// Updates success/failure counts based on response codes.
         /// Called when response data is available.
         /// </summary>
+        /// <summary>
+        /// Updates success/failure counts. Called by WindowedResponseCodeAggregator.
+        /// </summary>
         public void UpdateSuccessFailure(int successCount, int failedCount)
         {
             _semaphore.Wait();

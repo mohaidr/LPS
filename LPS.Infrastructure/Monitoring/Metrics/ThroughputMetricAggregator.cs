@@ -32,9 +32,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
-
-        // Cached error status code filters from failure rules
-        private readonly List<(ComparisonOperator Op, double Threshold, double? ThresholdMax)> _errorStatusCodeFilters;
+        private readonly IFailureRulesService _failureRulesService;
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
         public readonly string _roundName;
@@ -43,11 +41,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             string roundName,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricsVariableService metricsVariableService // NEW
-        , IMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
+            IMetricsVariableService metricsVariableService,
+            IFailureRulesService failureRulesService,
+            IMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+            _failureRulesService = failureRulesService ?? throw new ArgumentNullException(nameof(failureRulesService));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
 
             _snapshot = new ThroughputMetricSnapshot(
@@ -61,64 +61,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             
-            // Extract error status code filters from failure rules
-            _errorStatusCodeFilters = ExtractErrorStatusCodeFilters(httpIteration);
-            
             PushMetricAsync(default).Wait();
-        }
-
-        /// <summary>
-        /// Extracts all errorStatusCodes from the iteration's failure rules that have ErrorRate metrics.
-        /// If no ErrorRate rules are defined, defaults to >= 400.
-        /// </summary>
-        private static List<(ComparisonOperator Op, double Threshold, double? ThresholdMax)> ExtractErrorStatusCodeFilters(HttpIteration iteration)
-        {
-            var filters = new List<(ComparisonOperator Op, double Threshold, double? ThresholdMax)>();
-
-            if (iteration.FailureRules != null && iteration.FailureRules.Count > 0)
-            {
-                foreach (var rule in iteration.FailureRules)
-                {
-                    // Check if this is an ErrorRate rule
-                    if (MetricParser.TryParse(rule.Metric, out var parsed) && 
-                        parsed.MetricName.Equals("ErrorRate", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // Get the errorStatusCodes for this rule (default to >= 400 if not specified)
-                        var statusCodeExpression = string.IsNullOrWhiteSpace(rule.ErrorStatusCodes) 
-                            ? ">= 400" 
-                            : rule.ErrorStatusCodes;
-
-                        // Parse it as a StatusCode expression
-                        if (MetricParser.TryParse($"StatusCode {statusCodeExpression}", out var statusParsed))
-                        {
-                            filters.Add((statusParsed.Operator, statusParsed.Value1, statusParsed.Value2));
-                        }
-                    }
-                }
-            }
-
-            // If no ErrorRate rules found, use default >= 400
-            if (filters.Count == 0)
-            {
-                filters.Add((ComparisonOperator.GreaterThanOrEqual, 400, null));
-            }
-
-            return filters;
-        }
-
-        /// <summary>
-        /// Checks if a status code matches any of the error status code filters.
-        /// </summary>
-        private bool IsErrorStatusCode(int statusCode)
-        {
-            foreach (var (op, threshold, thresholdMax) in _errorStatusCodeFilters)
-            {
-                if (MetricParser.EvaluateCondition(statusCode, op, threshold, thresholdMax))
-                {
-                    return true;
-                }
-            }
-            return false;
         }
 
         private async ValueTask<bool> UpdateMetricsAsync(CancellationToken token)
@@ -142,7 +85,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     foreach (var summary in snapshot.ResponseSummaries)
                     {
                         int statusCode = (int)summary.HttpStatusCode;
-                        if (IsErrorStatusCode(statusCode))
+                        if (_failureRulesService.IsErrorStatusCode(_httpIteration, _roundName, statusCode))
                         {
                             failedCount += summary.Count;
                         }

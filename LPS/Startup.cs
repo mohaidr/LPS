@@ -108,6 +108,7 @@ namespace LPS
                     services.AddSingleton<IWarmUpService, WarmUpService>();
                     services.AddSingleton<IEntityRepositoryService, EntityRepositoryService>();
                     services.AddSingleton<IEntityDiscoveryService, EntityDiscoveryService>();
+                    services.AddSingleton<IFailureRulesService, FailureRulesService>();
                     services.AddSingleton<IMetricAggregatorFactory, MetricAggregatorFactory>();
                     services.AddSingleton<IMetricsUiService, MetricsUiService>();
                     services.AddSingleton<IMetricDataStore, MetricDataStoreService>();
