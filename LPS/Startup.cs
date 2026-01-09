@@ -36,7 +36,6 @@ using LPS.Infrastructure.Services;
 using LPS.Infrastructure.Monitoring.TerminationServices;
 using LPS.Infrastructure.FailureEvaluator;
 using LPS.Infrastructure.Monitoring;  // For MetricFetcher
-using LPS.Infrastructure.Monitoring.MetricsServices; // For GrafanaCloudConfig
 using LPS.Infrastructure.Skip;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices;
@@ -158,22 +157,6 @@ namespace LPS
                     services.AddSingleton<IDashboardService, DashboardService>();
                     services.AddSingleton<NodeHealthMonitorBackgroundService>();
                     
-                    // Grafana Cloud integration
-                    var grafanaOptions = hostContext.Configuration
-                        .GetSection("LPSAppSettings:GrafanaCloud")
-                        .Get<GrafanaCloudOptions>() ?? new GrafanaCloudOptions();
-                    
-                    services.AddSingleton(new GrafanaCloudConfig
-                    {
-                        Enabled = grafanaOptions.Enabled,
-                        Endpoint = grafanaOptions.Endpoint ?? string.Empty,
-                        Username = grafanaOptions.Username ?? string.Empty,
-                        ApiKey = grafanaOptions.ApiKey ?? string.Empty,
-                        PushIntervalSeconds = grafanaOptions.PushIntervalSeconds > 0 ? grafanaOptions.PushIntervalSeconds : 5,
-                        JobName = grafanaOptions.JobName ?? "lps"
-                    });
-                    services.AddSingleton<IGrafanaCloudPusher, GrafanaCloudPusher>();
-                    
                     // Windowed metrics - new clean architecture
                     // Coordinator fires OnWindowClosed event, aggregators subscribe and push to queue
                     // Pusher reads from queue and sends to SignalR (registered in Apis project)
@@ -208,7 +191,7 @@ namespace LPS
                     services.ConfigureWritable<WatchdogOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Watchdog"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<HttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:HttpClient"), AppConstants.AppSettingsFileLocation);
                     services.ConfigureWritable<ClusterConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Cluster"), AppConstants.AppSettingsFileLocation);
-                    services.ConfigureWritable<GrafanaCloudOptions>(hostContext.Configuration.GetSection("LPSAppSettings:GrafanaCloud"), AppConstants.AppSettingsFileLocation);
+                    services.ConfigureWritable<LPS.UI.Common.Options.InfluxDBOptions>(hostContext.Configuration.GetSection("LPSAppSettings:InfluxDB"), AppConstants.AppSettingsFileLocation);
                     services.AddHostedService(isp => isp.ResolveWith<HostedService>(new { args }));
 
                     if (hostContext.HostingEnvironment.IsProduction())
@@ -224,6 +207,7 @@ namespace LPS
                 .UseWatchdog()
                 .UseHttpClient()
                 .UseClusterConfiguration()
+                .UseInfluxDB()
                 .UseConsoleLifetime(options => options.SuppressStatusMessages = true)
                .Build();
 

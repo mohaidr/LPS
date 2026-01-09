@@ -4,6 +4,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Apis.Hubs;
 using LPS.Infrastructure.Monitoring.Cumulative;
+using LPS.Infrastructure.Monitoring.MetricsServices;
+using LPS.Infrastructure.Nodes;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -12,22 +14,29 @@ namespace Apis.Services
 {
     /// <summary>
     /// Background service that reads cumulative metric snapshots from the queue
-    /// and pushes them to connected SignalR clients.
+    /// and pushes them to connected SignalR clients and customer's InfluxDB.
     /// Cumulative data is pushed at its own interval (RefreshRate), separate from windowed data.
+    /// Only master node uploads to InfluxDB (workers have partial data).
     /// </summary>
     public sealed class CumulativeMetricsSignalRPusher : BackgroundService
     {
         private readonly ICumulativeMetricsQueue _queue;
         private readonly IHubContext<WindowedMetricsHub> _hubContext;
+        private readonly IInfluxDBWriter _influxDBWriter;
+        private readonly INodeMetadata _nodeMetadata;
         private readonly ILogger<CumulativeMetricsSignalRPusher> _logger;
 
         public CumulativeMetricsSignalRPusher(
             ICumulativeMetricsQueue queue,
             IHubContext<WindowedMetricsHub> hubContext,
+            IInfluxDBWriter influxDBWriter,
+            INodeMetadata nodeMetadata,
             ILogger<CumulativeMetricsSignalRPusher> logger)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
+            _influxDBWriter = influxDBWriter ?? throw new ArgumentNullException(nameof(influxDBWriter));
+            _nodeMetadata = nodeMetadata ?? throw new ArgumentNullException(nameof(nodeMetadata));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -74,6 +83,13 @@ namespace Apis.Services
                     "Pushed cumulative snapshot for {IterationName} (final: {IsFinal})",
                     snapshot.IterationName,
                     snapshot.IsFinal);
+
+                // Upload to customer's InfluxDB (fire-and-forget, non-blocking)
+                // Only master uploads - workers have partial data, master has aggregated metrics
+                if (_nodeMetadata.NodeType == NodeType.Master)
+                {
+                    _ = _influxDBWriter.UploadCumulativeMetricsAsync(snapshot);
+                }
             }
             catch (Exception ex)
             {

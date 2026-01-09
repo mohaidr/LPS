@@ -34,13 +34,12 @@
       "RefreshRate": 3,
       "WindowIntervalSeconds": 5
     },
-    "GrafanaCloud": {
-      "Enabled": false,
-      "Endpoint": "https://prometheus-prod-53-prod-me-central-1.grafana.net/api/prom/push",
-      "Username": "***",
-      "ApiKey": "***",
-      "PushIntervalSeconds": 15,
-      "JobName": "lps"
+    "InfluxDB": {
+      "Enabled": true,
+      "Url": "<YOUR_INFLUXDB_URL>",
+      "Token": "<YOUR_INFLUXDB_TOKEN>",
+      "Organization": "lps",
+      "Bucket": "lps-metrics"
     }
   }
 }

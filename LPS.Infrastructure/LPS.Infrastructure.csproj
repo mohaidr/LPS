@@ -11,6 +11,7 @@
     <PackageReference Include="Grpc.Net.Client" Version="2.67.0" />
     <PackageReference Include="HdrHistogram" Version="2.5.0" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.70" />
+    <PackageReference Include="InfluxDB.Client" Version="4.18.0" />
     <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.7" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.7" />

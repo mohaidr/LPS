@@ -188,6 +188,58 @@ namespace LPS.UI.Common.Extensions
             return hostBuilder;
         }
 
+        public static IHostBuilder UseInfluxDB(this IHostBuilder hostBuilder, InfluxDBOptions? influxDBOptions = null)
+        {
+            hostBuilder.ConfigureServices((hostContext, services) =>
+            {
+                influxDBOptions ??= hostContext.Configuration.GetSection("LPSAppSettings:InfluxDB").Get<InfluxDBOptions>();
+
+                // Validate and register InfluxDB writer
+                var (validOptions, isValid) = ValidateOptions(
+                    influxDBOptions,
+                    hostContext,
+                    new InfluxDBValidator(),
+                    "LPSAppSettings:InfluxDB");
+
+                // Register the validated options for InfluxDBWriter
+                services.AddSingleton(sp =>
+                {
+                    var logger = sp.GetRequiredService<ILogger>();
+                    
+                    if (!isValid || validOptions == null)
+                    {
+                        LogConfigurationIssue(logger, "InfluxDB", "LPSAppSettings:InfluxDB", validOptions == null);
+                        // Return disabled options
+                        return new LPS.Infrastructure.Monitoring.MetricsServices.InfluxDBOptions
+                        {
+                            Enabled = false,
+                            Url = string.Empty,
+                            Token = string.Empty,
+                            Organization = string.Empty,
+                            Bucket = string.Empty
+                        };
+                    }
+
+                    var infraOptions = new LPS.Infrastructure.Monitoring.MetricsServices.InfluxDBOptions
+                    {
+                        Enabled = validOptions.Enabled ?? false,
+                        Url = validOptions.Url ?? string.Empty,
+                        Token = validOptions.Token ?? string.Empty,
+                        Organization = validOptions.Organization ?? string.Empty,
+                        Bucket = validOptions.Bucket ?? "lps-metrics"
+                    };
+
+                    LogAppliedConfiguration(infraOptions, false, "InfluxDB Configuration", logger);
+                    return infraOptions;
+                });
+
+                services.AddHttpClient<LPS.Infrastructure.Monitoring.MetricsServices.IInfluxDBWriter, 
+                    LPS.Infrastructure.Monitoring.MetricsServices.InfluxDBWriter>();
+            });
+
+            return hostBuilder;
+        }
+
         #region Helper Methods
 
         private static (TOptions? validOptions, bool isValid) ValidateOptions<TOptions>(

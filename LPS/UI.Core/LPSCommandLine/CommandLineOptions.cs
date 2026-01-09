@@ -1026,6 +1026,78 @@ namespace LPS.UI.Core.LPSCommandLine
                 foreach (var a in aliases) opt.AddAlias(a);
             }
         }
+        
+        public static class LPSDashboardCommandOptions
+        {
+            static LPSDashboardCommandOptions()
+            {
+                BuiltInDashboardOption.AddAlias("-bid");
+                PortOption.AddAlias("-p");
+                RefreshRateOption.AddAlias("-rr");
+                WindowIntervalSecondsOption.AddAlias("-wis");
+
+                AddCaseInsensitiveAliases(BuiltInDashboardOption, "--builtindashboard");
+                AddCaseInsensitiveAliases(PortOption, "--port");
+                AddCaseInsensitiveAliases(RefreshRateOption, "--refreshrate");
+                AddCaseInsensitiveAliases(WindowIntervalSecondsOption, "--windowintervalseconds");
+            }
+
+            public static Option<bool?> BuiltInDashboardOption { get; } =
+                new("--builtindashboard", "Enable or disable built-in dashboard") { IsRequired = false };
+
+            public static Option<int?> PortOption { get; } =
+                new("--port", "Dashboard port") { IsRequired = false };
+
+            public static Option<int?> RefreshRateOption { get; } =
+                new("--refreshrate", "Dashboard refresh rate in seconds") { IsRequired = false };
+
+            public static Option<int?> WindowIntervalSecondsOption { get; } =
+                new("--windowintervalseconds", "Window interval for windowed metrics in seconds") { IsRequired = false };
+
+            private static void AddCaseInsensitiveAliases<T>(Option<T> opt, params string[] aliases)
+            {
+                foreach (var a in aliases) opt.AddAlias(a);
+            }
+        }
+
+        public static class LPSInfluxDBCommandOptions
+        {
+            static LPSInfluxDBCommandOptions()
+            {
+                EnabledOption.AddAlias("-ie");
+                UrlOption.AddAlias("-iu");
+                TokenOption.AddAlias("-it");
+                OrganizationOption.AddAlias("-io");
+                BucketOption.AddAlias("-ib");
+
+                AddCaseInsensitiveAliases(EnabledOption, "--influxdbenabled");
+                AddCaseInsensitiveAliases(UrlOption, "--influxdburl");
+                AddCaseInsensitiveAliases(TokenOption, "--influxdbtoken");
+                AddCaseInsensitiveAliases(OrganizationOption, "--influxdborganization");
+                AddCaseInsensitiveAliases(BucketOption, "--influxdbbucket");
+            }
+
+            public static Option<bool?> EnabledOption { get; } =
+                new("--influxdbenabled", "Enable or disable InfluxDB integration") { IsRequired = false };
+
+            public static Option<string?> UrlOption { get; } =
+                new("--influxdburl", "InfluxDB server URL") { IsRequired = false };
+
+            public static Option<string?> TokenOption { get; } =
+                new("--influxdbtoken", "InfluxDB authentication token") { IsRequired = false };
+
+            public static Option<string?> OrganizationOption { get; } =
+                new("--influxdborganization", "InfluxDB organization name") { IsRequired = false };
+
+            public static Option<string?> BucketOption { get; } =
+                new("--influxdbbucket", "InfluxDB bucket name") { IsRequired = false };
+
+            private static void AddCaseInsensitiveAliases<T>(Option<T> opt, params string[] aliases)
+            {
+                foreach (var a in aliases) opt.AddAlias(a);
+            }
+        }
+        
         public static string ParseBoolOptionArgument(System.CommandLine.Parsing.ArgumentResult result)
         {
             if (result.Tokens.Count == 0)
