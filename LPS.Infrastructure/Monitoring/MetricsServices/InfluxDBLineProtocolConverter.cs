@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             var lines = new List<string>();
             var timestamp = ToNanosecondTimestamp(snapshot.WindowEnd);
-            var tags = BuildCommonTags(snapshot.IterationId, snapshot.IterationName, snapshot.RoundName, snapshot.TargetUrl);
+            var tags = BuildCommonTags(snapshot.PlanName, snapshot.TestStartTime, snapshot.RoundName, snapshot.IterationName, snapshot.TargetUrl);
 
             // Duration metrics (timing)
             if (snapshot.Duration?.HasData == true)
@@ -48,6 +48,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 lines.Add(ConvertWindowedDataTransmission(tags, snapshot.DataTransmission, timestamp));
             }
 
+            // Final iteration status (only written once when iteration completes)
+            if (snapshot.IsFinal)
+            {
+                lines.Add(ConvertIterationFinalStatus(tags, snapshot.ExecutionStatus, timestamp));
+            }
+
             return string.Join("\n", lines);
         }
 
@@ -58,7 +64,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         {
             var lines = new List<string>();
             var timestamp = ToNanosecondTimestamp(snapshot.Timestamp);
-            var tags = BuildCommonTags(snapshot.IterationId, snapshot.IterationName, snapshot.RoundName, snapshot.TargetUrl);
+            var tags = BuildCommonTags(snapshot.PlanName, snapshot.TestStartTime, snapshot.RoundName, snapshot.IterationName, snapshot.TargetUrl);
 
             // Duration metrics
             if (snapshot.Duration != null)
@@ -82,6 +88,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             if (snapshot.DataTransmission != null)
             {
                 lines.Add(ConvertCumulativeDataTransmission(tags, snapshot.DataTransmission, timestamp));
+            }
+
+            // Final iteration status (only written once when iteration completes)
+            if (snapshot.IsFinal)
+            {
+                lines.Add(ConvertIterationFinalStatus(tags, snapshot.ExecutionStatus, timestamp));
             }
 
             return string.Join("\n", lines);
@@ -118,21 +130,20 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private static string ConvertWindowedThroughput(string tags, WindowedThroughputData throughput, long timestamp)
         {
             var fields = new StringBuilder();
-            fields.Append($"requests={throughput.RequestsCount}i,");
-            fields.Append($"successful={throughput.SuccessfulRequestCount}i,");
-            fields.Append($"failed={throughput.FailedRequestsCount}i,");
-            fields.Append($"active={throughput.ActiveRequestsCount}i,");
-            fields.Append($"rps={FormatFloat(throughput.RequestsPerSecond)},");
-            fields.Append($"error_rate={FormatFloat(throughput.ErrorRate)}");
+            // Request counts (per window only - cumulative metrics like active_count, requests_per_second, error_rate belong in cumulative_requests)
+            fields.Append($"requests_count={throughput.RequestsCount}i,");
+            fields.Append($"successful_count={throughput.SuccessfulRequestCount}i,");
+            fields.Append($"failed_count={throughput.FailedRequestsCount}i");
 
-            return BuildLine("windowed_throughput", tags, fields.ToString(), timestamp);
+            return BuildLine("windowed_requests", tags, fields.ToString(), timestamp);
         }
 
         private static IEnumerable<string> ConvertWindowedResponseCodes(string tags, WindowedResponseCodeData responseCodes, long timestamp)
         {
             foreach (var summary in responseCodes.ResponseSummaries)
             {
-                var codeTags = $"{tags},status_code={summary.HttpStatusCode}";
+                var statusReason = string.IsNullOrWhiteSpace(summary.HttpStatusReason) ? "unknown" : summary.HttpStatusReason;
+                var codeTags = $"{tags},status_code={summary.HttpStatusCode},status_reason={EscapeTag(statusReason)}";
                 var fields = $"count={summary.Count}i";
                 yield return BuildLine("windowed_response_codes", codeTags, fields, timestamp);
             }
@@ -145,9 +156,9 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             fields.Append($"data_received={FormatFloat(data.DataReceived)},");
             fields.Append($"upstream_bps={FormatFloat(data.UpstreamThroughputBps)},");
             fields.Append($"downstream_bps={FormatFloat(data.DownstreamThroughputBps)},");
-            fields.Append($"throughput_bps={FormatFloat(data.ThroughputBps)}");
+            fields.Append($"total_bps={FormatFloat(data.ThroughputBps)}");
 
-            return BuildLine("windowed_data_transmission", tags, fields.ToString(), timestamp);
+            return BuildLine("windowed_data_transfer", tags, fields.ToString(), timestamp);
         }
 
         #endregion
@@ -183,22 +194,26 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private static string ConvertCumulativeThroughput(string tags, CumulativeThroughputData throughput, long timestamp)
         {
             var fields = new StringBuilder();
-            fields.Append($"requests={throughput.RequestsCount}i,");
-            fields.Append($"successful={throughput.SuccessfulRequestCount}i,");
-            fields.Append($"failed={throughput.FailedRequestsCount}i,");
-            fields.Append($"active={throughput.ActiveRequestsCount}i,");
-            fields.Append($"rps={FormatFloat(throughput.RequestsPerSecond)},");
+            // Request counts
+            fields.Append($"requests_count={throughput.RequestsCount}i,");
+            fields.Append($"successful_count={throughput.SuccessfulRequestCount}i,");
+            fields.Append($"failed_count={throughput.FailedRequestsCount}i,");
+            fields.Append($"active_count={throughput.ActiveRequestsCount}i,");
+            // Calculated rates
+            fields.Append($"requests_per_second={FormatFloat(throughput.RequestsPerSecond)},");
+            fields.Append($"requests_rate_per_cooldown={FormatFloat(throughput.RequestsRatePerCoolDown)},");
             fields.Append($"error_rate={FormatFloat(throughput.ErrorRate)},");
-            fields.Append($"elapsed_ms={FormatFloat(throughput.TimeElapsedMs)}");
+            fields.Append($"time_elapsed_ms={FormatFloat(throughput.TimeElapsedMs)}");
 
-            return BuildLine("cumulative_throughput", tags, fields.ToString(), timestamp);
+            return BuildLine("cumulative_requests", tags, fields.ToString(), timestamp);
         }
 
         private static IEnumerable<string> ConvertCumulativeResponseCodes(string tags, CumulativeResponseCodeData responseCodes, long timestamp)
         {
             foreach (var summary in responseCodes.ResponseSummaries)
             {
-                var codeTags = $"{tags},status_code={summary.HttpStatusCode}";
+                var statusReason = string.IsNullOrWhiteSpace(summary.HttpStatusReason) ? "unknown" : summary.HttpStatusReason;
+                var codeTags = $"{tags},status_code={summary.HttpStatusCode},status_reason={EscapeTag(statusReason)}";
                 var fields = $"count={summary.Count}i";
                 yield return BuildLine("cumulative_response_codes", codeTags, fields, timestamp);
             }
@@ -213,32 +228,49 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             fields.Append($"avg_data_received={FormatFloat(data.AverageDataReceived)},");
             fields.Append($"upstream_bps={FormatFloat(data.UpstreamThroughputBps)},");
             fields.Append($"downstream_bps={FormatFloat(data.DownstreamThroughputBps)},");
-            fields.Append($"throughput_bps={FormatFloat(data.ThroughputBps)}");
+            fields.Append($"total_bps={FormatFloat(data.ThroughputBps)}");
 
-            return BuildLine("cumulative_data_transmission", tags, fields.ToString(), timestamp);
+            return BuildLine("cumulative_data_transfer", tags, fields.ToString(), timestamp);
+        }
+
+        /// <summary>
+        /// Converts iteration final status to InfluxDB line protocol.
+        /// Only written when IsFinal==true. Status is a field (not a tag) so it won't appear as a filter.
+        /// </summary>
+        private static string ConvertIterationFinalStatus(string tags, string executionStatus, long timestamp)
+        {
+            var safeStatus = string.IsNullOrWhiteSpace(executionStatus) ? "unknown" : executionStatus;
+            var fields = $"status=\"{EscapeFieldValue(safeStatus)}\"";
+            return BuildLine("iteration_final_status", tags, fields, timestamp);
         }
 
         #endregion
 
         #region Helper Methods
 
-        private static string BuildCommonTags(Guid iterationId, string iterationName, string roundName, string targetUrl)
+        private static string BuildCommonTags(string planName, DateTime testStartTime, string roundName, string iterationName, string targetUrl)
         {
             // InfluxDB doesn't allow empty tag values, use "unknown" as fallback
-            var safeIterationName = string.IsNullOrWhiteSpace(iterationName) ? "unknown" : iterationName;
+            var safePlanName = string.IsNullOrWhiteSpace(planName) ? "unknown" : planName;
             var safeRoundName = string.IsNullOrWhiteSpace(roundName) ? "unknown" : roundName;
+            var safeIterationName = string.IsNullOrWhiteSpace(iterationName) ? "unknown" : iterationName;
             var safeTargetUrl = string.IsNullOrWhiteSpace(targetUrl) ? "unknown" : targetUrl;
             
-            return $"iteration_id={EscapeTag(iterationId.ToString())}," +
+            // Append test start time to plan name for unique identification
+            // Format: PlanName_2026-01-09_03-45-23 (tag-friendly, no colons)
+            var testStartTimeStr = testStartTime.ToString("yyyy-MM-dd_HH-mm-ss");
+            var planNameWithTimestamp = $"{safePlanName}_{testStartTimeStr}";
+            
+            // Tag order matters in InfluxDB UI: plan → round → iteration → target
+            return $"plan_name={EscapeTag(planNameWithTimestamp)}," +
+                   $"round_name={EscapeTag(safeRoundName)}," +
                    $"iteration_name={EscapeTag(safeIterationName)}," +
-                   $"round={EscapeTag(safeRoundName)}," +
                    $"target={EscapeTag(safeTargetUrl)}";
         }
 
         private static string BuildTimingFields(WindowedTimingMetric metric)
         {
-            return $"count={metric.Count}i," +
-                   $"sum={FormatFloat(metric.Sum)}," +
+            return $"sum={FormatFloat(metric.Sum)}," +
                    $"avg={FormatFloat(metric.Average)}," +
                    $"min={FormatFloat(metric.Min)}," +
                    $"max={FormatFloat(metric.Max)}," +
@@ -271,6 +303,12 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 .Replace(",", "\\,")
                 .Replace("=", "\\=")
                 .Replace(" ", "\\ ");
+        }
+
+        private static string EscapeFieldValue(string value)
+        {
+            // String field values need quotes escaped
+            return value.Replace("\"", "\\\"");
         }
 
         private static string FormatFloat(double value)

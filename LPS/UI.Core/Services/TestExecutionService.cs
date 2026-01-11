@@ -56,6 +56,7 @@ namespace LPS.UI.Core.Services
         private readonly IWarmUpService _warmupService;
         private readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator;
         private readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator;
+        private readonly IPlanExecutionContext _planContext;
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -79,6 +80,7 @@ namespace LPS.UI.Core.Services
             INodeMetadata nodeMetaData,               // NEW
             IWindowedMetricsCoordinator windowedMetricsCoordinator,  // NEW: Windowed metrics coordinator
             ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,  // NEW: Cumulative metrics coordinator
+            IPlanExecutionContext planContext,
             ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
             IWarmUpService warmUpService,
             CancellationTokenSource cts)
@@ -107,6 +109,7 @@ namespace LPS.UI.Core.Services
             _warmupService = warmUpService;
             _windowedMetricsCoordinator = windowedMetricsCoordinator;
             _cumulativeMetricsCoordinator = cumulativeMetricsCoordinator;
+            _planContext = planContext;
             _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
 
             var mapperConfig = new MapperConfiguration(cfg =>
@@ -135,6 +138,10 @@ namespace LPS.UI.Core.Services
 
             var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
             var plan = new Plan(planCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
+
+            // Set plan execution context for metrics
+            var testStartTime = DateTime.UtcNow;
+            _planContext.SetContext(planDto.Name ?? "unknown", testStartTime);
 
             if (plan.IsValid)
             {

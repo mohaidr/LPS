@@ -12,6 +12,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
     public class WindowedIterationSnapshot
     {
         public Guid IterationId { get; init; }
+        public string PlanName { get; init; } = string.Empty;
+        public DateTime TestStartTime { get; init; }
         public string RoundName { get; init; } = string.Empty;
         public string IterationName { get; init; } = string.Empty;
         public string TargetUrl { get; init; } = string.Empty;

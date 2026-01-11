@@ -38,8 +38,8 @@
       "Enabled": true,
       "Url": "<YOUR_INFLUXDB_URL>",
       "Token": "<YOUR_INFLUXDB_TOKEN>",
-      "Organization": "lps",
-      "Bucket": "lps-metrics"
+      "Organization": "LPS",
+      "Bucket": "LPS_Metrics"
     }
   }
 }

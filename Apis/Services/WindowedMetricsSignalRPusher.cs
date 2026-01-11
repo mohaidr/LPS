@@ -88,7 +88,7 @@ namespace Apis.Services
                 // Only master uploads - workers have partial data, master has aggregated metrics
                 if (_nodeMetadata.NodeType == NodeType.Master)
                 {
-                    _ = _influxDBWriter.UploadWindowedMetricsAsync(snapshot);
+                   await _influxDBWriter.UploadWindowedMetricsAsync(snapshot);
                 }
             }
             catch (Exception ex)

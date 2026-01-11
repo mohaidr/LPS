@@ -32,6 +32,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly ICumulativeMetricsCoordinator _cumulativeCoordinator;
         private readonly IMetricDataStore _metricDataStore;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
+        private readonly IPlanExecutionContext _planContext;
 
         // Track collectors for lifecycle management
         private readonly ConcurrentDictionary<Guid, WindowedIterationMetricsCollector> _windowedCollectors = new();
@@ -46,7 +47,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             ICumulativeMetricsQueue cumulativeQueue,
             ICumulativeMetricsCoordinator cumulativeCoordinator,
             IMetricDataStore metricDataStore,
-            IIterationStatusMonitor iterationStatusMonitor)
+            IIterationStatusMonitor iterationStatusMonitor,
+            IPlanExecutionContext planContext)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
@@ -57,6 +59,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             _cumulativeCoordinator = cumulativeCoordinator ?? throw new ArgumentNullException(nameof(cumulativeCoordinator));
             _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
+            _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
         }
 
         /// <summary>
@@ -87,7 +90,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
                 // Create windowed collector and wire up aggregators
                 var windowedCollector = new WindowedIterationMetricsCollector(
-                    httpIteration, roundName, _windowedQueue, _windowedCoordinator, _iterationStatusMonitor)
+                    httpIteration, roundName, _windowedQueue, _windowedCoordinator, _iterationStatusMonitor, _planContext)
                 {
                     DurationAggregator = windowedDuration,
                     ThroughputAggregator = windowedThroughput,
@@ -97,7 +100,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
                 // Create cumulative collector (reads from metric data store)
                 var cumulativeCollector = new CumulativeIterationMetricsCollector(
-                    httpIteration, roundName, _cumulativeQueue, _cumulativeCoordinator, _metricDataStore, _iterationStatusMonitor);
+                    httpIteration, roundName, _cumulativeQueue, _cumulativeCoordinator, _metricDataStore, _iterationStatusMonitor, _planContext);
 
                 // Store collectors for lifecycle management
                 _windowedCollectors[httpIteration.Id] = windowedCollector;

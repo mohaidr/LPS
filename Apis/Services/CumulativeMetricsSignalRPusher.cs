@@ -84,11 +84,11 @@ namespace Apis.Services
                     snapshot.IterationName,
                     snapshot.IsFinal);
 
-                // Upload to customer's InfluxDB (fire-and-forget, non-blocking)
+                // Upload to customer's InfluxDB
                 // Only master uploads - workers have partial data, master has aggregated metrics
                 if (_nodeMetadata.NodeType == NodeType.Master)
                 {
-                    _ = _influxDBWriter.UploadCumulativeMetricsAsync(snapshot);
+                    await _influxDBWriter.UploadCumulativeMetricsAsync(snapshot);
                 }
             }
             catch (Exception ex)

@@ -4,6 +4,7 @@ using System.Threading;
 using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.Monitoring.Windowed
 {
@@ -21,6 +22,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private readonly IWindowedMetricsQueue _queue;
         private readonly IWindowedMetricsCoordinator _coordinator;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
+        private readonly IPlanExecutionContext _planContext;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private int _windowSequence;
@@ -41,13 +43,15 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             string roundName,
             IWindowedMetricsQueue queue,
             IWindowedMetricsCoordinator coordinator,
-            IIterationStatusMonitor iterationStatusMonitor)
+            IIterationStatusMonitor iterationStatusMonitor,
+            IPlanExecutionContext planContext)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
+            _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
 
             // Subscribe to window close events
             _coordinator.OnWindowClosed += OnWindowClosed;
@@ -131,8 +135,11 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                 var snapshot = new WindowedIterationSnapshot
                 {
                     IterationId = _httpIteration.Id,
+                    PlanName = _planContext.PlanName,
+                    TestStartTime = _planContext.TestStartTime,
                     RoundName = _roundName,
                     IterationName = _httpIteration.Name,
+                    TargetUrl = _httpIteration.HttpRequest?.Url?.BaseUrl ?? string.Empty,
                     WindowSequence = windowSequence,
                     WindowStart = _windowStart,
                     WindowEnd = windowEnd,

@@ -111,6 +111,7 @@ namespace LPS
                     services.AddSingleton<IMetricAggregatorFactory, MetricAggregatorFactory>();
                     services.AddSingleton<IMetricsUiService, MetricsUiService>();
                     services.AddSingleton<IMetricDataStore, MetricDataStoreService>();
+                    services.AddSingleton<IPlanExecutionContext, PlanExecutionContext>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddSingleton<IMetricsVariableService, MetricsVariableService>();
                     services.AddSingleton<IIterationStatusMonitor, IterationStatusMonitor>();

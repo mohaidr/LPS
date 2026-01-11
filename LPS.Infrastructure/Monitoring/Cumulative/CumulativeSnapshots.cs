@@ -11,6 +11,8 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
     public sealed class CumulativeIterationSnapshot
     {
         public Guid IterationId { get; init; }
+        public string PlanName { get; init; } = string.Empty;
+        public DateTime TestStartTime { get; init; }
         public string RoundName { get; init; } = string.Empty;
         public string IterationName { get; init; } = string.Empty;
         public string TargetUrl { get; init; } = string.Empty;
@@ -44,6 +46,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         public long FailedRequestsCount { get; init; }
         public long ActiveRequestsCount { get; init; }
         public double RequestsPerSecond { get; init; }
+        public double RequestsRatePerCoolDown { get; init; }
         public double ErrorRate { get; init; }
         public double TimeElapsedMs { get; init; }
     }

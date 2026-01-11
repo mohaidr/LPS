@@ -24,6 +24,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         private readonly ICumulativeMetricsCoordinator _coordinator;
         private readonly IMetricDataStore _metricDataStore;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
+        private readonly IPlanExecutionContext _planContext;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private bool _disposed;
@@ -37,7 +38,8 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             ICumulativeMetricsQueue queue,
             ICumulativeMetricsCoordinator coordinator,
             IMetricDataStore metricDataStore,
-            IIterationStatusMonitor iterationStatusMonitor)
+            IIterationStatusMonitor iterationStatusMonitor,
+            IPlanExecutionContext planContext)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
@@ -45,6 +47,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
+            _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
 
             // Subscribe to push interval events
             _coordinator.OnPushInterval += OnPushInterval;
@@ -106,6 +109,8 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                 var snapshot = new CumulativeIterationSnapshot
                 {
                     IterationId = _httpIteration.Id,
+                    PlanName = _planContext.PlanName,
+                    TestStartTime = _planContext.TestStartTime,
                     RoundName = _roundName,
                     IterationName = _httpIteration.Name,
                     TargetUrl = targetUrl ?? string.Empty,
@@ -147,6 +152,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                 FailedRequestsCount = snapshot.FailedRequestsCount,
                 ActiveRequestsCount = snapshot.ActiveRequestsCount,
                 RequestsPerSecond = snapshot.RequestsRate.Value,
+                RequestsRatePerCoolDown = snapshot.RequestsRatePerCoolDownPeriod.Value,
                 ErrorRate = snapshot.ErrorRate,
                 TimeElapsedMs = snapshot.TimeElapsed
             };
