@@ -19,7 +19,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
     {
         private const string MetricName = "Throughput";
 
-        private int _activeRequestsCount;
+        private int _currentActiveRequests;
+        private int _maxConcurrentRequests;
         private int _requestsCount;
         private readonly ThroughputMetricSnapshot _snapshot;
         protected override IMetricShapshot Snapshot => _snapshot;
@@ -36,6 +37,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
         public readonly string _roundName;
+        public int CurrentActiveRequests => _currentActiveRequests;
         public ThroughputMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
@@ -111,7 +113,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 }
 
                 _snapshot.Update(
-                    _activeRequestsCount,
+                    _maxConcurrentRequests,
+                    _currentActiveRequests,
                     _requestsCount,
                     successCount,
                     failedCount,
@@ -185,7 +188,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 // Lazy start on first request
                 EnsureStarted();
                 
-                ++_activeRequestsCount;
+                ++_currentActiveRequests;
+                if (_currentActiveRequests > _maxConcurrentRequests)
+                {
+                    _maxConcurrentRequests = _currentActiveRequests;
+                }
                 ++_requestsCount;
                 await UpdateMetricsAsync(token);
                 return true;
@@ -204,7 +211,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 await _semaphore.WaitAsync(token); // Keep the is lock taken as a best practice - do not move the await _semaphore.WaitAsync(token); before the try immediatly and remove the isLockTaken
                 isLockTaken = true;
-                --_activeRequestsCount;
+                --_currentActiveRequests;
                 await UpdateMetricsAsync(token);
                 return true;
             }
@@ -277,13 +284,15 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public RequestsRate RequestsRate { get; private set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; private set; }
         public int RequestsCount { get; private set; }
-        public int ActiveRequestsCount { get; private set; }
+        public int MaxConcurrentRequests { get; private set; }
+        public int CurrentActiveRequests { get; private set; }
         public int SuccessfulRequestCount { get; private set; }
         public int FailedRequestsCount { get; private set; }
-        public double ErrorRate => FailedRequestsCount / (RequestsCount - ActiveRequestsCount != 0 ? (double)RequestsCount - ActiveRequestsCount : 1);
+        public double ErrorRate => FailedRequestsCount / (SuccessfulRequestCount + FailedRequestsCount != 0 ? (double)(SuccessfulRequestCount + FailedRequestsCount) : 1);
 
         public void Update(
-        int activeRequestsCount,
+        int maxConcurrentRequests,
+        int currentActiveRequests,
         int requestsCount = default,
         int successfulRequestsCount = default,
         int failedRequestsCount = default,
@@ -297,7 +306,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 
                 // Update cumulative
                 RequestsCount = requestsCount.Equals(default) ? RequestsCount : requestsCount;
-                ActiveRequestsCount = activeRequestsCount;
+                MaxConcurrentRequests = maxConcurrentRequests;
+                CurrentActiveRequests = currentActiveRequests;
                 SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? SuccessfulRequestCount : successfulRequestsCount;
                 FailedRequestsCount = failedRequestsCount.Equals(default) ? FailedRequestsCount : failedRequestsCount;
                 TimeElapsed = timeElpased.Equals(default) ? TimeElapsed : timeElpased;

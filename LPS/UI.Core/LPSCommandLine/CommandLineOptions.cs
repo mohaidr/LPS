@@ -1034,12 +1034,10 @@ namespace LPS.UI.Core.LPSCommandLine
                 BuiltInDashboardOption.AddAlias("-bid");
                 PortOption.AddAlias("-p");
                 RefreshRateOption.AddAlias("-rr");
-                WindowIntervalSecondsOption.AddAlias("-wis");
 
                 AddCaseInsensitiveAliases(BuiltInDashboardOption, "--builtindashboard");
                 AddCaseInsensitiveAliases(PortOption, "--port");
                 AddCaseInsensitiveAliases(RefreshRateOption, "--refreshrate");
-                AddCaseInsensitiveAliases(WindowIntervalSecondsOption, "--windowintervalseconds");
             }
 
             public static Option<bool?> BuiltInDashboardOption { get; } =
@@ -1049,10 +1047,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 new("--port", "Dashboard port") { IsRequired = false };
 
             public static Option<int?> RefreshRateOption { get; } =
-                new("--refreshrate", "Dashboard refresh rate in seconds") { IsRequired = false };
-
-            public static Option<int?> WindowIntervalSecondsOption { get; } =
-                new("--windowintervalseconds", "Window interval for windowed metrics in seconds") { IsRequired = false };
+                new("--refreshrate", "Dashboard refresh rate in seconds (controls SignalR push interval)") { IsRequired = false };
 
             private static void AddCaseInsensitiveAliases<T>(Option<T> opt, params string[] aliases)
             {

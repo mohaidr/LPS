@@ -44,7 +44,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         public long RequestsCount { get; init; }
         public long SuccessfulRequestCount { get; init; }
         public long FailedRequestsCount { get; init; }
-        public long ActiveRequestsCount { get; init; }
+        public long MaxConcurrentRequests { get; init; }
         public double RequestsPerSecond { get; init; }
         public double RequestsRatePerCoolDown { get; init; }
         public double ErrorRate { get; init; }

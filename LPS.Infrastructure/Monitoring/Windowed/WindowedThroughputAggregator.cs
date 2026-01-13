@@ -21,11 +21,12 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private bool _disposed;
         private DateTime _windowStart = DateTime.UtcNow;
 
-        // Throughput counters (resettable)
+        // Throughput counters (resettable per window)
         private long _requestsCount;
         private long _successfulRequests;
         private long _failedRequests;
-        private int _activeRequests;
+        private int _currentActiveRequests;  // Current in-flight requests (not reset)
+        private int _maxConcurrentRequests;  // Peak concurrent within this window (reset per window)
 
         public HttpIteration HttpIteration => _httpIteration;
         public LPSMetricType MetricType => LPSMetricType.Throughput;
@@ -90,7 +91,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                 RequestsCount = (int)_requestsCount,
                 SuccessfulRequestCount = (int)_successfulRequests,
                 FailedRequestsCount = (int)_failedRequests,
-                ActiveRequestsCount = _activeRequests,
+                MaxConcurrentRequests = _maxConcurrentRequests,
                 RequestsPerSecond = requestsPerSecond,
                 ErrorRate = errorRate
             };
@@ -122,6 +123,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _requestsCount = 0;
             _successfulRequests = 0;
             _failedRequests = 0;
+            // New window starts with max = current in-flight (those requests are still concurrent)
+            _maxConcurrentRequests = _currentActiveRequests;
             _windowStart = DateTime.UtcNow;
         }
 
@@ -132,8 +135,14 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             await _semaphore.WaitAsync(token);
             try 
             { 
-                Interlocked.Increment(ref _requestsCount);
-                Interlocked.Increment(ref _activeRequests);
+                _requestsCount++;
+                _currentActiveRequests++;
+                
+                // Track the peak concurrent requests within this window
+                if (_currentActiveRequests > _maxConcurrentRequests)
+                {
+                    _maxConcurrentRequests = _currentActiveRequests;
+                }
             }
             finally { _semaphore.Release(); }
             return true;
@@ -142,7 +151,10 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public async ValueTask<bool> DecreseConnectionsCount(CancellationToken token)
         {
             await _semaphore.WaitAsync(token);
-            try { Interlocked.Decrement(ref _activeRequests); }
+            try 
+            { 
+                _currentActiveRequests--;
+            }
             finally { _semaphore.Release(); }
             return true;
         }

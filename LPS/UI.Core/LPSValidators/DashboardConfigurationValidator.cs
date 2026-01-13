@@ -22,11 +22,6 @@ namespace LPS.UI.Core.LPSValidators
                 .NotNull()
                 .GreaterThan(0)
                 .WithMessage("'RefreshRate' must be greater than 0 seconds");
-
-            RuleFor(dashboard => dashboard.WindowIntervalSeconds)
-                .NotNull()
-                .GreaterThan(0)
-                .WithMessage("'WindowIntervalSeconds' must be greater than 0 seconds");
         }
     }
 }

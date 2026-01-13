@@ -12,14 +12,9 @@ namespace LPS.UI.Common.Options
         public int? Port { get; set; }
         
         /// <summary>
-        /// How often the dashboard UI should refresh (in seconds). Default is 5.
+        /// How often metrics are pushed to the dashboard via SignalR (in seconds). Default is 3.
+        /// This controls both windowed and cumulative metrics push intervals.
         /// </summary>
         public int? RefreshRate { get; set; }
-        
-        /// <summary>
-        /// Window interval for windowed metrics aggregation (in seconds). Default is 5.
-        /// This controls how often metrics are pushed via SignalR.
-        /// </summary>
-        public int? WindowIntervalSeconds { get; set; }
     }
 }

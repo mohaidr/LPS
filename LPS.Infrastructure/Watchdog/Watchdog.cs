@@ -156,7 +156,7 @@ namespace LPS.Infrastructure.Watchdog
 
                 var response = await _grpcClient.GetThroughputMetricsAsync(request);
 
-                int totalActiveConnections = response.Responses.Sum(r => r.ActiveRequestsCount);
+                int totalActiveConnections = response.Responses.Sum(r => r.CurrentActiveRequests);
                 return totalActiveConnections;
             }
             catch (Exception ex)

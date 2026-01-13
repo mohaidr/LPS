@@ -84,7 +84,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public int RequestsCount { get; init; }
         public int SuccessfulRequestCount { get; init; }
         public int FailedRequestsCount { get; init; }
-        public int ActiveRequestsCount { get; init; }
+        public int MaxConcurrentRequests { get; init; }
         public double RequestsPerSecond { get; init; }
         public double ErrorRate { get; init; }
 

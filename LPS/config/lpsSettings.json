@@ -31,8 +31,7 @@
     "Dashboard": {
       "BuiltInDashboard": true,
       "Port": 8009,
-      "RefreshRate": 3,
-      "WindowIntervalSeconds": 5
+      "RefreshRate": 3
     },
     "InfluxDB": {
       "Enabled": true,

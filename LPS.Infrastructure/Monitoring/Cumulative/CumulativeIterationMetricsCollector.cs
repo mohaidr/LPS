@@ -150,7 +150,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                 RequestsCount = snapshot.RequestsCount,
                 SuccessfulRequestCount = snapshot.SuccessfulRequestCount,
                 FailedRequestsCount = snapshot.FailedRequestsCount,
-                ActiveRequestsCount = snapshot.ActiveRequestsCount,
+                MaxConcurrentRequests = snapshot.MaxConcurrentRequests,
                 RequestsPerSecond = snapshot.RequestsRate.Value,
                 RequestsRatePerCoolDown = snapshot.RequestsRatePerCoolDownPeriod.Value,
                 ErrorRate = snapshot.ErrorRate,

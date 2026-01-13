@@ -130,10 +130,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private static string ConvertWindowedThroughput(string tags, WindowedThroughputData throughput, long timestamp)
         {
             var fields = new StringBuilder();
-            // Request counts (per window only - cumulative metrics like active_count, requests_per_second, error_rate belong in cumulative_requests)
+            // Request counts per window
             fields.Append($"requests_count={throughput.RequestsCount}i,");
             fields.Append($"successful_count={throughput.SuccessfulRequestCount}i,");
-            fields.Append($"failed_count={throughput.FailedRequestsCount}i");
+            fields.Append($"failed_count={throughput.FailedRequestsCount}i,");
+            fields.Append($"max_concurrent_requests={throughput.MaxConcurrentRequests}i");
 
             return BuildLine("windowed_requests", tags, fields.ToString(), timestamp);
         }
@@ -198,7 +199,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             fields.Append($"requests_count={throughput.RequestsCount}i,");
             fields.Append($"successful_count={throughput.SuccessfulRequestCount}i,");
             fields.Append($"failed_count={throughput.FailedRequestsCount}i,");
-            fields.Append($"active_count={throughput.ActiveRequestsCount}i,");
+            fields.Append($"max_concurrent_requests={throughput.MaxConcurrentRequests}i,");
             // Calculated rates
             fields.Append($"requests_per_second={FormatFloat(throughput.RequestsPerSecond)},");
             fields.Append($"requests_rate_per_cooldown={FormatFloat(throughput.RequestsRatePerCoolDown)},");

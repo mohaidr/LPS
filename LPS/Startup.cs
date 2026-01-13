@@ -164,16 +164,16 @@ namespace LPS
                     services.AddSingleton<IWindowedMetricsQueue, WindowedMetricsQueue>();
                     services.AddSingleton<IWindowedMetricsCoordinator>(sp =>
                     {
-                        // Read window interval from config, default to 5 seconds
+                        // Read refresh rate from config, default to 3 seconds
                         var dashboardOptions = hostContext.Configuration
                             .GetSection("LPSAppSettings:Dashboard")
                             .Get<DashboardConfigurationOptions>();
-                        var windowIntervalSeconds = dashboardOptions?.WindowIntervalSeconds ?? 5;
-                        var coordinator = new WindowedMetricsCoordinator(TimeSpan.FromSeconds(windowIntervalSeconds));
+                        var refreshRateSeconds = dashboardOptions?.RefreshRate ?? 3;
+                        var coordinator = new WindowedMetricsCoordinator(TimeSpan.FromSeconds(refreshRateSeconds));
                         return coordinator;
                     });
                     
-                    // Cumulative metrics - separate coordinator with its own interval
+                    // Cumulative metrics - separate coordinator with same refresh interval
                     // This pushes cumulative data (cards/summary) at RefreshRate interval
                     services.AddSingleton<ICumulativeMetricsQueue, CumulativeMetricsQueue>();
                     services.AddSingleton<ICumulativeMetricsCoordinator>(sp =>

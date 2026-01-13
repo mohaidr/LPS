@@ -101,7 +101,8 @@ message ThroughputMetricResponse {
   RequestsRate requestsRate = 3;
   RequestsRate requestsRatePerCoolDownPeriod = 4;
   int32 requestsCount = 5;
-  int32 activeRequestsCount = 6;
+  int32 maxConcurrentRequests = 6;
+  int32 currentActiveRequests = 10;
   int32 successfulRequestCount = 7;
   int32 failedRequestsCount = 8;
   double errorRate =9;
