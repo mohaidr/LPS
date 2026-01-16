@@ -34,7 +34,7 @@
       "RefreshRate": 3
     },
     "InfluxDB": {
-      "Enabled": true,
+      "Enabled": false,
       "Url": "<YOUR_INFLUXDB_URL>",
       "Token": "<YOUR_INFLUXDB_TOKEN>",
       "Organization": "LPS",
