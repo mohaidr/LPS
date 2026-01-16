@@ -13,17 +13,21 @@ namespace LPS.UI.Common.Options
         readonly IWritableOptions<WatchdogOptions> _watchDogOptions;
         readonly IWritableOptions<ClusterConfigurationOptions> _clusterOptions;
         readonly IWritableOptions<DashboardConfigurationOptions> _dashboardConfigurationOptions;
+        readonly IWritableOptions<InfluxDBOptions> _influxDBOptions;
+
         public AppSettingsWritableOptions(IWritableOptions<FileLoggerOptions> loggerOptions,
            IWritableOptions<HttpClientOptions> clientOptions,
            IWritableOptions<WatchdogOptions> watchDogOptions,
            IWritableOptions<DashboardConfigurationOptions> dashboardConfigurationOptions,
-           IWritableOptions<ClusterConfigurationOptions> clusterOptions)
+           IWritableOptions<ClusterConfigurationOptions> clusterOptions,
+           IWritableOptions<InfluxDBOptions> influxDBOptions)
         { 
             _loggerOptions = loggerOptions;
             _clientOptions = clientOptions;
             _watchDogOptions = watchDogOptions;
             _dashboardConfigurationOptions = dashboardConfigurationOptions;
             _clusterOptions = clusterOptions;
+            _influxDBOptions = influxDBOptions;
         }
 
         public IWritableOptions<FileLoggerOptions> FileLoggerOptions { get { return _loggerOptions; } }
@@ -31,5 +35,6 @@ namespace LPS.UI.Common.Options
         public IWritableOptions<WatchdogOptions> WatchdogOptions { get { return _watchDogOptions; } }
         public IWritableOptions<ClusterConfigurationOptions> ClusterConfigurationOptions { get { return _clusterOptions; } }
         public IWritableOptions<DashboardConfigurationOptions> DashboardConfigurationOptions { get { return _dashboardConfigurationOptions; } }
+        public IWritableOptions<LPS.UI.Common.Options.InfluxDBOptions> InfluxDBOptions { get { return _influxDBOptions; } }
     }
 }

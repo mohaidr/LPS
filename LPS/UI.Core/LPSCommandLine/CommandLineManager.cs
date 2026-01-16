@@ -46,6 +46,8 @@ namespace LPS.UI.Core.LPSCommandLine
         WatchDogCliCommand _watchdogCliCommand;
         HttpClientCliCommand _httpClientCliCommand;
         ClusterCliCommand _clusterCliCommand;
+        DashboardCliCommand _dashboardCliCommand;
+        InfluxDBCliCommand _influxDbCliCommand;
         readonly AppSettingsWritableOptions _appSettings;
         readonly IMetricsDataMonitor _lpsMonitoringEnroller;
         readonly CancellationTokenSource _cts;
@@ -122,6 +124,8 @@ namespace LPS.UI.Core.LPSCommandLine
             _variableCliCommand = new VariableCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _captureCliCommand = new CaptureCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _clusterCliCommand = new ClusterCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.ClusterConfigurationOptions);
+            _dashboardCliCommand = new DashboardCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.DashboardConfigurationOptions);
+            _influxDbCliCommand = new InfluxDBCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.InfluxDBOptions);
         }
 
 
@@ -161,6 +165,12 @@ namespace LPS.UI.Core.LPSCommandLine
                     break;
                 case string cmd when cmd.StartsWith("cluster"):
                     _clusterCliCommand.SetHandler(cancellationToken);
+                    break;
+                case string cmd when cmd.StartsWith("dashboard"):
+                    _dashboardCliCommand.SetHandler(cancellationToken);
+                    break;
+                case string cmd when cmd.StartsWith("influxdb"):
+                    _influxDbCliCommand.SetHandler(cancellationToken);
                     break;
                 default:
                     _lpsCliCommand.SetHandler(cancellationToken);
