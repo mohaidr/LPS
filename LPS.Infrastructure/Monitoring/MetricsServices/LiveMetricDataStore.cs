@@ -13,16 +13,17 @@ using LPS.Infrastructure.Monitoring.Metrics;
 namespace LPS.Infrastructure.Monitoring.MetricsServices
 {
     /// <summary>
-    /// Default in-memory implementation for IMetricDataStore.
-    /// Keeps a per-iteration dictionary of queues (one queue per metric type).
+    /// Live in-memory store for metric snapshots grouped by IterationId and MetricType.
+    /// Provides real-time access to the latest metrics for UI, gRPC queries, and cross-metric dependencies.
+    /// Keeps limited history (reduced capacity) since cumulative metrics are pushed directly from aggregators.
     /// Thread-safe, lock-free hot path with ConcurrentDictionary + ConcurrentQueue.
     /// </summary>
-    public sealed class MetricDataStoreService : IMetricDataStore
+    public sealed class LiveMetricDataStore : ILiveMetricDataStore
     {
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _op;
 
-        // To avoid unbounded memory, you can cap each metric-type queue length.
+        // Reduced capacity - we only need recent history, not full test history
         private readonly int _perTypeCapacity;
 
         private sealed class PerType
@@ -45,10 +46,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         // IterationId -> Entry
         private readonly ConcurrentDictionary<Guid, Entry> _store = new();
 
-        public MetricDataStoreService(
+        public LiveMetricDataStore(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            int perTypeCapacity = 2048)
+            int perTypeCapacity = 256)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));

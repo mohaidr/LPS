@@ -4,6 +4,7 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Cumulative;
+using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.Monitoring.Windowed;
 using System;
 using System.Collections.Concurrent;
@@ -27,10 +28,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly IRuntimeOperationIdProvider _op;
         private readonly IMetricAggregatorFactory _factory;
         private readonly IWindowedMetricsQueue _windowedQueue;
+        private readonly IWindowedMetricDataStore _windowedDataStore;
         private readonly IWindowedMetricsCoordinator _windowedCoordinator;
         private readonly ICumulativeMetricsQueue _cumulativeQueue;
+        private readonly ICumulativeMetricDataStore _cumulativeDataStore;
         private readonly ICumulativeMetricsCoordinator _cumulativeCoordinator;
-        private readonly IMetricDataStore _metricDataStore;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         private readonly IPlanExecutionContext _planContext;
 
@@ -43,10 +45,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricAggregatorFactory aggregatorFactory,
             IWindowedMetricsQueue windowedQueue,
+            IWindowedMetricDataStore windowedDataStore,
             IWindowedMetricsCoordinator windowedCoordinator,
             ICumulativeMetricsQueue cumulativeQueue,
+            ICumulativeMetricDataStore cumulativeDataStore,
             ICumulativeMetricsCoordinator cumulativeCoordinator,
-            IMetricDataStore metricDataStore,
             IIterationStatusMonitor iterationStatusMonitor,
             IPlanExecutionContext planContext)
         {
@@ -54,10 +57,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _factory = aggregatorFactory ?? throw new ArgumentNullException(nameof(aggregatorFactory));
             _windowedQueue = windowedQueue ?? throw new ArgumentNullException(nameof(windowedQueue));
+            _windowedDataStore = windowedDataStore ?? throw new ArgumentNullException(nameof(windowedDataStore));
             _windowedCoordinator = windowedCoordinator ?? throw new ArgumentNullException(nameof(windowedCoordinator));
             _cumulativeQueue = cumulativeQueue ?? throw new ArgumentNullException(nameof(cumulativeQueue));
+            _cumulativeDataStore = cumulativeDataStore ?? throw new ArgumentNullException(nameof(cumulativeDataStore));
             _cumulativeCoordinator = cumulativeCoordinator ?? throw new ArgumentNullException(nameof(cumulativeCoordinator));
-            _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
         }
@@ -88,9 +92,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 var windowedResponseCode = aggregators.OfType<WindowedResponseCodeAggregator>().FirstOrDefault();
                 var windowedDataTransmission = aggregators.OfType<WindowedDataTransmissionAggregator>().FirstOrDefault();
 
+                // Extract cumulative aggregators by type
+                var cumulativeThroughput = aggregators.OfType<ThroughputMetricAggregator>().FirstOrDefault();
+                var cumulativeDuration = aggregators.OfType<DurationMetricAggregator>().FirstOrDefault();
+                var cumulativeResponseCode = aggregators.OfType<ResponseCodeMetricAggregator>().FirstOrDefault();
+                var cumulativeDataTransmission = aggregators.OfType<DataTransmissionMetricAggregator>().FirstOrDefault();
+
                 // Create windowed collector and wire up aggregators
                 var windowedCollector = new WindowedIterationMetricsCollector(
-                    httpIteration, roundName, _windowedQueue, _windowedCoordinator, _iterationStatusMonitor, _planContext)
+                    httpIteration, roundName, _windowedQueue, _windowedDataStore, _windowedCoordinator, _iterationStatusMonitor, _planContext)
                 {
                     DurationAggregator = windowedDuration,
                     ThroughputAggregator = windowedThroughput,
@@ -98,9 +108,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     DataTransmissionAggregator = windowedDataTransmission
                 };
 
-                // Create cumulative collector (reads from metric data store)
+                // Create cumulative collector and wire up aggregators (similar to windowed pattern)
                 var cumulativeCollector = new CumulativeIterationMetricsCollector(
-                    httpIteration, roundName, _cumulativeQueue, _cumulativeCoordinator, _metricDataStore, _iterationStatusMonitor, _planContext);
+                    httpIteration, roundName, _cumulativeQueue, _cumulativeDataStore, _cumulativeCoordinator, _iterationStatusMonitor, _planContext)
+                {
+                    ThroughputAggregator = cumulativeThroughput,
+                    DurationAggregator = cumulativeDuration,
+                    ResponseCodeAggregator = cumulativeResponseCode,
+                    DataTransmissionAggregator = cumulativeDataTransmission
+                };
 
                 // Store collectors for lifecycle management
                 _windowedCollectors[httpIteration.Id] = windowedCollector;

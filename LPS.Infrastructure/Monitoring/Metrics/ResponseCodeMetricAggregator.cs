@@ -2,6 +2,7 @@
 using LPS.Domain;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Common;
+using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.EventSources;
 using LPS.Infrastructure.Monitoring.MetricsVariables;
 using System;
@@ -35,7 +36,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService // NEW
-        , IMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
+        , ILiveMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
@@ -78,6 +79,35 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
             return this;
         }
+
+        /// <summary>
+        /// Gets the current cumulative response code data for the CumulativeIterationMetricsCollector.
+        /// Similar to how WindowedResponseCodeAggregator.GetWindowDataAndReset() works, but does NOT reset.
+        /// </summary>
+        #nullable enable
+        public CumulativeResponseCodeData? GetCumulativeData()
+        {
+            _semaphore.Wait();
+            try
+            {
+                return new CumulativeResponseCodeData
+                {
+                    ResponseSummaries = _snapshot.ResponseSummaries
+                        .Select(s => new CumulativeResponseSummary
+                        {
+                            HttpStatusCode = (int)s.HttpStatusCode,
+                            HttpStatusReason = s.HttpStatusReason,
+                            Count = s.Count
+                        })
+                        .ToList()
+                };
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+        #nullable restore
 
         // NEW: serialize and publish the dimension set to the variable system
         private async Task PushMetricAsync(CancellationToken token)

@@ -2,6 +2,7 @@
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Cumulative;
 using System;
 using System.Diagnostics;
 using System.Text.Json;
@@ -42,7 +43,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
-            IMetricDataStore metricDataStore)
+            ILiveMetricDataStore metricDataStore)
             : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
@@ -86,10 +87,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 await _semaphore.WaitAsync(token);
                 lockTaken = true;
-                
+
                 // Lazy start on first data
                 EnsureStarted();
-                
+
                 _totalSentBytes += (long)totalBytes;
                 _requestsCount = GetRequestsCount();
             }
@@ -109,7 +110,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 await _semaphore.WaitAsync(token);
                 lockTaken = true;
-                
+
                 // Lazy start on first data
                 EnsureStarted();
 
@@ -203,6 +204,34 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _timer = null;
             _semaphore.Dispose();
         }
+
+        /// <summary>
+        /// Gets the current cumulative data transmission data for the CumulativeIterationMetricsCollector.
+        /// Similar to how WindowedDataTransmissionAggregator.GetWindowDataAndReset() works, but does NOT reset.
+        /// </summary>
+        #nullable enable
+        public CumulativeDataTransmissionData? GetCumulativeData()
+        {
+            _semaphore.Wait();
+            try
+            {
+                return new CumulativeDataTransmissionData
+                {
+                    DataSent = _snapshot.DataSent,
+                    DataReceived = _snapshot.DataReceived,
+                    AverageDataSent = _snapshot.AverageDataSent,
+                    AverageDataReceived = _snapshot.AverageDataReceived,
+                    UpstreamThroughputBps = _snapshot.UpstreamThroughputBps,
+                    DownstreamThroughputBps = _snapshot.DownstreamThroughputBps,
+                    ThroughputBps = _snapshot.ThroughputBps
+                };
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+        #nullable restore
     }
 
     public class DataTransmissionMetricSnapshot : HttpMetricSnapshot

@@ -52,7 +52,9 @@ namespace LPS.UI.Core.Services
         public readonly ISkipIfEvaluator _skipIfEvaluator;
         public readonly IVariableFactory _variableFactory;
         private readonly INodeMetadata _nodeMetaData;
-        private readonly IMetricDataStore _metricStore;
+        private readonly ILiveMetricDataStore _metricStore;
+        private readonly IWindowedMetricDataStore _windowedMetricStore;
+        private readonly ICumulativeMetricDataStore _cumulativeMetricStore;
         private readonly IWarmUpService _warmupService;
         private readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator;
         private readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator;
@@ -76,7 +78,9 @@ namespace LPS.UI.Core.Services
             IIterationStatusMonitor iterationStatusMonitor,
             ISkipIfEvaluator skipIfEvaluator,
             IVariableFactory variableFactory,
-            IMetricDataStore metricStore,             // NEW
+            ILiveMetricDataStore metricStore,             // NEW
+            IWindowedMetricDataStore windowedMetricStore, // NEW
+            ICumulativeMetricDataStore cumulativeMetricStore, // NEW
             INodeMetadata nodeMetaData,               // NEW
             IWindowedMetricsCoordinator windowedMetricsCoordinator,  // NEW: Windowed metrics coordinator
             ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,  // NEW: Cumulative metrics coordinator
@@ -105,6 +109,8 @@ namespace LPS.UI.Core.Services
             _skipIfEvaluator = skipIfEvaluator;
             _variableFactory = variableFactory;
             _metricStore = metricStore;
+            _windowedMetricStore = windowedMetricStore;
+            _cumulativeMetricStore = cumulativeMetricStore;
             _nodeMetaData = nodeMetaData;
             _warmupService = warmUpService;
             _windowedMetricsCoordinator = windowedMetricsCoordinator;
@@ -422,28 +428,156 @@ namespace LPS.UI.Core.Services
                     {
                         if (DateTime.UtcNow >= deadline) break;
 
-                        foreach (var metric in Enum.GetValues(typeof(LPSMetricType)).Cast<LPSMetricType>())
+                        // Save cumulative metrics from the cumulative store
+                        if (_cumulativeMetricStore.TryGet(iter.Id, out var cumulativeSnaps) && cumulativeSnaps.Count > 0)
                         {
-                            if (DateTime.UtcNow >= deadline) break;
-
-                            if (!_metricStore.TryGet(iter.Id, metric, out var baseSnaps) || baseSnaps.Count == 0)
-                                continue;
-
-                            object payload = metric switch
+                            // Extract Throughput metrics from all cumulative snapshots
+                            var throughputHistory = cumulativeSnaps
+                                .Where(s => s.Throughput != null)
+                                .Select(s => new 
+                                {
+                                    s.Timestamp,
+                                    s.ExecutionStatus,
+                                    s.IsFinal,
+                                    Metric = s.Throughput
+                                })
+                                .ToList();
+                            if (throughputHistory.Count > 0)
                             {
-                                LPSMetricType.Throughput => baseSnaps.OfType<ThroughputMetricSnapshot>().ToList(),
-                                LPSMetricType.Time => baseSnaps.OfType<DurationMetricSnapshot>().ToList(),
-                                LPSMetricType.DataTransmission => baseSnaps.OfType<DataTransmissionMetricSnapshot>().ToList(),
-                                LPSMetricType.ResponseCode => baseSnaps.OfType<ResponseCodeMetricSnapshot>().ToList(),
-                                _ => baseSnaps
-                            };
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_Throughput.json");
+                                var json = JsonSerializer.Serialize(throughputHistory, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
 
-                            var file = Path.Combine(
-                                roundDir,
-                                $"{SanitizeFileName(iter.Name)}_{SanitizeFileName(metric.ToString())}.json");
+                            // Extract Duration/Time metrics from all cumulative snapshots
+                            var durationHistory = cumulativeSnaps
+                                .Where(s => s.Duration != null)
+                                .Select(s => new 
+                                {
+                                    s.Timestamp,
+                                    s.ExecutionStatus,
+                                    s.IsFinal,
+                                    Metric = s.Duration
+                                })
+                                .ToList();
+                            if (durationHistory.Count > 0)
+                            {
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_Time.json");
+                                var json = JsonSerializer.Serialize(durationHistory, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
 
-                            var json = JsonSerializer.Serialize(payload, payload.GetType(), jsonOpts);
-                            await File.WriteAllTextAsync(file, json, persistToken);
+                            // Extract DataTransmission metrics from all cumulative snapshots
+                            var dataTransmissionHistory = cumulativeSnaps
+                                .Where(s => s.DataTransmission != null)
+                                .Select(s => new 
+                                {
+                                    s.Timestamp,
+                                    s.ExecutionStatus,
+                                    s.IsFinal,
+                                    Metric = s.DataTransmission
+                                })
+                                .ToList();
+                            if (dataTransmissionHistory.Count > 0)
+                            {
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_DataTransmission.json");
+                                var json = JsonSerializer.Serialize(dataTransmissionHistory, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
+
+                            // Extract ResponseCode metrics from all cumulative snapshots
+                            var responseCodeHistory = cumulativeSnaps
+                                .Where(s => s.ResponseCodes != null)
+                                .Select(s => new 
+                                {
+                                    s.Timestamp,
+                                    s.ExecutionStatus,
+                                    s.IsFinal,
+                                    Metric = s.ResponseCodes
+                                })
+                                .ToList();
+                            if (responseCodeHistory.Count > 0)
+                            {
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_ResponseCode.json");
+                                var json = JsonSerializer.Serialize(responseCodeHistory, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
+                        }
+                        
+                        // Save windowed metrics for this iteration - split by metric type like cumulative
+                        if (DateTime.UtcNow < deadline && _windowedMetricStore.TryGet(iter.Id, out var windowedSnaps) && windowedSnaps.Count > 0)
+                        {
+                            // Extract Throughput metrics from all windows
+                            var throughputWindows = windowedSnaps
+                                .Where(s => s.Throughput != null)
+                                .Select(s => new 
+                                {
+                                    s.WindowSequence,
+                                    s.WindowStart,
+                                    s.WindowEnd,
+                                    Metric = s.Throughput
+                                })
+                                .ToList();
+                            if (throughputWindows.Count > 0)
+                            {
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_Windowed_Throughput.json");
+                                var json = JsonSerializer.Serialize(throughputWindows, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
+
+                            // Extract Duration/Time metrics from all windows
+                            var durationWindows = windowedSnaps
+                                .Where(s => s.Duration != null)
+                                .Select(s => new 
+                                {
+                                    s.WindowSequence,
+                                    s.WindowStart,
+                                    s.WindowEnd,
+                                    Metric = s.Duration
+                                })
+                                .ToList();
+                            if (durationWindows.Count > 0)
+                            {
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_Windowed_Time.json");
+                                var json = JsonSerializer.Serialize(durationWindows, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
+
+                            // Extract DataTransmission metrics from all windows
+                            var dataTransmissionWindows = windowedSnaps
+                                .Where(s => s.DataTransmission != null)
+                                .Select(s => new 
+                                {
+                                    s.WindowSequence,
+                                    s.WindowStart,
+                                    s.WindowEnd,
+                                    Metric = s.DataTransmission
+                                })
+                                .ToList();
+                            if (dataTransmissionWindows.Count > 0)
+                            {
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_Windowed_DataTransmission.json");
+                                var json = JsonSerializer.Serialize(dataTransmissionWindows, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
+
+                            // Extract ResponseCode metrics from all windows
+                            var responseCodeWindows = windowedSnaps
+                                .Where(s => s.ResponseCodes != null)
+                                .Select(s => new 
+                                {
+                                    s.WindowSequence,
+                                    s.WindowStart,
+                                    s.WindowEnd,
+                                    Metric = s.ResponseCodes
+                                })
+                                .ToList();
+                            if (responseCodeWindows.Count > 0)
+                            {
+                                var file = Path.Combine(roundDir, $"{SanitizeFileName(iter.Name)}_Windowed_ResponseCode.json");
+                                var json = JsonSerializer.Serialize(responseCodeWindows, jsonOpts);
+                                await File.WriteAllTextAsync(file, json, persistToken);
+                            }
                         }
                     }
                 }

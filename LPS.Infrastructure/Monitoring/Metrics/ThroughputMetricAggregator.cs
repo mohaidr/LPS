@@ -2,6 +2,7 @@
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Cumulative;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -45,7 +46,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
             IFailureRulesService failureRulesService,
-            IMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
+            ILiveMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
@@ -232,6 +233,37 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _timer = null;
             _semaphore.Dispose();
         }
+
+        /// <summary>
+        /// Gets the current cumulative throughput data for the CumulativeIterationMetricsCollector.
+        /// Similar to how WindowedThroughputAggregator.GetWindowDataAndReset() works, but does NOT reset.
+        /// </summary>
+        #nullable enable
+        public CumulativeThroughputData? GetCumulativeData(out string? targetUrl)
+        {
+            targetUrl = null;
+            _semaphore.Wait();
+            try
+            {
+                targetUrl = _snapshot.URL;
+                return new CumulativeThroughputData
+                {
+                    RequestsCount = _snapshot.RequestsCount,
+                    SuccessfulRequestCount = _snapshot.SuccessfulRequestCount,
+                    FailedRequestsCount = _snapshot.FailedRequestsCount,
+                    MaxConcurrentRequests = _snapshot.MaxConcurrentRequests,
+                    RequestsPerSecond = _snapshot.RequestsRate.Value,
+                    RequestsRatePerCoolDown = _snapshot.RequestsRatePerCoolDownPeriod.Value,
+                    ErrorRate = _snapshot.ErrorRate,
+                    TimeElapsedMs = _snapshot.TimeElapsed
+                };
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+        #nullable restore
 
         // NEW: Serialize and push to Metrics variable system
         private async Task PushMetricAsync(CancellationToken token)

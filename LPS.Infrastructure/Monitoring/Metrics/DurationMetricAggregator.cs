@@ -3,6 +3,7 @@ using LPS.Domain;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.EventSources;
 using LPS.Infrastructure.Monitoring.MetricsServices;
 using LPS.Infrastructure.Monitoring.MetricsVariables;
@@ -41,7 +42,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
-            IMetricDataStore metricDataStore) // NEW
+            ILiveMetricDataStore metricDataStore) // NEW
             : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
@@ -172,6 +173,49 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _semaphore.Release();
             }
             return this;
+        }
+
+        /// <summary>
+        /// Gets the current cumulative duration data for the CumulativeIterationMetricsCollector.
+        /// Similar to how WindowedDurationAggregator.GetWindowDataAndReset() works, but does NOT reset.
+        /// </summary>
+#nullable enable
+        public CumulativeDurationData? GetCumulativeData()
+        {
+            _semaphore.Wait();
+            try
+            {
+                return new CumulativeDurationData
+                {
+                    TotalTime = MapTimingMetric(_snapshot.TotalTimeMetrics),
+                    TCPHandshakeTime = MapTimingMetric(_snapshot.TCPHandshakeTimeMetrics),
+                    SSLHandshakeTime = MapTimingMetric(_snapshot.SSLHandshakeTimeMetrics),
+                    TimeToFirstByte = MapTimingMetric(_snapshot.TimeToFirstByteMetrics),
+                    WaitingTime = MapTimingMetric(_snapshot.WaitingTimeMetrics),
+                    ReceivingTime = MapTimingMetric(_snapshot.ReceivingTimeMetrics),
+                    SendingTime = MapTimingMetric(_snapshot.SendingTimeMetrics)
+                };
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+        }
+#nullable restore
+
+        private static CumulativeTimingMetric MapTimingMetric(DurationMetricSnapshot.MetricTime metric)
+        {
+            return new CumulativeTimingMetric
+            {
+                Sum = metric.Sum,
+                Average = metric.Average,
+                Min = metric.Min,
+                Max = metric.Max,
+                P50 = metric.P50,
+                P90 = metric.P90,
+                P95 = metric.P95,
+                P99 = metric.P99
+            };
         }
 
         private async Task PushMetricAsync(CancellationToken token)

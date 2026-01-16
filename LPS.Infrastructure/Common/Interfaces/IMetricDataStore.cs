@@ -8,10 +8,11 @@ using System.Threading.Tasks;
 namespace LPS.Infrastructure.Common.Interfaces
 {
     /// <summary>
-    /// In-memory, thread-safe store for metric snapshots grouped by IterationId and MetricType.
-    /// Enforces exactly the 4 supported metric types per iteration.
+    /// Live in-memory store for metric snapshots grouped by IterationId and MetricType.
+    /// Provides real-time access to the latest metrics for UI, gRPC queries, and cross-metric dependencies.
+    /// Supports 4 metric types per iteration: Throughput, Duration, ResponseCode, DataTransmission.
     /// </summary>
-    public interface IMetricDataStore
+    public interface ILiveMetricDataStore
     {
         /// <summary>Push a new snapshot for an iteration + metric type. Registers the iteration on first push.</summary>
         ValueTask PushAsync(HttpIteration iteration, HttpMetricSnapshot snapshot, CancellationToken token = default);

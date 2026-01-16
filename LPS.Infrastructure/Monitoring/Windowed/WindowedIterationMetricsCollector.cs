@@ -20,6 +20,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private readonly HttpIteration _httpIteration;
         private readonly string _roundName;
         private readonly IWindowedMetricsQueue _queue;
+        private readonly IWindowedMetricDataStore _dataStore;
         private readonly IWindowedMetricsCoordinator _coordinator;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         private readonly IPlanExecutionContext _planContext;
@@ -42,6 +43,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             HttpIteration httpIteration,
             string roundName,
             IWindowedMetricsQueue queue,
+            IWindowedMetricDataStore dataStore,
             IWindowedMetricsCoordinator coordinator,
             IIterationStatusMonitor iterationStatusMonitor,
             IPlanExecutionContext planContext)
@@ -49,6 +51,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _dataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
@@ -157,6 +160,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                 if (isFinal || snapshot.HasData)
                 {
                     _queue.TryEnqueue(snapshot);
+                    // Also store for persistence
+                    _ = _dataStore.PushAsync(_httpIteration.Id, snapshot);
                 }
 
                 if (!isFinal)

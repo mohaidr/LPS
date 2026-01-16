@@ -13,15 +13,15 @@ using System.Threading.Tasks;
 namespace LPS.Infrastructure.Monitoring.GRPCServices
 {
     /// <summary>
-    /// gRPC service that reads metrics from the in-memory IMetricDataStore (not from aggregators).
+    /// gRPC service that reads metrics from the in-memory ILiveMetricDataStore (not from aggregators).
     /// It returns the latest snapshot per iteration/metric-type that matches the provided filters.
     /// </summary>
     public class MetricsQueryGrpcService : Protos.Shared.MetricsQueryService.MetricsQueryServiceBase
     {
-        private readonly IMetricDataStore _metricDataStore;
+        private readonly ILiveMetricDataStore _metricDataStore;
         private readonly CancellationTokenSource _cts;
 
-        public MetricsQueryGrpcService(IMetricDataStore metricDataStore, CancellationTokenSource cts)
+        public MetricsQueryGrpcService(ILiveMetricDataStore metricDataStore, CancellationTokenSource cts)
         {
             _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
             _cts = cts ?? throw new ArgumentNullException(nameof(cts));

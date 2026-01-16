@@ -9,13 +9,13 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public abstract class BaseMetricAggregator(HttpIteration httpIteration, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, IMetricDataStore metricDataStore) : IMetricAggregator
+    public abstract class BaseMetricAggregator(HttpIteration httpIteration, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, ILiveMetricDataStore metricDataStore) : IMetricAggregator
     {
         protected HttpIteration _httpIteration = httpIteration;
         protected abstract IMetricShapshot Snapshot { get; }
         protected ILogger _logger = logger;
         protected IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-        protected IMetricDataStore _metricDataStore = metricDataStore;
+        protected ILiveMetricDataStore _metricDataStore = metricDataStore;
         public HttpIteration HttpIteration => _httpIteration;
 
         public abstract LPSMetricType MetricType { get; }

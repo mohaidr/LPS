@@ -17,14 +17,14 @@ namespace LPS.UI.Core.Services
 
     public sealed class MetricsUiService : IMetricsUiService
     {
-        private readonly IMetricDataStore _store;
+        private readonly ILiveMetricDataStore _store;
         private readonly IIterationStatusMonitor _status;
         private readonly IRuntimeOperationIdProvider _op;
         private readonly ILogger _logger;
         IEntityRepositoryService _entityRepositoryService;
 
         public MetricsUiService(
-            IMetricDataStore metricDataStore,
+            ILiveMetricDataStore metricDataStore,
             IIterationStatusMonitor iterationStatusMonitor,
             IEntityRepositoryService entityRepositoryService,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,

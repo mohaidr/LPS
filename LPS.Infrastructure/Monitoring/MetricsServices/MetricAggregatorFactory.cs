@@ -21,7 +21,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _op;
         private readonly IMetricsVariableService _metricsVarSvc;
-        private readonly IMetricDataStore _metricDataStore;
+        private readonly ILiveMetricDataStore _metricDataStore;
         private readonly IFailureRulesService _failureRulesService;
 
         private sealed record Entry(HttpIteration Iteration, IReadOnlyList<IMetricAggregator> Aggregators);
@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
-            IMetricDataStore metricDataStore,
+            ILiveMetricDataStore metricDataStore,
             IFailureRulesService failureRulesService)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));

@@ -89,10 +89,16 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             if (!_isRunning) return;
             _isRunning = false;
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
-            
+
             // Fire one final event so collectors can push final state
-            try { OnPushInterval?.Invoke(); }
-            catch { /* Swallow */ }
+            try 
+            {
+                OnPushInterval?.Invoke(); 
+            }
+            catch (Exception ex) 
+            { 
+                Console.WriteLine(ex.ToString()); 
+            }
         }
 
         public ValueTask StartAsync(CancellationToken token)

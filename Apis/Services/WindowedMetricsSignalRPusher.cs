@@ -7,6 +7,7 @@ using LPS.Infrastructure.Monitoring.MetricsServices;
 using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Nodes;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
@@ -24,6 +25,7 @@ namespace Apis.Services
         private readonly IHubContext<WindowedMetricsHub> _hubContext;
         private readonly IInfluxDBWriter _influxDBWriter;
         private readonly INodeMetadata _nodeMetadata;
+        private readonly int _refreshRateMs;
         private readonly ILogger<WindowedMetricsSignalRPusher> _logger;
 
         public WindowedMetricsSignalRPusher(
@@ -31,12 +33,15 @@ namespace Apis.Services
             IHubContext<WindowedMetricsHub> hubContext,
             IInfluxDBWriter influxDBWriter,
             INodeMetadata nodeMetadata,
+            IConfiguration configuration,
             ILogger<WindowedMetricsSignalRPusher> logger)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
             _influxDBWriter = influxDBWriter ?? throw new ArgumentNullException(nameof(influxDBWriter));
             _nodeMetadata = nodeMetadata ?? throw new ArgumentNullException(nameof(nodeMetadata));
+            var refreshRate = configuration.GetValue<int?>("LPSAppSettings:Dashboard:RefreshRate") ?? 3;
+            _refreshRateMs = refreshRate * 1000;
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -49,12 +54,26 @@ namespace Apis.Services
                 // Wait for snapshots and push to SignalR
                 await foreach (var snapshot in _queue.Reader.ReadAllAsync(stoppingToken))
                 {
-                    await PushSnapshotAsync(snapshot, stoppingToken);
+                    await PushSnapshotAsync(snapshot, CancellationToken.None);
                 }
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("WindowedMetricsSignalRPusher stopping due to cancellation.");
+                _logger.LogInformation("WindowedMetricsSignalRPusher stopping, waiting {RefreshRateMs}ms for final snapshots...", _refreshRateMs);
+                
+                // Wait for final snapshots to be enqueued by coordinators during shutdown
+                // MUST drain here in ExecuteAsync - SignalR is still alive during this window
+                // If we move this to StopAsync, SignalR will already be disposed
+                await Task.Delay(_refreshRateMs * 2);
+                
+                // Drain any remaining items from the queue before exiting
+                while (_queue.Reader.TryRead(out var snapshot))
+                {
+                    _logger.LogInformation("WindowedMetricsSignalRPusher: Draining final snapshot for {IterationName}, IsFinal={IsFinal}", snapshot.IterationName, snapshot.IsFinal);
+                    await PushSnapshotAsync(snapshot, CancellationToken.None);
+                }
+                
+                _logger.LogInformation("WindowedMetricsSignalRPusher finished draining queue.");
             }
             catch (Exception ex)
             {
@@ -97,6 +116,15 @@ namespace Apis.Services
                     "Failed to push windowed snapshot for {IterationId}",
                     snapshot.IterationId);
             }
+        }
+
+
+        public override async Task StopAsync(CancellationToken stoppingToken)
+        {  
+            // Draining is already done in ExecuteAsync catch block (while SignalR is still alive)
+            // By this point, SignalR may already be disposed
+            _logger.LogInformation("CumulativeMetricsSignalRPusher StopAsync called.");
+            await base.StopAsync(stoppingToken);
         }
     }
 }

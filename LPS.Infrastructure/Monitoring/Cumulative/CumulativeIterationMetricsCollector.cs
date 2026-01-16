@@ -1,6 +1,5 @@
 #nullable enable
 using System;
-using System.Linq;
 using System.Threading;
 using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
@@ -13,7 +12,8 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
     /// <summary>
     /// Collector for cumulative metrics for a single iteration.
     /// Subscribes to cumulative coordinator's push interval event,
-    /// collects cumulative data from the metric data store, and pushes to queue.
+    /// collects cumulative data directly from the aggregators (like WindowedIterationMetricsCollector),
+    /// pushes to queue for real-time streaming, and stores in data store for persistence.
     /// Self-manages lifecycle based on iteration status from IIterationStatusMonitor.
     /// </summary>
     public sealed class CumulativeIterationMetricsCollector : IDisposable
@@ -21,8 +21,8 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         private readonly HttpIteration _httpIteration;
         private readonly string _roundName;
         private readonly ICumulativeMetricsQueue _queue;
+        private readonly ICumulativeMetricDataStore _dataStore;
         private readonly ICumulativeMetricsCoordinator _coordinator;
-        private readonly IMetricDataStore _metricDataStore;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         private readonly IPlanExecutionContext _planContext;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
@@ -30,22 +30,28 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         private bool _disposed;
         private bool _finalSnapshotSent;
 
+        // Component aggregators (set after construction by MetricsDataMonitor)
+        public ThroughputMetricAggregator? ThroughputAggregator { get; set; }
+        public DurationMetricAggregator? DurationAggregator { get; set; }
+        public ResponseCodeMetricAggregator? ResponseCodeAggregator { get; set; }
+        public DataTransmissionMetricAggregator? DataTransmissionAggregator { get; set; }
+
         public HttpIteration HttpIteration => _httpIteration;
         
         public CumulativeIterationMetricsCollector(
             HttpIteration httpIteration,
             string roundName,
             ICumulativeMetricsQueue queue,
+            ICumulativeMetricDataStore dataStore,
             ICumulativeMetricsCoordinator coordinator,
-            IMetricDataStore metricDataStore,
             IIterationStatusMonitor iterationStatusMonitor,
             IPlanExecutionContext planContext)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+            _dataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
-            _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
 
@@ -100,11 +106,15 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             _semaphore.Wait();
             try
             {
-                // Collect cumulative data from the data store
-                var throughput = GetCumulativeThroughput(out var targetUrl);
-                var duration = GetCumulativeDuration();
-                var dataTransmission = GetCumulativeDataTransmission();
-                var responseCodes = GetCumulativeResponseCodes();
+                // Collect cumulative data directly from aggregators (like WindowedIterationMetricsCollector)
+                string? targetUrl = null;
+                var throughput = ThroughputAggregator?.GetCumulativeData(out targetUrl);
+                var duration = DurationAggregator?.GetCumulativeData();
+                var dataTransmission = DataTransmissionAggregator?.GetCumulativeData();
+                var responseCodes = ResponseCodeAggregator?.GetCumulativeData();
+
+                // Get target URL from throughput aggregator or fall back to iteration's URL
+                string url = targetUrl ?? _httpIteration.HttpRequest?.Url?.Url ?? string.Empty;
 
                 var snapshot = new CumulativeIterationSnapshot
                 {
@@ -113,7 +123,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                     TestStartTime = _planContext.TestStartTime,
                     RoundName = _roundName,
                     IterationName = _httpIteration.Name,
-                    TargetUrl = targetUrl ?? string.Empty,
+                    TargetUrl = url,
                     Timestamp = DateTime.UtcNow,
                     ExecutionStatus = executionStatus,
                     IsFinal = isFinal,
@@ -127,111 +137,14 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                 if (isFinal || snapshot.HasData)
                 {
                     _queue.TryEnqueue(snapshot);
+                    // Also store for persistence
+                    _ = _dataStore.PushAsync(_httpIteration.Id, snapshot);
                 }
             }
             finally
             {
                 _semaphore.Release();
             }
-        }
-
-        private CumulativeThroughputData? GetCumulativeThroughput(out string? targetUrl)
-        {
-            targetUrl = null;
-            if (!_metricDataStore.TryGetLatest<ThroughputMetricSnapshot>(
-                _httpIteration.Id, LPSMetricType.Throughput, out var snapshot) || snapshot == null)
-            {
-                return null;
-            }
-
-            targetUrl = snapshot.URL;
-            return new CumulativeThroughputData
-            {
-                RequestsCount = snapshot.RequestsCount,
-                SuccessfulRequestCount = snapshot.SuccessfulRequestCount,
-                FailedRequestsCount = snapshot.FailedRequestsCount,
-                MaxConcurrentRequests = snapshot.MaxConcurrentRequests,
-                RequestsPerSecond = snapshot.RequestsRate.Value,
-                RequestsRatePerCoolDown = snapshot.RequestsRatePerCoolDownPeriod.Value,
-                ErrorRate = snapshot.ErrorRate,
-                TimeElapsedMs = snapshot.TimeElapsed
-            };
-        }
-
-        private CumulativeDurationData? GetCumulativeDuration()
-        {
-            if (!_metricDataStore.TryGetLatest<DurationMetricSnapshot>(
-                _httpIteration.Id, LPSMetricType.Time, out var snapshot) || snapshot == null)
-            {
-                return null;
-            }
-
-            return new CumulativeDurationData
-            {
-                TotalTime = MapTimingMetric(snapshot.TotalTimeMetrics),
-                TCPHandshakeTime = MapTimingMetric(snapshot.TCPHandshakeTimeMetrics),
-                SSLHandshakeTime = MapTimingMetric(snapshot.SSLHandshakeTimeMetrics),
-                TimeToFirstByte = MapTimingMetric(snapshot.TimeToFirstByteMetrics),
-                WaitingTime = MapTimingMetric(snapshot.WaitingTimeMetrics),
-                ReceivingTime = MapTimingMetric(snapshot.ReceivingTimeMetrics),
-                SendingTime = MapTimingMetric(snapshot.SendingTimeMetrics)
-            };
-        }
-
-        private static CumulativeTimingMetric MapTimingMetric(DurationMetricSnapshot.MetricTime metric)
-        {
-            return new CumulativeTimingMetric
-            {
-                Sum = metric.Sum,
-                Average = metric.Average,
-                Min = metric.Min,
-                Max = metric.Max,
-                P50 = metric.P50,
-                P90 = metric.P90,
-                P95 = metric.P95,
-                P99 = metric.P99
-            };
-        }
-
-        private CumulativeDataTransmissionData? GetCumulativeDataTransmission()
-        {
-            if (!_metricDataStore.TryGetLatest<DataTransmissionMetricSnapshot>(
-                _httpIteration.Id, LPSMetricType.DataTransmission, out var snapshot) || snapshot == null)
-            {
-                return null;
-            }
-
-            return new CumulativeDataTransmissionData
-            {
-                DataSent = snapshot.DataSent,
-                DataReceived = snapshot.DataReceived,
-                AverageDataSent = snapshot.AverageDataSent,
-                AverageDataReceived = snapshot.AverageDataReceived,
-                UpstreamThroughputBps = snapshot.UpstreamThroughputBps,
-                DownstreamThroughputBps = snapshot.DownstreamThroughputBps,
-                ThroughputBps = snapshot.ThroughputBps
-            };
-        }
-
-        private CumulativeResponseCodeData? GetCumulativeResponseCodes()
-        {
-            if (!_metricDataStore.TryGetLatest<ResponseCodeMetricSnapshot>(
-                _httpIteration.Id, LPSMetricType.ResponseCode, out var snapshot) || snapshot == null)
-            {
-                return null;
-            }
-
-            return new CumulativeResponseCodeData
-            {
-                ResponseSummaries = snapshot.ResponseSummaries
-                    .Select(s => new CumulativeResponseSummary
-                    {
-                        HttpStatusCode = (int)s.HttpStatusCode,
-                        HttpStatusReason = s.HttpStatusReason,
-                        Count = s.Count
-                    })
-                    .ToList()
-            };
         }
 
         public void Dispose()

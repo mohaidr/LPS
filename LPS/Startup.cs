@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Logging;
 using LPS.Infrastructure.Logger;
 using LPS.Domain;
 using LPS.UI.Common.Extensions;
@@ -110,7 +111,9 @@ namespace LPS
                     services.AddSingleton<IFailureRulesService, FailureRulesService>();
                     services.AddSingleton<IMetricAggregatorFactory, MetricAggregatorFactory>();
                     services.AddSingleton<IMetricsUiService, MetricsUiService>();
-                    services.AddSingleton<IMetricDataStore, MetricDataStoreService>();
+                    services.AddSingleton<ILiveMetricDataStore, LiveMetricDataStore>();
+                    services.AddSingleton<IWindowedMetricDataStore, WindowedMetricDataStore>();
+                    services.AddSingleton<ICumulativeMetricDataStore, CumulativeMetricDataStore>();
                     services.AddSingleton<IPlanExecutionContext, PlanExecutionContext>();
                     services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                     services.AddSingleton<IMetricsVariableService, MetricsVariableService>();
@@ -209,6 +212,11 @@ namespace LPS
                 .UseHttpClient()
                 .UseClusterConfiguration()
                 .UseInfluxDB()
+                .ConfigureLogging(logging =>
+                {
+                    // Suppress verbose System.Net.Http logging - only show warnings and errors
+                    logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
+                })
                 .UseConsoleLifetime(options => options.SuppressStatusMessages = true)
                .Build();
 
