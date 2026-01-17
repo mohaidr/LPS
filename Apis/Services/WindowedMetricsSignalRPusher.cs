@@ -59,7 +59,7 @@ namespace Apis.Services
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("WindowedMetricsSignalRPusher stopping, waiting {RefreshRateMs}ms for final snapshots...", _refreshRateMs);
+                _logger.LogInformation("WindowedMetricsSignalRPusher stopping, waiting {RefreshRateMs}ms for final snapshots...", _refreshRateMs*2);
                 
                 // Wait for final snapshots to be enqueued by coordinators during shutdown
                 // MUST drain here in ExecuteAsync - SignalR is still alive during this window

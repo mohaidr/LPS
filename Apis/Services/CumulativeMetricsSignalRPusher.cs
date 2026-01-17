@@ -59,7 +59,7 @@ namespace Apis.Services
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("CumulativeMetricsSignalRPusher stopping, waiting {RefreshRateMs}ms for final snapshots...", _refreshRateMs);
+                _logger.LogInformation("CumulativeMetricsSignalRPusher stopping, waiting {RefreshRateMs}ms for final snapshots...", _refreshRateMs *2);
                 
                 // Wait for final snapshots to be enqueued by coordinators during shutdown
                 // MUST drain here in ExecuteAsync - SignalR is still alive during this window
@@ -68,7 +68,7 @@ namespace Apis.Services
                 // Drain any remaining items from the queue before exiting
                 while (_queue.Reader.TryRead(out var snapshot))
                 {
-                    Console.WriteLine($"CumulativeMetricsSignalRPusher: Draining final snapshot for IterationId={snapshot.IterationId}, IsFinal={snapshot.IsFinal}, {snapshot.ExecutionStatus}");
+                    _logger.LogInformation($"CumulativeMetricsSignalRPusher: Draining final snapshot for IterationId={snapshot.IterationId}, IsFinal={snapshot.IsFinal}, {snapshot.ExecutionStatus}");
                     await PushSnapshotAsync(snapshot, CancellationToken.None);
                 }
                 
