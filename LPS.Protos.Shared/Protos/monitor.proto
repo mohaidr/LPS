@@ -18,6 +18,7 @@ enum ExecutionStatus
   FAILED = 3;
   TERMINATED=4;
   CANCELLED = 5;
+  SKIPPED = 6;
   UNKOWN = -1; 
 }
 

@@ -2,10 +2,10 @@
 
 	<PropertyGroup>
 		<!-- Versions (align all to 3.0.2) -->
-		<Version>3.0.3.1</Version>
-		<AssemblyVersion>3.0.3.1</AssemblyVersion>
-		<FileVersion>3.0.3.1</FileVersion>
-		<InformationalVersion>3.0.3.1</InformationalVersion>
+		<Version>3.0.3.2</Version>
+		<AssemblyVersion>3.0.3.2</AssemblyVersion>
+		<FileVersion>3.0.3.2</FileVersion>
+		<InformationalVersion>3.0.3.2</InformationalVersion>
 
 		<!-- Target -->
 		<OutputType>Exe</OutputType>

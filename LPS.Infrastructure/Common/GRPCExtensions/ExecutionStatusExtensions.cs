@@ -18,6 +18,7 @@ namespace LPS.Infrastructure.Common.GRPCExtensions
                 DomainStatus.Cancelled => GrpcStatus.Cancelled,
                 DomainStatus.Failed => GrpcStatus.Failed,
                 DomainStatus.Terminated => GrpcStatus.Terminated,
+                DomainStatus.Skipped => GrpcStatus.Skipped,
                 DomainStatus.Unkown => GrpcStatus.Unkown,
                 _ => GrpcStatus.Unkown
             };
@@ -36,6 +37,7 @@ namespace LPS.Infrastructure.Common.GRPCExtensions
                 GrpcStatus.Cancelled => DomainStatus.Cancelled,
                 GrpcStatus.Failed => DomainStatus.Failed,
                 GrpcStatus.Terminated => DomainStatus.Terminated,
+                GrpcStatus.Skipped => DomainStatus.Skipped,
                 GrpcStatus.Unkown => DomainStatus.Unkown,
                 _ => DomainStatus.Unkown
             };
