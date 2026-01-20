@@ -19,8 +19,6 @@ using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Extensions;
-using System.Net.Security;
-using System.Net.Sockets;
 using LPS.Infrastructure.Monitoring.Metrics;
 using Google.Protobuf.WellKnownTypes;
 using System.IO;
@@ -33,6 +31,8 @@ namespace LPS.Infrastructure.LPSClients
         readonly ILogger _logger;
         private static int _clientNumber;
         public static object _lock = new();
+        // Initialize the event listener once to passively capture connection timing metrics
+        private static readonly HttpConnectionEventListener _connectionEventListener = HttpConnectionEventListener.Instance;
         public string SessionId { get; private set; }
         public string GuidId { get; private set; }
         readonly ICacheService<string> _memoryCacheService;
@@ -72,56 +72,7 @@ namespace LPS.Infrastructure.LPSClients
                 UseCookies = true,
                 AllowAutoRedirect = true,
                 MaxAutomaticRedirections = 5,
-                EnableMultipleHttp2Connections = true,
-                ConnectCallback = async (context, cancellationToken) =>
-                {
-                    Console.WriteLine("Start DNS..."+ DateTime.UtcNow.ToString("o"));
-                    // Measure DNS resolution time
-                    var dnsStopwatch = Stopwatch.StartNew();
-                    var addresses = await Dns.GetHostAddressesAsync(context.DnsEndPoint.Host, cancellationToken);
-                    dnsStopwatch.Stop();
-
-                    // Store DNS resolution time in request options
-                    context.InitialRequestMessage.Options.Set(new HttpRequestOptionsKey<double>("DnsResolutionTime"), dnsStopwatch.Elapsed.TotalMilliseconds);
-
-                    // Measure TCP connect time using resolved IP address
-                    var tcpStopwatch = Stopwatch.StartNew();
-                    var socket = new Socket(addresses[0].AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                    await socket.ConnectAsync(addresses[0], context.DnsEndPoint.Port, cancellationToken);
-                    tcpStopwatch.Stop();
-
-                    // Store TCP handshake time in request options
-                    context.InitialRequestMessage.Options.Set(new HttpRequestOptionsKey<double>("TcpHandshakeTime"), tcpStopwatch.Elapsed.TotalMilliseconds);
-
-                    var netStream = new NetworkStream(socket, ownsSocket: true);
-
-                    // Decide TLS only for HTTPS
-                    bool isHttps =
-                        string.Equals(context.InitialRequestMessage?.RequestUri?.Scheme,
-                                      Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
-                        || context.DnsEndPoint.Port == 443;
-
-                    if (!isHttps)
-                    {
-                        // HTTP: no TLS, so TLS time is 0
-                        context.InitialRequestMessage.Options.Set(new HttpRequestOptionsKey<double>("TlsHandshakeTime"), 0.0);
-                        return netStream;
-                    }
-
-                    // HTTPS: Measure TLS handshake time
-                    var tlsStopwatch = Stopwatch.StartNew();
-                    var ssl = new SslStream(netStream, leaveInnerStreamOpen: false,
-                                            userCertificateValidationCallback: (_, __, ___, ____) => true);
-                    await ssl.AuthenticateAsClientAsync(context.DnsEndPoint.Host);
-                    tlsStopwatch.Stop();
-
-                    // Store TLS handshake time in request options
-                    context.InitialRequestMessage.Options.Set(new HttpRequestOptionsKey<double>("TlsHandshakeTime"), tlsStopwatch.Elapsed.TotalMilliseconds);
-
-                    Console.WriteLine("End Connecting..."+ DateTime.UtcNow.ToString("o"));
-
-                    return ssl;
-                }
+                EnableMultipleHttp2Connections = true
             };
             httpClient = new HttpClient(socketsHandler)
             {
@@ -137,7 +88,7 @@ namespace LPS.Infrastructure.LPSClients
         public async Task<HttpResponse> SendAsync(HttpRequest httpRequestEntity, CancellationToken token = default)
         {
             HttpResponse lpsHttpResponse;
-            Stopwatch timeToFirstByteWatch = new();
+            Stopwatch timeToheaders = new();
             TimeSpan downStreamTime = TimeSpan.FromSeconds(0);
             TimeSpan htmlDownloadTime = TimeSpan.FromSeconds(0);
             double tcpHandshakeTime = 0;
@@ -162,26 +113,28 @@ namespace LPS.Infrastructure.LPSClients
                         await _metricsService.TryIncreaseConnectionsCountAsync(httpRequestEntity.Id, token);
 
                         //Start the http Request
-                        timeToFirstByteWatch.Start();
-                        Console.WriteLine("Sending Request..."+ DateTime.UtcNow.ToString("o"));
+                        var host = httpRequestEntity.Url?.HostName ?? httpRequestMessage.RequestUri?.Host ?? "";
+                        timeToheaders.Start();
                         var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
-                        Console.WriteLine("Received HEaders..."+ DateTime.UtcNow.ToString("o"));
+                        timeToheaders.Stop();
 
-                        timeToFirstByteWatch.Stop();
+                        // Extract connection timing from passive EventListener (non-blocking)
+                        var connectionTiming = _connectionEventListener.GetAndClearTiming(host);
+                        if (connectionTiming != null)
+                        {
+                            dnsResolutionTime = connectionTiming.DnsResolutionMs;
+                            tcpHandshakeTime = connectionTiming.TcpHandshakeMs;
+                            tlsHandshakeTime = connectionTiming.TlsHandshakeMs;
+                            Console.WriteLine($"[Timing] Host: {host} |  timing captured  => DNS: {dnsResolutionTime} MS, TCP: {tcpHandshakeTime} MS, TLS: {tlsHandshakeTime} MS");
 
-                        // Extract DNS, TCP, TLS, and Upload times from request options
-                        if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("DnsResolutionTime"), out var dns))
-                        {
-                            dnsResolutionTime = dns;
                         }
-                        if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("TcpHandshakeTime"), out var tcp))
+                        else
                         {
-                            tcpHandshakeTime = tcp;
+                            Console.WriteLine($"[Timing] Host: {host} | No timing captured (connection reused or not tracked)");
                         }
-                        if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("TlsHandshakeTime"), out var tls))
-                        {
-                            tlsHandshakeTime = tls;
-                        }
+                        // Note: When connection is reused from pool, timing will be null/0 (correct behavior)
+
+                        // Extract Upload time from request options (set by ProgressContent)
                         if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("UploadTime"), out var upload))
                         {
                             uploadTime = upload;
@@ -280,7 +233,7 @@ namespace LPS.Infrastructure.LPSClients
 
                         // Download Html Embdedded Resources, conditonally
                         (bool hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, linkedCts.Token);
-                        responseCommand.TotalTime = timeToFirstByteWatch.Elapsed + htmlDownloadTime + downStreamTime; // set the response time after the complete payload is read.
+                        responseCommand.TotalTime = timeToheaders.Elapsed + htmlDownloadTime + downStreamTime; // set the response time after the complete payload is read.
                         lpsHttpResponse = new HttpResponse(responseCommand, _logger, _runtimeOperationIdProvider);
                         lpsHttpResponse.SetHttpRequest(httpRequestEntity);
 
@@ -293,13 +246,13 @@ namespace LPS.Infrastructure.LPSClients
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, linkedCts.Token);
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, linkedCts.Token);
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.SendingTime, uploadTime, linkedCts.Token); // RENAMED
-                        await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TimeToFirstByte, timeToFirstByteWatch.Elapsed.TotalMilliseconds, linkedCts.Token);
+                        await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TimeToFirstByte, timeToheaders.Elapsed.TotalMilliseconds, linkedCts.Token);
                         
                         // Calculate and update Waiting Time (TTFB - DNS - TCP - TLS - Upload)
-                        double waitingTime = timeToFirstByteWatch.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime - uploadTime;
+                        double waitingTime = timeToheaders.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime  - uploadTime;
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
 
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tTTFB: {timeToFirstByteWatch.Elapsed.TotalMilliseconds} MS\n\tWaiting: {waitingTime} MS\n\tDNS Resolution: {dnsResolutionTime} MS\n\tTCP Handshake: {tcpHandshakeTime} MS\n\tTLS Handshake: {tlsHandshakeTime} MS\n\tSending: {uploadTime} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tTTFB: {timeToheaders.Elapsed.TotalMilliseconds} MS\n\tWaiting: {waitingTime} MS\n\tDNS Resolution: {dnsResolutionTime} MS\n\tTCP Handshake: {tcpHandshakeTime} MS\n\tTLS Handshake: {tlsHandshakeTime} MS\n\tSending: {uploadTime} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
 
                         //Update Throughput Metrics
                         await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, linkedCts.Token);
@@ -318,7 +271,7 @@ namespace LPS.Infrastructure.LPSClients
                     LocationToResponse = string.Empty,
                     IsSuccessStatusCode = false,
                     HttpRequestId = httpRequestEntity.Id,
-                    TotalTime = timeToFirstByteWatch.Elapsed + htmlDownloadTime + downStreamTime,
+                    TotalTime = timeToheaders.Elapsed + htmlDownloadTime + downStreamTime,
                 };
 
                 lpsHttpResponse = new HttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
@@ -333,7 +286,7 @@ namespace LPS.Infrastructure.LPSClients
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.SendingTime, uploadTime, token); // RENAMED
                 
                 // Calculate and update Waiting Time even on failure
-                double waitingTime = timeToFirstByteWatch.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime - uploadTime;
+                double waitingTime = timeToheaders.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime - uploadTime;
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, token);
 
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer")))
