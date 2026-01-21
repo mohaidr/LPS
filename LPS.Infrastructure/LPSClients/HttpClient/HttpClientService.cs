@@ -33,7 +33,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly ILogger _logger;
         private static int _clientNumber;
         public static object _lock = new();
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> _firstRequestPerHost = new();
+        private readonly ConnectionInitializationService _connectionInitService = new();
         public string SessionId { get; private set; }
         public string GuidId { get; private set; }
         readonly ICacheService<string> _memoryCacheService;
@@ -159,71 +159,25 @@ namespace LPS.Infrastructure.LPSClients
                         //Update Throughput Metric
                         await _metricsService.TryIncreaseConnectionsCountAsync(httpRequestEntity.Id, token);
 
-                        // OPTIONS pre-flight for first request to establish connection and measure DNS/TCP/TLS
-                        string host = httpRequestMessage.RequestUri?.Host ?? "unknown";
-                        double optionsDns = 0, optionsTcp = 0, optionsTls = 0;
-                        
-                        if (!_firstRequestPerHost.ContainsKey(host))
-                        {
-                            var optionsRequest = new HttpRequestMessage(HttpMethod.Options, httpRequestMessage.RequestUri);
-                            optionsRequest.Version = httpRequestMessage.Version;
-                            
-                            try
-                            {
-                                var optionsResponse = await httpClient.SendAsync(optionsRequest, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
-                                optionsResponse.Dispose();
-                                
-                                // Extract connection timing from OPTIONS request
-                                if (optionsRequest.Options.TryGetValue(new HttpRequestOptionsKey<double>("DnsResolutionTime"), out var optDns))
-                                    optionsDns = optDns;
-
-                                if (optionsRequest.Options.TryGetValue(new HttpRequestOptionsKey<double>("TcpHandshakeTime"), out var optTcp))
-                                    optionsTcp = optTcp;
-
-                                if (optionsRequest.Options.TryGetValue(new HttpRequestOptionsKey<double>("TlsHandshakeTime"), out var optTls))
-                                    optionsTls = optTls;
-       
-                                _firstRequestPerHost[host] = true;
-                            }
-                            catch (Exception optEx)
-                            {
-                                await _logger.LogAsync($"[First Request] OPTIONS failed: {optEx.Message} - will use actual request timing", LPSLoggingLevel.Warning);
-                                // OPTIONS failed, actual request will establish connection
-                            }
-                        }
+                        // Initialize connection for first request to host (OPTIONS pre-flight)
+                        var optionsTiming = await _connectionInitService.InitializeConnectionAsync(
+                            httpClient, 
+                            httpRequestMessage, 
+                            linkedCts.Token);
 
                         //Start the http Request
                         timeToHeadersWatch.Start();
                         var responseMessage = await httpClient.SendAsync(httpRequestMessage, HttpCompletionOption.ResponseHeadersRead, linkedCts.Token);
                         timeToHeadersWatch.Stop();
 
-                        // Extract DNS, TCP, TLS, and Upload times from request options
-                        if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("DnsResolutionTime"), out var dns))
-                        {
-                            dnsResolutionTime = dns;
-                        }
-                        if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("TcpHandshakeTime"), out var tcp))
-                        {
-                            tcpHandshakeTime = tcp;
-                        }
-                        if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("TlsHandshakeTime"), out var tls))
-                        {
-                            tlsHandshakeTime = tls;
-                        }
+                        // Extract connection timing: use OPTIONS timing if available, otherwise extract from actual request
+                        var requestTiming = _connectionInitService.ExtractTimingFromRequest(httpRequestMessage);
                         
-                        // If actual request reused connection (timing = 0) and we have OPTIONS timing, use it
-                        if (dnsResolutionTime == 0 && optionsDns > 0 || optionsDns > dnsResolutionTime)
-                        {
-                            dnsResolutionTime = optionsDns;
-                        }
-                        if (tcpHandshakeTime == 0 && optionsTcp > 0 || optionsTcp > tcpHandshakeTime)
-                        {
-                            tcpHandshakeTime = optionsTcp;
-                        }
-                        if (tlsHandshakeTime == 0 && optionsTls > 0 || optionsTls > tlsHandshakeTime)
-                        {
-                            tlsHandshakeTime = optionsTls;
-                        }
+                        // Use OPTIONS timing (from InitializeConnection) if connection was reused, otherwise use actual request timing
+                        dnsResolutionTime = optionsTiming.DnsResolutionMs > 0 ? optionsTiming.DnsResolutionMs : requestTiming.DnsResolutionMs;
+                        tcpHandshakeTime = optionsTiming.TcpHandshakeMs > 0 ? optionsTiming.TcpHandshakeMs : requestTiming.TcpHandshakeMs;
+                        tlsHandshakeTime = optionsTiming.TlsHandshakeMs > 0 ? optionsTiming.TlsHandshakeMs : requestTiming.TlsHandshakeMs;
+                        
                         if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("UploadTime"), out var upload))
                         {
                             uploadTime = upload;
