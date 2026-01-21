@@ -87,17 +87,20 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         public void Stop()
         {
             if (!_isRunning) return;
-            _isRunning = false;
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
 
             // Fire one final event so collectors can push final state
-            try 
+            try
             {
-                OnPushInterval?.Invoke(); 
+                OnPushInterval?.Invoke();
             }
-            catch (Exception ex) 
-            { 
-                Console.WriteLine(ex.ToString()); 
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                _isRunning = false;
             }
         }
 

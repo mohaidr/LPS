@@ -95,19 +95,22 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public void Stop()
         {
             if (!_isRunning) return;
-            _isRunning = false;
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
-            
+
             // Fire one final event so collectors can push final state
             Interlocked.Increment(ref _windowSequence);
-            try 
+            try
             {
 
                 OnWindowClosed?.Invoke();
             }
-            catch (Exception ex) 
-            { 
-                Console.WriteLine(ex.ToString()); 
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                _isRunning = false;
             }
         }
 
@@ -128,7 +131,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             if (!_isRunning) return;
 
             Interlocked.Increment(ref _windowSequence);
-            
+
             try
             {
                 OnWindowClosed?.Invoke();
