@@ -259,7 +259,7 @@ namespace LPS.UI.Core.Services
             if (plan.GetReadOnlyRounds().Any())
             {
                 var hosts = plan.GetReadOnlyRounds().SelectMany(r => r.GetReadOnlyIterations().Select(iteration =>  ((HttpIteration)iteration).HttpRequest.Url.BaseUrl));
-               // await _warmupService.TryWarmUpAsync(hosts.Distinct(), ct: parameters.CancellationToken);
+                await _warmupService.TryWarmUpAsync(hosts.Distinct(), requestsPerHost: 1, ct: parameters.CancellationToken);
                 
                 await RegisterEntities(plan);
                 await localNode.SetNodeStatus(NodeStatus.Running);
