@@ -105,7 +105,7 @@ namespace Apis.Services
                     _runtimeOperationIdProvider.OperationId,
                     $"GetRecordAsync(): No entity found for FQDN: {fullyQualifiedName}. Retrying in {delaySeconds} seconds...",
                     LPSLoggingLevel.Verbose);
-                Console.WriteLine("BackOff");
+                Console.WriteLine($"BackOff Logic: No entity found for FQDN: {fullyQualifiedName}. Retrying in {delaySeconds} seconds...");
                 await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
 
                 // Exponential backoff: 1, 2,4, 8, 16, 32 (capped)
