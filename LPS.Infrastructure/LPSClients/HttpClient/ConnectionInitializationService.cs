@@ -1,6 +1,9 @@
+using LPS.Domain.Common.Interfaces;
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net.Http;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -133,6 +136,7 @@ namespace LPS.Infrastructure.LPSClients
         public async Task<ConnectionTiming> InitializeConnectionAsync(
             HttpClient httpClient,
             HttpRequestMessage originalRequest,
+            ILogger logger,
             CancellationToken cancellationToken)
         {
             string host = originalRequest.RequestUri?.Host ?? "unknown";
@@ -171,9 +175,22 @@ namespace LPS.Infrastructure.LPSClients
 
                 return new ConnectionTiming(dnsMs, tcpMs, tlsMs, IsFirstRequest: true, WasSuccessful: true);
             }
+            catch (Exception ex) when (
+                ex is SocketException ||
+                ex is OperationCanceledException ||
+                ex is TaskCanceledException || 
+                ex is IOException ||
+                ex?.InnerException is SocketException || 
+                ex?.InnerException?.InnerException is SocketException
+            )
+            {
+                throw;
+            }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ConnectionInit] OPTIONS to {host} failed: {ex.Message}");
+                Console.WriteLine(ex.ToString());   
+
+                await logger.LogAsync($"[ConnectionInit] to {host} failed: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
                 // OPTIONS failed - actual request will establish connection (with overhead)
                 return new ConnectionTiming(0, 0, 0, IsFirstRequest: true, WasSuccessful: false);
             }

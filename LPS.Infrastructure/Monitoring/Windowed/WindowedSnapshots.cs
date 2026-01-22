@@ -57,7 +57,6 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public WindowedTimingMetric ReceivingTime { get; init; } = new();
         public WindowedTimingMetric SendingTime { get; init; } = new();
 
-        public bool HasData => TotalTime.Count > 0;
     }
 
     /// <summary>
@@ -88,7 +87,6 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public double RequestsPerSecond { get; init; }
         public double ErrorRate { get; init; }
 
-        public bool HasData => RequestsCount > 0;
     }
 
     /// <summary>
@@ -98,7 +96,6 @@ namespace LPS.Infrastructure.Monitoring.Windowed
     {
         public List<WindowedResponseSummary> ResponseSummaries { get; init; } = new();
 
-        public bool HasData => ResponseSummaries.Count > 0;
     }
 
     /// <summary>
@@ -122,7 +119,6 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public double DownstreamThroughputBps { get; init; }
         public double ThroughputBps { get; init; }
 
-        public bool HasData => DataSent > 0 || DataReceived > 0;
     }
 
     #endregion

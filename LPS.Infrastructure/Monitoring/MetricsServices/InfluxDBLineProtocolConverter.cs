@@ -25,25 +25,25 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var tags = BuildCommonTags(snapshot.PlanName, snapshot.TestStartTime, snapshot.RoundName, snapshot.IterationName, snapshot.TargetUrl);
 
             // Duration metrics (timing)
-            if (snapshot.Duration?.HasData == true)
+            if (snapshot.Duration !=null)
             {
                 lines.AddRange(ConvertWindowedDuration(tags, snapshot.Duration, timestamp));
             }
 
             // Throughput metrics
-            if (snapshot.Throughput?.HasData == true)
+            if (snapshot.Throughput != null)
             {
                 lines.Add(ConvertWindowedThroughput(tags, snapshot.Throughput, timestamp));
             }
 
             // Response code distribution
-            if (snapshot.ResponseCodes?.HasData == true)
+            if (snapshot.ResponseCodes != null)
             {
                 lines.AddRange(ConvertWindowedResponseCodes(tags, snapshot.ResponseCodes, timestamp));
             }
 
             // Data transmission metrics
-            if (snapshot.DataTransmission?.HasData == true)
+            if (snapshot.DataTransmission != null)
             {
                 lines.Add(ConvertWindowedDataTransmission(tags, snapshot.DataTransmission, timestamp));
             }

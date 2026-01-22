@@ -163,6 +163,7 @@ namespace LPS.Infrastructure.LPSClients
                         var optionsTiming = await _connectionInitService.InitializeConnectionAsync(
                             httpClient, 
                             httpRequestMessage, 
+                            _logger,
                             linkedCts.Token);
 
                         //Start the http Request

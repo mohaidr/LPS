@@ -52,7 +52,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
                 var data = BuildWindowData();
                 Reset();
-                return data.HasData ? data : null;
+                return data;
             }
             finally
             {
@@ -71,7 +71,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             {
                 if (_disposed) return null;
                 var data = BuildWindowData();
-                return data.HasData ? data : null;
+                return data;
             }
             finally
             {
