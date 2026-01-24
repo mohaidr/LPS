@@ -16,15 +16,6 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         /// </summary>
         event Action? OnPushInterval;
 
-        /// <summary>
-        /// Start the coordinator timer.
-        /// </summary>
-        void Start();
-
-        /// <summary>
-        /// Stop the coordinator timer.
-        /// </summary>
-        void Stop();
 
         /// <summary>
         /// Start the coordinator timer (async).
@@ -71,7 +62,8 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             IntervalMs = (int)interval.TotalMilliseconds;
         }
 
-        public void Start()
+
+        public async ValueTask StartAsync(CancellationToken token)
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CumulativeMetricsCoordinator));
             if (_isRunning) return;
@@ -81,10 +73,11 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                 OnTimerTick,
                 null,
                 IntervalMs,
-                IntervalMs);
+                IntervalMs); 
+            await ValueTask.CompletedTask;
         }
 
-        public void Stop()
+        public async ValueTask StopAsync(CancellationToken token)
         {
             if (!_isRunning) return;
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
@@ -102,18 +95,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             {
                 _isRunning = false;
             }
-        }
-
-        public ValueTask StartAsync(CancellationToken token)
-        {
-            Start();
-            return ValueTask.CompletedTask;
-        }
-
-        public ValueTask StopAsync(CancellationToken token)
-        {
-            Stop();
-            return ValueTask.CompletedTask;
+            await ValueTask.CompletedTask;
         }
 
         private void OnTimerTick(object? state)

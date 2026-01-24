@@ -1,5 +1,6 @@
 ﻿using Spectre.Console;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace LPS
 {
@@ -12,7 +13,6 @@ namespace LPS
             var host = Startup.ConfigureServices(args);
             var cancelltionToken = host.Services.GetRequiredService<CancellationTokenSource>();
 
-           
             await host.StartAsync(cancelltionToken.Token);
             await host.StopAsync(cancelltionToken.Token);
         }

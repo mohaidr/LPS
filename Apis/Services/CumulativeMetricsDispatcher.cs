@@ -20,24 +20,24 @@ namespace Apis.Services
     /// Cumulative data is pushed at its own interval (RefreshRate), separate from windowed data.
     /// Only master node uploads to InfluxDB (workers have partial data).
     /// </summary>
-    public sealed class CumulativeMetricsSignalRPusher : BackgroundService
+    public sealed class CumulativeMetricsDispatcher : BackgroundService
     {
         private readonly ICumulativeMetricsQueue _queue;
-        private readonly IHubContext<WindowedMetricsHub> _hubContext;
+        private readonly IHubContext<MetricsHub> _hubContext;
         private readonly IInfluxDBWriter _influxDBWriter;
         private readonly INodeMetadata _nodeMetadata;
         private readonly ICumulativeMetricsCoordinator _coordinator;
         private readonly int _refreshRateMs;
-        private readonly ILogger<CumulativeMetricsSignalRPusher> _logger;
+        private readonly ILogger<CumulativeMetricsDispatcher> _logger;
 
-        public CumulativeMetricsSignalRPusher(
+        public CumulativeMetricsDispatcher(
             ICumulativeMetricsQueue queue,
-            IHubContext<WindowedMetricsHub> hubContext,
+            IHubContext<MetricsHub> hubContext,
             IInfluxDBWriter influxDBWriter,
             INodeMetadata nodeMetadata,
             ICumulativeMetricsCoordinator coordinator,
             IConfiguration configuration,
-            ILogger<CumulativeMetricsSignalRPusher> logger)
+            ILogger<CumulativeMetricsDispatcher> logger)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
             _hubContext = hubContext ?? throw new ArgumentNullException(nameof(hubContext));
@@ -51,7 +51,7 @@ namespace Apis.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("CumulativeMetricsSignalRPusher started, listening for snapshots.");
+            _logger.LogInformation("CumulativeMetricsDispatcher started, listening for snapshots.");
 
             try
             {
@@ -63,55 +63,26 @@ namespace Apis.Services
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                _logger.LogInformation("CumulativeMetricsSignalRPusher stopping, waiting {RefreshRateMs}ms for final snapshots...", _refreshRateMs * 2);
-
-                // Wait for final snapshots to be enqueued by coordinators during shutdown
-                // MUST drain here in ExecuteAsync - SignalR is still alive during this window
-                // If we move this to StopAsync, SignalR will already be disposed
-                await Task.Delay(_refreshRateMs * 2);
-                // Drain any remaining items from the queue before exiting
-                while (_queue.Reader.TryRead(out var snapshot))
-                {
-                    _logger.LogInformation($"CumulativeMetricsSignalRPusher: Draining final snapshot for IterationId={snapshot.IterationId}, IsFinal={snapshot.IsFinal}, {snapshot.ExecutionStatus}");
-                    await PushSnapshotAsync(snapshot, CancellationToken.None);
-                }
-
-                _logger.LogInformation("CumulativeMetricsSignalRPusher finished draining queue.");
+                await DrainAsync();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "CumulativeMetricsSignalRPusher encountered an error.");
+                _logger.LogError(ex, "CumulativeMetricsDispatcher encountered an error.");
                 throw;
             }
             finally
             {
-                _logger.LogInformation("CumulativeMetricsSignalRPusher stopping, waiting for coordinator to finish...");
-
-                // Keep draining while the coordinator is still running
-                // The coordinator will push final snapshots before stopping
-                // MUST drain here in ExecuteAsync - SignalR is still alive during this window
-                // If we move this to StopAsync, SignalR will already be disposed
-                while (_coordinator.IsRunning)
-                {
-                    // Wait a bit before checking again
-                    await Task.Delay(_refreshRateMs);
-                }
-
-                while (_queue.Reader.TryRead(out var snapshot))
-                {
-                    _logger.LogDebug(
-                        "CumulativeMetricsSignalRPusher: Draining snapshot for IterationId={IterationId}, IsFinal={IsFinal}, Status={ExecutionStatus}",
-                        snapshot.IterationId, snapshot.IsFinal, snapshot.ExecutionStatus);
-                    await PushSnapshotAsync(snapshot, CancellationToken.None);
-                }
-                _logger.LogInformation("CumulativeMetricsSignalRPusher finished draining queue.");
-
-                _logger.LogInformation("CumulativeMetricsSignalRPusher stopped.");
+                await DrainAsync();
             }
         }
 
 
-        private async Task PushSnapshotAsync(CumulativeIterationSnapshot snapshot, CancellationToken token)
+        public override async Task StopAsync(CancellationToken stoppingToken)
+        {
+            await DrainAsync();
+            await base.StopAsync(stoppingToken);
+        }
+        private async Task PushSnapshotAsync(CumulativeIterationSnapshot snapshot , CancellationToken token)
         {
             try
             {
@@ -141,17 +112,24 @@ namespace Apis.Services
             }
             catch (Exception ex)
             {
+       
                 _logger.LogWarning(ex,
                     "Failed to push cumulative snapshot for {IterationId}",
                     snapshot.IterationId);
             }
         }
-        public override async Task StopAsync(CancellationToken stoppingToken)
+
+        async ValueTask DrainAsync()
         {
-            // Draining is already done in ExecuteAsync catch block (while SignalR is still alive)
-            // By this point, SignalR may already be disposed
-            _logger.LogInformation("CumulativeMetricsSignalRPusher StopAsync called.");
-            await base.StopAsync(stoppingToken);
+            await Task.Delay(_refreshRateMs);
+            await _coordinator.StopAsync(CancellationToken.None);
+            while (_queue.Reader.TryRead(out var snapshot))
+            {
+                _logger.LogDebug(
+                    "CumulativeMetricsDispatcher: Draining snapshot for IterationId={IterationId}, IsFinal={IsFinal}, Status={ExecutionStatus}",
+                    snapshot.IterationId, snapshot.IsFinal, snapshot.ExecutionStatus);
+                await PushSnapshotAsync(snapshot, CancellationToken.None);
+            }
         }
 
     }

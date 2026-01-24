@@ -12,7 +12,7 @@ using LPS.Infrastructure.GRPCClients.Factory;
 using LPS.Infrastructure.GRPCClients;
 using LPS.Infrastructure.Nodes;
 using System.Threading;
-using LPS.Infrastructure.Monitoring;  // NEW: For MetricParser
+using LPS.Infrastructure.Monitoring;  // For MetricParser and IFailureRulesService
 using System.Collections.Concurrent;
 
 namespace LPS.Infrastructure.FailureEvaluator
@@ -29,7 +29,11 @@ namespace LPS.Infrastructure.FailureEvaluator
         private readonly IEntityDiscoveryService _discoveryService;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly IMetricFetcher _metricFetcher;  // NEW: Injected dependency
+        private readonly IMetricFetcher _metricFetcher;
+        private readonly IFailureRulesService _failureRulesService;
+
+        // Default round name used when evaluating default failure rules (no specific round context)
+        private const string DefaultRoundName = "__default__";
 
         public IterationFailureEvaluator(
             ICommandStatusMonitor<HttpIteration> commandStatusMonitor,
@@ -39,7 +43,8 @@ namespace LPS.Infrastructure.FailureEvaluator
             IEntityDiscoveryService discoveryService,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricFetcher metricFetcher)  // NEW: Inject MetricFetcher
+            IMetricFetcher metricFetcher,
+            IFailureRulesService failureRulesService)
         {
             _commandStatusMonitor = commandStatusMonitor;
             _nodeMetadata = nodeMetadata;
@@ -48,7 +53,8 @@ namespace LPS.Infrastructure.FailureEvaluator
             _discoveryService = discoveryService;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _metricFetcher = metricFetcher ?? throw new ArgumentNullException(nameof(metricFetcher));  // NEW
+            _metricFetcher = metricFetcher ?? throw new ArgumentNullException(nameof(metricFetcher));
+            _failureRulesService = failureRulesService ?? throw new ArgumentNullException(nameof(failureRulesService));
         }
 
         /// <summary>
@@ -230,16 +236,17 @@ namespace LPS.Infrastructure.FailureEvaluator
                         continue;
                     }
 
-                    // Server errors (>= 500)
-                    if (codeInt >= 500)
-                    {
-                        serverErrors += count;
-                    }
-
-                    // All errors (>= 400)
-                    if (codeInt >= 400)
+                    // Use unified error status code logic from FailureRulesService
+                    // This ensures dashboard metrics and failure evaluation use the same definition
+                    if (_failureRulesService.IsErrorStatusCode(iteration, DefaultRoundName, codeInt))
                     {
                         allErrors += count;
+                        
+                        // Server errors: >= 500
+                        if (codeInt >= 500)
+                        {
+                            serverErrors += count;
+                        }
                     }
                 }
 
@@ -267,14 +274,14 @@ namespace LPS.Infrastructure.FailureEvaluator
                     await _logger.LogAsync(
                         _runtimeOperationIdProvider.OperationId,
                         $"Iteration '{iteration.Name}' determined as FAILED (DEFAULT RULE): Error rate exceeded 5%. Actual={errorRate:P2}, " +
-                        $"TotalResponses={total}, ErrorResponses={allErrors} (4xx+5xx).",
+                        $"TotalResponses={total}, ErrorResponses={allErrors} (0+4xx+5xx).",
                         LPSLoggingLevel.Warning,
                         token);
                     return true;
                 }
-
+                var serverErrorRate = (double)serverErrors / total;
                 // Default Rule 2: Any server error (>= 500)
-                if (serverErrors > 0)
+                if (serverErrorRate > 0.01)
                 {
                     await _logger.LogAsync(
                         _runtimeOperationIdProvider.OperationId,

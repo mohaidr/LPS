@@ -84,6 +84,7 @@ namespace LPS.Infrastructure.Monitoring
             if (filters.Count == 0)
             {
                 filters.Add((ComparisonOperator.GreaterThanOrEqual, 400, null));
+                filters.Add((ComparisonOperator.Equals, 0, null));
             }
 
             return filters;

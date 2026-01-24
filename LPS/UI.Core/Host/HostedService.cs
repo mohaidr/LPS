@@ -146,19 +146,15 @@ namespace LPS.UI.Core.Host
                     await Task.Delay(500);
                 }
             }
-            
+
+
             if (localNode!=null)
                 await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
 
             _nodeHealthMonitorBackgroundService.Stop();
 
             await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
-            
-            // Stop coordinators - they fire final events so collectors push final state
-            await _windowedMetricsCoordinator.StopAsync(CancellationToken.None);
-            await _cumulativeMetricsCoordinator.StopAsync(CancellationToken.None);
-
-
+           
         }
 
         private void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)

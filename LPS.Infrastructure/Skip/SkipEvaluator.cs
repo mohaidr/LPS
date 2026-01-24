@@ -59,7 +59,6 @@ namespace LPS.Infrastructure.Skip
                     .ResolvePlaceholdersAsync<string>(skipIfExpression, sessionId, token)
                     .ConfigureAwait(false);
 
-
                 // IMPORTANT: We compile as boolean; non-boolean expressions will throw with a clear message.
                 var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
@@ -81,7 +80,7 @@ namespace LPS.Infrastructure.Skip
             {
                 // Mirror your diagnostic style, updated to reflect Flee behavior.
                 var message =
-                    "Iteration skipped due to the below exception.\r\n" +
+                    "Iteration skip decesion can't be taken due to the below exception.\r\n" +
                     "Failed to evaluate skipIf condition.\r\n" +
                     "\r\n" +
                     $"The Skip condition: {skipIfExpression}\r\n" +
@@ -96,8 +95,8 @@ namespace LPS.Infrastructure.Skip
 
                 await _logger.LogAsync(message, LPSLoggingLevel.Error).ConfigureAwait(false);
 
-                // Preserve your current behavior: on evaluation error, treat as 'skip = true'
-                return true;
+                // treat error as 'skip = false' as we can't decide to skip or not.
+                return false;
             }
         }
     }

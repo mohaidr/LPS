@@ -30,7 +30,12 @@ namespace LPS.Apis
             services.AddAutoMapper(typeof(LpsMappingProfile));
 
             // SignalR for real-time windowed metrics
-            services.AddSignalR()
+            services.AddSignalR(options =>
+                {
+                    // Keep connections alive longer during shutdown
+                    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+                    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+                })
                 .AddJsonProtocol(options =>
                 {
                     options.PayloadSerializerOptions.PropertyNamingPolicy = null;
@@ -47,11 +52,11 @@ namespace LPS.Apis
                     });
 
             // Windowed metrics SignalR pusher (reads from queue, pushes to SignalR hub)
-            services.AddHostedService<WindowedMetricsSignalRPusher>();
+            services.AddHostedService<WindowedMetricsDispatcher>();
             
             // Cumulative metrics SignalR pusher (reads from queue, pushes to SignalR hub)
             // Cumulative data is pushed at its own interval (RefreshRate), separate from windowed data
-            services.AddHostedService<CumulativeMetricsSignalRPusher>();
+            services.AddHostedService<CumulativeMetricsDispatcher>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -73,7 +78,7 @@ namespace LPS.Apis
             app.UseEndpoints(endpoints =>
             {
                 // SignalR hub for real-time metrics (cumulative and windowed)
-                endpoints.MapHub<WindowedMetricsHub>("/hubs/metrics");
+                endpoints.MapHub<MetricsHub>("/hubs/metrics");
 
                 // gRPC services
                 endpoints.MapGrpcService<NodeGRPCService>();

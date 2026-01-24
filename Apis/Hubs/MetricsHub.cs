@@ -7,7 +7,7 @@ namespace Apis.Hubs
     /// SignalR hub for pushing windowed metrics to connected dashboard clients.
     /// Clients join a group based on their iterationId to receive targeted updates.
     /// </summary>
-    public class WindowedMetricsHub : Hub
+    public class MetricsHub : Hub
     {
         /// <summary>
         /// Client calls this to subscribe to a specific iteration's windowed metrics.
