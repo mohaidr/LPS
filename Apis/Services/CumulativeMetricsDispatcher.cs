@@ -63,7 +63,7 @@ namespace Apis.Services
             }
             catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
             {
-                await DrainAsync();
+                await DrainQueueAsync();
             }
             catch (Exception ex)
             {
@@ -72,14 +72,15 @@ namespace Apis.Services
             }
             finally
             {
-                await DrainAsync();
+                await DrainQueueAsync();
             }
         }
 
 
         public override async Task StopAsync(CancellationToken stoppingToken)
         {
-            await DrainAsync();
+            await DrainQueueAsync();
+            _logger.LogInformation("CumulativeDispatcher stopped.");
             await base.StopAsync(stoppingToken);
         }
         private async Task PushSnapshotAsync(CumulativeIterationSnapshot snapshot , CancellationToken token)
@@ -119,10 +120,11 @@ namespace Apis.Services
             }
         }
 
-        async ValueTask DrainAsync()
+        async ValueTask DrainQueueAsync()
         {
+            // Wait to ensure final data is in the queue - upon cancellation there is a very high propability of race condition so we have to wait
             await Task.Delay(_refreshRateMs);
-            await _coordinator.StopAsync(CancellationToken.None);
+            
             while (_queue.Reader.TryRead(out var snapshot))
             {
                 _logger.LogDebug(

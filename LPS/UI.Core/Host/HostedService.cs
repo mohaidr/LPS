@@ -78,14 +78,16 @@ namespace LPS.UI.Core.Host
         readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator = cumulativeMetricsCoordinator;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
-
+        INode? _localNode;
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             try
             {
+                RegisterLocalNode();
+                _localNode = _nodeRegistry.GetLocalNode();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
-                
+
                 // Start metrics coordinators (they fire events for collectors to push data)
                 await _windowedMetricsCoordinator.StartAsync(_cts.Token);
                 await _cumulativeMetricsCoordinator.StartAsync(_cts.Token);
@@ -112,49 +114,47 @@ namespace LPS.UI.Core.Host
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has completed  --------------", LPSLoggingLevel.Verbose, cancellationToken);
                 await _logger.FlushAsync();
             }
-            catch
+            catch (Exception ex)
             {
-                await _nodeRegistry.GetLocalNode()
-                .SetNodeStatus(Infrastructure.Nodes.NodeStatus.Failed);
+                Console.WriteLine(ex.ToString() );
+                _logger.Log(ex.ToString(), LPSLoggingLevel.Error);
+                if (_localNode != null)
+                    await _localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Failed);
+            }
+            finally {
+
+                if (_localNode?.Metadata.NodeType == NodeType.Master)
+                {
+                    // Wait for all workers to complete before stopping coordinators
+                    while (_nodeRegistry.GetNeighborNodes().Count(n => n.IsActive()) > 0)
+                    {
+                        await Task.Delay(500);
+                    }
+                }
+                
+                await _cumulativeMetricsCoordinator.StopAsync(CancellationToken.None);
+                await _windowedMetricsCoordinator.StopAsync(CancellationToken.None);
+                await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
+
             }
         }
-
-       
-        private static void SavePlanToDisk(PlanDto planDto)
+        private void RegisterLocalNode()
         {
-            var jsonContent = SerializationHelper.Serialize(planDto);
-            File.WriteAllText($"{planDto.Name}.json", jsonContent);
-
-            var yamlContent = SerializationHelper
-                .SerializeToYaml(planDto);
-            File.WriteAllText($"{planDto.Name}.yaml", yamlContent);
-
+            Node node = _nodeMetadata.NodeType == NodeType.Master ? new MasterNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory) : new WorkerNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory);
+            // keep this line for the worker nodes to register the nodes locally
+            _nodeRegistry.RegisterNode(node); // register locally
         }
+
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             await _logger.FlushAsync();
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
 
-            _nodeRegistry.TryGetLocalNode(out INode? localNode); 
-
-            if (localNode?.Metadata.NodeType == NodeType.Master)
-            {
-                // Wait for all workers to complete before stopping coordinators
-                while (_nodeRegistry.GetNeighborNodes().Where(n => n.IsActive()).Count() > 0)
-                {
-                    await Task.Delay(500);
-                }
-            }
-
-
-            if (localNode!=null)
-                await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
-
             _nodeHealthMonitorBackgroundService.Stop();
 
-            await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
-           
+            if (_localNode != null)
+                await _localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Stopped);
         }
 
         private void CancelKeyPressHandler(object sender, ConsoleCancelEventArgs e)
@@ -207,11 +207,21 @@ namespace LPS.UI.Core.Host
                 await Task.Delay(1000); // Poll every second
             }
         }
-
         private void RequestCancellation()
         {
             AnsiConsole.MarkupLine("[yellow]Gracefully shutting down the LPS local server[/]");
             _cts.Cancel();
+        }
+
+        private static void SavePlanToDisk(PlanDto planDto)
+        {
+            var jsonContent = SerializationHelper.Serialize(planDto);
+            File.WriteAllText($"{planDto.Name}.json", jsonContent);
+
+            var yamlContent = SerializationHelper
+                .SerializeToYaml(planDto);
+            File.WriteAllText($"{planDto.Name}.yaml", yamlContent);
+
         }
 
     }

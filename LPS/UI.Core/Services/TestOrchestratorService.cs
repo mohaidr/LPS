@@ -56,7 +56,7 @@ namespace LPS.UI.Core.Services
         } 
         public async Task RunAsync(TestRunParameters parameters)
         {
-            RegisterLocalNode();
+            //RegisterLocalNode();
             _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(parameters.CancellationToken); });
 
             _parameters = parameters;

@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,9 +14,9 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
     {
         /// <summary>
         /// Event fired when it's time to push cumulative metrics.
+        /// Handlers return Task to allow awaiting completion.
         /// </summary>
-        event Action? OnPushInterval;
-
+        event Func<Task>? OnPushInterval;
 
         /// <summary>
         /// Start the coordinator timer (async).
@@ -26,6 +27,12 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         /// Stop the coordinator timer (async).
         /// </summary>
         ValueTask StopAsync(CancellationToken token);
+
+        /// <summary>
+        /// Flush all collectors by invoking OnPushInterval and awaiting all handlers.
+        /// Use this to ensure all data is pushed before draining the queue.
+        /// </summary>
+        Task FlushAllAsync();
 
         /// <summary>
         /// Push interval in milliseconds.
@@ -47,7 +54,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         private bool _isRunning;
         private bool _disposed;
 
-        public event Action? OnPushInterval;
+        public event Func<Task>? OnPushInterval;
 
         public int IntervalMs { get; }
         public bool IsRunning => _isRunning;
@@ -85,7 +92,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             // Fire one final event so collectors can push final state
             try
             {
-                OnPushInterval?.Invoke();
+                await FlushAllAsync();
             }
             catch (Exception ex)
             {
@@ -95,7 +102,22 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             {
                 _isRunning = false;
             }
-            await ValueTask.CompletedTask;
+        }
+
+        /// <summary>
+        /// Flush all collectors by invoking OnPushInterval and awaiting all handlers.
+        /// </summary>
+        public async Task FlushAllAsync()
+        {
+            var handlers = OnPushInterval?.GetInvocationList();
+            if (handlers == null || handlers.Length == 0) return;
+
+            var tasks = handlers.Cast<Func<Task>>().Select(h =>
+            {
+                try { return h(); }
+                catch { return Task.CompletedTask; }
+            });
+            await Task.WhenAll(tasks);
         }
 
         private void OnTimerTick(object? state)
@@ -104,7 +126,9 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
 
             try
             {
-                OnPushInterval?.Invoke();
+                // Fire and forget for timer ticks - we can't await in timer callback
+                // But handlers are async so they run independently
+                _ = FlushAllAsync();
             }
             catch
             {

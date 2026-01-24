@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
@@ -59,7 +60,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             _coordinator.OnPushInterval += OnPushInterval;
         }
 
-        private async void OnPushInterval()
+        private async Task OnPushInterval()
         {
             if (_disposed || _finalSnapshotSent) return;
 

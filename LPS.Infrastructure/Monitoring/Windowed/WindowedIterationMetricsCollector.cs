@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
@@ -60,7 +61,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _coordinator.OnWindowClosed += OnWindowClosed;
         }
 
-        private async void OnWindowClosed()
+        private async Task OnWindowClosed()
         {
             if (_disposed || _finalSnapshotSent) return;
 

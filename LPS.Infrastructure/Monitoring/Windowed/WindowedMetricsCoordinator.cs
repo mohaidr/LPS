@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,10 +14,9 @@ namespace LPS.Infrastructure.Monitoring.Windowed
     {
         /// <summary>
         /// Event fired when a window closes. Subscribers should snapshot their data,
-        /// push to queue, and reset.
+        /// push to queue, and reset. Handlers return Task to allow awaiting completion.
         /// </summary>
-        event Action? OnWindowClosed;
-
+        event Func<Task>? OnWindowClosed;
 
         /// <summary>
         /// Start the coordinator timer (async).
@@ -27,6 +27,12 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         /// Stop the coordinator timer (async).
         /// </summary>
         ValueTask StopAsync(CancellationToken token);
+
+        /// <summary>
+        /// Flush all collectors by invoking OnWindowClosed and awaiting all handlers.
+        /// Use this to ensure all data is pushed before draining the queue.
+        /// </summary>
+        Task FlushAllAsync();
 
         /// <summary>
         /// Current window sequence number.
@@ -54,7 +60,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private bool _isRunning;
         private bool _disposed;
 
-        public event Action? OnWindowClosed;
+        public event Func<Task>? OnWindowClosed;
 
         public int WindowIntervalMs { get; }
         public int WindowSequence => _windowSequence;
@@ -95,7 +101,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             Interlocked.Increment(ref _windowSequence);
             try
             {
-                OnWindowClosed?.Invoke();
+                await FlushAllAsync();
             }
             catch (Exception ex)
             {
@@ -105,7 +111,22 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             {
                 _isRunning = false;
             }
-           
+        }
+
+        /// <summary>
+        /// Flush all collectors by invoking OnWindowClosed and awaiting all handlers.
+        /// </summary>
+        public async Task FlushAllAsync()
+        {
+            var handlers = OnWindowClosed?.GetInvocationList();
+            if (handlers == null || handlers.Length == 0) return;
+
+            var tasks = handlers.Cast<Func<Task>>().Select(h =>
+            {
+                try { return h(); }
+                catch { return Task.CompletedTask; }
+            });
+            await Task.WhenAll(tasks);
         }
 
         private void OnTimerTick(object? state)
@@ -116,7 +137,9 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
             try
             {
-                OnWindowClosed?.Invoke();
+                // Fire and forget for timer ticks - we can't await in timer callback
+                // But handlers are async so they run independently
+                _ = FlushAllAsync();
             }
             catch
             {
