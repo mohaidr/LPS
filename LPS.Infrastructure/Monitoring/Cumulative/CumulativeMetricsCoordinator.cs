@@ -1,6 +1,5 @@
 #nullable enable
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,9 +13,18 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
     {
         /// <summary>
         /// Event fired when it's time to push cumulative metrics.
-        /// Handlers return Task to allow awaiting completion.
         /// </summary>
-        event Func<Task>? OnPushInterval;
+        event Action? OnPushInterval;
+
+        /// <summary>
+        /// Start the coordinator timer.
+        /// </summary>
+        void Start();
+
+        /// <summary>
+        /// Stop the coordinator timer.
+        /// </summary>
+        void Stop();
 
         /// <summary>
         /// Start the coordinator timer (async).
@@ -27,12 +35,6 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         /// Stop the coordinator timer (async).
         /// </summary>
         ValueTask StopAsync(CancellationToken token);
-
-        /// <summary>
-        /// Flush all collectors by invoking OnPushInterval and awaiting all handlers.
-        /// Use this to ensure all data is pushed before draining the queue.
-        /// </summary>
-        Task FlushAllAsync();
 
         /// <summary>
         /// Push interval in milliseconds.
@@ -54,7 +56,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         private bool _isRunning;
         private bool _disposed;
 
-        public event Func<Task>? OnPushInterval;
+        public event Action? OnPushInterval;
 
         public int IntervalMs { get; }
         public bool IsRunning => _isRunning;
@@ -69,8 +71,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             IntervalMs = (int)interval.TotalMilliseconds;
         }
 
-
-        public async ValueTask StartAsync(CancellationToken token)
+        public void Start()
         {
             if (_disposed) throw new ObjectDisposedException(nameof(CumulativeMetricsCoordinator));
             if (_isRunning) return;
@@ -80,11 +81,10 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                 OnTimerTick,
                 null,
                 IntervalMs,
-                IntervalMs); 
-            await ValueTask.CompletedTask;
+                IntervalMs);
         }
 
-        public async ValueTask StopAsync(CancellationToken token)
+        public void Stop()
         {
             if (!_isRunning) return;
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
@@ -92,7 +92,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             // Fire one final event so collectors can push final state
             try
             {
-                await FlushAllAsync();
+                OnPushInterval?.Invoke();
             }
             catch (Exception ex)
             {
@@ -104,20 +104,16 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             }
         }
 
-        /// <summary>
-        /// Flush all collectors by invoking OnPushInterval and awaiting all handlers.
-        /// </summary>
-        public async Task FlushAllAsync()
+        public ValueTask StartAsync(CancellationToken token)
         {
-            var handlers = OnPushInterval?.GetInvocationList();
-            if (handlers == null || handlers.Length == 0) return;
+            Start();
+            return ValueTask.CompletedTask;
+        }
 
-            var tasks = handlers.Cast<Func<Task>>().Select(h =>
-            {
-                try { return h(); }
-                catch { return Task.CompletedTask; }
-            });
-            await Task.WhenAll(tasks);
+        public ValueTask StopAsync(CancellationToken token)
+        {
+            Stop();
+            return ValueTask.CompletedTask;
         }
 
         private void OnTimerTick(object? state)
@@ -126,9 +122,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
 
             try
             {
-                // Fire and forget for timer ticks - we can't await in timer callback
-                // But handlers are async so they run independently
-                _ = FlushAllAsync();
+                OnPushInterval?.Invoke();
             }
             catch
             {

@@ -61,7 +61,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _coordinator.OnWindowClosed += OnWindowClosed;
         }
 
-        private async Task OnWindowClosed()
+        private async void OnWindowClosed()
         {
             if (_disposed || _finalSnapshotSent) return;
 

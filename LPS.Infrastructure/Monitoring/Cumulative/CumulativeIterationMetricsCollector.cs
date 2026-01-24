@@ -1,7 +1,6 @@
 #nullable enable
 using System;
 using System.Threading;
-using System.Threading.Tasks;
 using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
@@ -38,7 +37,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         public DataTransmissionMetricAggregator? DataTransmissionAggregator { get; set; }
 
         public HttpIteration HttpIteration => _httpIteration;
-        
+
         public CumulativeIterationMetricsCollector(
             HttpIteration httpIteration,
             string roundName,
@@ -60,7 +59,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             _coordinator.OnPushInterval += OnPushInterval;
         }
 
-        private async Task OnPushInterval()
+        private async void OnPushInterval()
         {
             if (_disposed || _finalSnapshotSent) return;
 

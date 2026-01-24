@@ -220,8 +220,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             updated ??= false;
             return updated.Value;
         }
-
-
         public async ValueTask<bool> TryUpdateDurationMetricAsync(Guid requestId, DurationMetricType metricType, double valueMs, CancellationToken token)
         {
             

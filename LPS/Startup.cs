@@ -55,12 +55,13 @@ namespace LPS
             .ConfigureWebHostDefaults(webBuilder =>
             {
 
+                webBuilder.UseStartup<Apis.Startup>();
                 var contentRoot = Path.GetDirectoryName(Assembly.GetEntryAssembly()?.Location);
                 ArgumentNullException.ThrowIfNull(contentRoot);
                 webBuilder.UseContentRoot(contentRoot);
+
                 var webRoot = Path.Combine(contentRoot, "wwwroot");
                 webBuilder.UseWebRoot(webRoot);
-                webBuilder.UseStartup<Apis.Startup>();
 
                 // Load configuration to access DashboardConfigurationOptions for the Port setting
                 var configuration = new ConfigurationBuilder()

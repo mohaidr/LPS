@@ -1,6 +1,5 @@
 #nullable enable
 using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,9 +13,19 @@ namespace LPS.Infrastructure.Monitoring.Windowed
     {
         /// <summary>
         /// Event fired when a window closes. Subscribers should snapshot their data,
-        /// push to queue, and reset. Handlers return Task to allow awaiting completion.
+        /// push to queue, and reset.
         /// </summary>
-        event Func<Task>? OnWindowClosed;
+        event Action? OnWindowClosed;
+
+        /// <summary>
+        /// Start the coordinator timer.
+        /// </summary>
+        void Start();
+
+        /// <summary>
+        /// Stop the coordinator timer.
+        /// </summary>
+        void Stop();
 
         /// <summary>
         /// Start the coordinator timer (async).
@@ -27,12 +36,6 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         /// Stop the coordinator timer (async).
         /// </summary>
         ValueTask StopAsync(CancellationToken token);
-
-        /// <summary>
-        /// Flush all collectors by invoking OnWindowClosed and awaiting all handlers.
-        /// Use this to ensure all data is pushed before draining the queue.
-        /// </summary>
-        Task FlushAllAsync();
 
         /// <summary>
         /// Current window sequence number.
@@ -60,7 +63,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private bool _isRunning;
         private bool _disposed;
 
-        public event Func<Task>? OnWindowClosed;
+        public event Action? OnWindowClosed;
 
         public int WindowIntervalMs { get; }
         public int WindowSequence => _windowSequence;
@@ -76,9 +79,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             WindowIntervalMs = (int)windowInterval.TotalMilliseconds;
         }
 
-
-
-        public async ValueTask StartAsync(CancellationToken token)
+        public void Start()
         {
             if (_disposed) throw new ObjectDisposedException(nameof(WindowedMetricsCoordinator));
             if (_isRunning) return;
@@ -89,10 +90,9 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                 null,
                 WindowIntervalMs,
                 WindowIntervalMs);
-            await ValueTask.CompletedTask;
         }
 
-        public async ValueTask StopAsync(CancellationToken token)
+        public void Stop()
         {
             if (!_isRunning) return;
             _timer?.Change(Timeout.Infinite, Timeout.Infinite);
@@ -101,7 +101,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             Interlocked.Increment(ref _windowSequence);
             try
             {
-                await FlushAllAsync();
+
+                OnWindowClosed?.Invoke();
             }
             catch (Exception ex)
             {
@@ -113,20 +114,16 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             }
         }
 
-        /// <summary>
-        /// Flush all collectors by invoking OnWindowClosed and awaiting all handlers.
-        /// </summary>
-        public async Task FlushAllAsync()
+        public ValueTask StartAsync(CancellationToken token)
         {
-            var handlers = OnWindowClosed?.GetInvocationList();
-            if (handlers == null || handlers.Length == 0) return;
+            Start();
+            return ValueTask.CompletedTask;
+        }
 
-            var tasks = handlers.Cast<Func<Task>>().Select(h =>
-            {
-                try { return h(); }
-                catch { return Task.CompletedTask; }
-            });
-            await Task.WhenAll(tasks);
+        public ValueTask StopAsync(CancellationToken token)
+        {
+            Stop();
+            return ValueTask.CompletedTask;
         }
 
         private void OnTimerTick(object? state)
@@ -137,9 +134,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
             try
             {
-                // Fire and forget for timer ticks - we can't await in timer callback
-                // But handlers are async so they run independently
-                _ = FlushAllAsync();
+                OnWindowClosed?.Invoke();
             }
             catch
             {

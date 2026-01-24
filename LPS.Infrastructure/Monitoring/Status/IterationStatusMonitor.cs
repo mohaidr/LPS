@@ -46,25 +46,30 @@ namespace LPS.Infrastructure.Monitoring.Status
             // 3) Aggregate command statuses to determine current state
             var commandsStatuses = await _commandStatusMonitor.QueryAsync(httpIteration);
 
+
             // Skipped (all skipped) -> terminal
             if (commandsStatuses.Count != 0 && commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Skipped);
 
-            // PartiallySkipped -> not terminal
+            //// PartiallySkipped -> not terminal
             if (commandsStatuses.Any(status => status == CommandExecutionStatus.Skipped) &&
-                !commandsStatuses.All(status => status == CommandExecutionStatus.Skipped)&& 
-                !commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing) &&
-                !_globalCts.IsCancellationRequested)
+                !commandsStatuses.All(status => status == CommandExecutionStatus.Skipped) &&
+               (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing) || commandsStatuses.Any(status => status == CommandExecutionStatus.Scheduled))
+                 && !_globalCts.IsCancellationRequested)
+            {
                 return EntityExecutionStatus.PartiallySkipped;
+            }
 
             // Ongoing (not terminal)
-            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing) 
+            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing)
                 && !_globalCts.IsCancellationRequested)
+            {
                 return EntityExecutionStatus.Ongoing;
+            }
 
             // Scheduled (not terminal)
-            if (commandsStatuses.Count != 0 
-                && commandsStatuses.All(status => status == CommandExecutionStatus.Scheduled) 
+            if (commandsStatuses.Count != 0
+                && commandsStatuses.All(status => status == CommandExecutionStatus.Scheduled)
                 && !_globalCts.IsCancellationRequested)
                 return EntityExecutionStatus.Scheduled;
 
@@ -85,8 +90,7 @@ namespace LPS.Infrastructure.Monitoring.Status
             // 4) All commands completed - NOW evaluate failure rules
             // Explicit check ensures this block only runs when all commands are done,
             // regardless of code ordering above
-            bool allCompleted = commandsStatuses.Count != 0 &&
-                                commandsStatuses.All(s => s == CommandExecutionStatus.Completed);
+            bool allCompleted = !commandsStatuses.Any(s => s == CommandExecutionStatus.Ongoing) && !commandsStatuses.Any(s => s == CommandExecutionStatus.Scheduled);
 
             if (allCompleted && await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token))
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Failed);
