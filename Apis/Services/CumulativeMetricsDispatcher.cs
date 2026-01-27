@@ -6,6 +6,7 @@ using Apis.Hubs;
 using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.MetricsServices;
 using LPS.Infrastructure.Nodes;
+using LPS.UI.Common;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -122,7 +123,14 @@ namespace Apis.Services
 
         async ValueTask DrainQueueAsync()
         {
-            // Wait to ensure final data is in the queue - upon cancellation there is a very high propability of race condition so we have to wait
+            // Skip drain logic for config commands - no metrics to drain
+            if (!CommandContext.IsTestExecutionCommand)
+            {
+                _logger.LogDebug("CumulativeMetricsDispatcher: Skipping drain for config command.");
+                return;
+            }
+
+            // Wait to ensure final data is in the queue - upon cancellation there is a very high probability of race condition so we have to wait
             await Task.Delay(_refreshRateMs);
             
             while (_queue.Reader.TryRead(out var snapshot))

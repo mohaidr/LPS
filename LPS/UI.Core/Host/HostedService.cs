@@ -88,9 +88,14 @@ namespace LPS.UI.Core.Host
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
 
-                // Start metrics coordinators (they fire events for collectors to push data)
-                await _windowedMetricsCoordinator.StartAsync(_cts.Token);
-                await _cumulativeMetricsCoordinator.StartAsync(_cts.Token);
+                // Only start metrics coordinators for test execution commands (not config commands)
+                bool isTestExecution = CommandLineManager.IsTestExecutionCommand(_command_args);
+                if (isTestExecution)
+                {
+                    // Start metrics coordinators (they fire events for collectors to push data)
+                    await _windowedMetricsCoordinator.StartAsync(_cts.Token);
+                    await _cumulativeMetricsCoordinator.StartAsync(_cts.Token);
+                }
 
                 #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
                 Console.CancelKeyPress += CancelKeyPressHandler;
@@ -123,18 +128,23 @@ namespace LPS.UI.Core.Host
             }
             finally {
 
-                if (_localNode?.Metadata.NodeType == NodeType.Master)
+                // Only stop coordinators and dashboard for test execution commands (not config commands)
+                bool isTestExecution = CommandLineManager.IsTestExecutionCommand(_command_args);
+                if (isTestExecution)
                 {
-                    // Wait for all workers to complete before stopping coordinators
-                    while (_nodeRegistry.GetNeighborNodes().Count(n => n.IsActive()) > 0)
+                    if (_localNode?.Metadata.NodeType == NodeType.Master)
                     {
-                        await Task.Delay(500);
+                        // Wait for all workers to complete before stopping coordinators
+                        while (_nodeRegistry.GetNeighborNodes().Count(n => n.IsActive()) > 0)
+                        {
+                            await Task.Delay(500);
+                        }
                     }
+                    
+                    await _cumulativeMetricsCoordinator.StopAsync(CancellationToken.None);
+                    await _windowedMetricsCoordinator.StopAsync(CancellationToken.None);
+                    await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
                 }
-                
-                await _cumulativeMetricsCoordinator.StopAsync(CancellationToken.None);
-                await _windowedMetricsCoordinator.StopAsync(CancellationToken.None);
-                await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
 
             }
         }

@@ -1,29 +1,31 @@
-﻿using LPS.Domain;
+﻿using AsyncKeyedLock;
+using Google.Protobuf.WellKnownTypes;
+using LPS.Domain;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Extensions;
+using LPS.Infrastructure.Caching;
+using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.CachService;
 using LPS.Infrastructure.LPSClients.EmbeddedResourcesServices;
+using LPS.Infrastructure.LPSClients.MessageServices;
+using LPS.Infrastructure.LPSClients.ResponseService;
+using LPS.Infrastructure.LPSClients.SessionManager;
+using LPS.Infrastructure.Monitoring.Metrics;
+using LPS.Infrastructure.VariableServices.GlobalVariableManager;
+using LPS.Infrastructure.VariableServices.VariableHolders;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using LPS.Infrastructure.LPSClients.MessageServices;
-using LPS.Infrastructure.Caching;
-using LPS.Infrastructure.LPSClients.ResponseService;
-using LPS.Infrastructure.LPSClients.SessionManager;
-using LPS.Infrastructure.LPSClients.CachService;
-using LPS.Infrastructure.Common.Interfaces;
-using LPS.Infrastructure.VariableServices.GlobalVariableManager;
-using LPS.Infrastructure.VariableServices.VariableHolders;
-using LPS.Domain.Domain.Common.Enums;
-using LPS.Domain.Domain.Common.Extensions;
 using System.Net.Security;
 using System.Net.Sockets;
-using LPS.Infrastructure.Monitoring.Metrics;
-using Google.Protobuf.WellKnownTypes;
-using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using YamlDotNet.Core.Tokens;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -37,6 +39,7 @@ namespace LPS.Infrastructure.LPSClients
         public string SessionId { get; private set; }
         public string GuidId { get; private set; }
         readonly ICacheService<string> _memoryCacheService;
+        readonly ICacheService<IHttpResponseVariableHolder> _httpResponseVariableHolderCacheInstance;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IMetricsService _metricsService;
         readonly IMessageService _messageService;
@@ -44,9 +47,12 @@ namespace LPS.Infrastructure.LPSClients
         readonly ISessionManager _sessionManager;
         readonly IVariableManager _variableManager;
         readonly IPlaceholderResolverService _placeholderResolverService;
+        private static readonly AsyncKeyedLocker<string> _variablelocker = new();
+
         public HttpClientService(IClientConfiguration<HttpRequest> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
             ICacheService<string> memoryCacheService,
+            ICacheService<IHttpResponseVariableHolder> httpResponseVariableHolderCacheInstance,
             ISessionManager sessionManager,
             IMessageService messageService,
             IMetricsService metricsService,
@@ -65,6 +71,7 @@ namespace LPS.Infrastructure.LPSClients
             _responseProcessingService = responseProcessingService;
             _variableManager = variableManager;
             _placeholderResolverService = placeholderResolver;
+            _httpResponseVariableHolderCacheInstance = httpResponseVariableHolderCacheInstance;
             SocketsHttpHandler socketsHandler = new()
             {
                 PooledConnectionLifetime = ((ILPSHttpClientConfiguration<HttpRequest>)config).PooledConnectionLifetime,
@@ -161,8 +168,8 @@ namespace LPS.Infrastructure.LPSClients
 
                         // Initialize connection for first request to host (OPTIONS pre-flight)
                         var optionsTiming = await _connectionInitService.InitializeConnectionAsync(
-                            httpClient, 
-                            httpRequestMessage, 
+                            httpClient,
+                            httpRequestMessage,
                             _logger,
                             linkedCts.Token);
 
@@ -173,12 +180,12 @@ namespace LPS.Infrastructure.LPSClients
 
                         // Extract connection timing: use OPTIONS timing if available, otherwise extract from actual request
                         var requestTiming = _connectionInitService.ExtractTimingFromRequest(httpRequestMessage);
-                        
+
                         // Use OPTIONS timing (from InitializeConnection) if connection was reused, otherwise use actual request timing
                         dnsResolutionTime = optionsTiming.DnsResolutionMs > 0 ? optionsTiming.DnsResolutionMs : requestTiming.DnsResolutionMs;
                         tcpHandshakeTime = optionsTiming.TcpHandshakeMs > 0 ? optionsTiming.TcpHandshakeMs : requestTiming.TcpHandshakeMs;
                         tlsHandshakeTime = optionsTiming.TlsHandshakeMs > 0 ? optionsTiming.TlsHandshakeMs : requestTiming.TlsHandshakeMs;
-                        
+
                         if (httpRequestMessage.Options.TryGetValue(new HttpRequestOptionsKey<double>("UploadTime"), out var upload))
                         {
                             uploadTime = upload;
@@ -199,80 +206,93 @@ namespace LPS.Infrastructure.LPSClients
                         #region Capture Response
                         if (captureResponse)
                         {
-                            var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{httpRequestEntity.Id}");
-
-
-                            bool typeDetected = httpRequestEntity.Capture.As.TryToVariableType(out VariableType type);
-
-                            // auto detect type if type if not provided, if not detected; default to string if not
-                            if (!typeDetected)
+                            var key = $"{httpRequestEntity.Capture.To }-{ (httpRequestEntity.Capture.MakeGlobal != true ? this.SessionId : string.Empty)}";
+                            var lockHandle = await _variablelocker.LockOrNullAsync(key, 0, token);
+                            if (lockHandle != null) // Successfully acquired lock
                             {
-                                switch (mimeType)
+                                using (lockHandle)
                                 {
-                                    case MimeType.ApplicationJson:
-                                        type = VariableType.JsonString;
-                                        break;
-                                    case MimeType.RawXml:
-                                    case MimeType.TextXml:
-                                    case MimeType.ApplicationXml:
-                                        type = VariableType.XmlString;
-                                        break;
+                                    // Check if variable is already cached - skip processing if so
+                                    var cacheKey = $"{CachePrefixes.Variable}{key}";
+                                    var cachedVariable = await _httpResponseVariableHolderCacheInstance.GetItemAsync(cacheKey);
+                                    if (cachedVariable == null)
+                                    {
+                                        var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{httpRequestEntity.Id}");
+                                        bool typeDetected = httpRequestEntity.Capture.As.TryToVariableType(out VariableType type);
 
-                                    case MimeType.TextCsv:
-                                        type = VariableType.CsvString;
-                                        break;
-                                    default:
-                                        type = VariableType.String;
-                                        break;
+                                        // auto detect type if type if not provided, if not detected; default to string if not
+                                        if (!typeDetected)
+                                        {
+                                            switch (mimeType)
+                                            {
+                                                case MimeType.ApplicationJson:
+                                                    type = VariableType.JsonString;
+                                                    break;
+                                                case MimeType.RawXml:
+                                                case MimeType.TextXml:
+                                                case MimeType.ApplicationXml:
+                                                    type = VariableType.XmlString;
+                                                    break;
+                                                case MimeType.TextCsv:
+                                                    type = VariableType.CsvString;
+                                                    break;
+                                                default:
+                                                    type = VariableType.String;
+                                                    break;
+                                            }
+                                        }
+
+                                        var responseVariableHolder =
+                                            await _sessionManager.GetVariableAsync(this.SessionId, httpRequestEntity.Capture.To, token);
+
+                                        if (responseVariableHolder is null)
+                                        {
+                                            if (await _variableManager.GetAsync(httpRequestEntity.Capture.To, token) is IHttpResponseVariableHolder httpResponseVariable)
+                                            {
+                                                responseVariableHolder = httpResponseVariable;
+                                            }
+                                        }
+
+                                        var bodyVariableHolder = ((IHttpResponseVariableHolder)responseVariableHolder)?.Body;
+                                        var responseVariableMaintainer = responseVariableHolder?.Maintainer != null ? ((HttpResponseVariableHolder.VMaintainer)responseVariableHolder.Maintainer) : new HttpResponseVariableHolder.VMaintainer(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
+                                        var stringVariableMaintainer = bodyVariableHolder?.Maintainer != null ? ((StringVariableHolder.VMaintainer)bodyVariableHolder?.Maintainer) : new StringVariableHolder.VMaintainer(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
+
+
+                                        bodyVariableHolder = rawContent != null ?
+                                            (IStringVariableHolder)await stringVariableMaintainer
+                                            .WithType(type)
+                                            .WithPattern(httpRequestEntity.Capture.Regex)
+                                            .WithRawValue(rawContent)
+                                            .UpdateAsync(token)
+                                        : null;
+
+                                        responseVariableHolder = await responseVariableMaintainer
+                                             .WithBody(bodyVariableHolder)
+                                             .WithStatusCode(responseMessage.StatusCode)
+                                             .WithStatusReason(responseMessage.ReasonPhrase)
+                                             .WithHeaders(responseMessage.Headers.ToDictionary())
+                                             .UpdateAsync(token);
+
+
+                                        if (httpRequestEntity.Capture.MakeGlobal == true)
+                                        {
+                                            responseVariableHolder = await responseVariableMaintainer.SetGlobal().UpdateAsync(token);
+                                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} as a global variable", LPSLoggingLevel.Verbose, linkedCts.Token);
+                                            await _variableManager.PutAsync(httpRequestEntity.Capture.To, responseVariableHolder, token);
+                                        }
+                                        else
+                                        {
+                                            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, linkedCts.Token);
+                                            await _sessionManager.PutVariableAsync(this.SessionId, httpRequestEntity.Capture.To, responseVariableHolder, linkedCts.Token);
+                                        }
+
+                                        // Cache the variable for 5 seconds to prevent redundant updates
+                                        await _httpResponseVariableHolderCacheInstance.SetItemAsync(cacheKey, (HttpResponseVariableHolder)responseVariableHolder, TimeSpan.FromSeconds(5));
+                                    }
+
                                 }
-                            }
-
-                            var responseVariableHolder =
-                                await _sessionManager.GetVariableAsync(this.SessionId, httpRequestEntity.Capture.To, token);
-
-                            if (responseVariableHolder is null)
-                            {
-                                if (await _variableManager.GetAsync(httpRequestEntity.Capture.To, token) is IHttpResponseVariableHolder httpResponseVariable)
-                                {
-                                    responseVariableHolder = httpResponseVariable;
-                                }
-                            }
-
-                            var bodyVariableHolder = ((IHttpResponseVariableHolder)responseVariableHolder)?.Body;
-
-                            var responseVariableBuilder = responseVariableHolder?.Builder != null ? ((HttpResponseVariableHolder.VBuilder)responseVariableHolder.Builder) : new HttpResponseVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
-                            var stringVariableBuiler = bodyVariableHolder?.Builder != null ? ((StringVariableHolder.VBuilder)bodyVariableHolder?.Builder) : new StringVariableHolder.VBuilder(_placeholderResolverService, _logger, _runtimeOperationIdProvider);
-
-
-                            bodyVariableHolder = rawContent != null ?
-                                    (IStringVariableHolder)await stringVariableBuiler
-                                    .WithType(type)
-                                    .WithPattern(httpRequestEntity.Capture.Regex)
-                                    .WithRawValue(rawContent)
-                                    .BuildAsync(token)
-                                : null;
-
-                            responseVariableHolder = await responseVariableBuilder
-                                 .WithBody(bodyVariableHolder)
-                                 .WithHeaders(responseMessage.Headers.ToDictionary())
-                                 .WithStatusCode(responseMessage.StatusCode)
-                                 .WithStatusReason(responseMessage.ReasonPhrase)
-                                 .BuildAsync(token);
-
-
-                            if (httpRequestEntity.Capture.MakeGlobal == true)
-                            {
-                                responseVariableHolder = await responseVariableBuilder.SetGlobal().BuildAsync(token);
-                                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} as a global variable", LPSLoggingLevel.Verbose, linkedCts.Token);
-                                await _variableManager.PutAsync(httpRequestEntity.Capture.To, responseVariableHolder, token);
-                            }
-                            else
-                            {
-                                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Setting {(MimeTypeExtensions.IsTextContent(mimeType) ? rawContent : "BinaryContent ")} to {httpRequestEntity.Capture.To} under Session {this.SessionId}", LPSLoggingLevel.Verbose, linkedCts.Token);
-                                await _sessionManager.PutVariableAsync(this.SessionId, httpRequestEntity.Capture.To, responseVariableHolder, linkedCts.Token);
                             }
                         }
-
                         #endregion
 
                         // Download Html Embdedded Resources, conditonally
@@ -294,9 +314,9 @@ namespace LPS.Infrastructure.LPSClients
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.SendingTime, uploadTime, linkedCts.Token); // RENAMED
                         var ttfb = timeToHeadersWatch.Elapsed.TotalMilliseconds + dnsResolutionTime + tcpHandshakeTime + tlsHandshakeTime;
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TimeToFirstByte, ttfb, linkedCts.Token);
-                        
+
                         // Calculate and update Waiting Time (TTFB - DNS - TCP - TLS - Upload)
-                        double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds  - uploadTime;
+                        double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds - uploadTime;
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
 
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tTTFB: {timeToHeadersWatch.Elapsed.TotalMilliseconds} MS\n\tWaiting: {waitingTime} MS\n\tDNS Resolution: {dnsResolutionTime} MS\n\tTCP Handshake: {tcpHandshakeTime} MS\n\tTLS Handshake: {tlsHandshakeTime} MS\n\tSending: {uploadTime} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
@@ -331,7 +351,7 @@ namespace LPS.Infrastructure.LPSClients
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, token);
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, token);
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.SendingTime, uploadTime, token); // RENAMED
-                
+
                 // Calculate and update Waiting Time even on failure
                 double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime - uploadTime;
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, token);

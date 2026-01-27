@@ -21,20 +21,20 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         // Private children: alias -> IVariableHolder (not registered in the manager by default)
         private readonly Dictionary<string, IVariableHolder> _children =
             new(StringComparer.OrdinalIgnoreCase);
-        private readonly VBuilder _builder;
-        public IVariableBuilder Builder => _builder;
+        private readonly VMaintainer _maintainer;
+        public IVariableMaintainer Maintainer => _maintainer;
 
         private MultipleVariableHolder(
             IPlaceholderResolverService resolver,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            bool isGlobal, VBuilder builder)
+            bool isGlobal, VMaintainer maintainer)
         {
             _placeholderResolverService = resolver;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             IsGlobal = isGlobal;
-            _builder = builder;
+            _maintainer = maintainer;
         }
 
         // IVariableHolder members
@@ -100,7 +100,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         // Builder
         // -----------------------
         //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
-        public sealed class VBuilder : IVariableBuilder
+        public sealed class VMaintainer : IVariableMaintainer
         {
             // Services
             private readonly IPlaceholderResolverService _placeholderResolverService;
@@ -116,7 +116,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             private readonly Dictionary<string, IVariableHolder> _children =
                 new(StringComparer.OrdinalIgnoreCase);
 
-            public VBuilder(
+            public VMaintainer(
                 IPlaceholderResolverService placeholderResolverService,
                 ILogger logger,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -133,13 +133,13 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     _logger,
                     _runtimeOperationIdProvider,
                     isGlobal: true,
-                    builder: this)
+                    maintainer: this)
                 {
                     Type = VariableType.Multiple
                 };
             }
 
-            public VBuilder SetGlobal(bool isGlobal = true)
+            public VMaintainer SetGlobal(bool isGlobal = true)
             {
                 _isGlobal = isGlobal; // buffer locally
                 return this;
@@ -148,7 +148,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             /// <summary>
             /// Attach a private child (local to this object). Does not register in manager.
             /// </summary>
-            public VBuilder AttachChild(string alias, IVariableHolder child)
+            public VMaintainer AttachChild(string alias, IVariableHolder child)
             {
                 if (string.IsNullOrWhiteSpace(alias))
                     throw new ArgumentException("Alias is required.", nameof(alias));
@@ -160,7 +160,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             /// <summary>
             /// Bind a reference to an existing variable stored in the manager (no copy).
             /// </summary>
-            public async Task<VBuilder> BindChildFromManagerAsync(string alias, string managerName, CancellationToken token)
+            public async Task<VMaintainer> BindChildFromManagerAsync(string alias, string managerName, CancellationToken token)
             {
                 if (string.IsNullOrWhiteSpace(alias))
                     throw new ArgumentException("Alias is required.", nameof(alias));
@@ -174,7 +174,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-            public ValueTask<IVariableHolder> BuildAsync(CancellationToken token)
+            public ValueTask<IVariableHolder> UpdateAsync(CancellationToken token)
             {
                 token.ThrowIfCancellationRequested();
 

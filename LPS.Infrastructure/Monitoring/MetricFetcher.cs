@@ -177,7 +177,7 @@ namespace LPS.Infrastructure.Monitoring
                 int codeInt = ParseHttpStatusCode(s.HttpStatusCode);
                 
                 // Check if this status code matches the error filter
-                if (MetricParser.EvaluateCondition(codeInt, op, threshold, thresholdMax))
+                if (RuleService.EvaluateCondition(codeInt, op, threshold, thresholdMax))
                 {
                     errors += count;
                 }

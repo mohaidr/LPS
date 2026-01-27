@@ -30,7 +30,7 @@ namespace LPS.Infrastructure.FailureEvaluator
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IMetricFetcher _metricFetcher;
-        private readonly IFailureRulesService _failureRulesService;
+        private readonly IRuleService _failureRulesService;
 
         // Default round name used when evaluating default failure rules (no specific round context)
         private const string DefaultRoundName = "__default__";
@@ -44,7 +44,7 @@ namespace LPS.Infrastructure.FailureEvaluator
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricFetcher metricFetcher,
-            IFailureRulesService failureRulesService)
+            IRuleService failureRulesService)
         {
             _commandStatusMonitor = commandStatusMonitor;
             _nodeMetadata = nodeMetadata;
@@ -135,7 +135,7 @@ namespace LPS.Infrastructure.FailureEvaluator
                         double currentValue = await _metricFetcher.GetMetricValueAsync(fqdn, metricName, rule.ErrorStatusCodes, token);
 
                         // Evaluate the condition
-                        bool conditionMet = MetricParser.EvaluateCondition(currentValue, op, threshold, thresholdMax);
+                        bool conditionMet = RuleService.EvaluateCondition(currentValue, op, threshold, thresholdMax);
                         
                         if (conditionMet)
                         {

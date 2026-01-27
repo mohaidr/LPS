@@ -12,8 +12,31 @@ namespace LPS.Infrastructure.Monitoring
     /// Caches parsed filters per iteration to avoid repeated parsing.
     /// Thread-safe for concurrent access.
     /// </summary>
-    public sealed class FailureRulesService : IFailureRulesService
+    public sealed class RuleService : IRuleService
     {
+        /// <summary>
+        /// Evaluates a comparison between a value and threshold(s).
+        /// </summary>
+        /// <param name="value">The actual value to compare</param>
+        /// <param name="op">The comparison operator</param>
+        /// <param name="threshold">The threshold value</param>
+        /// <param name="thresholdMax">The second threshold (for 'between' operator)</param>
+        /// <returns>True if the condition is met</returns>
+        public static bool EvaluateCondition(double value, ComparisonOperator op, double threshold, double? thresholdMax = null)
+        {
+            return op switch
+            {
+                ComparisonOperator.GreaterThan => value > threshold,
+                ComparisonOperator.LessThan => value < threshold,
+                ComparisonOperator.GreaterThanOrEqual => value >= threshold,
+                ComparisonOperator.LessThanOrEqual => value <= threshold,
+                ComparisonOperator.Equals => Math.Abs(value - threshold) < 0.0001, // Float comparison tolerance
+                ComparisonOperator.Between => thresholdMax.HasValue && value >= threshold && value <= thresholdMax.Value,
+                ComparisonOperator.NotEquals => Math.Abs(value - threshold) >= 0.0001, // Float comparison tolerance
+                _ => throw new ArgumentException($"Unsupported operator: {op}")
+            };
+        }
+
         // Cache key: (IterationId, RoundName) -> parsed filters
         private readonly ConcurrentDictionary<(Guid IterationId, string RoundName), IReadOnlyList<(ComparisonOperator Op, double Threshold, double? ThresholdMax)>> _cache = new();
 
@@ -41,7 +64,7 @@ namespace LPS.Infrastructure.Monitoring
             
             foreach (var (op, threshold, thresholdMax) in filters)
             {
-                if (MetricParser.EvaluateCondition(statusCode, op, threshold, thresholdMax))
+                if (EvaluateCondition(statusCode, op, threshold, thresholdMax))
                 {
                     return true;
                 }

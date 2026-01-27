@@ -18,8 +18,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
 
-        private readonly VBuilder _builder;
-        public IVariableBuilder Builder => _builder;
+        private readonly VMaintainer _maintainer;
+        public IVariableMaintainer Maintainer => _maintainer;
 
         public VariableType? Type { get; private set; } = VariableType.KeyValue;
         public bool IsGlobal { get; private set; }
@@ -31,13 +31,13 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             bool isGlobal,
-            VBuilder builder)
+            VMaintainer maintainer)
         {
             _placeholderResolverService = resolver ?? throw new ArgumentNullException(nameof(resolver));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             IsGlobal = isGlobal;
-            _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+            _maintainer = maintainer ?? throw new ArgumentNullException(nameof(maintainer));
 
             KeyValue = new KeyValuePair<string, IVariableHolder>(string.Empty, default!);
         }
@@ -94,7 +94,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         // Builder
         // -----------------------
         //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
-        public sealed class VBuilder : IVariableBuilder
+        public sealed class VMaintainer : IVariableMaintainer
         {
             private readonly IPlaceholderResolverService _placeholderResolverService;
             private readonly ILogger _logger;
@@ -107,7 +107,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             private string _key = string.Empty;
             private IVariableHolder _value;
 
-            public VBuilder(
+            public VMaintainer(
                 IPlaceholderResolverService placeholderResolverService,
                 ILogger logger,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -123,19 +123,19 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     _logger,
                     _runtimeOperationIdProvider,
                     isGlobal: true,
-                    builder: this)
+                    maintainer: this)
                 {
                     Type = VariableType.KeyValue
                 };
             }
 
-            public VBuilder SetGlobal(bool isGlobal = true)
+            public VMaintainer SetGlobal(bool isGlobal = true)
             {
                 _isGlobal = isGlobal;
                 return this;
             }
 
-            public VBuilder SetKey(string key)
+            public VMaintainer SetKey(string key)
             {
                 if (string.IsNullOrWhiteSpace(key))
                     throw new ArgumentException("Key is required.", nameof(key));
@@ -144,13 +144,13 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-            public VBuilder SetValue(IVariableHolder value)
+            public VMaintainer SetValue(IVariableHolder value)
             {
                 _value = value ?? throw new ArgumentNullException(nameof(value));
                 return this;
             }
 
-            public async Task<VBuilder> BindValueFromManagerAsync(string managerName, CancellationToken token)
+            public async Task<VMaintainer> BindValueFromManagerAsync(string managerName, CancellationToken token)
             {
                 if (string.IsNullOrWhiteSpace(managerName))
                     throw new ArgumentException("Manager variable name is required.", nameof(managerName));
@@ -162,7 +162,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-            public ValueTask<IVariableHolder> BuildAsync(CancellationToken token)
+            public ValueTask<IVariableHolder> UpdateAsync(CancellationToken token)
             {
                 token.ThrowIfCancellationRequested();
 

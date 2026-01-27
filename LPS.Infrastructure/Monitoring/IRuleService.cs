@@ -9,7 +9,7 @@ namespace LPS.Infrastructure.Monitoring
     /// Service for evaluating failure rules and determining error status codes.
     /// Provides caching to avoid repeated parsing of failure rules.
     /// </summary>
-    public interface IFailureRulesService
+    public interface IRuleService
     {
         /// <summary>
         /// Gets the error status code filters for a given iteration.

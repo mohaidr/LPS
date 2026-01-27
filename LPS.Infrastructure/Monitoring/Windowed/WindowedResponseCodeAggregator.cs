@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private bool _disposed;
         private WindowedThroughputAggregator? _throughputAggregator;
-        private readonly IFailureRulesService _failureRulesService;
+        private readonly IRuleService _rulesService;
 
         // Response code counters (resettable)
         private Dictionary<HttpStatusCode, (string Reason, int Count)> _statusCodes = new();
@@ -33,11 +33,11 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public WindowedResponseCodeAggregator(
             HttpIteration httpIteration,
             string roundName,
-            IFailureRulesService failureRulesService)
+            IRuleService rulesService)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
-            _failureRulesService = failureRulesService ?? throw new ArgumentNullException(nameof(failureRulesService));
+            _rulesService = rulesService ?? throw new ArgumentNullException(nameof(rulesService));
         }
 
         /// <summary>
@@ -146,7 +146,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                     foreach (var kvp in _statusCodes)
                     {
                         int code = (int)kvp.Key;
-                        if (_failureRulesService.IsErrorStatusCode(_httpIteration, _roundName, code))
+                        if (_rulesService.IsErrorStatusCode(_httpIteration, _roundName, code))
                         {
                             failedCount += kvp.Value.Count;
                         }

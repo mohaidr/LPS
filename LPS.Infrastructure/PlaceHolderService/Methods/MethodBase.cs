@@ -39,11 +39,11 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         {
             if (string.IsNullOrWhiteSpace(variableName)) return;
 
-            var holder = await new StringVariableHolder.VBuilder(_resolver.Value, _logger, _op) // Use .Value
+            var holder = await new StringVariableHolder.VMaintainer(_resolver.Value, _logger, _op) // Use .Value
                 .WithType(VariableType.String)
                 .WithRawValue(value ?? string.Empty)
                 .SetGlobal()
-                .BuildAsync(token);
+                .UpdateAsync(token);
 
             await _variables.PutAsync(variableName, holder, token);
         }

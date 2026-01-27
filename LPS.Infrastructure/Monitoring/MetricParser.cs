@@ -70,29 +70,6 @@ namespace LPS.Infrastructure.Monitoring
         }
 
         /// <summary>
-        /// Evaluates a comparison between a value and threshold(s).
-        /// </summary>
-        /// <param name="value">The actual value to compare</param>
-        /// <param name="op">The comparison operator</param>
-        /// <param name="threshold">The threshold value</param>
-        /// <param name="thresholdMax">The second threshold (for 'between' operator)</param>
-        /// <returns>True if the condition is met</returns>
-        public static bool EvaluateCondition(double value, ComparisonOperator op, double threshold, double? thresholdMax = null)
-        {
-            return op switch
-            {
-                ComparisonOperator.GreaterThan => value > threshold,
-                ComparisonOperator.LessThan => value < threshold,
-                ComparisonOperator.GreaterThanOrEqual => value >= threshold,
-                ComparisonOperator.LessThanOrEqual => value <= threshold,
-                ComparisonOperator.Equals => Math.Abs(value - threshold) < 0.0001, // Float comparison tolerance
-                ComparisonOperator.Between => thresholdMax.HasValue && value >= threshold && value <= thresholdMax.Value,
-                ComparisonOperator.NotEquals => Math.Abs(value - threshold) >= 0.0001, // Float comparison tolerance
-                _ => throw new ArgumentException($"Unsupported operator: {op}")
-            };
-        }
-
-        /// <summary>
         /// Tries to parse a metric expression without throwing exceptions.
         /// </summary>
         /// <param name="metricExpression">The expression to parse</param>

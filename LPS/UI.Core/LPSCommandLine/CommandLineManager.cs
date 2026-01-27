@@ -24,6 +24,32 @@ namespace LPS.UI.Core.LPSCommandLine
 {
     public class CommandLineManager
     {
+        // Config commands that are NOT test execution commands
+        private static readonly string[] ConfigCommands =
+        [
+            "create", "round", "iteration", "variable", "capture",
+            "logger", "httpclient", "watchdog", "cluster", "dashboard", "influxdb"
+        ];
+
+        /// <summary>
+        /// Determines if the command arguments represent a test execution command.
+        /// </summary>
+        public static bool IsTestExecutionCommand(string[]? args)
+        {
+            if (args == null || args.Length == 0)
+                return false;
+
+            string joinedCommand = string.Join(" ", args).ToLowerInvariant().Trim();
+
+            foreach (var configCmd in ConfigCommands)
+            {
+                if (joinedCommand.StartsWith(configCmd))
+                    return false;
+            }
+
+            return true;
+        }
+
         private string[] _command_args;
         readonly ILogger _logger;
         IClusterConfiguration _clusterConfiguration;
@@ -97,6 +123,10 @@ namespace LPS.UI.Core.LPSCommandLine
             _variableManager = variableManager;
             _cts = cts;
             _placeholderResolverService = placeholderResolverService;
+            
+            // Initialize shared command context for other services
+            CommandContext.Initialize(_command_args, IsTestExecutionCommand(_command_args));
+            
             // Create the AutoMapper configuration
             var mapperConfig = new MapperConfiguration(cfg =>
             {

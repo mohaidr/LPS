@@ -11,7 +11,7 @@ namespace LPS.Domain.Common.Interfaces
     {
         VariableType? Type { get; }
         bool IsGlobal { get; }
-        IVariableBuilder Builder { get; }
+        IVariableMaintainer Maintainer { get; }
         ValueTask<string> GetRawValueAsync (CancellationToken token) ;
     }
 }

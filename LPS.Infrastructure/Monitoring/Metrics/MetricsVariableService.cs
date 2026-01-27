@@ -73,27 +73,27 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
                 // upsert metric as JsonString
                 if (iterationNode.TryGetChild(metricName, out var existing) && existing is StringVariableHolder s)
                 {
-                    await ((StringVariableHolder.VBuilder)s.Builder)
+                    await ((StringVariableHolder.VMaintainer)s.Maintainer)
                         .WithType(VariableType.JsonString)
                         .WithPattern(string.Empty)
                         .WithRawValue(dimensionSetJson)
                         .SetGlobal()
-                        .BuildAsync(token)
+                        .UpdateAsync(token)
                         .ConfigureAwait(false);
                 }
                 else
                 {
-                    var metricHolder = await new StringVariableHolder.VBuilder(_resolver, _logger, _op)
+                    var metricHolder = await new StringVariableHolder.VMaintainer(_resolver, _logger, _op)
                         .WithType(VariableType.JsonString)
                         .WithPattern(string.Empty)
                         .WithRawValue(dimensionSetJson)
                         .SetGlobal()
-                        .BuildAsync(token)
+                        .UpdateAsync(token)
                         .ConfigureAwait(false);
 
-                    await ((MultipleVariableHolder.VBuilder)iterationNode.Builder)
+                    await ((MultipleVariableHolder.VMaintainer)iterationNode.Maintainer)
                         .AttachChild(metricName, metricHolder)
-                        .BuildAsync(token)
+                        .UpdateAsync(token)
                         .ConfigureAwait(false);
                 }
             }
@@ -104,9 +104,9 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
             var root = await _manager.GetAsync(MetricsRootName, token).ConfigureAwait(false) as MultipleVariableHolder;
             if (root is not null) return root;
 
-            var newRoot = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(_resolver, _logger, _op, _manager)
+            var newRoot = (MultipleVariableHolder)await new MultipleVariableHolder.VMaintainer(_resolver, _logger, _op, _manager)
                 .SetGlobal()
-                .BuildAsync(token)
+                .UpdateAsync(token)
                 .ConfigureAwait(false);
 
             await _manager.PutAsync(MetricsRootName, newRoot, token).ConfigureAwait(false);
@@ -120,15 +120,15 @@ namespace LPS.Infrastructure.Monitoring.MetricsVariables
         {
             if (parent.TryGetChild(childName, out var existing) && existing is MultipleVariableHolder m) return m;
 
-            var newContainer = (MultipleVariableHolder)await new MultipleVariableHolder.VBuilder(
+            var newContainer = (MultipleVariableHolder)await new MultipleVariableHolder.VMaintainer(
                     _resolver, _logger, _op, _manager)
                 .SetGlobal()
-                .BuildAsync(token)
+                .UpdateAsync(token)
                 .ConfigureAwait(false);
 
-            await ((MultipleVariableHolder.VBuilder)parent.Builder)
+            await ((MultipleVariableHolder.VMaintainer)parent.Maintainer)
                 .AttachChild(childName, newContainer)
-                .BuildAsync(token)
+                .UpdateAsync(token)
                 .ConfigureAwait(false);
 
             return newContainer;

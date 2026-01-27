@@ -109,7 +109,7 @@ namespace LPS
                 services.AddSingleton<IWarmUpService, WarmUpService>();
                 services.AddSingleton<IEntityRepositoryService, EntityRepositoryService>();
                 services.AddSingleton<IEntityDiscoveryService, EntityDiscoveryService>();
-                services.AddSingleton<IFailureRulesService, FailureRulesService>();
+                services.AddSingleton<IRuleService, RuleService>();
                 services.AddSingleton<IMetricAggregatorFactory, MetricAggregatorFactory>();
                 services.AddSingleton<IMetricsUiService, MetricsUiService>();
                 services.AddSingleton<ILiveMetricDataStore, LiveMetricDataStore>();
@@ -124,6 +124,7 @@ namespace LPS
                 services.AddSingleton<CancellationTokenSource>();
                 services.AddSingleton<IConsoleLogger, ConsoleLogger>();
                 services.AddSingleton<ILogFormatter, LogFormatter>();
+                services.AddSingleton<ICacheService<IHttpResponseVariableHolder>, MemoryCacheService<IHttpResponseVariableHolder>>();
                 services.AddSingleton<ICacheService<string>, MemoryCacheService<string>>();
                 services.AddSingleton<ICacheService<long>, MemoryCacheService<long>>();
                 services.AddSingleton<ICacheService<object>, MemoryCacheService<object>>();

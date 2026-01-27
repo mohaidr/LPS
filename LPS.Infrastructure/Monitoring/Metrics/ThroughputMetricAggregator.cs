@@ -34,7 +34,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
-        private readonly IFailureRulesService _failureRulesService;
+        private readonly IRuleService _failureRulesService;
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;
         public readonly string _roundName;
@@ -45,7 +45,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
-            IFailureRulesService failureRulesService,
+            IRuleService failureRulesService,
             ILiveMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));

@@ -17,24 +17,24 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         public bool IsGlobal { get; private set; }
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly VBuilder _builder;
-        public IVariableBuilder Builder => _builder;
+        private readonly VMaintainer _maintainer;
+        public IVariableMaintainer Maintainer => _maintainer;
 
         private NumberVariableHolder(
             ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider, VBuilder builder)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider, VMaintainer maintainer)
         {
 
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-            _builder = builder ?? throw new ArgumentNullException(nameof(builder));
+            _maintainer = maintainer ?? throw new ArgumentNullException(nameof(maintainer));
         }
 
         public ValueTask<string> GetRawValueAsync(CancellationToken token) => ValueTask.FromResult(Value);
 
         // ====== Builder ======
         //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
-        public sealed class VBuilder : IVariableBuilder
+        public sealed class VMaintainer : IVariableMaintainer
         {
             private readonly NumberVariableHolder _variableHolder;
             private readonly ILogger _logger;
@@ -45,7 +45,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             private VariableType _type = VariableType.Int; // default fallback
             private bool _isGlobal;
 
-            public VBuilder(
+            public VMaintainer(
                 ILogger logger,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
@@ -60,41 +60,41 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             }
 
             // Buffer numeric overloads locally (string + explicit VariableType)
-            public VBuilder WithRawValue(int value)
+            public VMaintainer WithRawValue(int value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 _type = VariableType.Int;
                 return this;
             }
 
-            public VBuilder WithRawValue(double value)
+            public VMaintainer WithRawValue(double value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 _type = VariableType.Double;
                 return this;
             }
 
-            public VBuilder WithRawValue(float value)
+            public VMaintainer WithRawValue(float value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 _type = VariableType.Float;
                 return this;
             }
 
-            public VBuilder WithRawValue(decimal value)
+            public VMaintainer WithRawValue(decimal value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 _type = VariableType.Decimal;
                 return this;
             }
 
-            public VBuilder SetGlobal(bool isGlobal = true)
+            public VMaintainer SetGlobal(bool isGlobal = true)
             {
                 _isGlobal = isGlobal; // buffer locally
                 return this;
             }
 
-            public async ValueTask<IVariableHolder> BuildAsync(CancellationToken token)
+            public async ValueTask<IVariableHolder> UpdateAsync(CancellationToken token)
             {
                 token.ThrowIfCancellationRequested();
 

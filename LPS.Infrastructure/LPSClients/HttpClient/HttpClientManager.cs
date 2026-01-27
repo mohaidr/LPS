@@ -15,7 +15,8 @@ namespace LPS.Infrastructure.LPSClients
     //Refactor to queue manager if more queue functionalities are needed
     public class HttpClientManager(ILogger logger, 
         IRuntimeOperationIdProvider runtimeOperationIdProvider, 
-        ICacheService<string> memoryCache, 
+        ICacheService<string> memoryCache,
+        ICacheService<IHttpResponseVariableHolder> httpResponseVariableHolderCacheInstance,
         ISessionManager sessionManager,
         IMessageService messageService,
         IMetricsService metricsService,
@@ -23,6 +24,7 @@ namespace LPS.Infrastructure.LPSClients
         IVariableManager variableManager, IPlaceholderResolverService placeholderResolverService) : IHttpClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>>
     {
         readonly ICacheService<string> _memoryCache = memoryCache;
+        readonly ICacheService<IHttpResponseVariableHolder> _httpResponseVariableHolderCacheInstance= httpResponseVariableHolderCacheInstance;
         readonly ILogger _logger = logger;
         readonly Queue<IClientService<HttpRequest, HttpResponse>> _clientsQueue = new Queue<IClientService<HttpRequest, HttpResponse>>();
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
@@ -31,17 +33,18 @@ namespace LPS.Infrastructure.LPSClients
         readonly IMetricsService _metricsService = metricsService;
         readonly IResponseProcessingService _responseProcessingService = responseProcessingService;
         readonly IVariableManager _variableManager = variableManager;
-        IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
+        readonly IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
+
         public IClientService<HttpRequest, HttpResponse> CreateInstance(IClientConfiguration<HttpRequest> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
         public void CreateAndQueueClient(IClientConfiguration<HttpRequest> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
             _clientsQueue.Enqueue(client);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created and queued", LPSLoggingLevel.Verbose);
         }
@@ -73,7 +76,7 @@ namespace LPS.Infrastructure.LPSClients
             {
                 if (byPassQueueIfEmpty)
                 {
-                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
+                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.SessionId} was created", LPSLoggingLevel.Information);
                     return client;
                 }

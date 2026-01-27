@@ -115,13 +115,13 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         double currentValue = await _metricFetcher.GetMetricValueAsync(fqdn, metricName, rule.ErrorStatusCodes, token);
 
                         // Check if condition is met (threshold violated)
-                        bool conditionMet = MetricParser.EvaluateCondition(currentValue, op, threshold, thresholdMax);
+                        bool hasConditionMet = RuleService.EvaluateCondition(currentValue, op, threshold, thresholdMax);
 
                         // Use grace period tracking
                         var key = (iteration.Id, rule.Metric);
                         var graceState = _stateV2.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod));
-
-                        if (await graceState.UpdateAndCheckValueAsync(conditionMet ? 1 : 0, 0.5))
+                        
+                        if (await graceState.UpdateAsync(hasConditionMet))
                         {
                             _terminatedIterations.TryAdd(iteration.Id, true);
 

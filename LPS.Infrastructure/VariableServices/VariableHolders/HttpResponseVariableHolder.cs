@@ -1,13 +1,17 @@
-﻿using Grpc.Net.Client.Balancer;
+﻿using AsyncKeyedLock;
+using Grpc.Net.Client.Balancer;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Logger;
+using Newtonsoft.Json.Linq;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,18 +24,18 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         private readonly IPlaceholderResolverService _placeholderResolverService;
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
-        private readonly VBuilder _builder;
-        public IVariableBuilder Builder => _builder;
+        private readonly VMaintainer _maintainer;
+        public IVariableMaintainer Maintainer => _maintainer;
 
         private HttpResponseVariableHolder(IPlaceholderResolverService resolver,
             ILogger logger,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider, 
-            VBuilder builder)
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            VMaintainer maintainer)
         {
             _placeholderResolverService = resolver;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            _builder = builder;
+            _maintainer = maintainer;
         }
 
         // Required by IVariableHolder
@@ -44,7 +48,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         public string StatusReason { get; private set; }
 
         // Case-insensitive headers store; supports multi-values per header
-        private readonly Dictionary<string, List<string>> _headers =
+        private readonly ConcurrentDictionary<string, List<string>> _headers =
             new(StringComparer.OrdinalIgnoreCase);
 
         public IReadOnlyDictionary<string, List<string>> Headers => _headers;
@@ -63,7 +67,6 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         public async ValueTask<string> GetValueAsync(string? path, string sessionId, CancellationToken token)
         {
-            var hash = this.GetHashCode();
             // No path => return raw body
             if (string.IsNullOrWhiteSpace(path))
                 return await GetRawValueAsync(token);
@@ -71,7 +74,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             // Resolve placeholders in the path itself (if any)
             var resolvedPath = await _placeholderResolverService
                 .ResolvePlaceholdersAsync<string>(path, sessionId, token);
-            
+
             // .Body...
             if (resolvedPath.StartsWith(".Body", StringComparison.OrdinalIgnoreCase))
             {
@@ -80,7 +83,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Body is not set on HttpResponseVariableHolder.", LPSLoggingLevel.Error, token);
                     throw new InvalidOperationException("Body is not set on HttpResponseVariableHolder.");
                 }
-                
+
                 // As requested: pass the path, sessionId, and token to Body
                 return await Body.GetValueAsync(resolvedPath.Substring(".Body".Length).Trim(), sessionId, token);
             }
@@ -93,7 +96,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 {
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "No status reason found", LPSLoggingLevel.Error, token);
                     throw new ArgumentException("No status reason found");
-                };
+                }
+                ;
             }
 
             if (resolvedPath.Trim().Equals(".StatusCode", StringComparison.OrdinalIgnoreCase))
@@ -188,7 +192,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         // Builder
         // -----------------------
         //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
-        public sealed class VBuilder : IVariableBuilder
+        public sealed class VMaintainer : IVariableMaintainer
         {
             private readonly IPlaceholderResolverService _placeholderResolverService;
             private readonly ILogger _logger;
@@ -204,7 +208,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             private string _statusReason = string.Empty;
             private readonly Dictionary<string, List<string>> _headers = new(StringComparer.OrdinalIgnoreCase);
 
-            public VBuilder(
+            public VMaintainer(
                 IPlaceholderResolverService placeholderResolverService,
                 ILogger logger,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider)
@@ -212,7 +216,6 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 _placeholderResolverService = placeholderResolverService ?? throw new ArgumentNullException(nameof(placeholderResolverService));
                 _logger = logger ?? throw new ArgumentNullException(nameof(logger));
                 _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
-
                 // Create the holder once and keep it untouched until BuildAsync
                 _holder = new HttpResponseVariableHolder(_placeholderResolverService, _logger, _runtimeOperationIdProvider, this)
                 {
@@ -220,25 +223,25 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 };
             }
 
-            public VBuilder SetGlobal(bool isGlobal = true)
+            public VMaintainer SetGlobal(bool isGlobal = true)
             {
                 _isGlobal = isGlobal; // buffer locally
                 return this;
             }
 
-            public VBuilder WithBody(IStringVariableHolder body)
+            public VMaintainer WithBody(IStringVariableHolder body)
             {
                 _body = body; // buffer locally
                 return this;
             }
 
-            public VBuilder WithStatusCode(HttpStatusCode? statusCode)
+            public VMaintainer WithStatusCode(HttpStatusCode? statusCode)
             {
                 _statusCode = statusCode; // buffer locally
                 return this;
             }
 
-            public VBuilder WithStatusReason(string reason)
+            public VMaintainer WithStatusReason(string reason)
             {
                 _statusReason = string.IsNullOrWhiteSpace(reason) ? string.Empty : reason; // buffer locally
                 return this;
@@ -254,8 +257,9 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     .Trim();
             }
 
-            public VBuilder WithHeader(string key, string value)
+            private VMaintainer WithHeader(string key, string value)
             {
+
                 if (string.IsNullOrWhiteSpace(key)) return this;
 
                 // Buffer with the original name
@@ -282,16 +286,19 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-            public VBuilder WithHeaders(IEnumerable<KeyValuePair<string, string>> headers)
+            public VMaintainer WithHeaders(IEnumerable<KeyValuePair<string, string>> headers, CancellationToken token = default)
             {
+                _headers.Clear();
                 if (headers == null) return this;
                 foreach (var kv in headers)
                     WithHeader(kv.Key, kv.Value);
                 return this;
             }
 
-            public VBuilder WithHeaders(IDictionary<string, IEnumerable<string>> headers)
+            public VMaintainer WithHeaders(IDictionary<string, IEnumerable<string>> headers)
             {
+
+                _headers.Clear();
                 if (headers == null) return this;
                 foreach (var kv in headers)
                 {
@@ -301,7 +308,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
-            public async ValueTask<IVariableHolder> BuildAsync(CancellationToken token)
+            public async ValueTask<IVariableHolder> UpdateAsync(CancellationToken token)
             {
                 token.ThrowIfCancellationRequested();
 
@@ -322,7 +329,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 _holder.Body = _body;
                 _holder.StatusCode = _statusCode;
                 _holder.StatusReason = _statusReason;
-
+                _holder._headers.Clear();
                 // Copy buffered headers into the holder
                 foreach (var kv in _headers)
                 {
@@ -333,6 +340,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                     }
                     list.AddRange(kv.Value);
                 }
+
 
                 return _holder; // return the same instance created in the constructor
             }
