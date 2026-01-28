@@ -59,6 +59,9 @@ namespace LPS.Infrastructure.Skip
                     .ResolvePlaceholdersAsync<string>(skipIfExpression, sessionId, token)
                     .ConfigureAwait(false);
 
+                // 2) Normalize operators: convert C#-style to Flee-compatible
+                resolved = NormalizeOperators(resolved);
+
                 // IMPORTANT: We compile as boolean; non-boolean expressions will throw with a clear message.
                 var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
@@ -98,6 +101,23 @@ namespace LPS.Infrastructure.Skip
                 // treat error as 'skip = false' as we can't decide to skip or not.
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Converts C#-style comparison operators to Flee-compatible operators.
+        /// == becomes = and != becomes <>
+        /// </summary>
+        private static string NormalizeOperators(string expression)
+        {
+            if (string.IsNullOrEmpty(expression))
+                return expression;
+
+            // Replace != with <> first (before replacing ==)
+            // to avoid partial replacements
+            expression = expression.Replace("!=", "<>");
+            expression = expression.Replace("==", "=");
+
+            return expression;
         }
     }
 }

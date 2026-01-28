@@ -83,15 +83,15 @@ namespace LPS.UI.Core.Host
         {
             try
             {
-                RegisterLocalNode();
-                _localNode = _nodeRegistry.GetLocalNode();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"is the correlation Id of this run", LPSLoggingLevel.Information);
+                bool isPlanExecutionCommand = CommandLineManager.IsTestExecutionCommand(_command_args);
 
                 // Only start metrics coordinators for test execution commands (not config commands)
-                bool isTestExecution = CommandLineManager.IsTestExecutionCommand(_command_args);
-                if (isTestExecution)
+                if (isPlanExecutionCommand)
                 {
+                    RegisterLocalNode();
+                    _localNode = _nodeRegistry.GetLocalNode();
                     // Start metrics coordinators (they fire events for collectors to push data)
                     await _windowedMetricsCoordinator.StartAsync(_cts.Token);
                     await _cumulativeMetricsCoordinator.StartAsync(_cts.Token);
