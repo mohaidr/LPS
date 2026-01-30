@@ -68,7 +68,11 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                     TcpHandshakeTime = BuildTimingStats(s.TCPHandshakeTimeMetrics),
                     TlsHandshakeTime = BuildTimingStats(s.SSLHandshakeTimeMetrics),
                     SendingTime = BuildTimingStats(s.SendingTimeMetrics),
-                    ReceivingTime = BuildTimingStats(s.ReceivingTimeMetrics)
+                    ReceivingTime = BuildTimingStats(s.ReceivingTimeMetrics),
+                    ServerTime = BuildTimingStats(s.ServerTimeMetrics),
+                    ServerTimeDB = BuildTimingStats(s.ServerTimeDBMetrics),
+                    ServerTimeCache = BuildTimingStats(s.ServerTimeCacheMetrics),
+                    ServerTimeApp = BuildTimingStats(s.ServerTimeAppMetrics)
                 });
             }
 

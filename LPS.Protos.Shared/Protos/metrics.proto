@@ -49,7 +49,11 @@ enum DurationMetricType {
     TLS_HANDSHAKE_TIME = 3;
     TCP_HANDSHAKE_TIME = 4;
     TIME_TO_FIRST_BYTE = 5;
-    WAITING_TIME = 6;          // NEW: TTFB - TCP - TLS
+    WAITING_TIME = 6;          // TTFB - TCP - TLS
+    SERVER_TIME = 7;           // Server processing time (total) from response header
+    SERVER_TIME_DB = 8;        // Server-Timing: db
+    SERVER_TIME_CACHE = 9;     // Server-Timing: cache
+    SERVER_TIME_APP = 10;      // Server-Timing: app
 }
 
 message UpdateDurationMetricRequest {

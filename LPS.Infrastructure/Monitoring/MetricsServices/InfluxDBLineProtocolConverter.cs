@@ -111,7 +111,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 ["time_to_first_byte"] = duration.TimeToFirstByte,
                 ["waiting_time"] = duration.WaitingTime,
                 ["receiving_time"] = duration.ReceivingTime,
-                ["sending_time"] = duration.SendingTime
+                ["sending_time"] = duration.SendingTime,
+                ["server_time"] = duration.ServerTime,
+                ["server_time_db"] = duration.ServerTimeDB,
+                ["server_time_cache"] = duration.ServerTimeCache,
+                ["server_time_app"] = duration.ServerTimeApp
             };
 
             foreach (var (metricName, metric) in metrics)
@@ -176,7 +180,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 ["time_to_first_byte"] = duration.TimeToFirstByte,
                 ["waiting_time"] = duration.WaitingTime,
                 ["receiving_time"] = duration.ReceivingTime,
-                ["sending_time"] = duration.SendingTime
+                ["sending_time"] = duration.SendingTime,
+                ["server_time"] = duration.ServerTime,
+                ["server_time_db"] = duration.ServerTimeDB,
+                ["server_time_cache"] = duration.ServerTimeCache,
+                ["server_time_app"] = duration.ServerTimeApp
             };
 
             foreach (var (metricName, metric) in metrics)

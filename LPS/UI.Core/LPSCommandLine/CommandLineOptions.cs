@@ -4,6 +4,8 @@ using LPS.Infrastructure.Watchdog;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.LPSClients.HeaderServices;
+using LPS.Infrastructure.Common.Interfaces;
+using LPS.UI.Common.Options;
 
 namespace LPS.UI.Core.LPSCommandLine
 {
@@ -857,6 +859,8 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 HeaderValidationModeOption.AddAlias("-hvm");
                 AllowHostOverrideOption.AddAlias("-aho");
+                ServerTimeHeaderOption.AddAlias("-sth");
+                ServerTimeFormatOption.AddAlias("-stf");
 
                 // Case-insensitive long aliases
                 AddCaseInsensitiveAliases(MaxConnectionsPerServerOption, "--maxconnectionsperserver");
@@ -866,9 +870,12 @@ namespace LPS.UI.Core.LPSCommandLine
 
                 AddCaseInsensitiveAliases(HeaderValidationModeOption, "--headervalidationmode");
                 AddCaseInsensitiveAliases(AllowHostOverrideOption, "--allowhostoverride");
+                AddCaseInsensitiveAliases(ServerTimeHeaderOption, "--servertimeheader");
+                AddCaseInsensitiveAliases(ServerTimeFormatOption, "--servertimeformat");
 
                 // Helpful completions
                 HeaderValidationModeOption.AddCompletions("Strict", "Lenient", "RawPassthrough");
+                ServerTimeFormatOption.AddCompletions("Auto", "Milliseconds", "Seconds", "ServerTiming");
             }
 
             public static Option<int?> MaxConnectionsPerServerOption { get; } = new Option<int?>(
@@ -903,6 +910,14 @@ namespace LPS.UI.Core.LPSCommandLine
 
             public static Option<bool?> AllowHostOverrideOption { get; } =
                 new Option<bool?>("--allowhostoverride", "Allow overriding the Host header") { IsRequired = false };
+
+            public static Option<string?> ServerTimeHeaderOption { get; } =
+                new Option<string?>("--servertimeheader", "Response header name to read server processing time (e.g., 'Server-Timing', 'X-Response-Time')")
+                { IsRequired = false };
+
+            public static Option<ServerTimeFormat?> ServerTimeFormatOption { get; } =
+                new Option<ServerTimeFormat?>("--servertimeformat", "Format of the server time header value: Auto | Milliseconds | Seconds | ServerTiming")
+                { IsRequired = false };
 
         }
         public static class LPSWatchdogCommandOptions

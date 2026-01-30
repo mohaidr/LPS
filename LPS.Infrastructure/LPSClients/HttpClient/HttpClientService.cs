@@ -15,14 +15,18 @@ using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
+using LPS.Infrastructure.LPSClients.ServerTiming;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using YamlDotNet.Core.Tokens;
@@ -48,6 +52,8 @@ namespace LPS.Infrastructure.LPSClients
         readonly IVariableManager _variableManager;
         readonly IPlaceholderResolverService _placeholderResolverService;
         private static readonly AsyncKeyedLocker<string> _variablelocker = new();
+        readonly string? _serverTimeHeader;
+        readonly ServerTimeFormat _serverTimeFormat;
 
         public HttpClientService(IClientConfiguration<HttpRequest> config,
             ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -119,7 +125,11 @@ namespace LPS.Infrastructure.LPSClients
                     var tlsStopwatch = Stopwatch.StartNew();
                     var ssl = new SslStream(netStream, leaveInnerStreamOpen: false,
                                             userCertificateValidationCallback: (_, __, ___, ____) => true);
-                    await ssl.AuthenticateAsClientAsync(context.DnsEndPoint.Host);
+                    var sslOptions = new SslClientAuthenticationOptions
+                    {
+                        TargetHost = context.DnsEndPoint.Host
+                    };
+                    await ssl.AuthenticateAsClientAsync(sslOptions, cancellationToken);
                     tlsStopwatch.Stop();
 
                     // Store TLS handshake time in request options
@@ -132,6 +142,9 @@ namespace LPS.Infrastructure.LPSClients
             {
                 Timeout = ((ILPSHttpClientConfiguration<HttpRequest>)config).Timeout
             };
+            var httpConfig = (ILPSHttpClientConfiguration<HttpRequest>)config;
+            _serverTimeHeader = httpConfig.ServerTimeHeader;
+            _serverTimeFormat = httpConfig.ServerTimeFormat;
             GuidId = Guid.NewGuid().ToString();
             lock (_lock)
             {
@@ -319,7 +332,31 @@ namespace LPS.Infrastructure.LPSClients
                         double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds - uploadTime;
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
 
-                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\n\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\n\tTTFB: {timeToHeadersWatch.Elapsed.TotalMilliseconds} MS\n\tWaiting: {waitingTime} MS\n\tDNS Resolution: {dnsResolutionTime} MS\n\tTCP Handshake: {tcpHandshakeTime} MS\n\tTLS Handshake: {tlsHandshakeTime} MS\n\tSending: {uploadTime} MS\n\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\n\tResponse Body: {responseCommand?.LocationToResponse}\n\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
+                        // Extract and update Server Time from response header (if configured)
+                        if (ServerTimingParser.TryParse(responseMessage.Headers, _serverTimeHeader, _serverTimeFormat, out var serverTimeBreakdown))
+                        {
+                            // Always report the total server time
+                            if (serverTimeBreakdown.Total > 0)
+                            {
+                                await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTime, serverTimeBreakdown.Total, linkedCts.Token);
+                            }
+                            
+                            // Report breakdown metrics if available (from Server-Timing header)
+                            if (serverTimeBreakdown.DB > 0)
+                            {
+                                await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTimeDB, serverTimeBreakdown.DB, linkedCts.Token);
+                            }
+                            if (serverTimeBreakdown.Cache > 0)
+                            {
+                                await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTimeCache, serverTimeBreakdown.Cache, linkedCts.Token);
+                            }
+                            if (serverTimeBreakdown.App > 0)
+                            {
+                                await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTimeApp, serverTimeBreakdown.App, linkedCts.Token);
+                            }
+                        }
+
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Client: {SessionId} - Request ID: {httpRequestEntity.Id} {httpRequestMessage?.Method} {httpRequestMessage?.RequestUri} Http/{httpRequestMessage?.Version}\\n\\tTotal Time: {responseCommand?.TotalTime.TotalMilliseconds} MS\\n\\tTTFB: {timeToHeadersWatch.Elapsed.TotalMilliseconds} MS\\n\\tWaiting: {waitingTime} MS\\n\\tDNS Resolution: {dnsResolutionTime} MS\\n\\tTCP Handshake: {tcpHandshakeTime} MS\\n\\tTLS Handshake: {tlsHandshakeTime} MS\\n\\tSending: {uploadTime} MS\\n\\tStatus Code: {(int)responseMessage?.StatusCode} Reason: {responseMessage?.ReasonPhrase}\\n\\tResponse Body: {responseCommand?.LocationToResponse}\\n\\tResponse Headers: {responseMessage?.Headers}{responseMessage?.Content?.Headers}", LPSLoggingLevel.Verbose, token);
 
                         //Update Throughput Metrics
                         await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, linkedCts.Token);

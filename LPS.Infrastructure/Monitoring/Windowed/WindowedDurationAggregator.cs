@@ -29,6 +29,10 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private WindowedTimingAccumulator _waitingTime = new();
         private WindowedTimingAccumulator _receivingTime = new();
         private WindowedTimingAccumulator _sendingTime = new();
+        private WindowedTimingAccumulator _serverTime = new();
+        private WindowedTimingAccumulator _serverTimeDB = new();
+        private WindowedTimingAccumulator _serverTimeCache = new();
+        private WindowedTimingAccumulator _serverTimeApp = new();
 
         public HttpIteration HttpIteration => _httpIteration;
         public LPSMetricType MetricType => LPSMetricType.Time;
@@ -91,7 +95,11 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                 TimeToFirstByte = _timeToFirstByte.ToMetric(),
                 WaitingTime = _waitingTime.ToMetric(),
                 ReceivingTime = _receivingTime.ToMetric(),
-                SendingTime = _sendingTime.ToMetric()
+                SendingTime = _sendingTime.ToMetric(),
+                ServerTime = _serverTime.ToMetric(),
+                ServerTimeDB = _serverTimeDB.ToMetric(),
+                ServerTimeCache = _serverTimeCache.ToMetric(),
+                ServerTimeApp = _serverTimeApp.ToMetric()
             };
         }
 
@@ -104,6 +112,10 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _waitingTime = new WindowedTimingAccumulator();
             _receivingTime = new WindowedTimingAccumulator();
             _sendingTime = new WindowedTimingAccumulator();
+            _serverTime = new WindowedTimingAccumulator();
+            _serverTimeDB = new WindowedTimingAccumulator();
+            _serverTimeCache = new WindowedTimingAccumulator();
+            _serverTimeApp = new WindowedTimingAccumulator();
         }
 
         #region IDurationMetricCollector Implementation
@@ -160,6 +172,38 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         {
             await _semaphore.WaitAsync(token);
             try { _waitingTime.Record(waitingTime); }
+            finally { _semaphore.Release(); }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateServerTimeAsync(double serverTime, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try { _serverTime.Record(serverTime); }
+            finally { _semaphore.Release(); }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateServerTimeDBAsync(double serverTimeDB, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try { _serverTimeDB.Record(serverTimeDB); }
+            finally { _semaphore.Release(); }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateServerTimeCacheAsync(double serverTimeCache, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try { _serverTimeCache.Record(serverTimeCache); }
+            finally { _semaphore.Release(); }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateServerTimeAppAsync(double serverTimeApp, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try { _serverTimeApp.Record(serverTimeApp); }
             finally { _semaphore.Release(); }
             return this;
         }

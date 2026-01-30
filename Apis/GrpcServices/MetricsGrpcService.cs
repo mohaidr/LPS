@@ -96,7 +96,11 @@ namespace Apis.Services
                     ProtoDurationMetricType.TlsHandshakeTime => DurationMetricType.TLSHandshakeTime,
                     ProtoDurationMetricType.TcpHandshakeTime => DurationMetricType.TCPHandshakeTime,
                     ProtoDurationMetricType.TimeToFirstByte => DurationMetricType.TimeToFirstByte,
-                    ProtoDurationMetricType.WaitingTime => DurationMetricType.WaitingTime,         // NEW
+                    ProtoDurationMetricType.WaitingTime => DurationMetricType.WaitingTime,
+                    ProtoDurationMetricType.ServerTime => DurationMetricType.ServerTime,
+                    ProtoDurationMetricType.ServerTimeDb => DurationMetricType.ServerTimeDB,
+                    ProtoDurationMetricType.ServerTimeCache => DurationMetricType.ServerTimeCache,
+                    ProtoDurationMetricType.ServerTimeApp => DurationMetricType.ServerTimeApp,
                     _ => DurationMetricType.TotalTime
                 };
 

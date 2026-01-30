@@ -12,6 +12,10 @@ namespace LPS.Infrastructure.Common.Interfaces
         public Task<IDurationMetricCollector> UpdateTLSHandshakeTimeAsync(double tlsHandshakeTime, CancellationToken token);
         public Task<IDurationMetricCollector> UpdateTCPHandshakeTimeAsync(double tcpHandshakeTime, CancellationToken token);
         public Task<IDurationMetricCollector> UpdateTimeToFirstByteAsync(double timeToFirstByte, CancellationToken token);
-        public Task<IDurationMetricCollector> UpdateWaitingTimeAsync(double waitingTime, CancellationToken token); // NEW
+        public Task<IDurationMetricCollector> UpdateWaitingTimeAsync(double waitingTime, CancellationToken token);
+        public Task<IDurationMetricCollector> UpdateServerTimeAsync(double serverTime, CancellationToken token);
+        public Task<IDurationMetricCollector> UpdateServerTimeDBAsync(double serverTimeDB, CancellationToken token);
+        public Task<IDurationMetricCollector> UpdateServerTimeCacheAsync(double serverTimeCache, CancellationToken token);
+        public Task<IDurationMetricCollector> UpdateServerTimeAppAsync(double serverTimeApp, CancellationToken token);
     }
 }

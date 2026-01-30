@@ -73,9 +73,22 @@ namespace LPS.Infrastructure.Monitoring
                 // ReceivingTime (download) metrics
                 "receivingtime" or "receiving" or "download" or "downstream" => await GetTimingMetricAsync(grpcClient, fqdn, TimingMetricType.ReceivingTime, aggregation, token),
 
+                // ServerTime metrics (from Server-Timing header)
+                "servertime" or "server" => await GetTimingMetricAsync(grpcClient, fqdn, TimingMetricType.ServerTime, aggregation, token),
+
+                // ServerTimeDB (database time from Server-Timing header)
+                "servertimedb" or "db" or "database" => await GetTimingMetricAsync(grpcClient, fqdn, TimingMetricType.ServerTimeDB, aggregation, token),
+
+                // ServerTimeCache (cache time from Server-Timing header)
+                "servertimecache" or "cache" => await GetTimingMetricAsync(grpcClient, fqdn, TimingMetricType.ServerTimeCache, aggregation, token),
+
+                // ServerTimeApp (application time from Server-Timing header)
+                "servertimeapp" or "app" or "application" => await GetTimingMetricAsync(grpcClient, fqdn, TimingMetricType.ServerTimeApp, aggregation, token),
+
                 _ => throw new ArgumentException(
                     $"Unknown metric: {metricName}. " +
-                    $"Supported metrics: ErrorRate, TotalTime, TTFB, WaitingTime, TCPHandshake, TLSHandshake, SendingTime, ReceivingTime. " +
+                    $"Supported metrics: ErrorRate, TotalTime, TTFB, WaitingTime, TCPHandshake, TLSHandshake, SendingTime, ReceivingTime, " +
+                    $"ServerTime, ServerTimeDB, ServerTimeCache, ServerTimeApp. " +
                     $"Add aggregation for timing metrics: .P50, .P90, .P95, .P99, .Average, .Min, .Max. " +
                     $"Use 'ErrorRate > 0' with 'errorStatusCodes' for status code checks.")
             };
@@ -89,7 +102,11 @@ namespace LPS.Infrastructure.Monitoring
             TCPHandshake,
             TLSHandshake,
             SendingTime,
-            ReceivingTime
+            ReceivingTime,
+            ServerTime,
+            ServerTimeDB,
+            ServerTimeCache,
+            ServerTimeApp
         }
 
         private async Task<double> GetTimingMetricAsync(
@@ -115,6 +132,10 @@ namespace LPS.Infrastructure.Monitoring
                 TimingMetricType.TLSHandshake => duration.TlsHandshakeTime,
                 TimingMetricType.SendingTime => duration.SendingTime,
                 TimingMetricType.ReceivingTime => duration.ReceivingTime,
+                TimingMetricType.ServerTime => duration.ServerTime,
+                TimingMetricType.ServerTimeDB => duration.ServerTimeDB,
+                TimingMetricType.ServerTimeCache => duration.ServerTimeCache,
+                TimingMetricType.ServerTimeApp => duration.ServerTimeApp,
                 _ => null
             };
 

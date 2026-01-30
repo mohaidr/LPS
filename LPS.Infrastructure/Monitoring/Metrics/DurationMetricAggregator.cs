@@ -24,7 +24,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         TLSHandshakeTime,
         TCPHandshakeTime,
         TimeToFirstByte,
-        WaitingTime         // NEW: TTFB - TCP - TLS
+        WaitingTime,        // TTFB - TCP - TLS
+        ServerTime,         // Server processing time (total) from response header
+        ServerTimeDB,       // Server-Timing: db;dur=X
+        ServerTimeCache,    // Server-Timing: cache;dur=X
+        ServerTimeApp       // Server-Timing: app;dur=X
     }
 
     public class DurationMetricAggregator : BaseMetricAggregator, IDurationMetricCollector
@@ -175,9 +179,70 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             return this;
         }
 
+        public async Task<IDurationMetricCollector> UpdateServerTimeAsync(double serverTime, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try
+            {
+                await _snapshot.UpdateAsync(DurationMetricType.ServerTime, serverTime, token);
+                await PushMetricAsync(token);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateServerTimeDBAsync(double serverTimeDB, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try
+            {
+                await _snapshot.UpdateAsync(DurationMetricType.ServerTimeDB, serverTimeDB, token);
+                await PushMetricAsync(token);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateServerTimeCacheAsync(double serverTimeCache, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try
+            {
+                await _snapshot.UpdateAsync(DurationMetricType.ServerTimeCache, serverTimeCache, token);
+                await PushMetricAsync(token);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+            return this;
+        }
+
+        public async Task<IDurationMetricCollector> UpdateServerTimeAppAsync(double serverTimeApp, CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try
+            {
+                await _snapshot.UpdateAsync(DurationMetricType.ServerTimeApp, serverTimeApp, token);
+                await PushMetricAsync(token);
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+            return this;
+        }
+
         /// <summary>
         /// Gets the current cumulative duration data for the CumulativeIterationMetricsCollector.
         /// Similar to how WindowedDurationAggregator.GetWindowDataAndReset() works, but does NOT reset.
+        /// </summary>
         /// </summary>
 #nullable enable
         public CumulativeDurationData? GetCumulativeData()
@@ -193,7 +258,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     TimeToFirstByte = MapTimingMetric(_snapshot.TimeToFirstByteMetrics),
                     WaitingTime = MapTimingMetric(_snapshot.WaitingTimeMetrics),
                     ReceivingTime = MapTimingMetric(_snapshot.ReceivingTimeMetrics),
-                    SendingTime = MapTimingMetric(_snapshot.SendingTimeMetrics)
+                    SendingTime = MapTimingMetric(_snapshot.SendingTimeMetrics),
+                    ServerTime = MapTimingMetric(_snapshot.ServerTimeMetrics),
+                    ServerTimeDB = MapTimingMetric(_snapshot.ServerTimeDBMetrics),
+                    ServerTimeCache = MapTimingMetric(_snapshot.ServerTimeCacheMetrics),
+                    ServerTimeApp = MapTimingMetric(_snapshot.ServerTimeAppMetrics)
                 };
             }
             finally
@@ -282,6 +351,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     case DurationMetricType.WaitingTime:
                         WaitingTimeMetrics.Update(totalTime);
                         break;
+                    case DurationMetricType.ServerTime:
+                        ServerTimeMetrics.Update(totalTime);
+                        break;
+                    case DurationMetricType.ServerTimeDB:
+                        ServerTimeDBMetrics.Update(totalTime);
+                        break;
+                    case DurationMetricType.ServerTimeCache:
+                        ServerTimeCacheMetrics.Update(totalTime);
+                        break;
+                    case DurationMetricType.ServerTimeApp:
+                        ServerTimeAppMetrics.Update(totalTime);
+                        break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(metricType), $"Unsupported DurationMetricType: {metricType}");
                 }
@@ -303,6 +384,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public WaitingTime WaitingTimeMetrics { get; private set; } = new();
         public ReceivingTime ReceivingTimeMetrics { get; private set; } = new();
         public SendingTime SendingTimeMetrics { get; private set; } = new();
+        public ServerTime ServerTimeMetrics { get; private set; } = new();
+        public ServerTimeDB ServerTimeDBMetrics { get; private set; } = new();
+        public ServerTimeCache ServerTimeCacheMetrics { get; private set; } = new();
+        public ServerTimeApp ServerTimeAppMetrics { get; private set; } = new();
 
 
         public class MetricTime
@@ -343,5 +428,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public class WaitingTime : MetricTime { }
         public class ReceivingTime : MetricTime { }
         public class SendingTime : MetricTime { }
+        public class ServerTime : MetricTime { }
+        public class ServerTimeDB : MetricTime { }
+        public class ServerTimeCache : MetricTime { }
+        public class ServerTimeApp : MetricTime { }
     }
 }   

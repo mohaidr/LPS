@@ -56,7 +56,10 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         public WindowedTimingMetric WaitingTime { get; init; } = new();
         public WindowedTimingMetric ReceivingTime { get; init; } = new();
         public WindowedTimingMetric SendingTime { get; init; } = new();
-
+        public WindowedTimingMetric ServerTime { get; init; } = new();
+        public WindowedTimingMetric ServerTimeDB { get; init; } = new();
+        public WindowedTimingMetric ServerTimeCache { get; init; } = new();
+        public WindowedTimingMetric ServerTimeApp { get; init; } = new();
     }
 
     /// <summary>

@@ -71,6 +71,10 @@ message DurationMetricResponse {
   TimingMetricStats tlsHandshakeTime = 14;     // SSL/TLS negotiation
   TimingMetricStats sendingTime = 15;          // Request upload time
   TimingMetricStats receivingTime = 16;        // Response download time
+  TimingMetricStats serverTime = 17;           // Server processing time (from Server-Timing header)
+  TimingMetricStats serverTimeDB = 18;         // Server-Timing: db;dur=X
+  TimingMetricStats serverTimeCache = 19;      // Server-Timing: cache;dur=X
+  TimingMetricStats serverTimeApp = 20;        // Server-Timing: app;dur=X
 }
 
 message DurationMetricSearchResponse {

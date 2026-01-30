@@ -60,6 +60,10 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         public CumulativeTimingMetric? WaitingTime { get; init; }
         public CumulativeTimingMetric? ReceivingTime { get; init; }
         public CumulativeTimingMetric? SendingTime { get; init; }
+        public CumulativeTimingMetric? ServerTime { get; init; }
+        public CumulativeTimingMetric? ServerTimeDB { get; init; }
+        public CumulativeTimingMetric? ServerTimeCache { get; init; }
+        public CumulativeTimingMetric? ServerTimeApp { get; init; }
     }
 
     public sealed class CumulativeTimingMetric

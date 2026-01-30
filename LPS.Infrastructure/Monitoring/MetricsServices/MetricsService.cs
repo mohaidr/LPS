@@ -237,7 +237,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                         DurationMetricType.TLSHandshakeTime => ProtoDurationMetricType.TlsHandshakeTime,
                         DurationMetricType.TCPHandshakeTime => ProtoDurationMetricType.TcpHandshakeTime,
                         DurationMetricType.TimeToFirstByte => ProtoDurationMetricType.TimeToFirstByte,
-                        DurationMetricType.WaitingTime => ProtoDurationMetricType.WaitingTime,       // NEW
+                        DurationMetricType.WaitingTime => ProtoDurationMetricType.WaitingTime,
+                        DurationMetricType.ServerTime => ProtoDurationMetricType.ServerTime,
+                        DurationMetricType.ServerTimeDB => ProtoDurationMetricType.ServerTimeDb,
+                        DurationMetricType.ServerTimeCache => ProtoDurationMetricType.ServerTimeCache,
+                        DurationMetricType.ServerTimeApp => ProtoDurationMetricType.ServerTimeApp,
                         _ => ProtoDurationMetricType.TotalTime
                     },
                     ValueMs = valueMs
@@ -294,8 +298,20 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                     case DurationMetricType.TimeToFirstByte:
                         await collector.UpdateTimeToFirstByteAsync(valueMs, token);
                         break;
-                    case DurationMetricType.WaitingTime: // NEW
+                    case DurationMetricType.WaitingTime:
                         await collector.UpdateWaitingTimeAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.ServerTime:
+                        await collector.UpdateServerTimeAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.ServerTimeDB:
+                        await collector.UpdateServerTimeDBAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.ServerTimeCache:
+                        await collector.UpdateServerTimeCacheAsync(valueMs, token);
+                        break;
+                    case DurationMetricType.ServerTimeApp:
+                        await collector.UpdateServerTimeAppAsync(valueMs, token);
                         break;
                 }
             }

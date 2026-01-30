@@ -64,7 +64,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     PooledConnectionIdleTimeoutInSeconds = updatedClientOptions.PooledConnectionIdleTimeoutInSeconds ?? _clientOptions.Value.PooledConnectionIdleTimeoutInSeconds,
                     ClientTimeoutInSeconds = updatedClientOptions.ClientTimeoutInSeconds ?? _clientOptions.Value.ClientTimeoutInSeconds,
                     HeaderValidationMode = updatedClientOptions.HeaderValidationMode ?? _clientOptions.Value.HeaderValidationMode,
-                    AllowHostOverride = updatedClientOptions.AllowHostOverride ?? _clientOptions.Value.AllowHostOverride
+                    AllowHostOverride = updatedClientOptions.AllowHostOverride ?? _clientOptions.Value.AllowHostOverride,
+                    ServerTimeHeader = updatedClientOptions.ServerTimeHeader ?? _clientOptions.Value.ServerTimeHeader,
+                    ServerTimeFormat = updatedClientOptions.ServerTimeFormat ?? _clientOptions.Value.ServerTimeFormat
                 };
 
                 var validationResults = httpClientValidator.Validate(clientOptions);
@@ -88,6 +90,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     option.ClientTimeoutInSeconds = clientOptions.ClientTimeoutInSeconds;
                     option.HeaderValidationMode = clientOptions.HeaderValidationMode;
                     option.AllowHostOverride = clientOptions.AllowHostOverride;
+                    option.ServerTimeHeader = clientOptions.ServerTimeHeader;
+                    option.ServerTimeFormat = clientOptions.ServerTimeFormat;
                 });
 
                 _logger.Log(
@@ -97,7 +101,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     $"PooledConnectionIdleTimeoutInSeconds={clientOptions.PooledConnectionIdleTimeoutInSeconds}, " +
                     $"ClientTimeoutInSeconds={clientOptions.ClientTimeoutInSeconds}, " +
                     $"HeaderValidationMode={clientOptions.HeaderValidationMode}, " +
-                    $"AllowHostOverride={clientOptions.AllowHostOverride}",
+                    $"AllowHostOverride={clientOptions.AllowHostOverride}, " +
+                    $"ServerTimeHeader={clientOptions.ServerTimeHeader ?? "(not set)"}, " +
+                    $"ServerTimeFormat={clientOptions.ServerTimeFormat}",
                     LPSLoggingLevel.Information);
 
             }, new HttpClientBinder());

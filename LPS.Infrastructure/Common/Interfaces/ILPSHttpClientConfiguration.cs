@@ -8,6 +8,29 @@ using System.Threading.Tasks;
 
 namespace LPS.Infrastructure.Common.Interfaces
 {
+    /// <summary>
+    /// Format of the server time header value.
+    /// </summary>
+    public enum ServerTimeFormat
+    {
+        /// <summary>
+        /// Auto-detect format: tries Server-Timing syntax first, then numeric with optional 'ms' suffix.
+        /// </summary>
+        Auto,
+        /// <summary>
+        /// Plain numeric value in milliseconds.
+        /// </summary>
+        Milliseconds,
+        /// <summary>
+        /// Plain numeric value in seconds (will be converted to ms).
+        /// </summary>
+        Seconds,
+        /// <summary>
+        /// W3C Server-Timing format: parses 'dur=' values.
+        /// </summary>
+        ServerTiming
+    }
+
     public interface ILPSHttpClientConfiguration<T> : IClientConfiguration<T> where T : IRequestEntity
     {
         public TimeSpan PooledConnectionLifetime { get; }
@@ -25,5 +48,16 @@ namespace LPS.Infrastructure.Common.Interfaces
         /// </summary>
         public bool AllowHostOverride { get; }
 
+        /// <summary>
+        /// The response header name to read server processing time from.
+        /// Examples: "Server-Timing", "X-Response-Time", "X-Runtime"
+        /// Null or empty means disabled.
+        /// </summary>
+        public string? ServerTimeHeader { get; }
+
+        /// <summary>
+        /// Format of the server time header value.
+        /// </summary>
+        public ServerTimeFormat ServerTimeFormat { get; }
     }
 }

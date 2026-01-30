@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 // If your enum lives elsewhere, adjust this using accordingly:
 using LPS.Infrastructure.LPSClients.HeaderServices;
-using LPS.Infrastructure.Common.Interfaces; // HeaderValidationMode
+using LPS.Infrastructure.Common.Interfaces;
 
 namespace LPS.Infrastructure.LPSClients
 {
@@ -24,6 +24,8 @@ namespace LPS.Infrastructure.LPSClients
             // NEW defaults
             HeaderMode = HeaderValidationMode.RawPassthrough; // Strict | Lenient| RawPassthrough  (default) 
             AllowHostOverride = false;                  // keep Host managed by HttpClient unless explicitly allowed
+            ServerTimeHeader = null;                    // no server time header tracking by default
+            ServerTimeFormat = ServerTimeFormat.Auto;   // auto-detect format when enabled
         }
 
         /// <summary>
@@ -35,7 +37,9 @@ namespace LPS.Infrastructure.LPSClients
             int maxConnectionsPerServer,
             TimeSpan timeout,
             HeaderValidationMode headerMode,
-            bool allowHostOverride = false)
+            bool allowHostOverride = false,
+            string? serverTimeHeader = null,
+            ServerTimeFormat serverTimeFormat = ServerTimeFormat.Auto)
         {
             PooledConnectionLifetime = pooledConnectionLifetime;
             PooledConnectionIdleTimeout = pooledConnectionIdleTimeout;
@@ -43,6 +47,8 @@ namespace LPS.Infrastructure.LPSClients
             Timeout = timeout;
             HeaderMode = headerMode;
             AllowHostOverride = allowHostOverride;
+            ServerTimeHeader = serverTimeHeader;
+            ServerTimeFormat = serverTimeFormat;
         }
 
         public static HttpClientConfiguration GetDefaultInstance()
@@ -65,5 +71,16 @@ namespace LPS.Infrastructure.LPSClients
         /// Keep false unless you explicitly test virtual host/authority scenarios.
         /// </summary>
         public bool AllowHostOverride { get; }
+
+        /// <summary>
+        /// The response header name to read server processing time from.
+        /// Examples: "Server-Timing", "X-Response-Time", "X-Runtime"
+        /// </summary>
+        public string? ServerTimeHeader { get; }
+
+        /// <summary>
+        /// Format of the server time header value.
+        /// </summary>
+        public ServerTimeFormat ServerTimeFormat { get; }
     }
 }

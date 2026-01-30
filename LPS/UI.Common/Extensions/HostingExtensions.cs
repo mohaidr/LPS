@@ -322,7 +322,9 @@ namespace LPS.UI.Common.Extensions
                 maxConnectionsPerServer: options.MaxConnectionsPerServer!.Value,
                 timeout: TimeSpan.FromSeconds(options.ClientTimeoutInSeconds!.Value),
                 headerMode: options.HeaderValidationMode!.Value,
-                allowHostOverride: options.AllowHostOverride!.Value);
+                allowHostOverride: options.AllowHostOverride!.Value,
+                serverTimeHeader: options.ServerTimeHeader,
+                serverTimeFormat: options.ServerTimeFormat ?? ServerTimeFormat.Auto);
         }
 
 
