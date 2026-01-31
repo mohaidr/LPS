@@ -28,6 +28,8 @@ namespace LPS.Domain
             {
                 // Scalar metrics
                 "errorrate",
+                // Throughput
+                "throughput", "rps", "requestspersecond",
                 // TotalTime
                 "totaltime",
                 // TTFB

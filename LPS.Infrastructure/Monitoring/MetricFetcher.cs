@@ -85,9 +85,12 @@ namespace LPS.Infrastructure.Monitoring
                 // ServerTimeApp (application time from Server-Timing header)
                 "servertimeapp" or "app" or "application" => await GetTimingMetricAsync(grpcClient, fqdn, TimingMetricType.ServerTimeApp, aggregation, token),
 
+                // Throughput metrics
+                "throughput" or "rps" or "requestspersecond" => await GetThroughputMetricAsync(grpcClient, fqdn, token),
+
                 _ => throw new ArgumentException(
                     $"Unknown metric: {metricName}. " +
-                    $"Supported metrics: ErrorRate, TotalTime, TTFB, WaitingTime, TCPHandshake, TLSHandshake, SendingTime, ReceivingTime, " +
+                    $"Supported metrics: ErrorRate, Throughput (RPS), TotalTime, TTFB, WaitingTime, TCPHandshake, TLSHandshake, SendingTime, ReceivingTime, " +
                     $"ServerTime, ServerTimeDB, ServerTimeCache, ServerTimeApp. " +
                     $"Add aggregation for timing metrics: .P50, .P90, .P95, .P99, .Average, .Min, .Max. " +
                     $"Use 'ErrorRate > 0' with 'errorStatusCodes' for status code checks.")
@@ -205,6 +208,20 @@ namespace LPS.Infrastructure.Monitoring
             }
 
             return total > 0 ? (double)errors / total : 0;
+        }
+
+        private async Task<double> GetThroughputMetricAsync(
+            GrpcMetricsQueryServiceClient grpcClient,
+            string fqdn,
+            CancellationToken token)
+        {
+            var throughput = await grpcClient.GetThroughputAsync(fqdn, token);
+            var response = throughput?.Responses?.SingleOrDefault();
+
+            if (response == null)
+                return 0;
+
+            return response.RequestsRate?.Value ?? 0;
         }
 
         /// <summary>

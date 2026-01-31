@@ -121,7 +121,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         var key = (iteration.Id, rule.Metric);
                         var graceState = _stateV2.GetOrAdd(key, _ => new GracePeriodState(rule.GracePeriod));
                         
-                        if (await graceState.UpdateAsync(hasConditionMet))
+                        if (await graceState.UpdateBreachAndCheckGracePeriodAsync(hasConditionMet))
                         {
                             _terminatedIterations.TryAdd(iteration.Id, true);
 

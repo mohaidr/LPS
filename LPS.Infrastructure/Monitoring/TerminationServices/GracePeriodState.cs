@@ -16,7 +16,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             _gracePeriod = gracePeriod;
         }
 
-        public async Task<bool> UpdateAsync(bool isBreachingNow)
+        public async Task<bool> UpdateBreachAndCheckGracePeriodAsync(bool isBreachingNow)
         {
             await _semaphore.WaitAsync();
             try

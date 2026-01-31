@@ -24,6 +24,8 @@ namespace LPS.UI.Core.LPSValidators
         {
             // Scalar metrics
             "errorrate",
+            // Throughput
+            "throughput", "rps", "requestspersecond",
             // TotalTime
             "totaltime",
             // TTFB
@@ -57,7 +59,8 @@ namespace LPS.UI.Core.LPSValidators
         // Scalar metrics that don't support aggregations
         private static readonly HashSet<string> ScalarMetrics = new(StringComparer.OrdinalIgnoreCase)
         {
-            "errorrate"
+            "errorrate",
+            "throughput", "rps", "requestspersecond"
         };
 
         public IterationValidator(HttpIterationDto iterationDto)
