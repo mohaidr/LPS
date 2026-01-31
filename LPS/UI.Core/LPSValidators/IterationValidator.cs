@@ -37,7 +37,15 @@ namespace LPS.UI.Core.LPSValidators
             // SendingTime
             "sendingtime", "sending", "upload", "upstream",
             // ReceivingTime
-            "receivingtime", "receiving", "download", "downstream"
+            "receivingtime", "receiving", "download", "downstream",
+            // ServerTime (from Server-Timing header)
+            "servertime", "server",
+            // ServerTimeDB
+            "servertimedb", "db", "database",
+            // ServerTimeCache
+            "servertimecache", "cache",
+            // ServerTimeApp
+            "servertimeapp", "app", "application"
         };
 
         // Supported aggregations for timing metrics

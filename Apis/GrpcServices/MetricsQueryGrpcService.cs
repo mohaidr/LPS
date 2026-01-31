@@ -214,13 +214,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                 return new[] { LPSMetricType.DataTransmission };
 
             if (typeof(TSnapshot) == typeof(DurationMetricSnapshot))
-            {
-                // Try both if your codebase sometimes uses ResponseTime
-                var list = new List<LPSMetricType>();
-                if (Enum.TryParse<LPSMetricType>("Duration", out var d)) list.Add(d);
-                if (Enum.TryParse<LPSMetricType>("ResponseTime", out var rt)) list.Add(rt);
-                return list;
-            }
+                return new[] { LPSMetricType.Time };
 
             // Fallback: try the enum name of the type (unlikely to help, but harmless)
             return Array.Empty<LPSMetricType>();
