@@ -40,6 +40,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string> _runInParallerOption;
         private Option<IList<string>> _failureRuleOption;
         private Option<IList<string>> _terminationRuleOption;
+        private Option<string?> _clientCertificatePathOption;
+        private Option<string?> _clientCertificatePasswordOption;
 
         public CommandBinder(
             Option<string>? nameOption = null,
@@ -65,7 +67,9 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<string>? saveResponseOption = null,
             Option<string?>? supportH2C = null,
             Option<IList<string>>? failureRuleOption = null,
-            Option<IList<string>>? terminationRuleOption = null)
+            Option<IList<string>>? terminationRuleOption = null,
+            Option<string?>? clientCertificatePathOption = null,
+            Option<string?>? clientCertificatePasswordOption = null)
         {
             _nameOption = nameOption ?? CommandLineOptions.LPSCommandOptions.PlanNameOption;
             _roundNameOption = roundNameOption ?? CommandLineOptions.LPSCommandOptions.RoundNameOption;
@@ -91,6 +95,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _supportH2C = supportH2C ?? CommandLineOptions.LPSCommandOptions.SupportH2C;
             _failureRuleOption = failureRuleOption ?? CommandLineOptions.LPSCommandOptions.FailureRuleOption;
             _terminationRuleOption = terminationRuleOption ?? CommandLineOptions.LPSCommandOptions.TerminationRuleOption;
+            _clientCertificatePathOption = clientCertificatePathOption ?? CommandLineOptions.LPSCommandOptions.ClientCertificatePathOption;
+            _clientCertificatePasswordOption = clientCertificatePasswordOption ?? CommandLineOptions.LPSCommandOptions.ClientCertificatePasswordOption;
         }
 
         protected override PlanDto GetBoundValue(BindingContext bindingContext)
@@ -137,6 +143,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                                     DownloadHtmlEmbeddedResources = bindingContext.ParseResult.GetValueForOption(_downloadHtmlEmbeddedResourcesOption),
                                     SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
                                     SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),
+                                    ClientCertificatePath = bindingContext.ParseResult.GetValueForOption(_clientCertificatePathOption),
+                                    ClientCertificatePassword = bindingContext.ParseResult.GetValueForOption(_clientCertificatePasswordOption),
                                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
                                     Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? new PayloadDto(){ Raw = InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) } : new PayloadDto(){ Raw = string.Empty },
                                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),

@@ -55,6 +55,16 @@ namespace LPS.UI.Common.DTOs
         // Whether to support H2C (HTTP/2 over cleartext) (supports placeholders)
         public string SupportH2C { get; set; }
 
+        // Path to client certificate file (PFX/PEM) for mutual TLS authentication
+        [YamlAlias("clientCertificatePath")]
+        [JsonAlias("clientCertificatePath")]
+        public string? ClientCertificatePath { get; set; }
+
+        // Password for the client certificate file (required for PFX files)
+        [YamlAlias("clientCertificatePassword")]
+        [JsonAlias("clientCertificatePassword")]
+        public string? ClientCertificatePassword { get; set; }
+
         // Capture handler for the HTTP request
         public CaptureHandlerDto Capture { get; set; }
 
@@ -71,6 +81,8 @@ namespace LPS.UI.Common.DTOs
                 DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources,
                 SaveResponse = this.SaveResponse,
                 SupportH2C = this.SupportH2C,
+                ClientCertificatePath = this.ClientCertificatePath,
+                ClientCertificatePassword = this.ClientCertificatePassword,
                 HttpHeaders = this.HttpHeaders?.ToDictionary(entry => entry.Key, entry => entry.Value)
             };
             #pragma warning restore CS8601 // Possible null reference assignment.

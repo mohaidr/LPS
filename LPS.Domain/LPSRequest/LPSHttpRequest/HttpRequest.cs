@@ -60,6 +60,10 @@ namespace LPS.Domain
 
         public bool SaveResponse { get; protected set; }
 
+        public string? ClientCertificatePath { get; protected set; }
+
+        public string? ClientCertificatePassword { get; protected set; }
+
         public CaptureHandler Capture { get; protected set; }
         //TODO: ReadHandler To Be Implemented 
     }

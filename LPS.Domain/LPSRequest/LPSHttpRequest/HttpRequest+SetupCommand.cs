@@ -43,6 +43,8 @@ namespace LPS.Domain
             public bool? DownloadHtmlEmbeddedResources { get; set; }
             public bool? SaveResponse { get; set; }
             public bool? SupportH2C { get; set; }
+            public string? ClientCertificatePath { get; set; }
+            public string? ClientCertificatePassword { get; set; }
 
             public bool IsValid { get; set; }
             public IDictionary<string, List<string>> ValidationErrors { get; set; }
@@ -63,6 +65,8 @@ namespace LPS.Domain
                 targetCommand.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
                 targetCommand.SaveResponse = this.SaveResponse;
                 targetCommand.SupportH2C = this.SupportH2C;
+                targetCommand.ClientCertificatePath = this.ClientCertificatePath;
+                targetCommand.ClientCertificatePassword = this.ClientCertificatePassword;
                 targetCommand.IsValid = this.IsValid;
                 targetCommand.ValidationErrors = this.ValidationErrors?.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
@@ -110,6 +114,8 @@ namespace LPS.Domain
                 this.DownloadHtmlEmbeddedResources = command.DownloadHtmlEmbeddedResources.HasValue ? command.DownloadHtmlEmbeddedResources.Value : false;
                 this.SaveResponse = command.SaveResponse ?? false;
                 this.SupportH2C = command.SupportH2C;
+                this.ClientCertificatePath = command.ClientCertificatePath;
+                this.ClientCertificatePassword = command.ClientCertificatePassword;
                 if (command.HttpHeaders != null)
                 {
                     foreach (var header in command.HttpHeaders)
@@ -139,6 +145,8 @@ namespace LPS.Domain
                 clone.Payload = this.Payload; // intentionally not doing deep clone here TODO: review performence and then implement deep clone
                 clone.SaveResponse = this.SaveResponse;
                 clone.SupportH2C = this.SupportH2C;
+                clone.ClientCertificatePath = this.ClientCertificatePath;
+                clone.ClientCertificatePassword = this.ClientCertificatePassword;
                 clone.Capture =  (CaptureHandler)this.Capture?.Clone();
                 clone.HttpHeaders = [];
                 if (this.HttpHeaders != null)

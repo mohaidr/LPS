@@ -79,6 +79,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 SupportH2C.AddAlias("-h2c");
                 FailureRuleOption.AddAlias("-fr");
                 TerminationRuleOption.AddAlias("-tr");
+                ClientCertificatePathOption.AddAlias("-ccp");
+                ClientCertificatePasswordOption.AddAlias("-ccpw");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(PlanNameOption, "--name");
@@ -298,6 +300,18 @@ namespace LPS.UI.Core.LPSCommandLine
 
             public static Option<string> PayloadOption { get; } = new Option<string>(
                 "--payload", () => string.Empty, "Request payload")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string?> ClientCertificatePathOption { get; } = new Option<string?>(
+                "--clientcertificatepath", "Path to client certificate file (PFX/PEM) for mutual TLS authentication")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string?> ClientCertificatePasswordOption { get; } = new Option<string?>(
+                "--clientcertificatepassword", "Password for the client certificate file")
             {
                 IsRequired = false
             };
@@ -657,6 +671,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 SaveResponse.AddAlias("-sr");
                 SupportH2C.AddAlias("-sh2c");
                 SupportH2C.AddAlias("-h2c");
+                ClientCertificatePathOption.AddAlias("-ccp");
+                ClientCertificatePasswordOption.AddAlias("-ccpw");
 
                 // Add case-insensitive aliases
                 AddCaseInsensitiveAliases(RoundNameOption, "--roundName");
@@ -677,6 +693,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(DownloadHtmlEmbeddedResources, "--downloadhtmlembeddedresources");
                 AddCaseInsensitiveAliases(SaveResponse, "--saveresponse");
                 AddCaseInsensitiveAliases(SupportH2C, "--supporth2c");
+                AddCaseInsensitiveAliases(ClientCertificatePathOption, "--clientcertificatepath");
+                AddCaseInsensitiveAliases(ClientCertificatePasswordOption, "--clientcertificatepassword");
             }
             public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
                 "config", // This makes it positional
@@ -786,6 +804,18 @@ namespace LPS.UI.Core.LPSCommandLine
             };
             public static Option<bool> GlobalOption { get; } = new Option<bool>(
                 "--global", () => false, "Save as a global iteration")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string?> ClientCertificatePathOption { get; } = new Option<string?>(
+                "--clientcertificatepath", "Path to client certificate file (PFX/PEM) for mutual TLS authentication")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string?> ClientCertificatePasswordOption { get; } = new Option<string?>(
+                "--clientcertificatepassword", "Password for the client certificate file")
             {
                 IsRequired = false
             };

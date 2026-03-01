@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LPS\LPS.csproj" />
+    <ProjectReference Include="..\LPS.Common\LPS.UI.Common.csproj" />
   </ItemGroup>
 
 </Project>

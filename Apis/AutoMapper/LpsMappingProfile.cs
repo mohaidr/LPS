@@ -67,6 +67,8 @@ namespace Apis.AutoMapper
                 .ForMember(d => d.DownloadHtmlEmbeddedResources, m => m.MapFrom(s => s.DownloadHtmlEmbeddedResources.ToString().ToLower()))
                 .ForMember(d => d.SaveResponse, m => m.MapFrom(s => s.SaveResponse.ToString().ToLower()))
                 .ForMember(d => d.SupportH2C, m => m.MapFrom(s => s.SupportH2C.ToString().ToLower()))
+                .ForMember(d => d.ClientCertificatePath, m => m.MapFrom(s => s.ClientCertificatePath))
+                .ForMember(d => d.ClientCertificatePassword, m => m.MapFrom(s => s.ClientCertificatePassword))
                 .ForMember(d => d.Capture, m => m.MapFrom(s => s.Capture))
                 .ForMember(d => d.Payload, option => option.Ignore())
 ;

@@ -27,7 +27,9 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         Option<string>? downloadHtmlEmbeddedResourcesOption = null,
         Option<string>? saveResponseOption = null,
         Option<string?>? supportH2C = null,
-        Option<string>? startupDelayOption = null) : BinderBase<HttpIterationDto>
+        Option<string>? startupDelayOption = null,
+        Option<string?>? clientCertificatePathOption = null,
+        Option<string?>? clientCertificatePasswordOption = null) : BinderBase<HttpIterationDto>
     {
         readonly private Option<string> _nameOption = nameOption ?? CommandLineOptions.LPSIterationCommandOptions.IterationNameOption;
         readonly private Option<string?> _requestCountOption = requestCountOption ?? CommandLineOptions.LPSIterationCommandOptions.RequestCountOption;
@@ -45,6 +47,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         readonly private Option<string> _payloadOption = payloadOption ?? CommandLineOptions.LPSIterationCommandOptions.PayloadOption;
         readonly Option<string> _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSIterationCommandOptions.IterationModeOption;
         private readonly Option<string> _startupDelayOption = startupDelayOption ?? CommandLineOptions.LPSIterationCommandOptions.StartupDelayOption;
+        private readonly Option<string?> _clientCertificatePathOption = clientCertificatePathOption ?? CommandLineOptions.LPSIterationCommandOptions.ClientCertificatePathOption;
+        private readonly Option<string?> _clientCertificatePasswordOption = clientCertificatePasswordOption ?? CommandLineOptions.LPSIterationCommandOptions.ClientCertificatePasswordOption;
         #pragma warning disable CS8601 // Possible null reference assignment.
         protected override HttpIterationDto GetBoundValue(BindingContext bindingContext) =>
             new()
@@ -64,6 +68,8 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                     DownloadHtmlEmbeddedResources = bindingContext.ParseResult.GetValueForOption(_downloadHtmlEmbeddedResourcesOption),
                     SaveResponse = bindingContext.ParseResult.GetValueForOption(_saveResponseOption),
                     SupportH2C = bindingContext.ParseResult.GetValueForOption(_supportH2C),
+                    ClientCertificatePath = bindingContext.ParseResult.GetValueForOption(_clientCertificatePathOption),
+                    ClientCertificatePassword = bindingContext.ParseResult.GetValueForOption(_clientCertificatePasswordOption),
                     URL = bindingContext.ParseResult.GetValueForOption(_urlOption),
                     Payload = !string.IsNullOrEmpty(bindingContext.ParseResult.GetValueForOption(_payloadOption)) ? new PayloadDto() { Raw = InputPayloadService.Parse(bindingContext.ParseResult.GetValueForOption(_payloadOption)) } : new PayloadDto() { Raw = string.Empty },
                     HttpHeaders = InputHeaderService.Parse(bindingContext.ParseResult.GetValueForOption(_headerOption)),

@@ -26,6 +26,7 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -129,6 +130,14 @@ namespace LPS.Infrastructure.LPSClients
                     {
                         TargetHost = context.DnsEndPoint.Host
                     };
+
+                    // Check if client certificate was provided in request options
+                    if (context.InitialRequestMessage.Options.TryGetValue(
+                        new HttpRequestOptionsKey<X509Certificate2>("ClientCertificate"), out var clientCert))
+                    {
+                        sslOptions.ClientCertificates = new X509CertificateCollection { clientCert };
+                    }
+
                     await ssl.AuthenticateAsClientAsync(sslOptions, cancellationToken);
                     tlsStopwatch.Stop();
 
@@ -174,6 +183,14 @@ namespace LPS.Infrastructure.LPSClients
                         #region Build The Message
                         (httpRequestMessage, long dataSentSize) = await _messageService.BuildAsync(httpRequestEntity, this.SessionId, linkedCts.Token);
                         httpRequestMessage.Content = httpRequestMessage.Content != null ? WrapWithProgressContentAsync(httpRequestEntity, httpRequestMessage.Content, httpRequestMessage, linkedCts.Token) : httpRequestMessage.Content;
+                        #endregion
+
+                        #region Set Client Certificate
+                        if (!string.IsNullOrEmpty(httpRequestEntity.ClientCertificatePath))
+                        {
+                            var clientCert = LoadClientCertificate(httpRequestEntity.ClientCertificatePath, httpRequestEntity.ClientCertificatePassword);
+                            httpRequestMessage.Options.Set(new HttpRequestOptionsKey<X509Certificate2>("ClientCertificate"), clientCert);
+                        }
                         #endregion
 
                         //Update Throughput Metric
@@ -444,6 +461,30 @@ namespace LPS.Infrastructure.LPSClients
                 _ = _logger.LogAsync(_runtimeOperationIdProvider.OperationId, ex.Message, LPSLoggingLevel.Error, token);
                 return (false, downloadWatch.Elapsed);
             }
+        }
+
+        /// <summary>
+        /// Loads a client certificate from the specified file path.
+        /// Supports PFX/P12 files (with optional password) and PEM/CER/CRT files.
+        /// </summary>
+        /// <param name="certificatePath">Path to the certificate file.</param>
+        /// <param name="password">Optional password for PFX/P12 files.</param>
+        /// <returns>The loaded X509Certificate2.</returns>
+        private static X509Certificate2 LoadClientCertificate(string certificatePath, string password)
+        {
+            var fullPath = Path.GetFullPath(certificatePath);
+            var extension = Path.GetExtension(fullPath)?.ToLowerInvariant();
+
+            // PFX/P12 files may require a password
+            if (extension == ".pfx" || extension == ".p12")
+            {
+                return string.IsNullOrEmpty(password)
+                    ? new X509Certificate2(fullPath)
+                    : new X509Certificate2(fullPath, password);
+            }
+
+            // PEM/CER/CRT files typically don't require a password
+            return new X509Certificate2(fullPath);
         }
     }
 }

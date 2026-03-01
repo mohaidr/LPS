@@ -129,6 +129,30 @@ namespace LPS.UI.Core.LPSValidators
                         || bool.TryParse(downloadHtmlEmbeddedResources, out _);
                 })
                 .WithMessage("'Download Html Embedded Resources' must be 'true', 'false', or a placeholder starting with '$'");
+
+            // Client certificate validation
+            RuleFor(dto => dto.ClientCertificatePath)
+                .Must(path =>
+                {
+                    // Allow null, empty, or placeholders
+                    if (string.IsNullOrEmpty(path) || path.StartsWith("$"))
+                        return true;
+
+                    // Validate file extension
+                    var validExtensions = new[] { ".pfx", ".p12", ".pem", ".cer", ".crt" };
+                    var extension = Path.GetExtension(path)?.ToLowerInvariant();
+                    return validExtensions.Contains(extension);
+                })
+                .WithMessage("'ClientCertificatePath' must have a valid certificate file extension (.pfx, .p12, .pem, .cer, .crt) or be a placeholder starting with '$'")
+                .Must(path =>
+                {
+                    // Allow null, empty, or placeholders
+                    if (string.IsNullOrEmpty(path) || path.StartsWith("$"))
+                        return true;
+
+                    return IsValidFilePath(path);
+                })
+                .WithMessage("'ClientCertificatePath' must point to an existing certificate file or be a placeholder starting with '$'");
            
             When(dto => dto.Payload != null, () =>
             {

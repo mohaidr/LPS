@@ -154,6 +154,16 @@ namespace LPS.Infrastructure.LPSClients
                 var optionsRequest = new HttpRequestMessage(HttpMethod.Options, originalRequest.RequestUri);
                 optionsRequest.Version = originalRequest.Version; // Use same HTTP version
 
+                // Copy client certificate from original request if present (required for mTLS)
+                if (originalRequest.Options.TryGetValue(
+                    new HttpRequestOptionsKey<System.Security.Cryptography.X509Certificates.X509Certificate2>("ClientCertificate"), 
+                    out var clientCert))
+                {
+                    optionsRequest.Options.Set(
+                        new HttpRequestOptionsKey<System.Security.Cryptography.X509Certificates.X509Certificate2>("ClientCertificate"), 
+                        clientCert);
+                }
+
                 // Send OPTIONS - this triggers ConnectCallback and measures DNS/TCP/TLS
                 using var optionsResponse = await httpClient.SendAsync(
                     optionsRequest,
