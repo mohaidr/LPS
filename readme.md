@@ -1,15 +1,4 @@
 
-# 🚨 Important Notice
-
-> **⚠️ Warning:** This documentation applies **only** to **version 2.0_Preview** and above of the **LPS Tool**.
-> For earlier versions, please visit the [`readme.md`](https://github.com/mohaidr/lps-tool/tree/main/Version) in each version's directory.
-> 
-> ⚠️ **Note:** Version **2.x is NOT backward compatible** with 1.x.
-
-> **🔄 Breaking Change in v3.0.2.6:** The `failureCriteria` property and old `terminationRules` format have been **permanently removed**. If you are upgrading from v3.0.2.5 or earlier, please see the [Migration Guide](https://github.com/mohaidr/lps-docs/blob/main/articles/10.MigrationGuide.md) for details on migrating to the new `failureRules` and `terminationRules` inline metric expression format.
-
----
-
 # 🚀 Introduction
 
 Welcome to the **LPS Tool** – your ultimate companion for **Load**, **Performance**, and **Stress** testing!
@@ -129,8 +118,16 @@ lps --url https://www.example.com -rc 1000 --httpmethod "POST" --payload "URL:ht
 
 Explore full docs in the [📖 LPS Docs Repo](https://github.com/mohaidr/lps-docs/tree/main)
 
+# 🚨 Important Notice
+
+> **⚠️ Warning:** This documentation applies **only** to **version 2.0_Preview** and above of the **LPS Tool**.
+> For earlier versions, please visit the [`readme.md`](https://github.com/mohaidr/lps-tool/tree/main/Version) in each version's directory.
+> 
+> ⚠️ **Note:** Version **2.x is NOT backward compatible** with 1.x.
+
+> **🔄 Breaking Change in v3.0.2.6:** The `failureCriteria` property and old `terminationRules` format have been **permanently removed**. If you are upgrading from v3.0.2.5 or earlier, please see the [Migration Guide](https://github.com/mohaidr/lps-docs/blob/main/articles/10.MigrationGuide.md) for details on migrating to the new `failureRules` and `terminationRules` inline metric expression format.
+
+---
 ### Key Sections:
-- 🧾 [Commands](https://github.com/mohaidr/lps-docs/blob/main/articles/1.Commands.md)
-- 📄 [Articles](https://github.com/mohaidr/lps-docs/tree/main/articles)
-- 🧠 [Concepts](https://github.com/mohaidr/lps-docs/tree/main/concepts)
-- 💡 [Examples](https://github.com/mohaidr/lps-docs/tree/main/examples)
+- [Understand LPS](https://lpsload.io/docs/understanding-lps.html)
+- [LPS Docs](https://lpsload.io/docs/readme.html)
