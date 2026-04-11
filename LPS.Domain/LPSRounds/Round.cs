@@ -42,6 +42,7 @@ namespace LPS.Domain
         public bool IsValid { get; private set; }
         public int NumberOfClients { get; private set; }
         public int? ArrivalDelay { get; private set; }
+        public IList<Stage> Stages { get; private set; }
         private IList<Iteration> Iterations { get; set; }
         private IList<string> Tags { get; set; }
     }

@@ -102,29 +102,73 @@ namespace LPS.Domain
                 {
                     _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Details", LPSLoggingLevel.Verbose, token),
                     _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Round Name:  {this.Name}", LPSLoggingLevel.Verbose, token),
-                    _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbose, token),
                     _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Delay Client Creation:  {this.DelayClientCreationUntilIsNeeded}", LPSLoggingLevel.Verbose, token)
                 };
 
-                if (!this.DelayClientCreationUntilIsNeeded.Value)
+                if (this.Stages != null && this.Stages.Count > 0)
                 {
-                    for (int i = 0; i < this.NumberOfClients; i++)
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Stages:  {this.Stages.Count}", LPSLoggingLevel.Verbose, token));
+
+                    // Pre-schedule all stages upfront so every command is registered before any executes.
+                    // This prevents the status monitor from seeing a false terminal state between stages.
+                    var startTime = DateTime.Now;
+                    int cumulativeOffsetMs = 0;
+
+                    // Pre-create all clients across all stages
+                    if (!this.DelayClientCreationUntilIsNeeded.Value)
                     {
-                        _lpsClientManager.CreateAndQueueClient(_lpsClientConfig);
+                        int totalClients = this.Stages.Sum(s => s.NumberOfClients);
+                        for (int i = 0; i < totalClients; i++)
+                        {
+                            _lpsClientManager.CreateAndQueueClient(_lpsClientConfig);
+                        }
+                    }
+
+                    for (int stageIndex = 0; stageIndex < this.Stages.Count && !token.IsCancellationRequested; stageIndex++)
+                    {
+                        var stage = this.Stages[stageIndex];
+
+                        cumulativeOffsetMs += stage.StartupDelay;
+
+                        awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                            $"Stage {stageIndex + 1}/{this.Stages.Count}: {stage.NumberOfClients} clients, {stage.ArrivalDelay}ms arrival delay, scheduled at +{cumulativeOffsetMs}ms",
+                            LPSLoggingLevel.Verbose, token));
+
+                        for (int i = 0; i < stage.NumberOfClients && !token.IsCancellationRequested; i++)
+                        {
+                            int clientOffsetMs = cumulativeOffsetMs + (i * stage.ArrivalDelay);
+                            awaitableTasks.Add(ScheduleHttpIterationForExecutionAsync(startTime.AddMilliseconds(clientOffsetMs), token));
+                        }
+
+                        // Move the timeline beyond this stage's last client so the next stage starts after it
+                        int stageDurationMs = stage.NumberOfClients > 1 ? (stage.NumberOfClients - 1) * stage.ArrivalDelay : 0;
+                        cumulativeOffsetMs += stageDurationMs;
                     }
                 }
-
-                for (int i = 0; i < this.NumberOfClients && !token.IsCancellationRequested; i++)
+                else
                 {
-                    int delayTime = i * (this.ArrivalDelay ?? 0);
-                    awaitableTasks.Add(SchedualHttpIterationForExecutionAsync(DateTime.Now.AddMilliseconds(delayTime), token));
+                    awaitableTasks.Add(_logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Number Of Clients:  {this.NumberOfClients}", LPSLoggingLevel.Verbose, token));
+
+                    if (!this.DelayClientCreationUntilIsNeeded.Value)
+                    {
+                        for (int i = 0; i < this.NumberOfClients; i++)
+                        {
+                            _lpsClientManager.CreateAndQueueClient(_lpsClientConfig);
+                        }
+                    }
+
+                    for (int i = 0; i < this.NumberOfClients && !token.IsCancellationRequested; i++)
+                    {
+                        int delayTime = i * (this.ArrivalDelay ?? 0);
+                        awaitableTasks.Add(ScheduleHttpIterationForExecutionAsync(DateTime.Now.AddMilliseconds(delayTime), token));
+                    }
                 }
 
                 await Task.WhenAll(awaitableTasks);
             }
         }
 
-        private async Task SchedualHttpIterationForExecutionAsync(DateTime executionTime, CancellationToken token)
+        private async Task ScheduleHttpIterationForExecutionAsync(DateTime executionTime, CancellationToken token)
         {
             // Preregister all commands so the iteration status can reflect the status correctly as it assumes all commands are registered. -> this should change but doing it for now to keep the development effort
             var commandQueue = new Queue<(HttpIteration.ExecuteCommand Cmd, HttpIteration Iter)>();

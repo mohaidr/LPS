@@ -31,6 +31,14 @@ namespace Apis.AutoMapper
                 .ForMember(d => d.DelayClientCreationUntilIsNeeded, m => m.MapFrom(s => s.DelayClientCreationUntilIsNeeded.Value.ToString().ToLower()))
                 .ForMember(d => d.RunInParallel, m => m.MapFrom(s => s.RunInParallel.Value.ToString().ToLower()))
                 .ForMember(d => d.Tags, m => m.Ignore())
+                .ForMember(d => d.Stages, m => m.MapFrom(s => s.Stages != null
+                    ? s.Stages.Select(st => new StageDto
+                    {
+                        NumberOfClients = st.NumberOfClients.ToString(),
+                        ArrivalDelay = st.ArrivalDelay.ToString(),
+                        StartupDelay = st.StartupDelay.ToString()
+                    }).ToList()
+                    : null))
                 .ForMember(d => d.Iterations, m => m.Ignore())
                 .ForMember(d => d.ReferencedIterations, m => m.Ignore());
 

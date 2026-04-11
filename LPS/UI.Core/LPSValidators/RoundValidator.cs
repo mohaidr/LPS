@@ -97,6 +97,25 @@ namespace LPS.UI.Core.LPSValidators
                 || bool.TryParse(value, out _);
             })
             .WithMessage("'Run In Parallel' must be 'true', 'false', or a placeholder starting with '$'");
+
+            // Validate stages if provided
+            RuleForEach(dto => dto.Stages)
+                .ChildRules(stage =>
+                {
+                    stage.RuleFor(s => s.NumberOfClients)
+                        .NotEmpty().WithMessage("Stage 'NumberOfClients' must not be empty")
+                        .Must(v => (!string.IsNullOrEmpty(v) && v.StartsWith("$")) || (int.TryParse(v, out int n) && n > 0))
+                        .WithMessage("Stage 'NumberOfClients' must be a positive integer or a placeholder starting with '$'");
+
+                    stage.RuleFor(s => s.ArrivalDelay)
+                        .Must(v => string.IsNullOrEmpty(v) || v.StartsWith("$") || (int.TryParse(v, out int n) && n >= 0))
+                        .WithMessage("Stage 'ArrivalDelay' must be a non-negative integer or a placeholder starting with '$'");
+
+                    stage.RuleFor(s => s.StartupDelay)
+                        .Must(v => string.IsNullOrEmpty(v) || v.StartsWith("$") || (int.TryParse(v, out int n) && n >= 0))
+                        .WithMessage("Stage 'StartupDelay' must be a non-negative integer or a placeholder starting with '$'");
+                })
+                .When(dto => dto.Stages != null && dto.Stages.Count > 0);
         }
         private bool HaveUniqueIterationNames(IList<HttpIterationDto> iterations)
         {

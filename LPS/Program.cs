@@ -11,10 +11,10 @@ namespace LPS
             AnsiConsole.Write(new FigletText("Load -- Perform {} Stress ^ ").Centered().Color(Color.Green));
             //DI Services
             var host = Startup.ConfigureServices(args);
-            var cancelltionToken = host.Services.GetRequiredService<CancellationTokenSource>();
+            var cancellationToken = host.Services.GetRequiredService<CancellationTokenSource>();
 
-            await host.StartAsync(cancelltionToken.Token);
-            await host.StopAsync(cancelltionToken.Token);
+            await host.StartAsync(cancellationToken.Token);
+            await host.StopAsync(cancellationToken.Token);
         }
 
     }

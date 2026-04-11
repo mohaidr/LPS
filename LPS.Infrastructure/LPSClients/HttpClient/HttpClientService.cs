@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly HttpClient httpClient;
         readonly ILogger _logger;
         private static int _clientNumber;
-        public static object _lock = new();
+        private static object _lock = new();
         private readonly ConnectionInitializationService _connectionInitService = new();
         public string SessionId { get; private set; }
         public string GuidId { get; private set; }
@@ -72,7 +72,6 @@ namespace LPS.Infrastructure.LPSClients
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _memoryCacheService = memoryCacheService;
             _metricsService = metricsService;
-            _memoryCacheService = memoryCacheService;
             _sessionManager = sessionManager;
             _messageService = messageService;
             _responseProcessingService = responseProcessingService;

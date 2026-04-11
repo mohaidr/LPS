@@ -57,6 +57,9 @@ namespace LPS.UI.Common.DTOs
         // Run in parallel (can be a variable)
         public string RunInParallel { get; set; }
 
+        // Stages for ramping load
+        public List<StageDto> Stages { get; set; }
+
         // Tags associated with the round
         public IList<string> Tags { get; set; }
 
@@ -79,7 +82,13 @@ namespace LPS.UI.Common.DTOs
                     iteration.DeepCopy(out copiedIteration);
                     return copiedIteration;
                 }).ToList() ?? new List<HttpIterationDto>(),
-                ReferencedIterations = this.ReferencedIterations?.ToList() ?? new List<string>()
+                ReferencedIterations = this.ReferencedIterations?.ToList() ?? new List<string>(),
+                Stages = this.Stages?.Select(s => new StageDto
+                {
+                    NumberOfClients = s.NumberOfClients,
+                    ArrivalDelay = s.ArrivalDelay,
+                    StartupDelay = s.StartupDelay
+                }).ToList()
             };
         }
     }

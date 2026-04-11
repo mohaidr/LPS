@@ -49,9 +49,9 @@ namespace LPS.Infrastructure.Logging
                         }
                     }
                 }
-                catch (IOException exc)
+                catch (IOException)
                 {
-                    throw new IOException(exc.Message);
+                    throw;
                 }
             }
         }

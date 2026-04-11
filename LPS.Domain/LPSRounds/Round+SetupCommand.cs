@@ -39,6 +39,7 @@ namespace LPS.Domain
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
             public IList<string> Tags { get; set; } // TODO: Make domain level
+            public IList<Stage> Stages { get; set; }
 
             [JsonIgnore]
             [YamlIgnore]
@@ -56,6 +57,7 @@ namespace LPS.Domain
                 targetCommand.ArrivalDelay = this.ArrivalDelay;
                 targetCommand.DelayClientCreationUntilIsNeeded = this.DelayClientCreationUntilIsNeeded;
                 targetCommand.RunInParallel = this.RunInParallel;
+                targetCommand.Stages = this.Stages?.ToList();
                 targetCommand.IsValid = this.IsValid;
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
@@ -117,6 +119,7 @@ namespace LPS.Domain
                 this.IsValid = true;
                 this.RunInParallel = command.RunInParallel;
                 this.Tags = command.Tags;
+                this.Stages = command.Stages?.ToList();
             }
             else
             {

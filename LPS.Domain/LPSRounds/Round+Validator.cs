@@ -64,6 +64,20 @@ namespace LPS.Domain
 
                 RuleFor(command => command.RunInParallel)
                 .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
+
+                RuleForEach(command => command.Stages).ChildRules(stage =>
+                {
+                    stage.RuleFor(s => s.NumberOfClients)
+                        .GreaterThan(0).WithMessage("Stage 'NumberOfClients' must be greater than 0");
+
+                    stage.RuleFor(s => s.ArrivalDelay)
+                        .GreaterThan(0)
+                        .When(s => s.NumberOfClients > 1)
+                        .WithMessage("Stage 'ArrivalDelay' must be greater than 0 when NumberOfClients > 1");
+
+                    stage.RuleFor(s => s.StartupDelay)
+                        .GreaterThanOrEqualTo(0).WithMessage("Stage 'StartupDelay' must be greater than or equal to 0");
+                }).When(command => command.Stages != null && command.Stages.Count > 0);
                 #endregion
 
                 if (entity.Id != default && command.Id.HasValue && entity.Id != command.Id)

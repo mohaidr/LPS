@@ -46,9 +46,21 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.DelayClientCreationUntilIsNeeded, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.DelayClientCreationUntilIsNeeded).Result))
                 .ForMember(dest => dest.RunInParallel, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.RunInParallel).Result))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => src.Tags.Select(tag => ResolvePlaceholderAsync<string>(tag).Result).ToList()))
+                .ForMember(dest => dest.Stages, opt => opt.Ignore())
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
-                .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());
+                .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore())
+                .AfterMap((RoundDto src, Round.SetupCommand dest) =>
+                {
+                    if (src.Stages is not null && src.Stages.Count > 0)
+                    {
+                        dest.Stages = src.Stages.Select(s => new Stage(
+                            ResolvePlaceholderAsync<int>(s.NumberOfClients).Result,
+                            ResolvePlaceholderAsync<int>(s.ArrivalDelay).Result,
+                            ResolvePlaceholderAsync<int>(s.StartupDelay).Result
+                        )).ToList();
+                    }
+                });
 
             // Map HttpIterationDto to HttpIteration.SetupCommand
             CreateMap<HttpIterationDto, HttpIteration.SetupCommand>()

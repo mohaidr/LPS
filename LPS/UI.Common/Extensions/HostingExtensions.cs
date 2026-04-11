@@ -287,7 +287,7 @@ namespace LPS.UI.Common.Extensions
                 
                 string jsonString = JsonSerializer.Serialize(configuration, options);
                 AnsiConsole.MarkupLine($"[Magenta]Applied Default {configName}: {jsonString}[/]");
-                _logger.Log(AppConstants.emptyLogId, $"Applied Default {configName}: {jsonString}", LPSLoggingLevel.Warning);
+                _logger.Log(AppConstants.EmptyLogId, $"Applied Default {configName}: {jsonString}", LPSLoggingLevel.Warning);
             }
         }
 
