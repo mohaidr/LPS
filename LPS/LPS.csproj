@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Version>3.0.4.1</Version>
-		<AssemblyVersion>3.0.4.1</AssemblyVersion>
-		<FileVersion>3.0.4.1</FileVersion>
-		<InformationalVersion>3.0.4.1</InformationalVersion>
+		<Version>3.0.4.2</Version>
+		<AssemblyVersion>3.0.4.2</AssemblyVersion>
+		<FileVersion>3.0.4.2</FileVersion>
+		<InformationalVersion>3.0.4.2</InformationalVersion>
 
 		<!-- Target -->
 		<OutputType>Exe</OutputType>
@@ -21,6 +21,8 @@
 		<Authors>Mohamad Haidar</Authors>
 		<Description>Load, Performance and Stress (LPS) CLI tool.</Description>
 		<PackageProjectUrl>https://lpsload.io/</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/mohaidr/lps</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
 		<PackageTags>load-testing;performance;stress;cli;lps</PackageTags>
 
 		<!-- Custom license file -->
@@ -30,7 +32,6 @@
 		<!-- Optional niceties -->
 		<IsPackable>true</IsPackable>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
-		<!-- <RepositoryUrl>https://github.com/your/repo</RepositoryUrl> -->
 		<!-- <PackageReadmeFile>README.md</PackageReadmeFile> -->
 		<!-- <PackageIcon>icon.png</PackageIcon> -->
 	</PropertyGroup>
@@ -59,7 +60,7 @@
 
 	<ItemGroup>
 		<FrameworkReference Include="Microsoft.AspNetCore.App" />
-		<PackageReference Include="AutoMapper" Version="14.0.0" />
+		<PackageReference Include="AutoMapper" Version="16.1.1" />
 		<PackageReference Include="FluentValidation" Version="11.10.0" />
 		<PackageReference Include="Google.Protobuf" Version="3.29.3" />
 		<PackageReference Include="Grpc.Net.Client" Version="2.67.0" />

@@ -121,7 +121,7 @@ namespace LPS.UI.Core.Services
             var mapperConfig = new MapperConfiguration(cfg =>
             {
                 cfg.AddProfile(new DtoToCommandProfile(placeholderResolverService, string.Empty));
-            });
+            }, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance);
             mapperConfig.AssertConfigurationIsValid();
             _mapper = mapperConfig.CreateMapper();
         }

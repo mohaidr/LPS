@@ -27,7 +27,7 @@ namespace LPS.Apis
 
             // gRPC
             services.AddGrpc();
-            services.AddAutoMapper(typeof(LpsMappingProfile));
+            services.AddAutoMapper(cfg => { }, typeof(LpsMappingProfile));
 
             // SignalR for real-time windowed metrics
             services.AddSignalR(options =>
