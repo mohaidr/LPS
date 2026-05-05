@@ -70,9 +70,60 @@ namespace LPS.Infrastructure.Nodes
 
         private static string GetCpuInfo()
         {
-            return RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ?
-                Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown CPU" :
-                File.ReadLines("/proc/cpuinfo").FirstOrDefault(line => line.StartsWith("model name"))?.Split(":")[1].Trim() ?? "Unknown CPU";
+            try
+            {
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return Environment.GetEnvironmentVariable("PROCESSOR_IDENTIFIER") ?? "Unknown CPU";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    return File.ReadLines("/proc/cpuinfo")
+                        .FirstOrDefault(line => line.StartsWith("model name"))?
+                        .Split(':', 2)[1]
+                        .Trim() ?? "Unknown CPU";
+                }
+
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return TryGetProcessOutput("/usr/sbin/sysctl", "-n machdep.cpu.brand_string")
+                        ?? TryGetProcessOutput("/usr/sbin/sysctl", "-n hw.model")
+                        ?? "Unknown CPU";
+                }
+            }
+            catch
+            {
+                return "Unknown CPU";
+            }
+
+            return "Unknown CPU";
+        }
+
+        private static string TryGetProcessOutput(string fileName, string arguments)
+        {
+            using var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = fileName,
+                    Arguments = arguments,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                }
+            };
+
+            if (!process.Start())
+            {
+                return null;
+            }
+
+            var output = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+
+            return string.IsNullOrWhiteSpace(output) ? null : output;
         }
 
         private static string GetMemoryInfo()
