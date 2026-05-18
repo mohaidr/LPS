@@ -3,6 +3,7 @@ using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -30,12 +31,15 @@ namespace LPS.Domain.LPSRun.IterationMode
             {
                 List<Task> awaitableTasks = [];
                 int _numberOfSentRequests = 0;
+                await _watchdog.BalanceAsync(_hostName, token);
+
                 for (int b = 0; b < batchSize && batchCondition(); b++)
                 {
-                    await _watchdog.BalanceAsync(_hostName, token);
+                 
                     awaitableTasks.Add(command.ExecuteAsync(_request, token));
                     _numberOfSentRequests++;
                 }
+
                 await Task.WhenAll(awaitableTasks);
                 return _numberOfSentRequests;
             }

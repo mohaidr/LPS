@@ -17,7 +17,6 @@ namespace LPS.Domain
 
     public partial class HttpRequest
     {
-        readonly SemaphoreSlim _semaphoreSlim = new(1, 1);
         public class ExecuteCommand(IClientService<HttpRequest,HttpResponse> httpClientService,
             ILogger logger,
             IWatchdog watchdog,
@@ -55,7 +54,6 @@ namespace LPS.Domain
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
-                   // _executionStatus = ExecutionStatus.Cancelled;
                     throw;
                 }
                 catch
@@ -70,7 +68,6 @@ namespace LPS.Domain
             if (this.IsValid)
             {
                 string hostName = this.Url.HostName;
-                await _watchdog.BalanceAsync(hostName, token);
                 try
                 {
                     if (command.HttpClientService == null)

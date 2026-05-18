@@ -53,10 +53,10 @@ namespace LPS.Domain
                 .GreaterThan(0).WithMessage("The 'Number Of Clients' must be greater than 0");
 
                 RuleFor(command => command.ArrivalDelay)
-                .NotNull().WithMessage("The 'Arrival Delay' must be greater than 0")
-                .GreaterThan(0)
+                .NotNull().WithMessage("The 'ArrivalDelay' must be greater than or equal to 0")
+                .GreaterThanOrEqualTo(0)
                 .When(command => command.NumberOfClients > 1)
-                .WithMessage("The 'Arrival Delay' must be greater than 0");
+                .WithMessage("The 'ArrivalDelay' must be greater than or equal to 0");
 
 
                 RuleFor(command => command.DelayClientCreationUntilIsNeeded)
@@ -71,9 +71,9 @@ namespace LPS.Domain
                         .GreaterThan(0).WithMessage("Stage 'NumberOfClients' must be greater than 0");
 
                     stage.RuleFor(s => s.ArrivalDelay)
-                        .GreaterThan(0)
+                        .GreaterThanOrEqualTo(0)
                         .When(s => s.NumberOfClients > 1)
-                        .WithMessage("Stage 'ArrivalDelay' must be greater than 0 when NumberOfClients > 1");
+                        .WithMessage("Stage 'ArrivalDelay' must be greater than or equal to 0 when NumberOfClients > 1");
 
                     stage.RuleFor(s => s.StartupDelay)
                         .GreaterThanOrEqualTo(0).WithMessage("Stage 'StartupDelay' must be greater than or equal to 0");

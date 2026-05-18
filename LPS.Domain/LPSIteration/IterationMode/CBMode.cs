@@ -19,6 +19,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         private readonly IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> _batchProcessor;
         readonly HttpIteration _httpIteration;
         readonly IIterationStatusMonitor _iterationStatusMonitor;
+        readonly IWatchdog _watchdog;
         public CBMode(
             HttpRequest.ExecuteCommand command,
             int coolDownTime,
@@ -26,7 +27,8 @@ namespace LPS.Domain.LPSRun.IterationMode
             bool maximizeThroughput,
             IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor, 
             HttpIteration httpIteration,
-            IIterationStatusMonitor iterationStatusMonitor)
+            IIterationStatusMonitor iterationStatusMonitor,
+            IWatchdog watchdog)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _coolDownTime = coolDownTime;
@@ -35,6 +37,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
             _httpIteration = httpIteration ?? throw new ArgumentNullException();
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException();
+            _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
         }
 
         public async Task<int> ExecuteAsync(CancellationToken token)
@@ -54,6 +57,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                     {
                         coolDownWatch.Restart();
                         await Task.Yield();
+                        await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, token);
                         awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
                     }
                     newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
@@ -61,6 +65,7 @@ namespace LPS.Domain.LPSRun.IterationMode
                 else
                 {
                     coolDownWatch.Restart();
+                    await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, token);
                     awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
                     await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), token);
                 }

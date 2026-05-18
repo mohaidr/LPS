@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -18,24 +19,54 @@ namespace LPS.Infrastructure.Watchdog
         Any,
         All
     }
-    public class Watchdog : IWatchdog
+
+    /// <summary>
+    /// Watchdog that samples system pressure in the background and gates callers
+    /// until their requested host can proceed under a Cool state.
+    ///
+    /// Design:
+    ///  - A single background sampler loop ticks every <see cref="SamplingIntervalMs"/> and owns ALL
+    ///    mutable cooling/state bookkeeping. No locks are needed for that state because only the
+    ///    sampler mutates it.
+    ///  - Callers of <see cref="BalanceAsync"/> register their host and await sampler ticks until
+    ///    the evaluated state for that host is <c>Cool</c>.
+    ///  - Sampling and state transitions are owned by the sampler loop; callers never resample
+    ///    resources directly.
+    ///  - <see cref="GC.Collect()"/> is only invoked under real memory pressure and is throttled to
+    ///    at most once per <see cref="GcMinIntervalSeconds"/>.
+    /// </summary>
+    public class Watchdog : IWatchdog, IAsyncDisposable
     {
+        private const int SamplingIntervalMs = 1000;
+        private const int GcMinIntervalSeconds = 30;
+
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _operationIdProvider;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
-        IClusterConfiguration _clusterConfiguration;
+        private readonly IClusterConfiguration _clusterConfiguration;
         private readonly ResourceEventListener _resourceListener = new ResourceEventListener();
-        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1, 1);
 
-        private ResourceState _resourceState = ResourceState.Cool;
-        private bool _isResourceUsageExceeded;
-        private bool _isResourceCoolingDown;
-        private bool _isCoolingStarted = false;
-        private bool _isGCExecuted = false;
-        private bool _isCoolingPaused = false;
+        // Hostnames seen by BalanceAsync callers - the sampler will poll connection counts for these.
+        private readonly ConcurrentDictionary<string, byte> _observedHosts = new();
+        private readonly ConcurrentDictionary<string, int> _hostConnectionCounts = new();
 
+        // ---- Hot-path readable state (only field read by callers) ----
+        private volatile ResourceState _currentState = ResourceState.Cool;
+
+        private double _latestMemoryMB;
+        private double _latestCPUPercentage;
+
+        // ---- Sampler-owned state (mutated only inside the sampler loop) ----
+        private bool _isCoolingStarted;
+        private bool _isCoolingPaused;
         private readonly Stopwatch _maxCoolingStopwatch = new Stopwatch();
         private readonly Stopwatch _resetToCoolingStopwatch = new Stopwatch();
+        private DateTime _lastGcUtc = DateTime.MinValue;
+
+        // ---- Sampler lifecycle ----
+        private readonly CancellationTokenSource _samplerCts = new CancellationTokenSource();
+        private readonly Task _samplerTask;
+        private TaskCompletionSource<bool> _nextSampleSignal = CreateSampleSignal();
 
         public double MaxMemoryMB { get; }
         public double MaxCPUPercentage { get; }
@@ -47,7 +78,9 @@ namespace LPS.Infrastructure.Watchdog
         public int MaxCoolingPeriod { get; }
         public int ResumeCoolingAfter { get; }
         public SuspensionMode SuspensionMode { get; }
-        GrpcMetricsQueryServiceClient _grpcClient;
+
+        private GrpcMetricsQueryServiceClient _grpcClient;
+
         public Watchdog(
             double memoryLimitMB,
             double cpuLimit,
@@ -80,6 +113,8 @@ namespace LPS.Infrastructure.Watchdog
             _customGrpcClientFactory = customGrpcClientFactory;
             _clusterConfiguration = clusterConfiguration;
             _grpcClient = customGrpcClientFactory.GetClient<GrpcMetricsQueryServiceClient>(clusterConfiguration.MasterNodeIP);
+
+            _samplerTask = Task.Run(() => SamplerLoopAsync(_samplerCts.Token));
         }
 
         public static Watchdog GetDefaultInstance(ILogger logger, IRuntimeOperationIdProvider operationIdProvider, ICustomGrpcClientFactory customGrpcClientFactory, IClusterConfiguration clusterConfiguration)
@@ -89,58 +124,249 @@ namespace LPS.Infrastructure.Watchdog
                 SuspensionMode.Any, logger, operationIdProvider, customGrpcClientFactory, clusterConfiguration);
         }
 
-        public async Task<ResourceState> BalanceAsync(string hostName, CancellationToken token = default)
+        /// <summary>
+        /// Registers the host for sampling and waits until the host can proceed under a Cool state.
+        /// </summary>
+        public async ValueTask<ResourceState> BalanceAsync(string hostName, CancellationToken token = default)
         {
-            bool acquired = false;
-
-            try
+            if (!string.IsNullOrEmpty(hostName))
             {
-                await _semaphoreSlim.WaitAsync(token);
-                acquired = true;
+                _observedHosts.TryAdd(hostName, 0);
+            }
 
-                if (_isCoolingPaused && _resetToCoolingStopwatch.Elapsed.TotalSeconds > ResumeCoolingAfter)
+            while (!token.IsCancellationRequested)
+            {
+                if (EvaluateSnapshot(hostName) == ResourceState.Cool)
                 {
-                    await _logger.LogAsync(_operationIdProvider.OperationId, "Resuming cooling if needed", LPSLoggingLevel.Information, token);
-                    _resetToCoolingStopwatch.Reset();
-                    _isCoolingPaused = false;
-                    await _logger.LogAsync(_operationIdProvider.OperationId, "Resuming cooling if needed", LPSLoggingLevel.Information, token);
+                    return ResourceState.Cool;
                 }
 
-                await UpdateResourceUsageFlagAsync(hostName);
-                await UpdateResourceCoolingFlagAsync(hostName);
-                _resourceState = DetermineResourceState();
+                Task sampleSignal;
+                sampleSignal = _nextSampleSignal.Task;
 
-                while (_resourceState != ResourceState.Cool && !_isCoolingPaused && !token.IsCancellationRequested)
+
+                await sampleSignal.WaitAsync(token).ConfigureAwait(false);
+            }
+
+            token.ThrowIfCancellationRequested();
+            return ResourceState.Unknown;
+        }
+
+        // -----------------------------------------------------------------------------------------
+        // Sampler
+        // -----------------------------------------------------------------------------------------
+
+        private async Task SamplerLoopAsync(CancellationToken token)
+        {
+            var interval = TimeSpan.FromSeconds(CoolDownRetryTimeInSeconds);
+
+            while (!token.IsCancellationRequested)
+            {
+                try
                 {
-                    if (!_isCoolingStarted) await StartCoolingAsync(token);
-                    if (_maxCoolingStopwatch.Elapsed.TotalSeconds > MaxCoolingPeriod)
+                    await SampleOnceAsync(token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    try
                     {
-                        await PauseCoolingAsync(token);
-                        break;
+                        await _logger.LogAsync(_operationIdProvider.OperationId,
+                            $"Watchdog sampler iteration failed.\n{ex}", LPSLoggingLevel.Error, token).ConfigureAwait(false);
+                    }
+                    catch { /* swallow logger failures inside sampler */ }
+
+                    // On unknown failure, surface as Unknown so callers stop waiting.
+                    SetState(ResourceState.Unknown);
+                }
+
+                SignalSampleAvailable();
+
+                try
+                {
+                    await Task.Delay(interval, token).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    break;
+                }
+            }
+        }
+
+        private async Task SampleOnceAsync(CancellationToken token)
+        {
+            // ----- Sample inputs -----
+            double memoryMB = _resourceListener.MemoryUsageMB;
+            double cpuPct = _resourceListener.CPUPercentage;
+            Volatile.Write(ref _latestMemoryMB, memoryMB);
+            Volatile.Write(ref _latestCPUPercentage, cpuPct);
+
+
+            int hostsExceeded = 0;
+            int hostsCooldown = 0;
+            int hostCount = 0;
+            foreach (var host in _observedHosts.Keys)
+            {
+                int active = await GetHostActiveConnectionsCountAsync(host).ConfigureAwait(false);
+                if (active < 0) continue; // failure already logged
+                _hostConnectionCounts[host] = active;
+                hostCount++;
+                if (active > MaxConcurrentConnectionsCountPerHostName) hostsExceeded++;
+                if (active > CoolDownConcurrentConnectionsCountPerHostName) hostsCooldown++;
+            }
+
+
+            bool memExceeded = memoryMB > MaxMemoryMB;
+            bool cpuExceeded = cpuPct >= MaxCPUPercentage;
+            bool memCooldown = memoryMB > CoolDownMemoryMB;
+            bool cpuCooldown = cpuPct >= CoolDownCPUPercentage;
+
+            bool hot, cooling;
+            if (SuspensionMode == SuspensionMode.All)
+            {
+                hot = memExceeded && cpuExceeded && (hostCount > 0 && hostsExceeded == hostCount);
+                cooling = memCooldown && cpuCooldown && (hostCount > 0 && hostsCooldown == hostCount);
+            }
+            else
+            {
+                hot = memExceeded || cpuExceeded || (hostsExceeded > 0);
+                cooling = memCooldown || cpuCooldown || (hostsCooldown > 0);
+            }
+
+            // ----- Resume cooling if pause window elapsed -----
+            if (_isCoolingPaused && _resetToCoolingStopwatch.Elapsed.TotalSeconds > ResumeCoolingAfter)
+            {
+                _isCoolingPaused = false;
+                _resetToCoolingStopwatch.Reset();
+                await _logger.LogAsync(_operationIdProvider.OperationId, "Watchdog: resuming cooling evaluation", LPSLoggingLevel.Information, token).ConfigureAwait(false);
+            }
+
+            // ----- Decide next state -----
+
+            ResourceState next;
+            if (_isCoolingPaused)
+            {
+                // Cooling paused -> let traffic flow regardless of pressure.
+                next = ResourceState.Cool;
+            }
+            else if (hot)
+            {
+                next = ResourceState.Hot;
+            }
+            else if (cooling && _currentState != ResourceState.Cool)
+            {
+                next = ResourceState.Cooling;
+            }
+            else
+            {
+                next = ResourceState.Cool;
+            }
+
+            // ----- Manage cooling lifecycle -----
+            if (next != ResourceState.Cool)
+            {
+                if (!_isCoolingStarted)
+                {
+                    _isCoolingStarted = true;
+                    _maxCoolingStopwatch.Restart();
+                    await _logger.LogAsync(_operationIdProvider.OperationId, "Watchdog: cooling has started", LPSLoggingLevel.Information, token).ConfigureAwait(false);
+                }
+
+                if (_maxCoolingStopwatch.Elapsed.TotalSeconds > MaxCoolingPeriod)
+                {
+                    _isCoolingPaused = true;
+                    _resetToCoolingStopwatch.Restart();
+                    _maxCoolingStopwatch.Reset();
+                    _isCoolingStarted = false;
+                    await _logger.LogAsync(_operationIdProvider.OperationId,
+                        $"Watchdog: max cooling period reached - pausing cooling for {ResumeCoolingAfter}s", LPSLoggingLevel.Warning, token).ConfigureAwait(false);
+                    next = ResourceState.Cool;
+                }
+                else
+                {
+                    // Throttled, pressure-gated GC.
+                    if (memExceeded && (DateTime.UtcNow - _lastGcUtc).TotalSeconds >= GcMinIntervalSeconds)
+                    {
+                        _lastGcUtc = DateTime.UtcNow;
+                        GC.Collect(2, GCCollectionMode.Aggressive, blocking: true, compacting: true);
+                        await _logger.LogAsync(_operationIdProvider.OperationId,
+                            "Watchdog: full GC executed under memory pressure", LPSLoggingLevel.Warning, token).ConfigureAwait(false);
                     }
 
-                    if (!_isGCExecuted) await ExecuteGarbageCollectionAsync(token);
-
-                    await LogCoolingInitiationAsync(token);
-                    await Task.Delay(TimeSpan.FromSeconds(CoolDownRetryTimeInSeconds), token);
-
-                    await UpdateResourceUsageFlagAsync(hostName);
-                    await UpdateResourceCoolingFlagAsync(hostName);
-                    _resourceState = DetermineResourceState();
+                    await _logger.LogAsync(_operationIdProvider.OperationId,
+                        $"Watchdog: pressure detected (mem={memoryMB:F0}MB cpu={cpuPct:F0}% state={next})",
+                        LPSLoggingLevel.Warning, token).ConfigureAwait(false);
                 }
             }
-            catch (Exception ex)
+            else
             {
-                await _logger.LogAsync(_operationIdProvider.OperationId, $"Watchdog failed to balance resources.\n{ex}", LPSLoggingLevel.Error, token);
-                _resourceState = ResourceState.Unknown;
-            }
-            finally
-            {
-                ResetCoolingState();
-                if (acquired) _semaphoreSlim.Release();
+                if (_isCoolingStarted)
+                {
+                    _isCoolingStarted = false;
+                    _maxCoolingStopwatch.Reset();
+                }
             }
 
-            return _resourceState;
+            SetState(next);
+        }
+
+        private ResourceState EvaluateSnapshot(string hostName)
+        {
+            if (string.IsNullOrWhiteSpace(hostName))
+            {
+                return _currentState;
+            }
+
+            if (!_hostConnectionCounts.TryGetValue(hostName, out int activeRequests))
+            {
+                return _currentState;
+            }
+
+            double memoryMB = Volatile.Read(ref _latestMemoryMB);
+            double cpuPct = Volatile.Read(ref _latestCPUPercentage);
+
+            bool memoryExceeded = memoryMB > MaxMemoryMB;
+            bool cpuExceeded = cpuPct >= MaxCPUPercentage;
+            bool memoryCooldown = memoryMB > CoolDownMemoryMB;
+            bool cpuCooldown = cpuPct >= CoolDownCPUPercentage;
+
+            bool hot, cooling;
+            if (SuspensionMode == SuspensionMode.All)
+            {
+                hot = memoryExceeded && cpuExceeded && (activeRequests > MaxConcurrentConnectionsCountPerHostName);
+                cooling = memoryCooldown && cpuCooldown && (activeRequests > CoolDownConcurrentConnectionsCountPerHostName);
+            }
+            else
+            {
+                hot = memoryExceeded || cpuExceeded || (activeRequests > MaxConcurrentConnectionsCountPerHostName);
+                cooling = memoryCooldown || cpuCooldown || (activeRequests > CoolDownConcurrentConnectionsCountPerHostName);
+            }
+
+            if (hot)
+                return ResourceState.Hot;
+            if (cooling)
+                return ResourceState.Cooling;
+            return ResourceState.Cool;
+        }
+
+        private static TaskCompletionSource<bool> CreateSampleSignal()
+            => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private void SignalSampleAvailable()
+        {
+            _nextSampleSignal.TrySetResult(true);
+            _nextSampleSignal = CreateSampleSignal();
+        }
+
+        /// <summary>
+        /// Publishes the new state. Single-writer (sampler only).
+        /// </summary>
+        private void SetState(ResourceState next)
+        {
+            _currentState = next;
         }
 
         private async Task<int> GetHostActiveConnectionsCountAsync(string hostName)
@@ -155,9 +381,7 @@ namespace LPS.Infrastructure.Watchdog
                 };
 
                 var response = await _grpcClient.GetThroughputMetricsAsync(request);
-
-                int totalActiveConnections = response.Responses.Sum(r => r.CurrentActiveRequests);
-                return totalActiveConnections;
+                return response.Responses.Sum(r => r.CurrentActiveRequests);
             }
             catch (Exception ex)
             {
@@ -167,76 +391,18 @@ namespace LPS.Infrastructure.Watchdog
             }
         }
 
-        private async Task UpdateResourceUsageFlagAsync(string hostName)
+        public async ValueTask DisposeAsync()
         {
-            bool memoryExceeded = _resourceListener.MemoryUsageMB > MaxMemoryMB;
-            bool cpuExceeded = _resourceListener.CPUPercentage >= MaxCPUPercentage;
-            bool connectionsExceeded = (await GetHostActiveConnectionsCountAsync(hostName)) > MaxConcurrentConnectionsCountPerHostName;
-
-            _isResourceUsageExceeded = SuspensionMode switch
+            try
             {
-                SuspensionMode.Any => memoryExceeded || cpuExceeded || connectionsExceeded,
-                SuspensionMode.All => memoryExceeded && cpuExceeded && connectionsExceeded,
-                _ => false
-            };
-        }
-
-        private async Task UpdateResourceCoolingFlagAsync(string hostName)
-        {
-            bool memoryExceedsCooldown = _resourceListener.MemoryUsageMB > CoolDownMemoryMB;
-            bool cpuExceedsCooldown = _resourceListener.CPUPercentage >= CoolDownCPUPercentage;
-            bool connectionsExceedsCooldown = (await GetHostActiveConnectionsCountAsync(hostName)) > CoolDownConcurrentConnectionsCountPerHostName;
-
-            bool coolingCondition = SuspensionMode switch
+                _samplerCts.Cancel();
+                try { await _samplerTask.ConfigureAwait(false); } catch { /* ignore */ }
+            }
+            finally
             {
-                SuspensionMode.Any => memoryExceedsCooldown || cpuExceedsCooldown || connectionsExceedsCooldown,
-                SuspensionMode.All => memoryExceedsCooldown && cpuExceedsCooldown && connectionsExceedsCooldown,
-                _ => false
-            };
-
-            _isResourceCoolingDown = coolingCondition && _resourceState != ResourceState.Cool;
-        }
-
-        private ResourceState DetermineResourceState()
-        {
-            return _isResourceUsageExceeded
-                ? ResourceState.Hot
-                : _isResourceCoolingDown
-                    ? ResourceState.Cooling
-                    : ResourceState.Cool;
-        }
-
-        private async Task StartCoolingAsync(CancellationToken token)
-        {
-            await _logger.LogAsync(_operationIdProvider.OperationId, "Cooling has started", LPSLoggingLevel.Information, token);
-            _isCoolingStarted = true;
-            _maxCoolingStopwatch.Start();
-        }
-
-        private async Task PauseCoolingAsync(CancellationToken token)
-        {
-            _isCoolingPaused = true;
-            _resetToCoolingStopwatch.Start();
-            await _logger.LogAsync(_operationIdProvider.OperationId, $"Pausing cooling for {ResumeCoolingAfter} seconds", LPSLoggingLevel.Information, token);
-        }
-
-        private async Task ExecuteGarbageCollectionAsync(CancellationToken token)
-        {
-            GC.Collect();
-            _isGCExecuted = true;
-            await _logger.LogAsync(_operationIdProvider.OperationId, "Garbage collection executed", LPSLoggingLevel.Warning, token);
-        }
-
-        private async Task LogCoolingInitiationAsync(CancellationToken token)
-        {
-            await _logger.LogAsync(_operationIdProvider.OperationId, "Resource utilization limit reached - initiating cooling...", LPSLoggingLevel.Warning, token);
-        }
-
-        private void ResetCoolingState()
-        {
-            _maxCoolingStopwatch.Reset();
-            _isCoolingStarted = false;
-            _isGCExecuted = false;
+                _samplerCts.Dispose();
+                _nextSampleSignal.TrySetResult(true);
+            }
         }
     }
 }
