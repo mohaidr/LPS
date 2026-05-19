@@ -21,6 +21,6 @@ namespace LPS.Domain.Common.Interfaces
         /// <param name="hostName">The host name to monitor.</param>
         /// <param name="token">Cancellation token.</param>
         /// <returns>The current resource state after balancing.</returns>
-        public Task<ResourceState> BalanceAsync(string hostName, CancellationToken token = default);
+        public ValueTask<ResourceState> BalanceAsync(string hostName, CancellationToken token = default);
     }
 }

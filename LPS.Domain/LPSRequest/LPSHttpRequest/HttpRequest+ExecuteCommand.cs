@@ -70,6 +70,7 @@ namespace LPS.Domain
                 string hostName = this.Url.HostName;
                 try
                 {
+                    await _watchdog.BalanceAsync(hostName, token);
                     if (command.HttpClientService == null)
                     {
                         throw new InvalidOperationException("Http Client Is Not Defined");
