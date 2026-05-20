@@ -74,7 +74,7 @@ namespace LPS.Infrastructure.Watchdog
         public double CoolDownCPUPercentage { get; }
         public int MaxConcurrentConnectionsCountPerHostName { get; }
         public int CoolDownConcurrentConnectionsCountPerHostName { get; }
-        public int CoolDownRetryTimeInSeconds { get; }
+        public int CoolDownRetryTimeInMs { get; }
         public int MaxCoolingPeriod { get; }
         public int ResumeCoolingAfter { get; }
         public SuspensionMode SuspensionMode { get; }
@@ -88,7 +88,7 @@ namespace LPS.Infrastructure.Watchdog
             double coolDownCPUPercentage,
             int maxConcurrentConnectionsPerHostName,
             int coolDownConcurrentConnectionsCountPerHostName,
-            int coolDownRetryTimeInSeconds,
+            int coolDownRetryTimeInMs,
             int maxCoolingPeriod,
             int resumeCoolingAfter,
             SuspensionMode suspensionMode,
@@ -103,7 +103,7 @@ namespace LPS.Infrastructure.Watchdog
             CoolDownCPUPercentage = coolDownCPUPercentage;
             MaxConcurrentConnectionsCountPerHostName = maxConcurrentConnectionsPerHostName;
             CoolDownConcurrentConnectionsCountPerHostName = coolDownConcurrentConnectionsCountPerHostName;
-            CoolDownRetryTimeInSeconds = coolDownRetryTimeInSeconds;
+            CoolDownRetryTimeInMs = coolDownRetryTimeInMs;
             MaxCoolingPeriod = maxCoolingPeriod;
             ResumeCoolingAfter = resumeCoolingAfter;
             SuspensionMode = suspensionMode;
@@ -120,7 +120,7 @@ namespace LPS.Infrastructure.Watchdog
         public static Watchdog GetDefaultInstance(ILogger logger, IRuntimeOperationIdProvider operationIdProvider, ICustomGrpcClientFactory customGrpcClientFactory, IClusterConfiguration clusterConfiguration)
         {
             return new Watchdog(
-                1000, 50, 500, 30, 1000, 100, 1, 60, 300,
+                1000, 50, 500, 30, 1000, 100, 100, 60, 300,
                 SuspensionMode.Any, logger, operationIdProvider, customGrpcClientFactory, clusterConfiguration);
         }
 
@@ -158,7 +158,7 @@ namespace LPS.Infrastructure.Watchdog
 
         private async Task SamplerLoopAsync(CancellationToken token)
         {
-            var interval = TimeSpan.FromSeconds(CoolDownRetryTimeInSeconds);
+            var interval = TimeSpan.FromMilliseconds(CoolDownRetryTimeInMs);
 
             while (!token.IsCancellationRequested)
             {
@@ -312,6 +312,14 @@ namespace LPS.Infrastructure.Watchdog
 
             SetState(next);
         }
+        private static TaskCompletionSource<bool> CreateSampleSignal()
+            => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private void SignalSampleAvailable()
+        {
+            _nextSampleSignal.TrySetResult(true);
+            _nextSampleSignal = CreateSampleSignal();
+        }
 
         private ResourceState EvaluateSnapshot(string hostName)
         {
@@ -352,14 +360,7 @@ namespace LPS.Infrastructure.Watchdog
             return ResourceState.Cool;
         }
 
-        private static TaskCompletionSource<bool> CreateSampleSignal()
-            => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        private void SignalSampleAvailable()
-        {
-            _nextSampleSignal.TrySetResult(true);
-            _nextSampleSignal = CreateSampleSignal();
-        }
 
         /// <summary>
         /// Publishes the new state. Single-writer (sampler only).

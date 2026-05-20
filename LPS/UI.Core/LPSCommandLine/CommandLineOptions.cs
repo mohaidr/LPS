@@ -963,7 +963,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 CoolDownConcurrentConnectionsCountPerHostName.AddAlias("-cdcccphn");
                 MaxCoolingPeriod.AddAlias("-maxcp");
                 ResumeCoolingAfter.AddAlias("-rca");
-                CoolDownRetryTimeInSeconds.AddAlias("-cdrtis");
+                CoolDownRetryTimeInMs.AddAlias("-cdrtims");
                 SuspensionMode.AddAlias("-sm");
 
                 // Add case-insensitive aliases
@@ -973,7 +973,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(CoolDownCPUPercentage, "--cooldowncpupercentage");
                 AddCaseInsensitiveAliases(MaxConcurrentConnectionsCountPerHostName, "--maxconcurrentconnectionscountperhostname");
                 AddCaseInsensitiveAliases(CoolDownConcurrentConnectionsCountPerHostName, "--cooldownconcurrentconnectionscountperhostname");
-                AddCaseInsensitiveAliases(CoolDownRetryTimeInSeconds, "--cooldownretrytimeinseconds");
+                AddCaseInsensitiveAliases(CoolDownRetryTimeInMs, "--cooldownretrytimeinms");
                 AddCaseInsensitiveAliases(MaxCoolingPeriod, "--maxcoolingperiod");
                 AddCaseInsensitiveAliases(ResumeCoolingAfter, "--resumecoolingafter");
                 AddCaseInsensitiveAliases(SuspensionMode, "--suspensionmode");
@@ -1015,8 +1015,8 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
 
-            public static Option<int?> CoolDownRetryTimeInSeconds { get; } = new Option<int?>(
-                "--cooldownretrytimeinseconds", "Cooldown retry stringerval in seconds")
+            public static Option<int?> CoolDownRetryTimeInMs { get; } = new Option<int?>(
+                "--cooldownretrytimeinms", "Cooldown retry interval in milliseconds")
             {
                 IsRequired = false
             };

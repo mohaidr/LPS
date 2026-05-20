@@ -14,7 +14,7 @@ namespace LPS.UI.Common.Options
         public int? CoolDownMemoryMB { get; set; }
         public int? MaxCPUPercentage { get; set; }
         public int? CoolDownCPUPercentage { get; set; }
-        public int? CoolDownRetryTimeInSeconds { get; set; }
+        public int? CoolDownRetryTimeInMs { get; set; }
         public int? MaxConcurrentConnectionsCountPerHostName { get; set; }
         public int? CoolDownConcurrentConnectionsCountPerHostName { get; set; }
         public int? MaxCoolingPeriod { get; set; }

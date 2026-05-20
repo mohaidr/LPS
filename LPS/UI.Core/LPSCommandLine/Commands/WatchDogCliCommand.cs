@@ -59,7 +59,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     CoolDownMemoryMB = updatedWatchdogOptions.CoolDownMemoryMB ?? _watchdogOptions.Value.CoolDownMemoryMB,
                     CoolDownCPUPercentage = updatedWatchdogOptions.CoolDownCPUPercentage ?? _watchdogOptions.Value.CoolDownCPUPercentage,
                     CoolDownConcurrentConnectionsCountPerHostName = updatedWatchdogOptions.CoolDownConcurrentConnectionsCountPerHostName ?? _watchdogOptions.Value.CoolDownConcurrentConnectionsCountPerHostName,
-                    CoolDownRetryTimeInSeconds = updatedWatchdogOptions.CoolDownRetryTimeInSeconds ?? _watchdogOptions.Value.CoolDownRetryTimeInSeconds,
+                    CoolDownRetryTimeInMs = updatedWatchdogOptions.CoolDownRetryTimeInMs ?? _watchdogOptions.Value.CoolDownRetryTimeInMs,
                     SuspensionMode = updatedWatchdogOptions.SuspensionMode ?? _watchdogOptions.Value.SuspensionMode,
                     MaxCoolingPeriod = updatedWatchdogOptions.MaxCoolingPeriod ?? _watchdogOptions.Value.MaxCoolingPeriod,
                     ResumeCoolingAfter = updatedWatchdogOptions.ResumeCoolingAfter ?? _watchdogOptions.Value.ResumeCoolingAfter
@@ -82,7 +82,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         option.CoolDownMemoryMB = watchdoOptions.CoolDownMemoryMB;
                         option.CoolDownCPUPercentage = watchdoOptions.CoolDownCPUPercentage;
                         option.CoolDownConcurrentConnectionsCountPerHostName = watchdoOptions.CoolDownConcurrentConnectionsCountPerHostName;
-                        option.CoolDownRetryTimeInSeconds = watchdoOptions.CoolDownRetryTimeInSeconds;
+                        option.CoolDownRetryTimeInMs = watchdoOptions.CoolDownRetryTimeInMs;
                         option.SuspensionMode = watchdoOptions.SuspensionMode;
                         option.MaxCoolingPeriod = watchdoOptions.MaxCoolingPeriod;
                         option.ResumeCoolingAfter = watchdoOptions.ResumeCoolingAfter;

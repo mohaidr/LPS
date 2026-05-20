@@ -13,7 +13,7 @@
       "CoolDownMemoryMB": 4000,
       "MaxCPUPercentage": 80,
       "CoolDownCPUPercentage": 60,
-      "CoolDownRetryTimeInSeconds": 1,
+      "CoolDownRetryTimeInMs": 100,
       "MaxConcurrentConnectionsCountPerHostName": 3000,
       "CoolDownConcurrentConnectionsCountPerHostName": 1500,
       "MaxCoolingPeriod": 30,

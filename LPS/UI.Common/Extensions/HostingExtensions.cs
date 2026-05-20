@@ -350,7 +350,7 @@ namespace LPS.UI.Common.Extensions
                 options.CoolDownCPUPercentage.Value,
                 options.MaxConcurrentConnectionsCountPerHostName.Value,
                 options.CoolDownConcurrentConnectionsCountPerHostName.Value,
-                options.CoolDownRetryTimeInSeconds.Value,
+                options.CoolDownRetryTimeInMs.Value,
                 options.MaxCoolingPeriod.Value,
                 options.ResumeCoolingAfter.Value,
                 options.SuspensionMode.Value,

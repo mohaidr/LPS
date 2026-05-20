@@ -90,7 +90,7 @@ Memory Cooldown (-cdmm, --coolDownMemoryMB <coolDownMemoryMB>): Memory limit for
 CPU Cooldown (-coolDownCPUPercentage <coolDownCPUPercentage>): CPU usage threshold for test resumption.
 Concurrent Connection Threshold (-mcccphn, --maxConcurrentConnectionsCountPerHostName <maxConcurrentConnectionsCountPerHostName>): Limits concurrent connections per host to pause the test.
 Connection Cooldown (-cdcccphn, --coolDownConcurrentConnectionsCountPerHostName <coolDownConcurrentConnectionsCountPerHostName>): Concurrent connection limit for resuming tests.
-Retry Time (-cdrtis, --coolDownRetryTimeInSeconds <coolDownRetryTimeInSeconds>): Interval for checking if the test can be resumed.
+Retry Time (-cdrtims, --coolDownRetryTimeInMs <coolDownRetryTimeInMs>): Interval (in milliseconds) for checking if the test can be resumed.
 Suspension Mode (-sm, --suspensionMode <All|Any>): Decides whether to pause the test when all or any thresholds are exceeded.
 
 Help

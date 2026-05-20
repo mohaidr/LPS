@@ -42,7 +42,7 @@ namespace LPS.UI.Core.LPSValidators
             .GreaterThan(0);
             RuleFor(watchdog => watchdog.SuspensionMode)
                 .IsInEnum();
-            RuleFor(watchdog => watchdog.CoolDownRetryTimeInSeconds)
+            RuleFor(watchdog => watchdog.CoolDownRetryTimeInMs)
             .NotNull()
             .GreaterThan(0);
             RuleFor(command => command.MaxCoolingPeriod)
