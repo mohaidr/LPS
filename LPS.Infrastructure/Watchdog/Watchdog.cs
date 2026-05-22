@@ -127,25 +127,26 @@ namespace LPS.Infrastructure.Watchdog
         /// <summary>
         /// Registers the host for sampling and waits until the host can proceed under a Cool state.
         /// </summary>
-        public async ValueTask<ResourceState> BalanceAsync(string hostName, CancellationToken token = default)
+        /// idiomatic ValueTask usage: if the state is already Cool, return synchronously to avoid async state machine overhead for callers.
+        public ValueTask<ResourceState> BalanceAsync(string hostName, CancellationToken token = default)
         {
             if (!string.IsNullOrEmpty(hostName))
-            {
                 _observedHosts.TryAdd(hostName, 0);
-            }
 
+            if (EvaluateSnapshot(hostName) == ResourceState.Cool)
+                return new ValueTask<ResourceState>(ResourceState.Cool);
+
+            return new ValueTask<ResourceState>(BalanceInternalAsync(hostName, token));
+        }
+
+        private async Task<ResourceState> BalanceInternalAsync(string hostName, CancellationToken token)
+        {
             while (!token.IsCancellationRequested)
             {
                 if (EvaluateSnapshot(hostName) == ResourceState.Cool)
-                {
                     return ResourceState.Cool;
-                }
 
-                Task sampleSignal;
-                sampleSignal = _nextSampleSignal.Task;
-
-
-                await sampleSignal.WaitAsync(token).ConfigureAwait(false);
+                await _nextSampleSignal.Task.WaitAsync(token).ConfigureAwait(false);
             }
 
             token.ThrowIfCancellationRequested();
