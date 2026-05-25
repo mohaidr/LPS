@@ -162,7 +162,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> StartupDelayOption { get; } = new Option<string>(
-                "--startupDelay", "Add startup (in seconds) delay to your round")
+                "--startupDelay", "Add startup (in milliseconds) delay to your round")
             {
                 IsRequired = false
             };
@@ -426,7 +426,7 @@ namespace LPS.UI.Core.LPSCommandLine
             };
 
             public static Option<string> StartupDelayOption { get; } = new Option<string>(
-                "--startupDelay", "Add startup (in seconds) delay to your round")
+                "--startupDelay", "Add startup (in milliseconds) delay to your round")
             {
                 IsRequired = false
             };
@@ -720,7 +720,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = true
             };
             public static Option<string> StartupDelayOption { get; } = new Option<string>(
-                "--startupdelay", "Add startup delay to your round")
+                "--startupdelay", "Add startup delay (in milliseconds) to your iteration")
             {
                 IsRequired = false
             };

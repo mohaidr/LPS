@@ -95,7 +95,7 @@ namespace LPS.Domain
             {
                 if (this.StartupDelay > 0)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(this.StartupDelay), token);
+                    await Task.Delay(TimeSpan.FromMilliseconds(this.StartupDelay), token);
                 }
 
                 var awaitableTasks = new List<Task>

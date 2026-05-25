@@ -39,8 +39,12 @@ namespace LPS.UI.Common.DTOs
         }
 
         // Arrival delay (can be a variable)
-        public string ArrivalDelay { get; set; }
-
+        private string _arrivalDelay;
+        public string ArrivalDelay
+        {
+            get => string.IsNullOrWhiteSpace(_arrivalDelay) ? "0" : _arrivalDelay;
+            set => _arrivalDelay = value;
+        }
         // Inline iterations for this round
         public List<HttpIterationDto> Iterations { get; set; }
 

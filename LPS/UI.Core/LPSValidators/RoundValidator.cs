@@ -75,10 +75,9 @@ namespace LPS.UI.Core.LPSValidators
             .Must(arrivalDelay =>
             {
                 // Allow valid numeric values or placeholders
-                return (int.TryParse(arrivalDelay, out int parsedValue) && parsedValue >= 0) || (!string.IsNullOrEmpty(arrivalDelay) && arrivalDelay.StartsWith("$"));
+                return (string.IsNullOrEmpty(arrivalDelay) || int.TryParse(arrivalDelay, out int parsedValue) && parsedValue >= 0) || (!string.IsNullOrEmpty(arrivalDelay) && arrivalDelay.StartsWith("$"));
             })
-            .When(dto => dto.NumberOfClients != null && int.TryParse(dto.NumberOfClients, out int parsedClients) && parsedClients > 1)
-            .WithMessage("The 'Arrival Delay' must be greater than or equal to 0 or a placeholder starting with '$' when 'Number Of Clients' > 1");
+            .WithMessage("The 'Arrival Delay' must be greater than or equal to 0 or a placeholder starting with '$'");
 
             RuleFor(dto => dto.DelayClientCreationUntilIsNeeded)
                 .Must(value =>

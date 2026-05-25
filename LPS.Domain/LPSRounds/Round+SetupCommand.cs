@@ -35,7 +35,7 @@ namespace LPS.Domain
             public virtual string Name { get; set; }
             public int StartupDelay { get; set; }
             public int? NumberOfClients { get; set; }
-            public int? ArrivalDelay { get; set; }
+            public int ArrivalDelay { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
             public IList<string> Tags { get; set; } // TODO: Make domain level

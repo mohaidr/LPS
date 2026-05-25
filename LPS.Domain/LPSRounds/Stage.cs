@@ -2,7 +2,7 @@ namespace LPS.Domain
 {
     public readonly struct Stage
     {
-        public Stage(int numberOfClients, int arrivalDelay, int startupDelay = 0)
+        public Stage(int numberOfClients, int arrivalDelay = 0, int startupDelay = 0)
         {
             NumberOfClients = numberOfClients;
             ArrivalDelay = arrivalDelay;

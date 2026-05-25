@@ -36,7 +36,7 @@ namespace LPS.UI.Core.Build.Services
 
                     AnsiConsole.MarkupLine("[blue]Use this option cautiously, such as when you want to mimic the navigation between web pages with delays, resembling how a human would browse between pages.[/]");
                     _validator.PrintValidationErrors(nameof(Dto.StartupDelay));
-                    _iterationDto.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay (in seconds)'[/]? Enter 0 if not.").ToString();
+                    _iterationDto.StartupDelay = AnsiConsole.Ask<int>("Would you like to add a [green]'Startup Delay (in milliseconds)'[/]? Enter 0 if not.").ToString();
                     continue;
                 }
 

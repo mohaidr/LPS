@@ -70,7 +70,7 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
 
                 if (httpIteration.StartupDelay > 0)
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(httpIteration.StartupDelay), linkedToken);
+                    await Task.Delay(TimeSpan.FromMilliseconds(httpIteration.StartupDelay), linkedToken);
                 }
 
                 // Final check before execution (in case termination just happened)
