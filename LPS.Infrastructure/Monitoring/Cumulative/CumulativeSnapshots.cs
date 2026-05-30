@@ -42,6 +42,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
     public sealed class CumulativeThroughputData
     {
         public long RequestsCount { get; init; }
+        public long SkippedRequestsCount { get; init; }
         public long SuccessfulRequestCount { get; init; }
         public long FailedRequestsCount { get; init; }
         public long MaxConcurrentRequests { get; init; }

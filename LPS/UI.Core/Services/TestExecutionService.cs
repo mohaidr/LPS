@@ -40,6 +40,7 @@ namespace LPS.UI.Core.Services
         private readonly IVariableManager _variableManager;
         private readonly IMetricsDataMonitor _lpsMonitoringEnroller;
         private readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
+        private readonly ISkippedRequestReporter _skippedRequestReporter;
         private readonly IClientConfiguration<HttpRequest> _config;
         private readonly IWatchdog _watchdog;
         private readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
@@ -69,6 +70,7 @@ namespace LPS.UI.Core.Services
             IVariableManager variableManager,
             IMetricsDataMonitor lpsMonitoringEnroller,
             IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
+            ISkippedRequestReporter skippedRequestReporter,
             IClientConfiguration<HttpRequest> config,
             IWatchdog watchdog,
             IDashboardService dashboardService,
@@ -98,6 +100,7 @@ namespace LPS.UI.Core.Services
             _variableManager = variableManager;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
             _httpClientManager = httpClientManager;
+            _skippedRequestReporter = skippedRequestReporter;
             _config = config;
             _watchdog = watchdog;
             _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
@@ -267,7 +270,7 @@ namespace LPS.UI.Core.Services
                     $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
                 _dashboardService.Start();
                 
-                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _httpClientManager,
+                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _skippedRequestReporter, _httpClientManager,
                         _config, _httpIterationExecutionCommandStatusMonitor,
                         _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
                     .ExecuteAsync(plan, _cts.Token);

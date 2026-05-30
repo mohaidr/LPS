@@ -38,6 +38,7 @@ namespace LPS.Domain
             public URL Url { get; set; }
             public string HttpMethod { get; set; }
             public string HttpVersion { get; set; }
+            public string SkipIf { get; set; }
             public Dictionary<string, string> HttpHeaders { get; set; }
             public Payload? Payload { get; protected set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
@@ -60,6 +61,7 @@ namespace LPS.Domain
                 targetCommand.Url = this.Url;
                 targetCommand.HttpMethod = this.HttpMethod;
                 targetCommand.HttpVersion = this.HttpVersion;
+                targetCommand.SkipIf = this.SkipIf;
                 targetCommand.HttpHeaders = new Dictionary<string, string>(this.HttpHeaders);
                 targetCommand.Payload = this.Payload;
                 targetCommand.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
@@ -96,6 +98,7 @@ namespace LPS.Domain
             {
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
+                this.SkipIf = command.SkipIf;
                 this.Url = new URL(command.Url.Url);
                 if (command.Payload?.Type == Payload.PayloadType.Raw)
                 {

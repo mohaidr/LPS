@@ -122,6 +122,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.Url, opt => opt.MapFrom(src => ResolveURLShemaAndHostName(new URL(src.URL))))
                 .ForMember(dest => dest.HttpMethod, opt => opt.MapFrom(src => src.HttpMethod))
                 .ForMember(dest => dest.HttpVersion, opt => opt.MapFrom(src => src.HttpVersion))
+                .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => src.SkipIf))
                 .ForMember(dest => dest.HttpHeaders, opt => opt.MapFrom(src => src.HttpHeaders.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value)))

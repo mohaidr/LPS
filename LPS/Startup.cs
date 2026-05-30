@@ -143,6 +143,7 @@ namespace LPS
                 services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                 services.AddSingleton<IHttpHeadersService, HttpHeadersService>();
                 services.AddSingleton<IMetricsService, MetricsService>();
+                services.AddSingleton<ISkippedRequestReporter, SkippedRequestReporter>();
                 services.AddSingleton<IUrlSanitizationService, UrlSanitizationService>();
                 services.AddSingleton<IMessageService, MessageService>();
                 services.AddSingleton<IResponseProcessingService, ResponseProcessingService>();

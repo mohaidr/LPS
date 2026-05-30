@@ -18,6 +18,7 @@ namespace LPS.Domain
         IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
         IClientConfiguration<HttpRequest> _lpsClientConfig;
         IWatchdog _watchdog;
+        ISkippedRequestReporter _skippedRequestReporter;
         ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
         IIterationStatusMonitor _iterationStatusMonitor;
 
@@ -26,6 +27,7 @@ namespace LPS.Domain
             readonly ILogger _logger;
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            readonly ISkippedRequestReporter _skippedRequestReporter;
             readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
             readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
@@ -38,6 +40,7 @@ namespace LPS.Domain
                 ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
+                ISkippedRequestReporter skippedRequestReporter,
                 IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpRequest> lpsClientConfig,
                 ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
@@ -47,6 +50,7 @@ namespace LPS.Domain
                 _logger = logger;
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
+                _skippedRequestReporter = skippedRequestReporter;
                 _lpsClientManager = lpsClientManager;
                 _lpsClientConfig = lpsClientConfig;
                 _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
@@ -70,6 +74,7 @@ namespace LPS.Domain
                 entity._runtimeOperationIdProvider = _runtimeOperationIdProvider;
                 entity._lpsClientConfig = _lpsClientConfig;
                 entity._lpsClientManager = _lpsClientManager;
+                entity._skippedRequestReporter = _skippedRequestReporter;
                 entity._lpsMetricsDataMonitor = _lpsMetricsDataMonitor;
                 entity._httpIterationExecutionCommandRepository = _httpIterationExecutionCommandRepository;
                 entity._iterationStatusMonitor = _iterationStatusMonitor;
@@ -186,6 +191,7 @@ namespace LPS.Domain
                     _logger,
                     _watchdog,
                     _runtimeOperationIdProvider,
+                    _skippedRequestReporter,
                     _lpsMetricsDataMonitor,
                     _iterationStatusMonitor);
 

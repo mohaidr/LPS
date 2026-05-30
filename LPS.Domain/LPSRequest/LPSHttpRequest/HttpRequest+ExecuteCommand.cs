@@ -18,15 +18,19 @@ namespace LPS.Domain
     public partial class HttpRequest
     {
         public class ExecuteCommand(IClientService<HttpRequest,HttpResponse> httpClientService,
+            ISkippedRequestReporter skippedRequestReporter,
             ILogger logger,
             IWatchdog watchdog,
-            IRuntimeOperationIdProvider runtimeOperationIdProvider ) : IAsyncCommand<HttpRequest>
+            IRuntimeOperationIdProvider runtimeOperationIdProvider,
+            ISkipIfEvaluator skipIfEvaluator ) : IAsyncCommand<HttpRequest>
         {
             private IClientService<HttpRequest, HttpResponse> _httpClientService { get; set; } = httpClientService;
+            private readonly ISkippedRequestReporter _skippedRequestReporter = skippedRequestReporter;
             public IClientService<HttpRequest, HttpResponse> HttpClientService => _httpClientService;
             readonly ILogger _logger = logger;
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            readonly ISkipIfEvaluator _skipIfEvaluator = skipIfEvaluator;
             private CommandExecutionStatus _executionStatus;
             public CommandExecutionStatus Status => _executionStatus;
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
@@ -44,6 +48,16 @@ namespace LPS.Domain
                     entity._logger = this._logger;
                     entity._watchdog = this._watchdog;
                     entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
+
+                    if (await _skipIfEvaluator.ShouldSkipAsync(entity.SkipIf, _httpClientService.SessionId, token))
+                    {
+                        await _skippedRequestReporter.ReportSkippedRequestAsync(entity.Id, token);
+
+                        await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Request for URL {entity.Url.Url} has been skipped because the condition '{entity.SkipIf}' evaluated to true.", LPSLoggingLevel.Warning, token);
+                        _executionStatus = CommandExecutionStatus.Skipped;
+                        return;
+                    }
+
                     _executionStatus = CommandExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this, token);
 

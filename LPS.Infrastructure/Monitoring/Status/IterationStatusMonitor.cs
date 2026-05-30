@@ -1,6 +1,8 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Protos.Shared;
 using System;
 using System.Collections.Concurrent;
@@ -17,6 +19,7 @@ namespace LPS.Infrastructure.Monitoring.Status
         private readonly IIterationFailureEvaluator _iterationFailureEvaluator;
         private readonly CancellationTokenSource _globalCts;
         private readonly ICommandStatusMonitor<HttpIteration> _commandStatusMonitor;
+        private readonly ILiveMetricDataStore _metricDataStore;
 
         // Cache only terminal statuses: Skipped, Failed, Success, Terminated
         private static readonly ConcurrentDictionary<Guid, EntityExecutionStatus> _terminalStatusCache = new();
@@ -25,11 +28,13 @@ namespace LPS.Infrastructure.Monitoring.Status
             ITerminationCheckerService terminationChecker,
             IIterationFailureEvaluator iterationFailureEvaluator,
             ICommandStatusMonitor<HttpIteration> commandStatusMonitor,
+            ILiveMetricDataStore metricDataStore,
             CancellationTokenSource globalCts)
         {
             _terminationChecker = terminationChecker;
             _iterationFailureEvaluator = iterationFailureEvaluator;
             _commandStatusMonitor = commandStatusMonitor;
+            _metricDataStore = metricDataStore;
             _globalCts = globalCts;
         }
 
@@ -45,23 +50,17 @@ namespace LPS.Infrastructure.Monitoring.Status
 
             // 3) Aggregate command statuses to determine current state
             var commandsStatuses = await _commandStatusMonitor.QueryAsync(httpIteration);
+            var anyOngoing = commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing);
+            var anyScheduled = commandsStatuses.Any(status => status == CommandExecutionStatus.Scheduled);
+            var allCompleted = !anyOngoing && !anyScheduled;
 
 
             // Skipped (all skipped) -> terminal
             if (commandsStatuses.Count != 0 && commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Skipped);
 
-            //// PartiallySkipped -> not terminal
-            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Skipped) &&
-                !commandsStatuses.All(status => status == CommandExecutionStatus.Skipped) &&
-               (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing) || commandsStatuses.Any(status => status == CommandExecutionStatus.Scheduled))
-                 && !_globalCts.IsCancellationRequested)
-            {
-                return EntityExecutionStatus.PartiallySkipped;
-            }
-
             // Ongoing (not terminal)
-            if (commandsStatuses.Any(status => status == CommandExecutionStatus.Ongoing)
+            if (anyOngoing
                 && !_globalCts.IsCancellationRequested)
             {
                 return EntityExecutionStatus.Ongoing;
@@ -87,11 +86,23 @@ namespace LPS.Infrastructure.Monitoring.Status
             if (_globalCts.IsCancellationRequested)
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Cancelled);
 
+            // Request-level skip semantics: if all attempted requests were skipped and
+            // the iteration has fully completed, surface as terminal Skipped.
+            // While still running, skipped requests are visible only as a cumulative metric
+            // on the dashboard - the iteration itself remains Ongoing.
+            if (allCompleted && _metricDataStore.TryGetLatest(httpIteration.Id, LPSMetricType.Throughput, out ThroughputMetricSnapshot throughputSnapshot))
+            {
+                var sent = throughputSnapshot.RequestsCount;
+                var skipped = throughputSnapshot.SkippedRequestsCount;
+                var attempted = sent + skipped;
+
+                if (attempted > 0 && skipped == attempted)
+                    return CacheAndReturn(httpIteration, EntityExecutionStatus.Skipped);
+            }
+
             // 4) All commands completed - NOW evaluate failure rules
             // Explicit check ensures this block only runs when all commands are done,
             // regardless of code ordering above
-            bool allCompleted = !commandsStatuses.Any(s => s == CommandExecutionStatus.Ongoing) && !commandsStatuses.Any(s => s == CommandExecutionStatus.Scheduled);
-
             if (allCompleted && await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token))
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Failed);
 

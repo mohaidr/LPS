@@ -52,6 +52,8 @@ namespace LPS.Domain
 
         public string HttpVersion { get; protected set; }
 
+        public string SkipIf { get; protected set; }
+
         public Dictionary<string, string> HttpHeaders { get; protected set; }
 
         public bool DownloadHtmlEmbeddedResources { get; protected set; }

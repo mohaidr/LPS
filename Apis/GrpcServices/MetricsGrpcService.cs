@@ -47,6 +47,28 @@ namespace Apis.Services
             }
         }
 
+        public override async Task<UpdateSkippedRequestsResponse> UpdateSkippedRequests(UpdateSkippedRequestsRequest request, ServerCallContext context)
+        {
+            try
+            {
+                var success = true;
+                var count = request.Count <= 0 ? 1 : request.Count;
+
+                for (var i = 0; i < count; i++)
+                {
+                    success &= await _metricsService.TryIncreaseSkippedRequestsCountAsync(Guid.Parse(request.RequestId), context.CancellationToken);
+                }
+
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Update skipped requests completed successfully for {request.RequestId}", LPSLoggingLevel.Verbose, _cts.Token);
+                return new UpdateSkippedRequestsResponse { Success = success };
+            }
+            catch (OperationCanceledException ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"UpdateSkippedRequests cancelled for {request.RequestId}: {ex.Message}", LPSLoggingLevel.Warning, CancellationToken.None);
+                return new UpdateSkippedRequestsResponse { Success = false };
+            }
+        }
+
         public override async Task<UpdateResponseMetricsResponse> UpdateResponseMetrics(UpdateResponseMetricsRequest request, ServerCallContext context)
         {
             try

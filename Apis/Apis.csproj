@@ -87,6 +87,12 @@
         <Content Update="wwwroot\static\js\873.9eb7011e.chunk.js">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
+        <Content Update="wwwroot\static\js\main.025a9b0b.js">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
+        <Content Update="wwwroot\static\js\main.025a9b0b.js.LICENSE.txt">
+          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Content>
         <Content Update="wwwroot\static\js\main.a685629b.js">
           <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>

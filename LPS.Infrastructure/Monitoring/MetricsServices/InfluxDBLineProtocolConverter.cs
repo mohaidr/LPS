@@ -136,6 +136,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var fields = new StringBuilder();
             // Request counts per window
             fields.Append($"requests_count={throughput.RequestsCount}i,");
+            fields.Append($"skipped_count={throughput.SkippedRequestsCount}i,");
             fields.Append($"successful_count={throughput.SuccessfulRequestCount}i,");
             fields.Append($"failed_count={throughput.FailedRequestsCount}i,");
             fields.Append($"max_concurrent_requests={throughput.MaxConcurrentRequests}i");
@@ -205,6 +206,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             var fields = new StringBuilder();
             // Request counts
             fields.Append($"requests_count={throughput.RequestsCount}i,");
+            fields.Append($"skipped_count={throughput.SkippedRequestsCount}i,");
             fields.Append($"successful_count={throughput.SuccessfulRequestCount}i,");
             fields.Append($"failed_count={throughput.FailedRequestsCount}i,");
             fields.Append($"max_concurrent_requests={throughput.MaxConcurrentRequests}i,");

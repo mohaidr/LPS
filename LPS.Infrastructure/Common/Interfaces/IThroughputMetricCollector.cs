@@ -7,5 +7,6 @@ namespace LPS.Infrastructure.Common.Interfaces
     {
         public ValueTask<bool> IncreaseConnectionsCount(CancellationToken token);
         public ValueTask<bool> DecreseConnectionsCount(CancellationToken token);
+        public ValueTask<bool> IncreaseSkippedRequestsCount(CancellationToken token);
     }
 }

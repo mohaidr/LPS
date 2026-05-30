@@ -23,6 +23,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private int _currentActiveRequests;
         private int _maxConcurrentRequests;
         private int _requestsCount;
+        private int _skippedRequestsCount;
         private readonly ThroughputMetricSnapshot _snapshot;
         protected override IMetricShapshot Snapshot => _snapshot;
 
@@ -117,6 +118,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     _maxConcurrentRequests,
                     _currentActiveRequests,
                     _requestsCount,
+                    _skippedRequestsCount,
                     successCount,
                     failedCount,
                     timeElapsed,
@@ -223,6 +225,26 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
+        public async ValueTask<bool> IncreaseSkippedRequestsCount(CancellationToken token)
+        {
+            bool isLockTaken = false;
+            try
+            {
+                await _semaphore.WaitAsync(token);
+                isLockTaken = true;
+
+                EnsureStarted();
+                ++_skippedRequestsCount;
+                await UpdateMetricsAsync(token);
+                return true;
+            }
+            finally
+            {
+                if (isLockTaken)
+                    _semaphore.Release();
+            }
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -249,6 +271,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 return new CumulativeThroughputData
                 {
                     RequestsCount = _snapshot.RequestsCount,
+                    SkippedRequestsCount = _snapshot.SkippedRequestsCount,
                     SuccessfulRequestCount = _snapshot.SuccessfulRequestCount,
                     FailedRequestsCount = _snapshot.FailedRequestsCount,
                     MaxConcurrentRequests = _snapshot.MaxConcurrentRequests,
@@ -316,6 +339,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public RequestsRate RequestsRate { get; private set; }
         public RequestsRate RequestsRatePerCoolDownPeriod { get; private set; }
         public int RequestsCount { get; private set; }
+        public int SkippedRequestsCount { get; private set; }
         public int MaxConcurrentRequests { get; private set; }
         public int CurrentActiveRequests { get; private set; }
         public int SuccessfulRequestCount { get; private set; }
@@ -326,6 +350,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         int maxConcurrentRequests,
         int currentActiveRequests,
         int requestsCount = default,
+        int skippedRequestsCount = default,
         int successfulRequestsCount = default,
         int failedRequestsCount = default,
         double timeElpased = default,
@@ -338,6 +363,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 
                 // Update cumulative
                 RequestsCount = requestsCount.Equals(default) ? RequestsCount : requestsCount;
+                SkippedRequestsCount = skippedRequestsCount.Equals(default) ? SkippedRequestsCount : skippedRequestsCount;
                 MaxConcurrentRequests = maxConcurrentRequests;
                 CurrentActiveRequests = currentActiveRequests;
                 SuccessfulRequestCount = successfulRequestsCount.Equals(default) ? SuccessfulRequestCount : successfulRequestsCount;

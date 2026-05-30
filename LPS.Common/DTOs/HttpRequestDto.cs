@@ -39,6 +39,9 @@ namespace LPS.UI.Common.DTOs
         [JsonAlias("version")]
         public string HttpVersion { get; set; }
 
+        // Evaluator condition (can be a variable)
+        public string SkipIf { get; set; }
+
         // HTTP headers
         [YamlAlias("headers")]
         [JsonAlias("headers")]
@@ -77,6 +80,7 @@ namespace LPS.UI.Common.DTOs
                 URL = this.URL,
                 HttpMethod = this.HttpMethod,
                 HttpVersion = this.HttpVersion,
+                SkipIf = this.SkipIf,
                 Payload = this.Payload.CloneObject(),
                 DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources,
                 SaveResponse = this.SaveResponse,

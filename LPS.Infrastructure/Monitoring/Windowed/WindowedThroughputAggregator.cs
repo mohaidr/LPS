@@ -23,6 +23,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
         // Throughput counters (resettable per window)
         private long _requestsCount;
+        private long _skippedRequestsCount;
         private long _successfulRequests;
         private long _failedRequests;
         private int _currentActiveRequests;  // Current in-flight requests (not reset)
@@ -89,6 +90,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             return new WindowedThroughputData
             {
                 RequestsCount = (int)_requestsCount,
+                SkippedRequestsCount = (int)_skippedRequestsCount,
                 SuccessfulRequestCount = (int)_successfulRequests,
                 FailedRequestsCount = (int)_failedRequests,
                 MaxConcurrentRequests = _maxConcurrentRequests,
@@ -121,6 +123,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private void Reset()
         {
             _requestsCount = 0;
+            _skippedRequestsCount = 0;
             _successfulRequests = 0;
             _failedRequests = 0;
             // New window starts with max = current in-flight (those requests are still concurrent)
@@ -154,6 +157,17 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             try 
             { 
                 _currentActiveRequests--;
+            }
+            finally { _semaphore.Release(); }
+            return true;
+        }
+
+        public async ValueTask<bool> IncreaseSkippedRequestsCount(CancellationToken token)
+        {
+            await _semaphore.WaitAsync(token);
+            try
+            {
+                _skippedRequestsCount++;
             }
             finally { _semaphore.Release(); }
             return true;

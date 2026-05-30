@@ -33,18 +33,21 @@ namespace LPS.Domain
             readonly ILogger _logger;
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            readonly ISkippedRequestReporter _skippedRequestReporter;
             readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _lpsClientManager;
             readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
             readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
             readonly IIterationStatusMonitor _iterationStatusMonitor;
+            public ISkippedRequestReporter SkippedRequestReporter => _skippedRequestReporter;
             protected ExecuteCommand()
             {
             }
             public ExecuteCommand(ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
+                ISkippedRequestReporter skippedRequestReporter,
                 IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> lpsClientManager,
                 IClientConfiguration<HttpRequest> lpsClientConfig,
                 ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
@@ -55,6 +58,7 @@ namespace LPS.Domain
                 _logger = logger;
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
+                _skippedRequestReporter = skippedRequestReporter;
                 _lpsClientManager = lpsClientManager;
                 _lpsClientConfig = lpsClientConfig;
                 _httpIterationExecutionCommandStatusMonitor = httpIterationExecutionCommandStatusMonitor;
@@ -104,6 +108,7 @@ namespace LPS.Domain
                     var roundExecCommand = new Round.ExecuteCommand(_logger,
                         _watchdog,
                         _runtimeOperationIdProvider,
+                        command.SkippedRequestReporter,
                         _lpsClientManager,
                         _lpsClientConfig, _httpIterationExecutionCommandRepository,
                         _lpsMetricsDataMonitor, _iterationStatusMonitor);

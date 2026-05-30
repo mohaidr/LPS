@@ -119,6 +119,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                     CurrentActiveRequests = s.CurrentActiveRequests,
                     SuccessfulRequestCount = s.SuccessfulRequestCount,
                     FailedRequestsCount = s.FailedRequestsCount,
+                    SkippedRequestsCount = s.SkippedRequestsCount,
                     ErrorRate = s.ErrorRate,
                     RequestsRate = new Protos.Shared.RequestsRate
                     {

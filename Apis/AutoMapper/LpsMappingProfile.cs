@@ -70,6 +70,7 @@ namespace Apis.AutoMapper
             CreateMap<HttpRequest, HttpRequestDto>()
                 .ForMember(d => d.URL, m => m.MapFrom(s => s.Url.Url))
                 .ForMember(d => d.HttpMethod, m => m.MapFrom(s => s.HttpMethod))
+                .ForMember(d => d.SkipIf, m => m.MapFrom(s => s.SkipIf))
                 .ForMember(d => d.HttpVersion, m => m.MapFrom(s => s.HttpVersion))
                 .ForMember(d => d.HttpHeaders, m => m.MapFrom(s => s.HttpHeaders))
                 .ForMember(d => d.DownloadHtmlEmbeddedResources, m => m.MapFrom(s => s.DownloadHtmlEmbeddedResources.ToString().ToLower()))

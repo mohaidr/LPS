@@ -90,6 +90,44 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             return updated.Value;
         }
 
+        public async ValueTask<bool> TryIncreaseSkippedRequestsCountAsync(Guid requestId, CancellationToken token)
+        {
+            bool? updated = null;
+
+            if (_nodeMetaData.NodeType != Nodes.NodeType.Master)
+            {
+                var response = await _grpcClient.UpdateSkippedRequestsAsync(new UpdateSkippedRequestsRequest
+                {
+                    RequestId = requestId.ToString(),
+                    Count = 1
+                });
+                updated = response.Success;
+            }
+            else
+            {
+                requestId = await DiscoverRequestIdOnMaster(requestId, token);
+            }
+
+            if (requestId == Guid.Empty)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to update skipped requests count because the requestId was empty", LPSLoggingLevel.Warning, token);
+                updated ??= false;
+                return updated.Value;
+            }
+
+            await QueryMetricsAsync(requestId, token);
+            var throughputMetrics = _aggregators[requestId.ToString()]
+                .OfType<IThroughputMetricCollector>();
+
+            foreach (var metric in throughputMetrics)
+            {
+                await metric.IncreaseSkippedRequestsCount(token);
+            }
+
+            updated ??= true;
+            return updated.Value;
+        }
+
         public async ValueTask<bool> TryDecreaseConnectionsCountAsync(Guid requestId, CancellationToken token)
         {
             bool? updated = null;

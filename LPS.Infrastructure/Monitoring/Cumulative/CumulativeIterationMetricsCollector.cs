@@ -77,9 +77,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
 
                     case EntityExecutionStatus.Ongoing:
                     case EntityExecutionStatus.OngingScehduled:
-                    case EntityExecutionStatus.PartiallySkipped:
                         // Active - push regular snapshot
-                        // PartiallySkipped means some clients skipped but iteration is still running
                         PushSnapshot(isFinal: false, status.ToString());
                         break;
 

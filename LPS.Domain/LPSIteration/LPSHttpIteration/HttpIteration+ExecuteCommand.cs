@@ -21,8 +21,10 @@ namespace LPS.Domain
             readonly ILogger _logger;
             readonly IWatchdog _watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+            readonly ISkippedRequestReporter _skippedRequestReporter;
             readonly IMetricsDataMonitor _lpsMonitoringEnroller;
             IIterationStatusMonitor _iterationStatusMonitor;
+            public ISkippedRequestReporter SkippedRequestReporter => _skippedRequestReporter;
             protected ExecuteCommand()
             {
             }
@@ -32,6 +34,7 @@ namespace LPS.Domain
                 ILogger logger,
                 IWatchdog watchdog,
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
+                ISkippedRequestReporter skippedRequestReporter,
                 IMetricsDataMonitor lpsMonitoringEnroller,
                 IIterationStatusMonitor iterationStatusMonitor)
             {
@@ -39,6 +42,7 @@ namespace LPS.Domain
                 _logger = logger;
                 _watchdog = watchdog;
                 _runtimeOperationIdProvider = runtimeOperationIdProvider;
+                _skippedRequestReporter = skippedRequestReporter;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
                 _iterationStatusMonitor = iterationStatusMonitor;
                 _executionStatus = CommandExecutionStatus.Scheduled;
@@ -138,7 +142,7 @@ namespace LPS.Domain
             if (!this.IsValid)
                 return;
 
-            var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, _logger, _watchdog, _runtimeOperationIdProvider);
+            var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, command.SkippedRequestReporter, _logger, _watchdog, _runtimeOperationIdProvider, _skipIfEvaluator);
             try
             {
                 if (await _skipIfEvaluator.ShouldSkipAsync(SkipIf, command.HttpClientService.SessionId, token))

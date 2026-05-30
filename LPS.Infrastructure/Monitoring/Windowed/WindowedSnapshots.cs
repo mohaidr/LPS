@@ -84,6 +84,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
     public class WindowedThroughputData
     {
         public int RequestsCount { get; init; }
+        public int SkippedRequestsCount { get; init; }
         public int SuccessfulRequestCount { get; init; }
         public int FailedRequestsCount { get; init; }
         public int MaxConcurrentRequests { get; init; }

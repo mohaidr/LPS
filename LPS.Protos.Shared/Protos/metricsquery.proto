@@ -110,6 +110,7 @@ message ThroughputMetricResponse {
   int32 successfulRequestCount = 7;
   int32 failedRequestsCount = 8;
   double errorRate =9;
+  int32 skippedRequestsCount = 12;
 }
 
 message ThroughputMetricSearchResponse {

@@ -7,6 +7,7 @@ package metrics;
 
 service MetricsProtoService {
     rpc UpdateConnections(UpdateConnectionsRequest) returns (UpdateConnectionsResponse);
+    rpc UpdateSkippedRequests(UpdateSkippedRequestsRequest) returns (UpdateSkippedRequestsResponse);
     rpc UpdateResponseMetrics(UpdateResponseMetricsRequest) returns (UpdateResponseMetricsResponse);
     rpc UpdateDataTransmission(UpdateDataTransmissionRequest) returns (UpdateDataTransmissionResponse);
     rpc UpdateDurationMetric(UpdateDurationMetricRequest) returns (UpdateDurationMetricResponse);
@@ -18,6 +19,15 @@ message UpdateConnectionsRequest {
 }
 
 message UpdateConnectionsResponse {
+    bool success = 1;
+}
+
+message UpdateSkippedRequestsRequest {
+    string request_id = 1;
+    int32 count = 2;
+}
+
+message UpdateSkippedRequestsResponse {
     bool success = 1;
 }
 

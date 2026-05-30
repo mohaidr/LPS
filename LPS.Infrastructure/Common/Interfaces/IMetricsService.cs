@@ -20,6 +20,11 @@ namespace LPS.Infrastructure.Common.Interfaces
         ValueTask<bool> TryIncreaseConnectionsCountAsync(Guid requestId, CancellationToken token);
 
         /// <summary>
+        /// Attempts to increment the skipped requests count for the specified request.
+        /// </summary>
+        ValueTask<bool> TryIncreaseSkippedRequestsCountAsync(Guid requestId, CancellationToken token);
+
+        /// <summary>
         /// Attempts to decrement the active connections count for the specified request, 
         /// marking it as successful or not.
         /// </summary>
