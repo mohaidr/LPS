@@ -52,13 +52,14 @@ namespace LPS.Infrastructure.Logger
             bool iSemaphoreAcquired = false;
             try
             {
-                await _semaphoreSlim.WaitAsync(token);
-                iSemaphoreAcquired = true;
+
                 // Log to Console
                 await _consoleLogger.LogToConsoleAsync(currentDateTime, eventId, diagnosticMessage, level, _config);
                 // Log to File
                 if (!_config.DisableFileLogging && level >= _config.LoggingLevel)
                 {
+                    await _semaphoreSlim.WaitAsync(token);
+                    iSemaphoreAcquired = true;
                     StringBuilder stringBuilder = new StringBuilder();
                     stringBuilder.Append(_logFormatter.FormatLogMessage(currentDateTime, eventId, diagnosticMessage, level));
                     await _synchronizedTextWriter.WriteLineAsync(stringBuilder, token);

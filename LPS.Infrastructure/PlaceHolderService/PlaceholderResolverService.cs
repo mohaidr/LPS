@@ -62,6 +62,7 @@ namespace LPS.Infrastructure.PlaceHolderService
 
                     throw new InvalidOperationException($"Failed to parse '{resolvedValue}' as TimeSpan.");
                 }
+
                 // For non-enum types, handle nullable and regular types
                 var convertedValue = string.IsNullOrEmpty(resolvedValue)
                     ? default

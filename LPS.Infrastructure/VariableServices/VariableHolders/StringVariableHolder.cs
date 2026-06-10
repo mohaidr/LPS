@@ -15,6 +15,7 @@ using System.Xml;
 using LPS.Domain.Common;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Caching;
+using LPS.Infrastructure.Common.Expressions;
 using LPS.Infrastructure.LPSClients.CachService;
 using LPS.Infrastructure.Common.Interfaces;
 
@@ -22,6 +23,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 {
     public class StringVariableHolder : IStringVariableHolder
     {
+        private static readonly Regex BracketExpressionRegex = new(@"\[(.*?)\]", RegexOptions.Compiled);
+
         private readonly IPlaceholderResolverService _placeholderResolverService;
 
         public VariableType? Type { get; private set; }
@@ -81,6 +84,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         {
             try
             {
+                Console.WriteLine($"Extracting JSON value using path '{jsonPath}");
+                jsonPath = NormalizeBracketNumericExpressions(jsonPath);
                 var json = JToken.Parse(Value);
                 var tokenResult = json.SelectToken(jsonPath)?.ToString();
 
@@ -99,10 +104,47 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             }
         }
 
+        private static string NormalizeJsonIndexExpressions(string jsonPath)
+        {
+            return NormalizeBracketNumericExpressions(jsonPath);
+        }
+
+        private static string NormalizeBracketNumericExpressions(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return path;
+            }
+
+            // Only rewrite bracket content that looks like a numeric arithmetic expression.
+            return BracketExpressionRegex.Replace(path, match =>
+            {
+                var inner = match.Groups[1].Value?.Trim() ?? string.Empty;
+                if (string.IsNullOrWhiteSpace(inner))
+                {
+                    return match.Value;
+                }
+
+                // Keep selectors untouched (e.g. [0], ['name'], [?()], [*]) unless numeric arithmetic expression.
+                if (!ArithmeticExpressionEvaluator.IsArithmeticExpression(inner))
+                {
+                    return match.Value;
+                }
+
+                if (!ArithmeticExpressionEvaluator.TryEvaluateToInt(inner, out var evaluatedIndex))
+                {
+                    return match.Value;
+                }
+
+                return $"[{evaluatedIndex}]";
+            });
+        }
+
         private async ValueTask<string> ExtractXmlValue(string xpath, string sessionId, CancellationToken token)
         {
             try
             {
+                xpath = NormalizeBracketNumericExpressions(xpath);
                 var doc = new XmlDocument();
                 doc.LoadXml(Value);
                 var node = doc.SelectSingleNode(xpath);
@@ -129,8 +171,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 var trimmed = indices.Trim('[', ']');
                 var parts = trimmed.Split(',');
                 if (parts.Length != 2 ||
-                    !int.TryParse(parts[0], out int rowIndex) ||
-                    !int.TryParse(parts[1], out int columnIndex))
+                    !TryResolveCsvIndex(parts[0], out int rowIndex) ||
+                    !TryResolveCsvIndex(parts[1], out int columnIndex))
                 {
                     throw new ArgumentException("Invalid index format. Use the format [rowIndex,columnIndex].");
                 }
@@ -163,6 +205,19 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to extract csv value using indices '{indices}'.\n{ex}", LPSLoggingLevel.Error, token);
                 return string.Empty;
             }
+        }
+
+        private static bool TryResolveCsvIndex(string value, out int index)
+        {
+            index = default;
+            var candidate = value?.Trim() ?? string.Empty;
+
+            if (int.TryParse(candidate, NumberStyles.Integer, CultureInfo.InvariantCulture, out index))
+            {
+                return true;
+            }
+
+            return ArithmeticExpressionEvaluator.TryEvaluateToInt(candidate, out index);
         }
 
         private async ValueTask<string> ApplyRegexIfNeededAsync(string value, CancellationToken token)

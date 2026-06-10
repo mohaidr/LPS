@@ -58,7 +58,7 @@ namespace LPS.Infrastructure.Skip
                 resolved = await _placeholderResolver
                     .ResolvePlaceholdersAsync<string>(skipIfExpression, sessionId, token)
                     .ConfigureAwait(false);
-
+                Console.WriteLine(resolved);
                 // 2) Normalize operators: convert C#-style to Flee-compatible
                 resolved = NormalizeOperators(resolved);
 
