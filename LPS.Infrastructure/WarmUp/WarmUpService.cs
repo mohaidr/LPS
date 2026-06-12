@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -68,11 +69,14 @@ public sealed class WarmUpService : IWarmUpService
                         Version = HttpVersion.Version20,
                         VersionPolicy = HttpVersionPolicy.RequestVersionOrLower
                     };
+                    AnsiConsole.MarkupLine($"[bold #d1d1d1]WarmUp request is being sent to {host}{path}[/]");
 
                     using var res = await _client.SendAsync(
                         req,
                         HttpCompletionOption.ResponseHeadersRead,
                         cts.Token);
+
+                    AnsiConsole.MarkupLine($"[bold green]WarmUp request to {host}{path} completed with {(int)res.StatusCode} {res.StatusCode}[/]");
 
                     // Note: not throwing on non-success; only exceptions flip the return to false.
                     await _logger.LogAsync(
@@ -83,6 +87,8 @@ public sealed class WarmUpService : IWarmUpService
                 catch (OperationCanceledException oce) when (cts.IsCancellationRequested)
                 {
                     hadAnyException = true;
+                    AnsiConsole.MarkupLine($"[bold red]WarmUp request to {host}{path} timed out after {t}. Exception: {oce}[/]");
+
                     await _logger.LogAsync(
                         $"WarmUp request to {host}{path} timed out after {t}. Exception: {oce}",
                         LPSLoggingLevel.Error,

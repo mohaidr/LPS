@@ -24,15 +24,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
             try
             {
-                var targetExpression = await _params.ExtractStringAsync(parameters, "from", string.Empty, sessionId, token);
-                if (string.IsNullOrWhiteSpace(targetExpression))
-                {
-                    targetExpression = await _params.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
-                }
-                if (string.IsNullOrWhiteSpace(targetExpression))
-                {
-                    targetExpression = await _params.ExtractStringAsync(parameters, "path", string.Empty, sessionId, token);
-                }
+                var targetExpression = await _params.ExtractStringAsync(parameters, "source", string.Empty, sessionId, token);
                 if (string.IsNullOrWhiteSpace(targetExpression))
                 {
                     targetExpression = ExtractPositionalParameter(parameters);

@@ -84,7 +84,6 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         {
             try
             {
-                Console.WriteLine($"Extracting JSON value using path '{jsonPath}");
                 jsonPath = NormalizeBracketNumericExpressions(jsonPath);
                 var json = JToken.Parse(Value);
                 var tokenResult = json.SelectToken(jsonPath)?.ToString();
@@ -102,11 +101,6 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Failed to extract JSON value using path '{jsonPath}'.\n{ex}", LPSLoggingLevel.Error, token);
                 return string.Empty;
             }
-        }
-
-        private static string NormalizeJsonIndexExpressions(string jsonPath)
-        {
-            return NormalizeBracketNumericExpressions(jsonPath);
         }
 
         private static string NormalizeBracketNumericExpressions(string path)

@@ -286,7 +286,7 @@ namespace LPS.UI.Common.Extensions
                 options.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
                 
                 string jsonString = JsonSerializer.Serialize(configuration, options);
-                AnsiConsole.MarkupLine($"[Magenta]Applied Default {configName}: {jsonString}[/]");
+                AnsiConsole.MarkupLine($"[yellow]Warn:[/] Applied Default {configName}:\r\n{jsonString}");
                 _logger.Log(AppConstants.EmptyLogId, $"Applied Default {configName}: {jsonString}", LPSLoggingLevel.Warning);
             }
         }
