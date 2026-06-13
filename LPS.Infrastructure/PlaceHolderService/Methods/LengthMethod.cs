@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
+using Spectre.Console;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
@@ -46,7 +47,6 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     await StoreVariableIfNeededAsync(variableName, "0", token);
                     return "0";
                 }
-
                 if (!TryGetJsonArrayLength(resolvedValue, out var length))
                 {
                     await _logger.LogAsync(_op.OperationId, "length failed. The resolved value is not a JSON array.", LPSLoggingLevel.Warning, token);
@@ -84,18 +84,62 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
             return string.Empty;
         }
-
         private static bool TryGetJsonArrayLength(string value, out int length)
         {
             length = 0;
 
             try
             {
-                var token = JToken.Parse(value);
-                if (token is JArray array)
+                if (TryParseJsonArray(value, out var array))
                 {
                     length = array.Count;
                     return true;
+                }
+
+                var trimmed = value.Trim();
+                if (LooksLikeQuotedJson(trimmed))
+                {
+                    var unquoted = trimmed.Substring(1, trimmed.Length - 2).Trim();
+
+                    if (TryParseJsonArray(unquoted, out var quotedArray))
+                    {
+                        length = quotedArray.Count;
+                        return true;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AnsiConsole.MarkupLine($"[red]Error[/] Length Method - Failed to parse JSON array: {ex.Message}");
+            }
+            return false;
+        }
+
+        private static bool TryParseJsonArray(string value, out JArray array)
+        {
+            array = new JArray();
+
+            try
+            {
+                var token = JToken.Parse(value);
+                if (token is JArray parsedArray)
+                {
+                    array = parsedArray;
+                    return true;
+                }
+
+                if (token is JValue scalar && scalar.Type == JTokenType.String)
+                {
+                    var inner = (scalar.Value<string>() ?? string.Empty).Trim();
+                    if (inner.StartsWith("[") || inner.StartsWith("{"))
+                    {
+                        var nested = JToken.Parse(inner);
+                        if (nested is JArray nestedArray)
+                        {
+                            array = nestedArray;
+                            return true;
+                        }
+                    }
                 }
             }
             catch
@@ -103,6 +147,11 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             }
 
             return false;
+        }
+
+        private static bool LooksLikeQuotedJson(string value)
+        {
+            return value.Length >= 2 && value[0] == '"' && value[^1] == '"';
         }
     }
 }

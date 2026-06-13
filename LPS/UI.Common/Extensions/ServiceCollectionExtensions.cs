@@ -64,6 +64,11 @@ namespace LPS.UI.Common.Extensions
             services.AddSingleton<IPlaceholderMethod, Base64EncodeMethod>();
             services.AddSingleton<IPlaceholderMethod, Base64DecodeMethod>();
             services.AddSingleton<IPlaceholderMethod, HashMethod>();
+            services.AddSingleton<IPlaceholderMethod, ToLowerCaseMethod>();
+            services.AddSingleton<IPlaceholderMethod, ToUpperCaseMethod>();
+            services.AddSingleton<IPlaceholderMethod, ContainsMethod>();
+            services.AddSingleton<IPlaceholderMethod, StartsWithMethod>();
+            services.AddSingleton<IPlaceholderMethod, EndsWithMethod>();
             services.AddSingleton<IPlaceholderMethod, LengthMethod>();
             services.AddSingleton<IPlaceholderMethod, RandomItemMethod>();
             services.AddSingleton<IPlaceholderMethod, JwtClaimMethod>();

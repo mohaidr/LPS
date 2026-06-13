@@ -87,7 +87,7 @@ public sealed class WarmUpService : IWarmUpService
                 catch (OperationCanceledException oce) when (cts.IsCancellationRequested)
                 {
                     hadAnyException = true;
-                    AnsiConsole.MarkupLine($"[bold red]WarmUp request to {host}{path} timed out after {t}. Exception: {oce}[/]");
+                    AnsiConsole.MarkupLine($"[bold red]WarmUp request to {host}{path} timed out after {t}. Exception: {oce.Message}[/]");
 
                     await _logger.LogAsync(
                         $"WarmUp request to {host}{path} timed out after {t}. Exception: {oce}",
@@ -97,6 +97,8 @@ public sealed class WarmUpService : IWarmUpService
                 catch (Exception ex)
                 {
                     hadAnyException = true;
+                    AnsiConsole.MarkupLine($"[bold red]WarmUp request to {host}{path} failed. Exception: {ex.Message}[/]");
+
                     await _logger.LogAsync(
                         $"WarmUp request to {host}{path} failed: {ex}",
                         LPSLoggingLevel.Error,

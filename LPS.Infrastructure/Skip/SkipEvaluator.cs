@@ -95,7 +95,6 @@ namespace LPS.Infrastructure.Skip
                     "\t3- Flee requires the expression to be boolean (true/false). Use comparisons or ternary to return bool.\r\n" +
                     "\r\n" +
                     $"Exception: {ex}";
-
                 await _logger.LogAsync(message, LPSLoggingLevel.Error).ConfigureAwait(false);
 
                 // treat error as 'skip = false' as we can't decide to skip or not.

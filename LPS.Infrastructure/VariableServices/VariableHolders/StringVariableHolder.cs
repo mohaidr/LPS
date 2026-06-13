@@ -46,7 +46,9 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         public ValueTask<string> GetRawValueAsync(CancellationToken token)
         {
+            
             return (Type == VariableType.QString || Type == VariableType.QCsvString || Type == VariableType.QJsonString || Type == VariableType.QXmlString) ? ValueTask.FromResult($"\"{Value}\"") : ValueTask.FromResult(Value);
+           
         }
 
         public async ValueTask<string> GetValueAsync(string? path, string sessionId, CancellationToken token)
@@ -60,7 +62,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"A variable of type string can't have path. Empty value will be returned", LPSLoggingLevel.Warning, token);
                 return Type == VariableType.QString ? "\"\"" : string.Empty;
             }
-
+            
             var resolvedPath = await _placeholderResolverService.ResolvePlaceholdersAsync<string>(path ?? string.Empty, sessionId, token);
             string extracted = Type switch
             {
@@ -86,6 +88,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             {
                 jsonPath = NormalizeBracketNumericExpressions(jsonPath);
                 var json = JToken.Parse(Value);
+
                 var tokenResult = json.SelectToken(jsonPath)?.ToString();
 
                 if (tokenResult == null)

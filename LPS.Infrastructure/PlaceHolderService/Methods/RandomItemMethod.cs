@@ -92,8 +92,18 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
             try
             {
-                var token = JToken.Parse(value);
-                if (token is JArray parsedArray)
+                var trimmed = value.Trim();
+                if (LooksLikeQuotedJson(trimmed))
+                {
+                    var unquoted = trimmed.Substring(1, trimmed.Length - 2).Trim();
+                    if (TryParseJsonArray(unquoted, out var quotedArray))
+                    {
+                        array = quotedArray;
+                        return true;
+                    }
+                }
+
+                if (TryParseJsonArray(value, out var parsedArray))
                 {
                     array = parsedArray;
                     return true;
@@ -104,6 +114,45 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             }
 
             return false;
+        }
+
+        private static bool TryParseJsonArray(string value, out JArray array)
+        {
+            array = new JArray();
+
+            try
+            {
+                var token = JToken.Parse(value);
+                if (token is JArray parsedArray)
+                {
+                    array = parsedArray;
+                    return true;
+                }
+
+                if (token is JValue scalar && scalar.Type == JTokenType.String)
+                {
+                    var inner = (scalar.Value<string>() ?? string.Empty).Trim();
+                    if (inner.StartsWith("[") || inner.StartsWith("{"))
+                    {
+                        var nested = JToken.Parse(inner);
+                        if (nested is JArray nestedArray)
+                        {
+                            array = nestedArray;
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
+        }
+
+        private static bool LooksLikeQuotedJson(string value)
+        {
+            return value.Length >= 2 && value[0] == '"' && value[^1] == '"';
         }
     }
 }
