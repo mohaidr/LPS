@@ -55,9 +55,6 @@ namespace LPS.Infrastructure.Monitoring.Status
             var allCompleted = !anyOngoing && !anyScheduled;
 
 
-            // Skipped (all skipped) -> terminal
-            if (commandsStatuses.Count != 0 && commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
-                return CacheAndReturn(httpIteration, EntityExecutionStatus.Skipped);
 
             // Ongoing (not terminal)
             if (anyOngoing
@@ -86,6 +83,17 @@ namespace LPS.Infrastructure.Monitoring.Status
             if (_globalCts.IsCancellationRequested)
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Cancelled);
 
+            // 4) All commands completed - NOW evaluate failure rules
+            // Explicit check ensures this block only runs when all commands are done,
+            // regardless of code ordering above
+            if (allCompleted && await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token))
+                return CacheAndReturn(httpIteration, EntityExecutionStatus.Failed);
+
+            // Skipped (all skipped) -> terminal
+            if (commandsStatuses.Count != 0 && commandsStatuses.All(status => status == CommandExecutionStatus.Skipped))
+                return CacheAndReturn(httpIteration, EntityExecutionStatus.Skipped);
+
+
             // Request-level skip semantics: if all attempted requests were skipped and
             // the iteration has fully completed, surface as terminal Skipped.
             // While still running, skipped requests are visible only as a cumulative metric
@@ -100,15 +108,11 @@ namespace LPS.Infrastructure.Monitoring.Status
                     return CacheAndReturn(httpIteration, EntityExecutionStatus.Skipped);
             }
 
-            // 4) All commands completed - NOW evaluate failure rules
-            // Explicit check ensures this block only runs when all commands are done,
-            // regardless of code ordering above
-            if (allCompleted && await _iterationFailureEvaluator.EvaluateFailureAsync(httpIteration, token))
-                return CacheAndReturn(httpIteration, EntityExecutionStatus.Failed);
-
             // Success -> terminal (only if all completed)
             if (allCompleted)
                 return CacheAndReturn(httpIteration, EntityExecutionStatus.Success);
+
+
 
             // Fallback: should not normally reach here, but return Ongoing as safe default
             return EntityExecutionStatus.Ongoing;

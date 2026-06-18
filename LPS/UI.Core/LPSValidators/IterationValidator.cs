@@ -24,6 +24,7 @@ namespace LPS.UI.Core.LPSValidators
         {
             // Scalar metrics
             "errorrate",
+            "skipratio", "skippedratio", "skippedrequestsratio",
             // Throughput
             "throughput", "rps", "requestspersecond",
             // TotalTime
@@ -60,6 +61,7 @@ namespace LPS.UI.Core.LPSValidators
         private static readonly HashSet<string> ScalarMetrics = new(StringComparer.OrdinalIgnoreCase)
         {
             "errorrate",
+            "skipratio", "skippedratio", "skippedrequestsratio",
             "throughput", "rps", "requestspersecond"
         };
 

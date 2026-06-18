@@ -140,13 +140,25 @@ namespace LPS.Infrastructure.PlaceHolderService
             // Check for ${variable} syntax
             if (startIndex > 1 && result[startIndex - 2] == '$' && result[startIndex - 1] == '{')
             {
-                // Look for the matching closing '}'
+                // Look for the matching closing '}', tracking nested braces
+                int braceBalance = 1; // We've already consumed the opening '{'
                 while (endIndex < result.Length)
                 {
-                    if (result[endIndex] == '}')
+                    char c = result[endIndex];
+                    
+                    if (c == '{')
                     {
-                        return endIndex;
+                        braceBalance++;
                     }
+                    else if (c == '}')
+                    {
+                        braceBalance--;
+                        if (braceBalance == 0)
+                        {
+                            return endIndex;
+                        }
+                    }
+                    
                     endIndex++;
                 }
 

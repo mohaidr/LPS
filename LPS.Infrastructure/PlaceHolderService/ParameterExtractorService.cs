@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.PlaceHolderService
                 return defaultValue;
             }
 
-            var keyValuePairs = parameters.Split(',');
+            var keyValuePairs = SplitParametersAware(parameters);
             foreach (var pair in keyValuePairs)
             {
                 var parts = pair.Split('=', 2);
@@ -79,7 +79,7 @@ namespace LPS.Infrastructure.PlaceHolderService
             if (string.IsNullOrEmpty(parameters))
                 return defaultValue;
 
-            var keyValuePairs = parameters.Split(',');
+            var keyValuePairs = SplitParametersAware(parameters);
             foreach (var pair in keyValuePairs)
             {
                 var parts = pair.Split('=', 2);
@@ -98,7 +98,8 @@ namespace LPS.Infrastructure.PlaceHolderService
             if (string.IsNullOrEmpty(parameters))
                 return defaultValue;
 
-            var keyValuePairs = parameters.Split(',');
+            var keyValuePairs = SplitParametersAware(parameters);
+
             foreach (var pair in keyValuePairs)
             {
                 var parts = pair.Split('=', 2);
@@ -109,6 +110,65 @@ namespace LPS.Infrastructure.PlaceHolderService
             }
 
             return defaultValue;
+        }
+
+        private static List<string> SplitParametersAware(string parameters)
+        {
+            var result = new List<string>();
+            var current = new StringBuilder();
+            int braceDepth = 0;
+            int parenthesesDepth = 0;
+            int bracketDepth = 0;
+
+            foreach (char c in parameters)
+            {
+                if (c == '{')
+                {
+                    braceDepth++;
+                    current.Append(c);
+                }
+                else if (c == '}')
+                {
+                    braceDepth--;
+                    current.Append(c);
+                }
+                else if (c == '(')
+                {
+                    parenthesesDepth++;
+                    current.Append(c);
+                }
+                else if (c == ')')
+                {
+                    parenthesesDepth--;
+                    current.Append(c);
+                }
+                else if (c == '[')
+                {
+                    bracketDepth++;
+                    current.Append(c);
+                }
+                else if (c == ']')
+                {
+                    bracketDepth--;
+                    current.Append(c);
+                }
+                else if (c == ',' && braceDepth == 0 && parenthesesDepth == 0 && bracketDepth == 0)
+                {
+                    result.Add(current.ToString());
+                    current.Clear();
+                }
+                else
+                {
+                    current.Append(c);
+                }
+            }
+
+            if (current.Length > 0)
+            {
+                result.Add(current.ToString());
+            }
+
+            return result;
         }
     }
 

@@ -28,6 +28,7 @@ namespace LPS.Domain
             {
                 // Scalar metrics
                 "errorrate",
+                "skipratio", "skippedratio", "skippedrequestsratio",
                 // Throughput
                 "throughput", "rps", "requestspersecond",
                 // TotalTime
@@ -227,7 +228,10 @@ namespace LPS.Domain
                     return false;
 
                 // Validate aggregation for timing metrics (not required for ErrorRate)
-                bool isScalarMetric = metricName == "errorrate";
+                bool isScalarMetric = metricName == "errorrate" ||
+                                     metricName == "skipratio" ||
+                                     metricName == "skippedratio" ||
+                                     metricName == "skippedrequestsratio";
                 if (aggregation != null)
                 {
                     if (isScalarMetric)
