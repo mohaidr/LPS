@@ -25,14 +25,14 @@ namespace LPS.Domain
             TerminationRules = [];
             FailureRules = [];  
         }
-        ISkipIfEvaluator _skipIfEvaluator;
+        IIfEvaluator _ifEvaluator;
         private HttpIteration(
-            ISkipIfEvaluator skipIfEvaluator,
+            IIfEvaluator ifEvaluator,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             Type = IterationType.Http;
-            _skipIfEvaluator = skipIfEvaluator;
+            _ifEvaluator = ifEvaluator;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             TerminationRules = [];
@@ -41,13 +41,13 @@ namespace LPS.Domain
 
 
         public HttpIteration(SetupCommand command,
-            ISkipIfEvaluator skipIfEvaluator,
+            IIfEvaluator skipIfEvaluator,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
             ArgumentNullException.ThrowIfNull(command);
             Type = IterationType.Http;
-            _skipIfEvaluator = skipIfEvaluator;
+            _ifEvaluator = skipIfEvaluator;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             this.Setup(command);
@@ -96,14 +96,15 @@ namespace LPS.Domain
     // Termination rule with inline operator support
     public readonly struct TerminationRule
     {
-        public TerminationRule(string metric, TimeSpan gracePeriod, string errorStatusCodes = null)
+        public TerminationRule(string metric, TimeSpan gracePeriod, string errorStatusCodes = null, string expression = null)
         {
-            Metric = metric ?? throw new ArgumentNullException(nameof(metric));
+            Metric = metric;
             GracePeriod = gracePeriod;
             ErrorStatusCodes = errorStatusCodes;
+            Expression = expression;
         }
 
-        public string Metric { get; }
+        public string? Metric { get; }
         public TimeSpan GracePeriod { get; }
 
         /// <summary>
@@ -113,18 +114,27 @@ namespace LPS.Domain
         /// If not specified for ErrorRate, defaults to ">= 400".
         /// </summary>
         public string ErrorStatusCodes { get; }
+
+        /// <summary>
+        /// Optional Flee expression condition to terminate.
+        /// If this expression evaluates to true, termination is triggered immediately (independent of Metric).
+        /// Examples: "${Metrics.Main.Load.Throughput.ErrorRate} > 0.10"
+        /// </summary>
+        public string Expression { get; }
+
     }
 
     // Failure rule with inline operator support
     public readonly struct FailureRule
     {
-        public FailureRule(string metric, string errorStatusCodes = null)
+        public FailureRule(string metric, string errorStatusCodes = null, string expression = null)
         {
-            Metric = metric ?? throw new ArgumentNullException(nameof(metric));
+            Metric = metric;
             ErrorStatusCodes = errorStatusCodes;
+            Expression = expression;
         }
 
-        public string Metric { get; }
+        public string? Metric { get; }
 
         /// <summary>
         /// For ErrorRate metrics: defines which HTTP status codes count as errors.
@@ -133,5 +143,13 @@ namespace LPS.Domain
         /// If not specified for ErrorRate, defaults to ">= 400" (all client and server errors).
         /// </summary>
         public string ErrorStatusCodes { get; }
+
+        /// <summary>
+        /// Optional Flee expression condition.
+        /// If this expression evaluates to true, failure is triggered immediately (independent of Metric).
+        /// Examples: "${Metrics.Main.Load.Throughput.ErrorRate} > 0.10"
+        /// </summary>
+        public string Expression { get; }
+
     }
 }

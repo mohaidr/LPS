@@ -89,7 +89,7 @@ namespace LPS.UI.Common.DTOs
     // Failure rule with inline operator
     /// <summary>
     /// DTO for failure rules using inline operator syntax.
-    /// Example: { Metric: "ErrorRate > 0.05", ErrorStatusCodes: ">= 500" }
+    /// Example: { Metric: "ErrorRate > 0.05", ErrorStatusCodes: ">= 500", Expression: "${Metrics.Main.Load.Throughput.ErrorRate} > 0.10" }
     /// </summary>
     public struct FailureRuleDto
     {
@@ -107,12 +107,20 @@ namespace LPS.UI.Common.DTOs
         /// Ignored for non-ErrorRate metrics.
         /// </summary>
         public string ErrorStatusCodes { get; set; }
+
+        /// <summary>
+        /// Optional Flee expression condition.
+        /// If this expression evaluates to true, failure is triggered immediately (independent of Metric).
+        /// Examples: "${Metrics.Main.Load.Throughput.ErrorRate} > 0.10"
+        /// </summary>
+        public string Expression { get; set; }
+
     }
 
     // Termination rule V2 with inline operator
     /// <summary>
     /// DTO for termination rules using inline operator syntax with grace period.
-    /// Example: { Metric: "ErrorRate > 0.10", GracePeriod: "00:05:00", ErrorStatusCodes: ">= 500" }
+    /// Example: { Metric: "ErrorRate > 0.10", GracePeriod: "00:05:00", ErrorStatusCodes: ">= 500", Expression: "${Metrics.Main.Load.Throughput.ErrorRate} > 0.10" }
     /// </summary>
     public struct TerminationRuleDto
     {
@@ -123,7 +131,8 @@ namespace LPS.UI.Common.DTOs
         public string Metric { get; set; }
 
         /// <summary>
-        /// Grace period duration. Format: "00:05:00" (TimeSpan string)
+        /// Optional grace period duration. Format: "00:05:00" (TimeSpan string).
+        /// If omitted or empty, defaults to "00:00:00" (immediate termination when rule condition is met).
         /// </summary>
         public string GracePeriod { get; set; }
 
@@ -135,5 +144,13 @@ namespace LPS.UI.Common.DTOs
         /// Ignored for non-ErrorRate metrics.
         /// </summary>
         public string ErrorStatusCodes { get; set; }
+
+        /// <summary>
+        /// Optional Flee expression condition to terminate.
+        /// If this expression evaluates to true, termination is triggered immediately (independent of Metric).
+        /// Examples: "${Metrics.Main.Load.Throughput.ErrorRate} > 0.10"
+        /// </summary>
+        public string Expression { get; set; }
+
     }
 }

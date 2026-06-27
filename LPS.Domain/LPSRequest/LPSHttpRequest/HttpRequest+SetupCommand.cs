@@ -31,6 +31,10 @@ namespace LPS.Domain
                 HttpVersion = "2.0";
                 DownloadHtmlEmbeddedResources = false;
                 SaveResponse = false;
+                Retry = new RetryPolicy
+                {
+                    MaxRetries = 1,
+                };
                 HttpHeaders = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
@@ -39,6 +43,7 @@ namespace LPS.Domain
             public string HttpMethod { get; set; }
             public string HttpVersion { get; set; }
             public string SkipIf { get; set; }
+            public RetryPolicy Retry { get; set; }
             public Dictionary<string, string> HttpHeaders { get; set; }
             public Payload? Payload { get; protected set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
@@ -62,6 +67,16 @@ namespace LPS.Domain
                 targetCommand.HttpMethod = this.HttpMethod;
                 targetCommand.HttpVersion = this.HttpVersion;
                 targetCommand.SkipIf = this.SkipIf;
+                targetCommand.Retry = this.Retry == null
+                    ? null
+                    : new RetryPolicy
+                    {
+                        If = this.Retry.If,
+                        StopIf = this.Retry.StopIf,
+                        MaxRetries = this.Retry.MaxRetries,
+                        BaseDelayInMs = this.Retry.BaseDelayInMs,
+                        MaxDelayInMs = this.Retry.MaxDelayInMs
+                    };
                 targetCommand.HttpHeaders = new Dictionary<string, string>(this.HttpHeaders);
                 targetCommand.Payload = this.Payload;
                 targetCommand.DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources;
@@ -99,6 +114,20 @@ namespace LPS.Domain
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
                 this.SkipIf = command.SkipIf;
+                string retryIf = command.Retry?.If;
+                string stopIf = command.Retry?.StopIf;
+                int maxRetries = command.Retry?.MaxRetries ?? 1;
+                int? retryBaseDelayInMs = command.Retry?.BaseDelayInMs;
+                int? retryMaxDelayInMs = command.Retry?.MaxDelayInMs;
+
+                this.Retry = new RetryPolicy
+                {
+                    If = retryIf,
+                    StopIf = stopIf,
+                    MaxRetries = maxRetries,
+                    BaseDelayInMs = retryBaseDelayInMs,
+                    MaxDelayInMs = retryMaxDelayInMs
+                };
                 this.Url = new URL(command.Url.Url);
                 if (command.Payload?.Type == Payload.PayloadType.Raw)
                 {
@@ -144,6 +173,16 @@ namespace LPS.Domain
                 clone.Id = this.Id;
                 clone.HttpMethod = this.HttpMethod;
                 clone.HttpVersion = this.HttpVersion;
+                clone.Retry = this.Retry == null
+                    ? null
+                    : new RetryPolicy
+                    {
+                        If = this.Retry.If,
+                        StopIf = this.Retry.StopIf,
+                        MaxRetries = this.Retry.MaxRetries,
+                        BaseDelayInMs = this.Retry.BaseDelayInMs,
+                        MaxDelayInMs = this.Retry.MaxDelayInMs
+                    };
                 clone.Url = this.Url; // intentionally not doing deep clone here. TODO: review performence and then implement deep clone
                 clone.Payload = this.Payload; // intentionally not doing deep clone here TODO: review performence and then implement deep clone
                 clone.SaveResponse = this.SaveResponse;

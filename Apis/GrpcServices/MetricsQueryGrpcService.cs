@@ -40,7 +40,7 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
         /// <summary>
         /// Helper to build TimingMetricStats from a MetricTime object
         /// </summary>
-        private static TimingMetricStats BuildTimingStats(DurationMetricSnapshot.MetricTime m) => new()
+        private static TimingMetricStats BuildTimingStats(DurationMetricSnapshot.LatencyMetric m) => new()
         {
             Sum = m.Sum,
             Average = m.Average,
@@ -62,17 +62,17 @@ namespace LPS.Infrastructure.Monitoring.GRPCServices
                 response.Responses.Add(new DurationMetricResponse
                 {
                     Metadata = BuildMetadata(s),
-                    TotalTime = BuildTimingStats(s.TotalTimeMetrics),
-                    TimeToFirstByte = BuildTimingStats(s.TimeToFirstByteMetrics),
-                    WaitingTime = BuildTimingStats(s.WaitingTimeMetrics),
-                    TcpHandshakeTime = BuildTimingStats(s.TCPHandshakeTimeMetrics),
-                    TlsHandshakeTime = BuildTimingStats(s.SSLHandshakeTimeMetrics),
-                    SendingTime = BuildTimingStats(s.SendingTimeMetrics),
-                    ReceivingTime = BuildTimingStats(s.ReceivingTimeMetrics),
-                    ServerTime = BuildTimingStats(s.ServerTimeMetrics),
-                    ServerTimeDB = BuildTimingStats(s.ServerTimeDBMetrics),
-                    ServerTimeCache = BuildTimingStats(s.ServerTimeCacheMetrics),
-                    ServerTimeApp = BuildTimingStats(s.ServerTimeAppMetrics)
+                    TotalTime = BuildTimingStats(s.TotalTime),
+                    TimeToFirstByte = BuildTimingStats(s.TimeToFirstByte),
+                    WaitingTime = BuildTimingStats(s.WaitingTime),
+                    TcpHandshakeTime = BuildTimingStats(s.TCPHandshakeTime),
+                    TlsHandshakeTime = BuildTimingStats(s.SSLHandshakeTime),
+                    SendingTime = BuildTimingStats(s.SendingTime),
+                    ReceivingTime = BuildTimingStats(s.ReceivingTime),
+                    ServerTime = BuildTimingStats(s.ServerTime),
+                    ServerTimeDB = BuildTimingStats(s.DBServerTime),
+                    ServerTimeCache = BuildTimingStats(s.ServerCacheTime),
+                    ServerTimeApp = BuildTimingStats(s.ServerAppTime)
                 });
             }
 

@@ -55,6 +55,9 @@ namespace LPS.Infrastructure.Monitoring
                 // SkipRatio metric: skipped / total_attempted where total_attempted = executed + skipped
                 "skipratio" or "skippedratio" or "skippedrequestsratio" => await GetSkipRatioAsync(grpcClient, fqdn, token),
 
+                // SkippedRequestsCount metric: absolute number of skipped requests
+                "skippedrequestscount" or "skippedcount" => await GetSkippedRequestsCountAsync(grpcClient, fqdn, token),
+
                 // TotalTime metrics
                 "totaltime" => await GetTimingMetricAsync(grpcClient, fqdn, TimingMetricType.TotalTime, aggregation, token),
 
@@ -93,7 +96,7 @@ namespace LPS.Infrastructure.Monitoring
 
                 _ => throw new ArgumentException(
                     $"Unknown metric: {metricName}. " +
-                    $"Supported metrics: ErrorRate, SkipRatio, Throughput (RPS), TotalTime, TTFB, WaitingTime, TCPHandshake, TLSHandshake, SendingTime, ReceivingTime, " +
+                    $"Supported metrics: ErrorRate, SkipRatio, SkippedRequestsCount, Throughput (RPS), TotalTime, TTFB, WaitingTime, TCPHandshake, TLSHandshake, SendingTime, ReceivingTime, " +
                     $"ServerTime, ServerTimeDB, ServerTimeCache, ServerTimeApp. " +
                     $"Add aggregation for timing metrics: .P50, .P90, .P95, .P99, .Average, .Min, .Max. " +
                     $"Use 'ErrorRate > 0' with 'errorStatusCodes' for status code checks.")
@@ -119,7 +122,7 @@ namespace LPS.Infrastructure.Monitoring
             GrpcMetricsQueryServiceClient grpcClient,
             string fqdn,
             TimingMetricType metricType,
-            string? aggregation,
+            string aggregation,
             CancellationToken token)
         {
             var durations = await grpcClient.GetDurationAsync(fqdn, token);
@@ -245,6 +248,20 @@ namespace LPS.Infrastructure.Monitoring
                 return 0;
 
             return (double)skipped / totalAttempted;
+        }
+
+        private async Task<double> GetSkippedRequestsCountAsync(
+            GrpcMetricsQueryServiceClient grpcClient,
+            string fqdn,
+            CancellationToken token)
+        {
+            var throughput = await grpcClient.GetThroughputAsync(fqdn, token);
+            var response = throughput?.Responses?.SingleOrDefault();
+
+            if (response == null)
+                return 0;
+
+            return response.SkippedRequestsCount;
         }
 
         /// <summary>

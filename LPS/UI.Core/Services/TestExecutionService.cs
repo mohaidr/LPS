@@ -50,7 +50,7 @@ namespace LPS.UI.Core.Services
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         public readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
-        public readonly ISkipIfEvaluator _skipIfEvaluator;
+        public readonly IIfEvaluator _skipIfEvaluator;
         public readonly IVariableFactory _variableFactory;
         private readonly INodeMetadata _nodeMetaData;
         private readonly ILiveMetricDataStore _metricStore;
@@ -78,7 +78,7 @@ namespace LPS.UI.Core.Services
             IEntityRepositoryService entityRepositoryService,
             ICustomGrpcClientFactory customGrpcClientFactory,
             IIterationStatusMonitor iterationStatusMonitor,
-            ISkipIfEvaluator skipIfEvaluator,
+            IIfEvaluator skipIfEvaluator,
             IVariableFactory variableFactory,
             ILiveMetricDataStore metricStore,             // NEW
             IWindowedMetricDataStore windowedMetricStore, // NEW

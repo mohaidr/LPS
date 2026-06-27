@@ -244,7 +244,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         /// Similar to how WindowedDurationAggregator.GetWindowDataAndReset() works, but does NOT reset.
         /// </summary>
         /// </summary>
-#nullable enable
+        #nullable enable
         public CumulativeDurationData? GetCumulativeData()
         {
             _semaphore.Wait();
@@ -252,17 +252,17 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             {
                 return new CumulativeDurationData
                 {
-                    TotalTime = MapTimingMetric(_snapshot.TotalTimeMetrics),
-                    TCPHandshakeTime = MapTimingMetric(_snapshot.TCPHandshakeTimeMetrics),
-                    SSLHandshakeTime = MapTimingMetric(_snapshot.SSLHandshakeTimeMetrics),
-                    TimeToFirstByte = MapTimingMetric(_snapshot.TimeToFirstByteMetrics),
-                    WaitingTime = MapTimingMetric(_snapshot.WaitingTimeMetrics),
-                    ReceivingTime = MapTimingMetric(_snapshot.ReceivingTimeMetrics),
-                    SendingTime = MapTimingMetric(_snapshot.SendingTimeMetrics),
-                    ServerTime = MapTimingMetric(_snapshot.ServerTimeMetrics),
-                    ServerTimeDB = MapTimingMetric(_snapshot.ServerTimeDBMetrics),
-                    ServerTimeCache = MapTimingMetric(_snapshot.ServerTimeCacheMetrics),
-                    ServerTimeApp = MapTimingMetric(_snapshot.ServerTimeAppMetrics)
+                    TotalTime = MapTimingMetric(_snapshot.TotalTime),
+                    TCPHandshakeTime = MapTimingMetric(_snapshot.TCPHandshakeTime),
+                    SSLHandshakeTime = MapTimingMetric(_snapshot.SSLHandshakeTime),
+                    TimeToFirstByte = MapTimingMetric(_snapshot.TimeToFirstByte),
+                    WaitingTime = MapTimingMetric(_snapshot.WaitingTime),
+                    ReceivingTime = MapTimingMetric(_snapshot.ReceivingTime),
+                    SendingTime = MapTimingMetric(_snapshot.SendingTime),
+                    ServerTime = MapTimingMetric(_snapshot.ServerTime),
+                    ServerTimeDB = MapTimingMetric(_snapshot.DBServerTime),
+                    ServerTimeCache = MapTimingMetric(_snapshot.ServerCacheTime),
+                    ServerTimeApp = MapTimingMetric(_snapshot.ServerAppTime)
                 };
             }
             finally
@@ -270,9 +270,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 _semaphore.Release();
             }
         }
-#nullable restore
+        #nullable restore
 
-        private static CumulativeTimingMetric MapTimingMetric(DurationMetricSnapshot.MetricTime metric)
+        private static CumulativeTimingMetric MapTimingMetric(DurationMetricSnapshot.LatencyMetric metric)
         {
             return new CumulativeTimingMetric
             {
@@ -331,37 +331,37 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 switch (metricType)
                 {
                     case DurationMetricType.TotalTime:
-                        TotalTimeMetrics.Update(totalTime);
+                        TotalTime.Update(totalTime);
                         break;
                     case DurationMetricType.ReceivingTime:
-                        ReceivingTimeMetrics.Update(totalTime);
+                        ReceivingTime.Update(totalTime);
                         break;
                     case DurationMetricType.SendingTime:
-                        SendingTimeMetrics.Update(totalTime);
+                        SendingTime.Update(totalTime);
                         break;
                     case DurationMetricType.TLSHandshakeTime:
-                        SSLHandshakeTimeMetrics.Update(totalTime);
+                        SSLHandshakeTime.Update(totalTime);
                         break;
                     case DurationMetricType.TCPHandshakeTime:
-                        TCPHandshakeTimeMetrics.Update(totalTime);
+                        TCPHandshakeTime.Update(totalTime);
                         break;
                     case DurationMetricType.TimeToFirstByte:
-                        TimeToFirstByteMetrics.Update(totalTime);
+                        TimeToFirstByte.Update(totalTime);
                         break;
                     case DurationMetricType.WaitingTime:
-                        WaitingTimeMetrics.Update(totalTime);
+                        WaitingTime.Update(totalTime);
                         break;
                     case DurationMetricType.ServerTime:
-                        ServerTimeMetrics.Update(totalTime);
+                        ServerTime.Update(totalTime);
                         break;
                     case DurationMetricType.ServerTimeDB:
-                        ServerTimeDBMetrics.Update(totalTime);
+                        DBServerTime.Update(totalTime);
                         break;
                     case DurationMetricType.ServerTimeCache:
-                        ServerTimeCacheMetrics.Update(totalTime);
+                        ServerCacheTime.Update(totalTime);
                         break;
                     case DurationMetricType.ServerTimeApp:
-                        ServerTimeAppMetrics.Update(totalTime);
+                        ServerAppTime.Update(totalTime);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(nameof(metricType), $"Unsupported DurationMetricType: {metricType}");
@@ -377,20 +377,20 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public override LPSMetricType MetricType => LPSMetricType.Time;
         
         // Cumulative metrics (never reset - for final summary)
-        public TotalTime TotalTimeMetrics { get; private set; } = new();
-        public TCPHandshakeTime TCPHandshakeTimeMetrics { get; private set; } = new();
-        public SSLHandshakeTime SSLHandshakeTimeMetrics { get; private set; } = new();
-        public TimeToFirstByte TimeToFirstByteMetrics { get;private set; } = new();
-        public WaitingTime WaitingTimeMetrics { get; private set; } = new();
-        public ReceivingTime ReceivingTimeMetrics { get; private set; } = new();
-        public SendingTime SendingTimeMetrics { get; private set; } = new();
-        public ServerTime ServerTimeMetrics { get; private set; } = new();
-        public ServerTimeDB ServerTimeDBMetrics { get; private set; } = new();
-        public ServerTimeCache ServerTimeCacheMetrics { get; private set; } = new();
-        public ServerTimeApp ServerTimeAppMetrics { get; private set; } = new();
+        public TotalLatency TotalTime { get; private set; } = new();
+        public TCPHandshakeLatency TCPHandshakeTime { get; private set; } = new();
+        public SSLHandshakeLatency SSLHandshakeTime { get; private set; } = new();
+        public TimeToFirstByteLatency TimeToFirstByte { get;private set; } = new();
+        public WaitingLatency WaitingTime { get; private set; } = new();
+        public ReceivingLatency ReceivingTime { get; private set; } = new();
+        public SendingLatency SendingTime { get; private set; } = new();
+        public ServerLatency ServerTime { get; private set; } = new();
+        public ServerDBLatency DBServerTime { get; private set; } = new();
+        public ServerCacheLatency ServerCacheTime { get; private set; } = new();
+        public ServerAppLatency ServerAppTime { get; private set; } = new();
 
 
-        public class MetricTime
+        public class LatencyMetric
         {
             private readonly LongHistogram _histogram = new(1, 1000000, 3);  // Each instance has its own
 
@@ -421,16 +421,16 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        public class TotalTime : MetricTime { }
-        public class SSLHandshakeTime : MetricTime { }
-        public class TCPHandshakeTime : MetricTime { }
-        public class TimeToFirstByte : MetricTime { }
-        public class WaitingTime : MetricTime { }
-        public class ReceivingTime : MetricTime { }
-        public class SendingTime : MetricTime { }
-        public class ServerTime : MetricTime { }
-        public class ServerTimeDB : MetricTime { }
-        public class ServerTimeCache : MetricTime { }
-        public class ServerTimeApp : MetricTime { }
+        public class TotalLatency : LatencyMetric { }
+        public class SSLHandshakeLatency : LatencyMetric { }
+        public class TCPHandshakeLatency : LatencyMetric { }
+        public class TimeToFirstByteLatency : LatencyMetric { }
+        public class WaitingLatency : LatencyMetric { }
+        public class ReceivingLatency : LatencyMetric { }
+        public class SendingLatency : LatencyMetric { }
+        public class ServerLatency : LatencyMetric { }
+        public class ServerDBLatency : LatencyMetric { }
+        public class ServerCacheLatency : LatencyMetric { }
+        public class ServerAppLatency : LatencyMetric { }
     }
 }   

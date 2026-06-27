@@ -17,12 +17,12 @@ namespace LPS.Domain
 
     public partial class HttpRequest
     {
-        public class ExecuteCommand(IClientService<HttpRequest,HttpResponse> httpClientService,
+        public class ExecuteCommand(IClientService<HttpRequest, HttpResponse> httpClientService,
             ISkippedRequestReporter skippedRequestReporter,
             ILogger logger,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            ISkipIfEvaluator skipIfEvaluator ) : IAsyncCommand<HttpRequest>
+            IIfEvaluator ifEvaluator) : IAsyncCommand<HttpRequest>
         {
             private IClientService<HttpRequest, HttpResponse> _httpClientService { get; set; } = httpClientService;
             private readonly ISkippedRequestReporter _skippedRequestReporter = skippedRequestReporter;
@@ -30,7 +30,7 @@ namespace LPS.Domain
             readonly ILogger _logger = logger;
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            readonly ISkipIfEvaluator _skipIfEvaluator = skipIfEvaluator;
+            readonly IIfEvaluator _ifEvaluator = ifEvaluator;
             private CommandExecutionStatus _executionStatus;
             public CommandExecutionStatus Status => _executionStatus;
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
@@ -49,7 +49,7 @@ namespace LPS.Domain
                     entity._watchdog = this._watchdog;
                     entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
 
-                    if (await _skipIfEvaluator.ShouldSkipAsync(entity.SkipIf, _httpClientService.SessionId, token))
+                    if (await _ifEvaluator.EvaluateAsync(entity.SkipIf, _httpClientService.SessionId, token))
                     {
                         await _skippedRequestReporter.ReportSkippedRequestAsync(entity.Id, token);
 
@@ -59,7 +59,39 @@ namespace LPS.Domain
                     }
 
                     _executionStatus = CommandExecutionStatus.Ongoing;
-                    await entity.ExecuteAsync(this, token);
+
+                    int attempt = 0;
+                    while (true)
+                    {
+                        attempt++;
+                        try
+                        {
+                            await entity.ExecuteAsync(this, token);
+                        }
+                        catch (OperationCanceledException) when (token.IsCancellationRequested)
+                        {
+                            throw;
+                        }
+                        catch
+                        {
+                            entity.HasFailed = true;
+                        }
+
+                        bool shouldRetry = await ShouldRetryAsync(entity, token);
+                        bool hasRetriesLeft = attempt <= (entity.Retry?.MaxRetries ?? 0);
+
+                        if (!shouldRetry || !hasRetriesLeft)
+                            break;
+
+                        int delayInMs = CalculateRetryDelayInMs(entity, attempt);
+                        await _logger.LogAsync(
+                            _runtimeOperationIdProvider.OperationId,
+                            $"RetryIf for URL {entity.Url.Url} evaluated to true. Retrying attempt {attempt}/{entity.Retry?.MaxRetries ?? 0} in {delayInMs} ms.",
+                            LPSLoggingLevel.Warning,
+                            token);
+
+                        await Task.Delay(delayInMs, token);
+                    }
 
                     if (!entity.HasFailed)
                         _executionStatus = CommandExecutionStatus.Completed;
@@ -74,6 +106,55 @@ namespace LPS.Domain
                 {
                     _executionStatus = CommandExecutionStatus.Failed;
                 }
+            }
+
+            private async Task<bool> ShouldRetryAsync(HttpRequest entity, CancellationToken token)
+            {
+                string stopIf = entity.Retry?.StopIf;
+                if (!string.IsNullOrWhiteSpace(stopIf))
+                {
+                    bool stopRetries = await _ifEvaluator.EvaluateAsync(stopIf, _httpClientService.SessionId, token);
+                    if (stopRetries)
+                    {
+                        await _logger.LogAsync(
+                            _runtimeOperationIdProvider.OperationId,
+                            $"Retries for URL {entity.Url.Url} were stopped because stopIf condition '{stopIf}' evaluated to true.",
+                            LPSLoggingLevel.Warning,
+                            token);
+                        return false;
+                    }
+                }
+
+                string retryIf = entity.Retry?.If;
+                if (string.IsNullOrWhiteSpace(retryIf) || (entity.Retry?.MaxRetries ?? 0) <= 0)
+                    return false;
+
+                return await _ifEvaluator.EvaluateAsync(retryIf, _httpClientService.SessionId, token);
+            }
+
+            /// <summary>
+            /// Calculates retry delay based on strategy:
+            /// - If MaxDelayInMs provided: exponential backoff capped at MaxDelayInMs
+            /// - If MaxDelayInMs omitted but BaseDelayInMs provided: fixed constant delay
+            /// - If neither provided: immediate retry (0ms)
+            /// </summary>
+            private static int CalculateRetryDelayInMs(HttpRequest entity, int retryAttempt)
+            {
+                bool hasBase = entity.Retry?.BaseDelayInMs.HasValue == true;
+                bool hasMax = entity.Retry?.MaxDelayInMs.HasValue == true;
+
+                if (!hasBase && !hasMax)
+                    return 0; // immediate
+
+                int baseDelay = hasBase ? entity.Retry.BaseDelayInMs!.Value : 100;
+
+                if (!hasMax)
+                    return baseDelay; // fixed delay
+
+                int exponent = Math.Max(0, retryAttempt - 1);
+                double rawDelay = baseDelay * Math.Pow(2, exponent);
+                if (rawDelay > int.MaxValue) rawDelay = int.MaxValue;
+                return (int)Math.Min(entity.Retry.MaxDelayInMs!.Value, rawDelay);
             }
         }
 

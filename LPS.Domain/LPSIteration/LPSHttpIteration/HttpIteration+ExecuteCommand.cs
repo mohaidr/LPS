@@ -64,7 +64,7 @@ namespace LPS.Domain
                 entity._iterationStatusMonitor = _iterationStatusMonitor;
                 try
                 {
-                    if (await entity._skipIfEvaluator.ShouldSkipAsync(entity.SkipIf, _httpClientService.SessionId, token))
+                    if (await entity._ifEvaluator.EvaluateAsync(entity.SkipIf, _httpClientService.SessionId, token))
                     {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration {entity.Name} is being skipped because the condition '{entity.SkipIf}' evaluated to true.", LPSLoggingLevel.Verbose, token);
                         _executionStatus = CommandExecutionStatus.Skipped;
@@ -142,14 +142,15 @@ namespace LPS.Domain
             if (!this.IsValid)
                 return;
 
-            var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, command.SkippedRequestReporter, _logger, _watchdog, _runtimeOperationIdProvider, _skipIfEvaluator);
+            var httpRequestExecuteCommand = new HttpRequest.ExecuteCommand(command.HttpClientService, command.SkippedRequestReporter, _logger, _watchdog, _runtimeOperationIdProvider, _ifEvaluator);
             try
             {
-                if (await _skipIfEvaluator.ShouldSkipAsync(SkipIf, command.HttpClientService.SessionId, token))
+                if (await _ifEvaluator.EvaluateAsync(SkipIf, command.HttpClientService.SessionId, token))
                 {
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration {Name} has been skipped because the condition '{SkipIf}' evaluated to true.", LPSLoggingLevel.Information, token);
                     return;
                 }
+
                 await LogRequestDetailsAsync(token);
 
                 IIterationModeService iterationModeService;
@@ -201,7 +202,8 @@ namespace LPS.Domain
                             request: this.HttpRequest,
                             command: httpRequestExecuteCommand,
                             requestCount: this.RequestCount.Value,
-                            watchdog: _watchdog, _iterationStatusMonitor
+                            watchdog: _watchdog,
+                            _iterationStatusMonitor
                         );
                         break;
 
@@ -211,7 +213,8 @@ namespace LPS.Domain
                             request: this.HttpRequest,
                             command: httpRequestExecuteCommand,
                             duration: this.Duration.Value,
-                            watchdog: _watchdog, _iterationStatusMonitor
+                            watchdog: _watchdog,
+                            _iterationStatusMonitor
                         );
                         break;
 

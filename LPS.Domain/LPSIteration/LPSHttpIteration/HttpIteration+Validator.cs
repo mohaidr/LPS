@@ -21,7 +21,7 @@ namespace LPS.Domain
             private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             private readonly SetupCommand _command;
             private readonly HttpIteration _entity;
-            ISkipIfEvaluator _skipIfEvaluator;
+            IIfEvaluator _skipIfEvaluator;
 
             // Supported metrics for validation
             private static readonly HashSet<string> SupportedMetrics = new(StringComparer.OrdinalIgnoreCase)
@@ -29,6 +29,7 @@ namespace LPS.Domain
                 // Scalar metrics
                 "errorrate",
                 "skipratio", "skippedratio", "skippedrequestsratio",
+                "skippedrequestscount", "skippedcount",
                 // Throughput
                 "throughput", "rps", "requestspersecond",
                 // TotalTime
@@ -62,7 +63,7 @@ namespace LPS.Domain
             };
 
             public Validator(HttpIteration entity, SetupCommand command, 
-                ISkipIfEvaluator skipIfEvaluator,
+                IIfEvaluator skipIfEvaluator,
                 ILogger logger, 
                 IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {
@@ -107,7 +108,7 @@ namespace LPS.Domain
 
                 RuleFor(c => c.TerminationRules)
                     .Must(BeValidTerminationRules)
-                    .WithMessage("Termination rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000') and positive grace periods.");
+                    .WithMessage("Termination rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000') and non-negative grace periods. Omitted gracePeriod means immediate termination.");
 
                 RuleFor(c => c.FailureRules)
                     .Must(BeValidFailureRules)
@@ -181,10 +182,32 @@ namespace LPS.Domain
                 if (!rules.Any()) return true;
 
                 return rules.All(rule =>
-                    rule.GracePeriod > TimeSpan.Zero &&
-                    !string.IsNullOrWhiteSpace(rule.Metric) &&
-                    IsValidMetricExpression(rule.Metric) &&
-                    (string.IsNullOrWhiteSpace(rule.ErrorStatusCodes) || IsValidStatusCodeExpression(rule.ErrorStatusCodes)));
+                {
+                    // Grace period must be valid if present
+                    if (rule.GracePeriod < TimeSpan.Zero)
+                        return false;
+
+                    // Must have either metric or expression (or both)
+                    bool hasMetric = !string.IsNullOrWhiteSpace(rule.Metric);
+                    bool hasExpression = !string.IsNullOrWhiteSpace(rule.Expression);
+
+                    if (!hasMetric && !hasExpression)
+                        return false; // Must have at least one
+
+                    // If metric is present, it must be valid
+                    if (hasMetric && !IsValidMetricExpression(rule.Metric))
+                        return false;
+
+                    // If expression is present, it must be valid
+                    if (hasExpression && !IsValidInlineExpression(rule.Expression))
+                        return false;
+
+                    // ErrorStatusCodes must be valid if present
+                    if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes) && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                        return false;
+
+                    return true;
+                });
             }
 
             private bool BeValidFailureRules(IEnumerable<FailureRule> rules)
@@ -193,9 +216,40 @@ namespace LPS.Domain
                 if (!rules.Any()) return true;
 
                 return rules.All(rule => 
-                    !string.IsNullOrWhiteSpace(rule.Metric) &&
-                    IsValidMetricExpression(rule.Metric) &&
-                    (string.IsNullOrWhiteSpace(rule.ErrorStatusCodes) || IsValidStatusCodeExpression(rule.ErrorStatusCodes)));
+                {
+                    // Must have either metric or expression (or both)
+                    bool hasMetric = !string.IsNullOrWhiteSpace(rule.Metric);
+                    bool hasExpression = !string.IsNullOrWhiteSpace(rule.Expression);
+
+                    if (!hasMetric && !hasExpression)
+                        return false; // Must have at least one
+
+                    // If metric is present, it must be valid
+                    if (hasMetric && !IsValidMetricExpression(rule.Metric))
+                        return false;
+
+                    // If expression is present, it must be valid
+                    if (hasExpression && !IsValidInlineExpression(rule.Expression))
+                        return false;
+
+                    // ErrorStatusCodes must be valid if present
+                    if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes) && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                        return false;
+
+                    return true;
+                });
+            }
+
+            private bool IsValidInlineExpression(string expression)
+            {
+                if (string.IsNullOrWhiteSpace(expression))
+                    return false;
+
+                if (expression.StartsWith("$"))
+                    return true;
+
+                // Keep expression validation permissive while requiring a comparison shape.
+                return Regex.IsMatch(expression.Trim(), @"^.+\s*(==|=|!=|>=|<=|>|<)\s*.+$", RegexOptions.IgnoreCase);
             }
 
             /// <summary>
@@ -231,7 +285,9 @@ namespace LPS.Domain
                 bool isScalarMetric = metricName == "errorrate" ||
                                      metricName == "skipratio" ||
                                      metricName == "skippedratio" ||
-                                     metricName == "skippedrequestsratio";
+                                     metricName == "skippedrequestsratio" ||
+                                     metricName == "skippedrequestscount" ||
+                                     metricName == "skippedcount";
                 if (aggregation != null)
                 {
                     if (isScalarMetric)

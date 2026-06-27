@@ -16,6 +16,15 @@ using LPS.Domain.LPSSession;
 namespace LPS.Domain
 {
 
+    public sealed class RetryPolicy
+    {
+        public string If { get; set; }
+        public string StopIf { get; set; }
+        public int? MaxRetries { get; set; }
+        public int? BaseDelayInMs { get; set; }
+        public int? MaxDelayInMs { get; set; }
+    }
+
     public partial class HttpRequest :Request, IBusinessEntity, ICloneable
     {
 
@@ -53,6 +62,8 @@ namespace LPS.Domain
         public string HttpVersion { get; protected set; }
 
         public string SkipIf { get; protected set; }
+
+        public RetryPolicy Retry { get; protected set; }
 
         public Dictionary<string, string> HttpHeaders { get; protected set; }
 

@@ -25,6 +25,7 @@ namespace LPS.UI.Core.LPSValidators
             // Scalar metrics
             "errorrate",
             "skipratio", "skippedratio", "skippedrequestsratio",
+            "skippedrequestscount", "skippedcount",
             // Throughput
             "throughput", "rps", "requestspersecond",
             // TotalTime
@@ -62,6 +63,7 @@ namespace LPS.UI.Core.LPSValidators
         {
             "errorrate",
             "skipratio", "skippedratio", "skippedrequestsratio",
+            "skippedrequestscount", "skippedcount",
             "throughput", "rps", "requestspersecond"
         };
 
@@ -240,7 +242,7 @@ namespace LPS.UI.Core.LPSValidators
             
             RuleFor(dto => dto.TerminationRules)
                 .Must(BeValidTerminationRules)
-                .WithMessage("Termination rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000') and positive grace periods.");
+                .WithMessage("Termination rules must have valid metric expressions (e.g., 'ErrorRate > 0.1', 'TotalTime.P95 > 5000') and non-negative grace periods. Omitted gracePeriod means immediate termination.");
             
             RuleFor(dto => dto.FailureRules)
                 .Must(BeValidFailureRules)
@@ -258,34 +260,51 @@ namespace LPS.UI.Core.LPSValidators
 
             return rules.All(rule =>
             {
-                // Validate GracePeriod
-                if (string.IsNullOrWhiteSpace(rule.GracePeriod))
-                    return false;
-
-                bool validGrace = rule.GracePeriod.StartsWith("$") ||
-                                  (TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod) && gracePeriod > TimeSpan.Zero);
+                // GracePeriod is optional. Missing/empty means immediate termination.
+                bool validGrace = string.IsNullOrWhiteSpace(rule.GracePeriod) ||
+                                  rule.GracePeriod.StartsWith("$") ||
+                                  (TimeSpan.TryParse(rule.GracePeriod, out var gracePeriod) && gracePeriod >= TimeSpan.Zero);
 
                 if (!validGrace)
                     return false;
 
-                // Validate Metric expression
-                if (string.IsNullOrWhiteSpace(rule.Metric))
-                    return false;
+                // Must have either metric or expression (or both)
+                bool hasMetric = !string.IsNullOrWhiteSpace(rule.Metric);
+                bool hasExpression = !string.IsNullOrWhiteSpace(rule.Expression);
 
-                // If it's a placeholder, accept it
-                if (rule.Metric.StartsWith("$"))
-                    return true;
+                if (!hasMetric && !hasExpression)
+                    return false; // Must have at least one
 
-                // Validate metric expression format and content
-                if (!IsValidMetricExpression(rule.Metric))
-                    return false;
-
-                // Validate ErrorStatusCodes if provided (for ErrorRate metrics)
-                if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                // If metric is present, validate it
+                if (hasMetric)
                 {
-                    if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                    // If it's a placeholder, accept it
+                    if (rule.Metric.StartsWith("$"))
+                    {
+                        // Placeholder is valid, but still validate ErrorStatusCodes if present
+                        if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                        {
+                            if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                                return false;
+                        }
+                        return true;
+                    }
+
+                    // Validate metric expression format and content
+                    if (!IsValidMetricExpression(rule.Metric))
                         return false;
+
+                    // Validate ErrorStatusCodes if provided (for ErrorRate metrics)
+                    if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                    {
+                        if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                            return false;
+                    }
                 }
+
+                // If expression is present, validate it
+                if (hasExpression && !IsValidInlineExpression(rule.Expression))
+                    return false;
 
                 return true;
             });
@@ -298,25 +317,57 @@ namespace LPS.UI.Core.LPSValidators
 
             return rules.All(rule =>
             {
-                if (string.IsNullOrWhiteSpace(rule.Metric))
-                    return false;
+                // Must have either metric or expression (or both)
+                bool hasMetric = !string.IsNullOrWhiteSpace(rule.Metric);
+                bool hasExpression = !string.IsNullOrWhiteSpace(rule.Expression);
 
-                if (rule.Metric.StartsWith("$"))
-                    return true;
+                if (!hasMetric && !hasExpression)
+                    return false; // Must have at least one
 
-                // Validate metric expression format and content
-                if (!IsValidMetricExpression(rule.Metric))
-                    return false;
-
-                // Validate ErrorStatusCodes if provided (for ErrorRate metrics)
-                if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                // If metric is present, validate it
+                if (hasMetric)
                 {
-                    if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                    if (rule.Metric.StartsWith("$"))
+                    {
+                        // Placeholder is valid, but still validate ErrorStatusCodes if present
+                        if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                        {
+                            if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                                return false;
+                        }
+                        return true;
+                    }
+
+                    // Validate metric expression format and content
+                    if (!IsValidMetricExpression(rule.Metric))
                         return false;
+
+                    // Validate ErrorStatusCodes if provided (for ErrorRate metrics)
+                    if (!string.IsNullOrWhiteSpace(rule.ErrorStatusCodes))
+                    {
+                        if (!rule.ErrorStatusCodes.StartsWith("$") && !IsValidStatusCodeExpression(rule.ErrorStatusCodes))
+                            return false;
+                    }
                 }
+
+                // If expression is present, validate it
+                if (hasExpression && !IsValidInlineExpression(rule.Expression))
+                    return false;
 
                 return true;
             });
+        }
+
+        private static bool IsValidInlineExpression(string expression)
+        {
+            if (string.IsNullOrWhiteSpace(expression))
+                return false;
+
+            if (expression.StartsWith("$"))
+                return true;
+
+            // Keep expression validation permissive while requiring a comparison shape.
+            return Regex.IsMatch(expression.Trim(), @"^.+\s*(==|=|!=|>=|<=|>|<)\s*.+$", RegexOptions.IgnoreCase);
         }
 
         /// <summary>

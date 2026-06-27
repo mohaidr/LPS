@@ -10,13 +10,13 @@ using LPS.Infrastructure.Nodes;
 
 namespace LPS.Infrastructure.Skip
 {
-    public class SkipIfEvaluator : ISkipIfEvaluator
+    public class IfEvaluator : IIfEvaluator
     {
         private readonly IPlaceholderResolverService _placeholderResolver;
         private readonly ILogger _logger;
         private readonly INodeMetadata _nodeMetadata;
         ExpressionContext _ctx;
-        public SkipIfEvaluator(
+        public IfEvaluator(
             IPlaceholderResolverService placeholderResolver,
             INodeMetadata nodeMetadata,
             IRuntimeOperationIdProvider runtimeOperationIdProvider, // kept to match your ctor signature
@@ -45,9 +45,9 @@ namespace LPS.Infrastructure.Skip
         // NOTE:
         // Flee is synchronous. We keep the async signature to the interface and logging.
         // Expressions MUST resolve to a boolean result.
-        public async Task<bool> ShouldSkipAsync(string skipIfExpression, string sessionId, CancellationToken token)
+        public async Task<bool> EvaluateAsync(string expression, string sessionId, CancellationToken token)
         {
-            if (string.IsNullOrWhiteSpace(skipIfExpression))
+            if (string.IsNullOrWhiteSpace(expression))
                 return false;
 
             string resolved = string.Empty;
@@ -56,21 +56,21 @@ namespace LPS.Infrastructure.Skip
             {
                 // 1) Resolve placeholders first (your existing flow)
                 resolved = await _placeholderResolver
-                    .ResolvePlaceholdersAsync<string>(skipIfExpression, sessionId, token)
+                    .ResolvePlaceholdersAsync<string>(expression, sessionId, token)
                     .ConfigureAwait(false);
-
+                Console.WriteLine(resolved);
                 // 2) Normalize operators: convert C#-style to Flee-compatible
                 resolved = NormalizeOperators(resolved);
 
                 // IMPORTANT: We compile as boolean; non-boolean expressions will throw with a clear message.
                 var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
-                bool skip = fleeExpr.Evaluate();
+                bool result = fleeExpr.Evaluate();
 
-                if (skip)
+                if (result)
                 {
                     await _logger.LogAsync(
-                        $"Iteration skipped due to evaluated condition: {resolved}. " +
+                        $"The expression evaluation ({resolved}) failed." +
                         $"Node Details (Name: {_nodeMetadata.NodeName}, IP: {_nodeMetadata.NodeIP})",
                         LPSLoggingLevel.Warning).ConfigureAwait(false);
 
@@ -83,10 +83,9 @@ namespace LPS.Infrastructure.Skip
             {
                 // Mirror your diagnostic style, updated to reflect Flee behavior.
                 var message =
-                    "Iteration skip decesion can't be taken due to the below exception.\r\n" +
-                    "Failed to evaluate skipIf condition.\r\n" +
+                    "Failed to evaluate the expression.\r\n" +
                     "\r\n" +
-                    $"The Skip condition: {skipIfExpression}\r\n" +
+                    $"The Skip condition: {expression}\r\n" +
                     $"Resolved to: {resolved}\r\n" +
                     "\r\n" +
                     "Why?\r\n" +

@@ -31,6 +31,7 @@ namespace LPS.Infrastructure.FailureEvaluator
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IMetricFetcher _metricFetcher;
         private readonly IRuleService _failureRulesService;
+        private readonly IIfEvaluator _ifEvaluator;
 
         // Default round name used when evaluating default failure rules (no specific round context)
         private const string DefaultRoundName = "__default__";
@@ -44,7 +45,8 @@ namespace LPS.Infrastructure.FailureEvaluator
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricFetcher metricFetcher,
-            IRuleService failureRulesService)
+            IRuleService failureRulesService,
+            IIfEvaluator ifEvaluator)
         {
             _commandStatusMonitor = commandStatusMonitor;
             _nodeMetadata = nodeMetadata;
@@ -55,6 +57,7 @@ namespace LPS.Infrastructure.FailureEvaluator
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _metricFetcher = metricFetcher ?? throw new ArgumentNullException(nameof(metricFetcher));
             _failureRulesService = failureRulesService ?? throw new ArgumentNullException(nameof(failureRulesService));
+            _ifEvaluator = ifEvaluator ?? throw new ArgumentNullException(nameof(ifEvaluator));
         }
 
         /// <summary>
@@ -112,6 +115,7 @@ namespace LPS.Infrastructure.FailureEvaluator
 
         /// <summary>
         /// Evaluates failure rules using inline operator syntax.
+        /// If expression and metric expression are independent failure triggers.
         /// </summary>
         private async Task<bool> EvaluateInlineFailureRulesAsync(HttpIteration iteration, CancellationToken token)
         {
@@ -128,7 +132,23 @@ namespace LPS.Infrastructure.FailureEvaluator
                 {
                     try
                     {
-                        // Parse the metric expression (cached to avoid repeated regex parsing)
+                        // Step 1: Evaluate Expression condition as an independent trigger.
+                        if (!string.IsNullOrWhiteSpace(rule.Expression))
+                        {
+                            bool expressionConditionMet = await _ifEvaluator.EvaluateAsync(rule.Expression, string.Empty, token);
+                            Console.WriteLine($"Evaluating expression '{rule.Expression}' for iteration '{iteration.Name}': Result={expressionConditionMet}");
+                            if (expressionConditionMet)
+                            {
+                                await _logger.LogAsync(
+                                    _runtimeOperationIdProvider.OperationId,
+                                    $"Iteration '{iteration.Name}' determined as FAILED: expression '{rule.Expression}' evaluated to true.",
+                                    LPSLoggingLevel.Warning,
+                                    token);
+                                return true;
+                            }
+                        }
+
+                        // Step 2: Parse and evaluate the metric condition
                         var (metricName, op, threshold, thresholdMax) = GetOrParseCached(rule.Metric);
 
                         // Use injected MetricFetcher - pass ErrorStatusCodes for ErrorRate metrics

@@ -86,10 +86,9 @@ namespace LPS.AutoMapper
                         dest.FailureRules = src.FailureRules.Select(fr =>
                         {
                             var resolvedMetric = ResolvePlaceholderAsync<string>(fr.Metric).Result;
-                            var resolvedErrorStatusCodes = !string.IsNullOrWhiteSpace(fr.ErrorStatusCodes)
-                                ? ResolvePlaceholderAsync<string>(fr.ErrorStatusCodes).Result
-                                : null;
-                            return new FailureRule(resolvedMetric, resolvedErrorStatusCodes);
+                            var resolvedErrorStatusCodes = ResolvePlaceholderAsync<string>(fr.ErrorStatusCodes).Result;
+                            var resolvedExpression = fr.Expression;
+                            return new FailureRule(resolvedMetric, resolvedErrorStatusCodes, resolvedExpression);
                         }).ToList();
                     }
                     else
@@ -103,11 +102,12 @@ namespace LPS.AutoMapper
                         dest.TerminationRules = src.TerminationRules.Select(tr =>
                         {
                             var resolvedMetric = ResolvePlaceholderAsync<string>(tr.Metric).Result;
-                            var resolvedGracePeriod = ResolvePlaceholderAsync<TimeSpan>(tr.GracePeriod).Result;
-                            var resolvedErrorStatusCodes = !string.IsNullOrWhiteSpace(tr.ErrorStatusCodes)
-                                ? ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result
-                                : null;
-                            return new TerminationRule(resolvedMetric, resolvedGracePeriod, resolvedErrorStatusCodes);
+                            var resolvedGracePeriod = string.IsNullOrWhiteSpace(tr.GracePeriod)
+                                ? TimeSpan.Zero
+                                : ResolvePlaceholderAsync<TimeSpan>(tr.GracePeriod).Result;
+                            var resolvedErrorStatusCodes = ResolvePlaceholderAsync<string>(tr.ErrorStatusCodes).Result;
+                            var resolvedExpression = tr.Expression;
+                            return new TerminationRule(resolvedMetric, resolvedGracePeriod, resolvedErrorStatusCodes, resolvedExpression);
                         }).ToList();
                     }
                     else
@@ -123,6 +123,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.HttpMethod, opt => opt.MapFrom(src => src.HttpMethod))
                 .ForMember(dest => dest.HttpVersion, opt => opt.MapFrom(src => src.HttpVersion))
                 .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => src.SkipIf))
+                .ForMember(dest => dest.Retry, opt => opt.MapFrom(src => BuildRetryPolicy(src)))
                 .ForMember(dest => dest.HttpHeaders, opt => opt.MapFrom(src => src.HttpHeaders.ToDictionary(
                     kvp => kvp.Key,
                     kvp => kvp.Value)))
@@ -145,6 +146,35 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
             .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());
+        }
+
+        private RetryPolicy BuildRetryPolicy(HttpRequestDto src)
+        {
+            string retryIf = src?.Retry?.If;
+            string stopIf = src?.Retry?.StopIf;
+            string maxRetries = src?.Retry?.MaxRetries;
+            string baseDelay = src?.Retry?.BaseDelayInMs;
+            string maxDelay = src?.Retry?.MaxDelayInMs;
+
+            bool hasMaxDelayInput = !string.IsNullOrWhiteSpace(maxDelay);
+            bool hasBaseDelayInput = !string.IsNullOrWhiteSpace(baseDelay);
+
+            return new RetryPolicy
+            {
+                If = retryIf,
+                StopIf = stopIf,
+                // DTO-level defaults and variable resolution for retry fields.
+                MaxRetries = ResolvePlaceholderAsync<int?>(string.IsNullOrWhiteSpace(maxRetries) ? "1" : maxRetries).Result,
+                // If maxDelay is provided and baseDelay is omitted, default baseDelay to 100.
+                // If both are omitted, keep baseDelay null to allow immediate retry mode.
+                BaseDelayInMs = hasBaseDelayInput
+                    ? ResolvePlaceholderAsync<int?>(baseDelay).Result
+                    : (hasMaxDelayInput ? 100 : (int?)null),
+                // MaxDelay remains optional. Null means no exponential mode cap.
+                MaxDelayInMs = hasMaxDelayInput
+                    ? ResolvePlaceholderAsync<int?>(maxDelay).Result
+                    : (int?)null,
+            };
         }
 
         private Payload MapPayload(PayloadDto payloadDto)

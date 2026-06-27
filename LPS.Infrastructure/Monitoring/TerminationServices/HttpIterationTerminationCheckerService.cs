@@ -34,6 +34,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IMetricFetcher _metricFetcher;
+        private readonly IIfEvaluator _ifEvaluator;
 
         private readonly GrpcIterationTerminationServiceClient _grpcTermClient;
 
@@ -44,7 +45,8 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             INodeMetadata nodeMetadata,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IMetricFetcher metricFetcher)
+            IMetricFetcher metricFetcher,
+            IIfEvaluator ifEvaluator)
         {
             _discoveryService = discoveryService;
             _grpcClientFactory = grpcClientFactory;
@@ -53,6 +55,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _metricFetcher = metricFetcher ?? throw new ArgumentNullException(nameof(metricFetcher));
+            _ifEvaluator = ifEvaluator ?? throw new ArgumentNullException(nameof(ifEvaluator));
 
             _grpcTermClient = _grpcClientFactory.GetClient<GrpcIterationTerminationServiceClient>(_clusterConfig.MasterNodeIP);
         }
@@ -99,6 +102,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
 
         /// <summary>
         /// NEW: Evaluates termination rules using inline operator syntax (V2).
+        /// If expression and metric expression are independent termination triggers.
         /// </summary>
         private async Task<bool> EvaluateInlineTerminationRulesAsync(HttpIteration iteration, string fqdn, CancellationToken token)
         {
@@ -108,7 +112,24 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                 {
                     try
                     {
-                        // Parse the metric expression (cached to avoid repeated regex parsing)
+                        // Step 1: Evaluate Expression condition as an independent trigger.
+                        if (!string.IsNullOrWhiteSpace(rule.Expression))
+                        {
+                            bool expressionConditionMet = await _ifEvaluator.EvaluateAsync(rule.Expression, string.Empty, token);
+                            if (expressionConditionMet)
+                            {
+                                _terminatedIterations.TryAdd(iteration.Id, true);
+
+                                await _logger.LogAsync(
+                                    _runtimeOperationIdProvider.OperationId,
+                                    $"The iteration '{iteration.Name}' will be terminated because the expression '{rule.Expression}' evaluated to true.",
+                                    LPSLoggingLevel.Warning,
+                                    token);
+                                return true;
+                            }
+                        }
+
+                        // Step 2: Parse and evaluate the metric condition
                         var (metricName, op, threshold, thresholdMax) = GetOrParseCached(rule.Metric);
 
                         // Use injected MetricFetcher - pass ErrorStatusCodes for ErrorRate metrics

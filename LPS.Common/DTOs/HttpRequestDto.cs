@@ -22,6 +22,30 @@ namespace LPS.UI.Common.DTOs
             HttpHeaders = [];
             HttpVersion = "2.0";
             SupportH2C = "false";
+            Retry = new RetryDto();
+        }
+
+        public class RetryDto
+        {
+            [YamlAlias("if")]
+            [JsonAlias("if")]
+            public string If { get; set; }
+
+            [YamlAlias("stopIf")]
+            [JsonAlias("stopIf")]
+            public string StopIf { get; set; }
+
+            [YamlAlias("maxRetries")]
+            [JsonAlias("maxRetries")]
+            public string MaxRetries { get; set; }
+
+            [YamlAlias("baseDelayInMs")]
+            [JsonAlias("baseDelayInMs")]
+            public string BaseDelayInMs { get; set; }
+
+            [YamlAlias("maxDelayInMs")]
+            [JsonAlias("maxDelayInMs")]
+            public string MaxDelayInMs { get; set; }
         }
 
         // URL for the HTTP request (supports placeholders)
@@ -41,6 +65,11 @@ namespace LPS.UI.Common.DTOs
 
         // Evaluator condition (can be a variable)
         public string SkipIf { get; set; }
+
+        // Retry policy object (preferred).
+        [YamlAlias("retry")]
+        [JsonAlias("retry")]
+        public RetryDto Retry { get; set; }
 
         // HTTP headers
         [YamlAlias("headers")]
@@ -81,6 +110,16 @@ namespace LPS.UI.Common.DTOs
                 HttpMethod = this.HttpMethod,
                 HttpVersion = this.HttpVersion,
                 SkipIf = this.SkipIf,
+                Retry = this.Retry == null
+                    ? null
+                    : new RetryDto
+                    {
+                        If = this.Retry.If,
+                        StopIf = this.Retry.StopIf,
+                        MaxRetries = this.Retry.MaxRetries,
+                        BaseDelayInMs = this.Retry.BaseDelayInMs,
+                        MaxDelayInMs = this.Retry.MaxDelayInMs
+                    },
                 Payload = this.Payload.CloneObject(),
                 DownloadHtmlEmbeddedResources = this.DownloadHtmlEmbeddedResources,
                 SaveResponse = this.SaveResponse,

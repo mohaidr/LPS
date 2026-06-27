@@ -93,7 +93,7 @@ namespace LPS.Domain
             //Set the inherited properties through the parent entity setupcommand
             var IterationSetUpCommand = new Iteration.SetupCommand() { Id = command.Id, Name = command.Name };
             base.Setup(IterationSetUpCommand);
-            var validator = new Validator(this, command, _skipIfEvaluator, _logger, _runtimeOperationIdProvider);
+            var validator = new Validator(this, command, _ifEvaluator, _logger, _runtimeOperationIdProvider);
             if (command.IsValid && IterationSetUpCommand.IsValid)
             {
                 this.StartupDelay = command.StartupDelay;
@@ -117,7 +117,7 @@ namespace LPS.Domain
 
         public object Clone()
         {
-            HttpIteration clone = new(_skipIfEvaluator, _logger, _runtimeOperationIdProvider);
+            HttpIteration clone = new(_ifEvaluator, _logger, _runtimeOperationIdProvider);
             if (this.IsValid)
             {
                 clone.Id = this.Id;
@@ -130,6 +130,7 @@ namespace LPS.Domain
                 clone.CoolDownTime = this.CoolDownTime;
                 clone.BatchSize = this.BatchSize;
                 clone.MaximizeThroughput = this.MaximizeThroughput;
+                clone.SkipIf = this.SkipIf;
                 clone.TerminationRules = [.. this.TerminationRules];
                 clone.FailureRules = [.. this.FailureRules];
                 clone.IsValid = true;

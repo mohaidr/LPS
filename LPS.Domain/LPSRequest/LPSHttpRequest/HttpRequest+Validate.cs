@@ -90,6 +90,70 @@ namespace LPS.Domain
                     .NotNull()
                     .WithMessage("'Download Html Embedded Resources' must be true or false");
 
+                RuleFor(command => command)
+                    .Must(command => command.Retry?.MaxRetries.HasValue == true && command.Retry.MaxRetries.Value >= 0)
+                    .WithMessage("'MaxRetries' must be explicitly provided and greater than or equal to 0.");
+
+                // BaseDelayInMs validation by mode:
+                // - Exponential mode (MaxDelayInMs provided): BaseDelayInMs must be explicitly provided and > 0
+                // - Non-exponential mode (MaxDelayInMs omitted):
+                //   BaseDelayInMs is optional; if provided, it must be >= 0
+                RuleFor(command => command)
+                    .Must(command =>
+                    {
+                        bool hasBaseDelay = command.Retry?.BaseDelayInMs.HasValue ?? false;
+                        bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
+
+                        if (hasMaxDelay)
+                        {
+                            return hasBaseDelay && command.Retry.BaseDelayInMs.Value > 0;
+                        }
+
+                        if (hasBaseDelay)
+                        {
+                            return command.Retry.BaseDelayInMs.Value >= 0;
+                        }
+
+                        // No base and no max: immediate retry mode is valid
+                        return true;
+                    })
+                    .WithMessage("When 'MaxDelayInMs' is provided, 'BaseDelayInMs' must be explicitly provided and > 0. When 'MaxDelayInMs' is omitted, 'BaseDelayInMs' is optional and must be >= 0 if provided.");
+
+                RuleFor(command => command)
+                    .Must(command =>
+                    {
+                        bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
+                        if (hasMaxDelay)
+                            return command.Retry.MaxDelayInMs.Value > 0;
+                        return true; // MaxDelayInMs is optional
+                    })
+                    .WithMessage("'RetryMaxDelayInMs' must be greater than 0 when provided.");
+
+                RuleFor(command => command)
+                    .Must(command =>
+                    {
+                        bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
+                        if (hasMaxDelay)
+                        {
+                            // Exponential mode: MaxDelayInMs >= BaseDelayInMs
+                            return command.Retry.BaseDelayInMs.HasValue && command.Retry.MaxDelayInMs >= command.Retry.BaseDelayInMs;
+                        }
+                        return true; // No constraint when MaxDelayInMs omitted
+                    })
+                    .WithMessage("'RetryMaxDelayInMs' must be greater than or equal to 'RetryBaseDelayInMs' in exponential mode.");
+
+                RuleFor(command => command)
+                    .Must(command =>
+                    {
+                        var retryIf = command.Retry?.If?.Trim();
+                        var stopIf = command.Retry?.StopIf?.Trim();
+                        if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
+                            return true;
+
+                        return !string.Equals(retryIf, stopIf, StringComparison.OrdinalIgnoreCase);
+                    })
+                    .WithMessage("'retry.if' and 'retry.stopIf' must not be the same expression.");
+
                 // Enforce HTTP when SupportH2C is true
                 When(command => command.SupportH2C == true, () =>
                 {
@@ -109,7 +173,7 @@ namespace LPS.Domain
 
                 When(command => command.Payload != null, () =>
                 {
-                    if (command.Payload.Type == Payload.PayloadType.Multipart)
+                    if (command.Payload?.Type == Payload.PayloadType.Multipart)
                     {
                         RuleFor(command => command.Payload.Multipart)
                         .NotNull()
@@ -130,7 +194,7 @@ namespace LPS.Domain
                             || multipart.Fields.All(field => !string.IsNullOrWhiteSpace(field.Name) && !string.IsNullOrWhiteSpace(field.Value) && !string.IsNullOrWhiteSpace(field.ContentType)))
                         .WithMessage("All fields in the Multipart must have both field name and value.");
                     }
-                    else if (command.Payload.Type == Payload.PayloadType.Binary)
+                    else if (command.Payload?.Type == Payload.PayloadType.Binary)
                     {
                         RuleFor(dto => dto.Payload.BinaryValue)
                         .NotNull();
