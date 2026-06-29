@@ -336,7 +336,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         // Cumulative metrics (never reset)
         public double TimeElapsed { get; private set; }
+        public double RPS => RequestsRate.Value;
         public RequestsRate RequestsRate { get; private set; }
+        public double RPSCD => RequestsRatePerCoolDownPeriod.Value;
         public RequestsRate RequestsRatePerCoolDownPeriod { get; private set; }
         public int RequestsCount { get; private set; }
         public int SkippedRequestsCount { get; private set; }

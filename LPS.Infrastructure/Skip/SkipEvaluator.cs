@@ -61,12 +61,12 @@ namespace LPS.Infrastructure.Skip
                 Console.WriteLine(resolved);
                 // 2) Normalize operators: convert C#-style to Flee-compatible
                 resolved = NormalizeOperators(resolved);
-
+                
                 // IMPORTANT: We compile as boolean; non-boolean expressions will throw with a clear message.
                 var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
                 bool result = fleeExpr.Evaluate();
-
+                Console.WriteLine(result);
                 if (result)
                 {
                     await _logger.LogAsync(
@@ -81,6 +81,7 @@ namespace LPS.Infrastructure.Skip
             }
             catch (Exception ex)
             {
+                Console.WriteLine(ex.Message);
                 // Mirror your diagnostic style, updated to reflect Flee behavior.
                 var message =
                     "Failed to evaluate the expression.\r\n" +
@@ -114,6 +115,9 @@ namespace LPS.Infrastructure.Skip
             // to avoid partial replacements
             expression = expression.Replace("!=", "<>");
             expression = expression.Replace("==", "=");
+            expression = expression.Replace("&&", "and");
+            expression = expression.Replace("&", "and");
+            expression = expression.Replace("|", "or");
 
             return expression;
         }
