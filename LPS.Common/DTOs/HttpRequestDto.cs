@@ -22,30 +22,39 @@ namespace LPS.UI.Common.DTOs
             HttpHeaders = [];
             HttpVersion = "2.0";
             SupportH2C = "false";
-            Retry = new RetryDto();
+            Retry = new RetryDto
+            {
+                MaxRetries = "1",
+                Strategy = RetryDelayStrategy.Fixed.ToString(),
+                DelayInMs = "100"
+            };
         }
 
         public class RetryDto
         {
             [YamlAlias("if")]
             [JsonAlias("if")]
-            public string If { get; set; }
+            public string If { get; set; } = string.Empty;
 
             [YamlAlias("stopIf")]
             [JsonAlias("stopIf")]
-            public string StopIf { get; set; }
+            public string StopIf { get; set; } = string.Empty;
 
             [YamlAlias("maxRetries")]
             [JsonAlias("maxRetries")]
-            public string MaxRetries { get; set; }
+            public string MaxRetries { get; set; } = "1";
 
-            [YamlAlias("baseDelayInMs")]
-            [JsonAlias("baseDelayInMs")]
-            public string BaseDelayInMs { get; set; }
+            [YamlAlias("strategy")]
+            [JsonAlias("strategy")]
+            public string Strategy { get; set; } = RetryDelayStrategy.Fixed.ToString();
+
+            [YamlAlias("delayInMs")]
+            [JsonAlias("delayInMs")]
+            public string DelayInMs { get; set; } = "100";
 
             [YamlAlias("maxDelayInMs")]
             [JsonAlias("maxDelayInMs")]
-            public string MaxDelayInMs { get; set; }
+            public string MaxDelayInMs { get; set; } = string.Empty;
         }
 
         // URL for the HTTP request (supports placeholders)
@@ -101,7 +110,7 @@ namespace LPS.UI.Common.DTOs
         public CaptureHandlerDto Capture { get; set; }
 
         // Deep copy method
-        public void DeepCopy(out HttpRequestDto targetDto)
+        public new void DeepCopy(out HttpRequestDto targetDto)
         {
             #pragma warning disable CS8601 // Possible null reference assignment.
             targetDto = new HttpRequestDto
@@ -117,7 +126,8 @@ namespace LPS.UI.Common.DTOs
                         If = this.Retry.If,
                         StopIf = this.Retry.StopIf,
                         MaxRetries = this.Retry.MaxRetries,
-                        BaseDelayInMs = this.Retry.BaseDelayInMs,
+                        Strategy = this.Retry.Strategy,
+                        DelayInMs = this.Retry.DelayInMs,
                         MaxDelayInMs = this.Retry.MaxDelayInMs
                     },
                 Payload = this.Payload.CloneObject(),

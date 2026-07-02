@@ -133,27 +133,28 @@ namespace LPS.Domain
             }
 
             /// <summary>
-            /// Calculates retry delay based on strategy:
-            /// - If MaxDelayInMs provided: exponential backoff capped at MaxDelayInMs
-            /// - If MaxDelayInMs omitted but BaseDelayInMs provided: fixed constant delay
-            /// - If neither provided: immediate retry (0ms)
+            /// Calculates retry delay according to configured strategy.
+            /// - DelayInMs defaults to 100ms when omitted.
+            /// - Strategy defaults to Fixed.
+            /// - MaxDelayInMs is only applied for Exponential strategy.
             /// </summary>
             private static int CalculateRetryDelayInMs(HttpRequest entity, int retryAttempt)
             {
-                bool hasBase = entity.Retry?.BaseDelayInMs.HasValue == true;
+                RetryDelayStrategy strategy = entity.Retry?.Strategy ?? RetryDelayStrategy.Fixed;
                 bool hasMax = entity.Retry?.MaxDelayInMs.HasValue == true;
 
-                if (!hasBase && !hasMax)
-                    return 0; // immediate
+                int delay = entity.Retry?.DelayInMs ?? 100;
 
-                int baseDelay = hasBase ? entity.Retry.BaseDelayInMs!.Value : 100;
-
-                if (!hasMax)
-                    return baseDelay; // fixed delay
+                if (strategy == RetryDelayStrategy.Fixed)
+                    return delay;
 
                 int exponent = Math.Max(0, retryAttempt - 1);
-                double rawDelay = baseDelay * Math.Pow(2, exponent);
+                double rawDelay = delay * Math.Pow(2, exponent);
                 if (rawDelay > int.MaxValue) rawDelay = int.MaxValue;
+
+                if (!hasMax)
+                    return (int)rawDelay;
+
                 return (int)Math.Min(entity.Retry.MaxDelayInMs!.Value, rawDelay);
             }
         }

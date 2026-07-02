@@ -150,31 +150,42 @@ namespace LPS.AutoMapper
 
         private RetryPolicy BuildRetryPolicy(HttpRequestDto src)
         {
-            string retryIf = src?.Retry?.If;
-            string stopIf = src?.Retry?.StopIf;
-            string maxRetries = src?.Retry?.MaxRetries;
-            string baseDelay = src?.Retry?.BaseDelayInMs;
-            string maxDelay = src?.Retry?.MaxDelayInMs;
+            string? retryIf = src?.Retry?.If;
+            string? stopIf = src?.Retry?.StopIf;
+            string? maxRetries = src?.Retry?.MaxRetries;
+            string? strategy = src?.Retry?.Strategy;
+            string? delay = src?.Retry?.DelayInMs;
+            string? maxDelay = src?.Retry?.MaxDelayInMs;
 
             bool hasMaxDelayInput = !string.IsNullOrWhiteSpace(maxDelay);
-            bool hasBaseDelayInput = !string.IsNullOrWhiteSpace(baseDelay);
+            bool hasDelayInput = !string.IsNullOrWhiteSpace(delay);
+
+            var resolvedStrategy = ResolveRetryStrategy(strategy);
 
             return new RetryPolicy
             {
-                If = retryIf,
-                StopIf = stopIf,
+                If = retryIf ?? string.Empty,
+                StopIf = stopIf ?? string.Empty,
                 // DTO-level defaults and variable resolution for retry fields.
                 MaxRetries = ResolvePlaceholderAsync<int?>(string.IsNullOrWhiteSpace(maxRetries) ? "1" : maxRetries).Result,
-                // If maxDelay is provided and baseDelay is omitted, default baseDelay to 100.
-                // If both are omitted, keep baseDelay null to allow immediate retry mode.
-                BaseDelayInMs = hasBaseDelayInput
-                    ? ResolvePlaceholderAsync<int?>(baseDelay).Result
-                    : (hasMaxDelayInput ? 100 : (int?)null),
-                // MaxDelay remains optional. Null means no exponential mode cap.
+                Strategy = resolvedStrategy,
+                DelayInMs = hasDelayInput
+                    ? ResolvePlaceholderAsync<int?>(delay!).Result
+                    : 100,
                 MaxDelayInMs = hasMaxDelayInput
-                    ? ResolvePlaceholderAsync<int?>(maxDelay).Result
+                    ? ResolvePlaceholderAsync<int?>(maxDelay!).Result
                     : (int?)null,
             };
+        }
+
+        private static RetryDelayStrategy ResolveRetryStrategy(string? strategy)
+        {
+            if (string.IsNullOrWhiteSpace(strategy))
+                return RetryDelayStrategy.Fixed;
+
+            return Enum.TryParse<RetryDelayStrategy>(strategy, ignoreCase: true, out var parsed)
+                ? parsed
+                : RetryDelayStrategy.Fixed;
         }
 
         private Payload MapPayload(PayloadDto payloadDto)

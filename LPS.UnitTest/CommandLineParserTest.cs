@@ -147,7 +147,8 @@ namespace LPS.UnitTest
             {
                 If = "1 = 1",
                 MaxRetries = 3,
-                BaseDelayInMs = 100,
+                Strategy = RetryDelayStrategy.Exponential,
+                DelayInMs = 100,
                 MaxDelayInMs = 1000
             };
 
@@ -164,7 +165,8 @@ namespace LPS.UnitTest
             {
                 If = "1 = 1",
                 MaxRetries = 3,
-                BaseDelayInMs = 1000,
+                Strategy = RetryDelayStrategy.Exponential,
+                DelayInMs = 1000,
                 MaxDelayInMs = 100
             };
 
@@ -182,7 +184,8 @@ namespace LPS.UnitTest
             {
                 If = string.Empty,
                 MaxRetries = 2,
-                BaseDelayInMs = 100,
+                Strategy = RetryDelayStrategy.Exponential,
+                DelayInMs = 100,
                 MaxDelayInMs = 500
             };
 
@@ -199,7 +202,8 @@ namespace LPS.UnitTest
             {
                 If = "${LastResponse.StatusCode} >= 500",
                 MaxRetries = 3,
-                BaseDelayInMs = null,
+                Strategy = RetryDelayStrategy.Fixed,
+                DelayInMs = 100,
                 MaxDelayInMs = null
             };
 
@@ -216,7 +220,8 @@ namespace LPS.UnitTest
             {
                 If = "${LastResponse.StatusCode} >= 500",
                 MaxRetries = 3,
-                BaseDelayInMs = 500,
+                Strategy = RetryDelayStrategy.Fixed,
+                DelayInMs = 500,
                 MaxDelayInMs = null
             };
 
@@ -233,7 +238,8 @@ namespace LPS.UnitTest
             {
                 If = "${LastResponse.StatusCode} >= 500",
                 MaxRetries = null,
-                BaseDelayInMs = 500,
+                Strategy = RetryDelayStrategy.Fixed,
+                DelayInMs = 500,
                 MaxDelayInMs = null
             };
 
@@ -250,7 +256,8 @@ namespace LPS.UnitTest
             {
                 If = "${LastResponse.StatusCode} >= 500",
                 MaxRetries = 3,
-                BaseDelayInMs = 100,
+                Strategy = RetryDelayStrategy.Exponential,
+                DelayInMs = 100,
                 MaxDelayInMs = 2000
             };
 
@@ -296,7 +303,8 @@ namespace LPS.UnitTest
                 If = "${LastResponse.StatusCode} >= 500",
                 StopIf = "${LastResponse.StatusCode} = 400",
                 MaxRetries = 3,
-                BaseDelayInMs = 100,
+                Strategy = RetryDelayStrategy.Exponential,
+                DelayInMs = 100,
                 MaxDelayInMs = 1000
             };
 
@@ -314,7 +322,8 @@ namespace LPS.UnitTest
                 If = "${LastResponse.StatusCode} >= 500",
                 StopIf = "${LastResponse.StatusCode} >= 500",
                 MaxRetries = 3,
-                BaseDelayInMs = 100,
+                Strategy = RetryDelayStrategy.Exponential,
+                DelayInMs = 100,
                 MaxDelayInMs = 1000
             };
 
@@ -351,8 +360,9 @@ namespace LPS.UnitTest
                 Retry = new RetryPolicy
                 {
                     MaxRetries = 0,
-                    BaseDelayInMs = 100,
-                    MaxDelayInMs = 5000
+                    Strategy = RetryDelayStrategy.Fixed,
+                    DelayInMs = 100,
+                    MaxDelayInMs = null
                 }
             };
         }

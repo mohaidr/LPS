@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Version>3.0.5.1</Version>
-		<AssemblyVersion>3.0.5.1</AssemblyVersion>
-		<FileVersion>3.0.5.1</FileVersion>
-		<InformationalVersion>3.0.5.1</InformationalVersion>
+		<Version>3.0.5.2-Preview</Version>
+		<AssemblyVersion>3.0.5.2</AssemblyVersion>
+		<FileVersion>3.0.5.2</FileVersion>
+		<InformationalVersion>3.0.5.2-Preview</InformationalVersion>
 
 		<!-- Target -->
 		<OutputType>Exe</OutputType>

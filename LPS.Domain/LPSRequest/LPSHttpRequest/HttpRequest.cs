@@ -16,12 +16,19 @@ using LPS.Domain.LPSSession;
 namespace LPS.Domain
 {
 
+    public enum RetryDelayStrategy
+    {
+        Fixed,
+        Exponential
+    }
+
     public sealed class RetryPolicy
     {
         public string If { get; set; }
         public string StopIf { get; set; }
         public int? MaxRetries { get; set; }
-        public int? BaseDelayInMs { get; set; }
+        public RetryDelayStrategy Strategy { get; set; } = RetryDelayStrategy.Fixed;
+        public int? DelayInMs { get; set; }
         public int? MaxDelayInMs { get; set; }
     }
 

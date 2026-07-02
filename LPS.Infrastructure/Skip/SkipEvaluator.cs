@@ -58,7 +58,6 @@ namespace LPS.Infrastructure.Skip
                 resolved = await _placeholderResolver
                     .ResolvePlaceholdersAsync<string>(expression, sessionId, token)
                     .ConfigureAwait(false);
-                Console.WriteLine(resolved);
                 // 2) Normalize operators: convert C#-style to Flee-compatible
                 resolved = NormalizeOperators(resolved);
                 
@@ -66,7 +65,6 @@ namespace LPS.Infrastructure.Skip
                 var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
                 bool result = fleeExpr.Evaluate();
-                Console.WriteLine(result);
                 if (result)
                 {
                     await _logger.LogAsync(
@@ -81,7 +79,6 @@ namespace LPS.Infrastructure.Skip
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
                 // Mirror your diagnostic style, updated to reflect Flee behavior.
                 var message =
                     "Failed to evaluate the expression.\r\n" +

@@ -130,6 +130,60 @@ namespace LPS.UI.Core.LPSValidators
                 })
                 .WithMessage("'Download Html Embedded Resources' must be 'true', 'false', or a placeholder starting with '$'");
 
+            RuleFor(dto => dto)
+                .Must(dto => IsRequiredNonNegativeIntOrPlaceholder(dto?.Retry?.MaxRetries))
+                .WithMessage("'MaxRetries' must be explicitly provided and greater than or equal to 0 (or be a placeholder starting with '$').");
+
+            RuleFor(dto => dto)
+                .Must(dto => IsRequiredStrategyOrPlaceholder(dto?.Retry?.Strategy))
+                .WithMessage("'RetryStrategy' must be explicitly provided as 'Fixed' or 'Exponential' (or be a placeholder starting with '$').");
+
+            RuleFor(dto => dto)
+                .Must(dto => IsRequiredPositiveIntOrPlaceholder(dto?.Retry?.DelayInMs))
+                .WithMessage("'RetryDelayInMs' must be explicitly provided and greater than 0 (or be a placeholder starting with '$').");
+
+            RuleFor(dto => dto)
+                .Must(dto => IsOptionalPositiveIntOrPlaceholder(dto?.Retry?.MaxDelayInMs))
+                .WithMessage("'RetryMaxDelayInMs' must be greater than 0 when provided (or be a placeholder starting with '$').");
+
+            RuleFor(dto => dto)
+                .Must(dto =>
+                {
+                    int? delay = TryParseLiteralInt(dto?.Retry?.DelayInMs);
+                    int? maxDelay = TryParseLiteralInt(dto?.Retry?.MaxDelayInMs);
+                    var strategy = TryParseStrategyLiteral(dto?.Retry?.Strategy);
+
+                    // If either side is placeholder/unresolved, defer this relation check to domain/runtime evaluation.
+                    if (HasPlaceholder(dto?.Retry?.MaxDelayInMs)
+                        || HasPlaceholder(dto?.Retry?.DelayInMs)
+                        || HasPlaceholder(dto?.Retry?.Strategy))
+                        return true;
+
+                    if (!strategy.HasValue)
+                        return false;
+
+                    if (strategy.Value == RetryDelayStrategy.Fixed)
+                        return !maxDelay.HasValue;
+
+                    if (!maxDelay.HasValue || !delay.HasValue)
+                        return true;
+
+                    return maxDelay.Value >= delay.Value;
+                })
+                .WithMessage("For 'Fixed' strategy, 'RetryMaxDelayInMs' must be omitted. For 'Exponential' strategy, when provided, 'RetryMaxDelayInMs' must be greater than or equal to 'RetryDelayInMs'.");
+
+            RuleFor(dto => dto)
+                .Must(dto =>
+                {
+                    var retryIf = dto?.Retry?.If?.Trim();
+                    var stopIf = dto?.Retry?.StopIf?.Trim();
+                    if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
+                        return true;
+
+                    return !string.Equals(retryIf, stopIf, StringComparison.OrdinalIgnoreCase);
+                })
+                .WithMessage("'retry.if' and 'retry.stopIf' must not be the same expression.");
+
             // Client certificate validation
             RuleFor(dto => dto.ClientCertificatePath)
                 .Must(path =>
@@ -242,6 +296,74 @@ namespace LPS.UI.Core.LPSValidators
                 return false;
             }
         }
+
+        private static bool HasPlaceholder(string value)
+        {
+            return !string.IsNullOrWhiteSpace(value) && value.StartsWith("$");
+        }
+
+        private static int? TryParseLiteralInt(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || HasPlaceholder(value))
+                return null;
+
+            return int.TryParse(value, out var parsed) ? parsed : null;
+        }
+
+        private static bool IsRequiredNonNegativeIntOrPlaceholder(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            if (HasPlaceholder(value))
+                return true;
+
+            return int.TryParse(value, out var parsed) && parsed >= 0;
+        }
+
+        private static bool IsRequiredPositiveIntOrPlaceholder(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            if (HasPlaceholder(value))
+                return true;
+
+            return int.TryParse(value, out var parsed) && parsed > 0;
+        }
+
+        private static bool IsRequiredStrategyOrPlaceholder(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            if (HasPlaceholder(value))
+                return true;
+
+            return Enum.TryParse<RetryDelayStrategy>(value, ignoreCase: true, out _);
+        }
+
+        private static RetryDelayStrategy? TryParseStrategyLiteral(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value) || HasPlaceholder(value))
+                return null;
+
+            return Enum.TryParse<RetryDelayStrategy>(value, ignoreCase: true, out var parsed)
+                ? parsed
+                : null;
+        }
+
+        private static bool IsOptionalPositiveIntOrPlaceholder(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return true;
+
+            if (HasPlaceholder(value))
+                return true;
+
+            return int.TryParse(value, out var parsed) && parsed > 0;
+        }
+
         public override HttpRequestDto Dto { get { return _requestDto; } }
     }
 }

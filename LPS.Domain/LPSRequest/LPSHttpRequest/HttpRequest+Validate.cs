@@ -94,30 +94,16 @@ namespace LPS.Domain
                     .Must(command => command.Retry?.MaxRetries.HasValue == true && command.Retry.MaxRetries.Value >= 0)
                     .WithMessage("'MaxRetries' must be explicitly provided and greater than or equal to 0.");
 
-                // BaseDelayInMs validation by mode:
-                // - Exponential mode (MaxDelayInMs provided): BaseDelayInMs must be explicitly provided and > 0
-                // - Non-exponential mode (MaxDelayInMs omitted):
-                //   BaseDelayInMs is optional; if provided, it must be >= 0
                 RuleFor(command => command)
                     .Must(command =>
                     {
-                        bool hasBaseDelay = command.Retry?.BaseDelayInMs.HasValue ?? false;
-                        bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
-
-                        if (hasMaxDelay)
-                        {
-                            return hasBaseDelay && command.Retry.BaseDelayInMs.Value > 0;
-                        }
-
-                        if (hasBaseDelay)
-                        {
-                            return command.Retry.BaseDelayInMs.Value >= 0;
-                        }
-
-                        // No base and no max: immediate retry mode is valid
-                        return true;
+                        return command.Retry != null && Enum.IsDefined(typeof(RetryDelayStrategy), command.Retry.Strategy);
                     })
-                    .WithMessage("When 'MaxDelayInMs' is provided, 'BaseDelayInMs' must be explicitly provided and > 0. When 'MaxDelayInMs' is omitted, 'BaseDelayInMs' is optional and must be >= 0 if provided.");
+                    .WithMessage("'RetryStrategy' must be either 'Fixed' or 'Exponential'.");
+
+                RuleFor(command => command)
+                    .Must(command => command.Retry?.DelayInMs.HasValue == true && command.Retry.DelayInMs.Value > 0)
+                    .WithMessage("'RetryDelayInMs' must be explicitly provided and greater than 0.");
 
                 RuleFor(command => command)
                     .Must(command =>
@@ -132,15 +118,22 @@ namespace LPS.Domain
                 RuleFor(command => command)
                     .Must(command =>
                     {
+                        if (command.Retry == null)
+                            return false;
+
+                        if (command.Retry.Strategy == RetryDelayStrategy.Fixed)
+                        {
+                            return !command.Retry.MaxDelayInMs.HasValue;
+                        }
+
                         bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
                         if (hasMaxDelay)
                         {
-                            // Exponential mode: MaxDelayInMs >= BaseDelayInMs
-                            return command.Retry.BaseDelayInMs.HasValue && command.Retry.MaxDelayInMs >= command.Retry.BaseDelayInMs;
+                            return command.Retry.DelayInMs.HasValue && command.Retry.MaxDelayInMs >= command.Retry.DelayInMs;
                         }
                         return true; // No constraint when MaxDelayInMs omitted
                     })
-                    .WithMessage("'RetryMaxDelayInMs' must be greater than or equal to 'RetryBaseDelayInMs' in exponential mode.");
+                    .WithMessage("For 'Fixed' strategy, 'RetryMaxDelayInMs' must be omitted. For 'Exponential' strategy, when provided, 'RetryMaxDelayInMs' must be greater than or equal to 'RetryDelayInMs'.");
 
                 RuleFor(command => command)
                     .Must(command =>

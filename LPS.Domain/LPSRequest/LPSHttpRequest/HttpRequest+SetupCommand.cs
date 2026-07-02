@@ -34,6 +34,8 @@ namespace LPS.Domain
                 Retry = new RetryPolicy
                 {
                     MaxRetries = 1,
+                    Strategy = RetryDelayStrategy.Fixed,
+                    DelayInMs = 100,
                 };
                 HttpHeaders = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
@@ -74,7 +76,8 @@ namespace LPS.Domain
                         If = this.Retry.If,
                         StopIf = this.Retry.StopIf,
                         MaxRetries = this.Retry.MaxRetries,
-                        BaseDelayInMs = this.Retry.BaseDelayInMs,
+                        Strategy = this.Retry.Strategy,
+                        DelayInMs = this.Retry.DelayInMs,
                         MaxDelayInMs = this.Retry.MaxDelayInMs
                     };
                 targetCommand.HttpHeaders = new Dictionary<string, string>(this.HttpHeaders);
@@ -114,18 +117,20 @@ namespace LPS.Domain
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
                 this.SkipIf = command.SkipIf;
-                string retryIf = command.Retry?.If;
-                string stopIf = command.Retry?.StopIf;
+                string? retryIf = command.Retry?.If;
+                string? stopIf = command.Retry?.StopIf;
                 int maxRetries = command.Retry?.MaxRetries ?? 1;
-                int? retryBaseDelayInMs = command.Retry?.BaseDelayInMs;
+                RetryDelayStrategy retryStrategy = command.Retry?.Strategy ?? RetryDelayStrategy.Fixed;
+                int? retryDelayInMs = command.Retry?.DelayInMs;
                 int? retryMaxDelayInMs = command.Retry?.MaxDelayInMs;
 
                 this.Retry = new RetryPolicy
                 {
-                    If = retryIf,
-                    StopIf = stopIf,
+                    If = retryIf ?? string.Empty,
+                    StopIf = stopIf ?? string.Empty,
                     MaxRetries = maxRetries,
-                    BaseDelayInMs = retryBaseDelayInMs,
+                    Strategy = retryStrategy,
+                    DelayInMs = retryDelayInMs,
                     MaxDelayInMs = retryMaxDelayInMs
                 };
                 this.Url = new URL(command.Url.Url);
@@ -180,7 +185,8 @@ namespace LPS.Domain
                         If = this.Retry.If,
                         StopIf = this.Retry.StopIf,
                         MaxRetries = this.Retry.MaxRetries,
-                        BaseDelayInMs = this.Retry.BaseDelayInMs,
+                        Strategy = this.Retry.Strategy,
+                        DelayInMs = this.Retry.DelayInMs,
                         MaxDelayInMs = this.Retry.MaxDelayInMs
                     };
                 clone.Url = this.Url; // intentionally not doing deep clone here. TODO: review performence and then implement deep clone
