@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -90,62 +90,73 @@ namespace LPS.Domain
                     .NotNull()
                     .WithMessage("'Download Html Embedded Resources' must be true or false");
 
-                RuleFor(command => command)
-                    .Must(command => command.Retry?.MaxRetries.HasValue == true && command.Retry.MaxRetries.Value >= 0)
-                    .WithMessage("'MaxRetries' must be explicitly provided and greater than or equal to 0.");
+                When(command => command.Retry != null, () =>
+                {
+                    RuleFor(command => command)
+                        .Must(command => command.Retry?.MaxRetries.HasValue == true && command.Retry.MaxRetries.Value > 0)
+                        .WithMessage("'MaxRetries' must be greater than or equal to 1.");
 
-                RuleFor(command => command)
-                    .Must(command =>
-                    {
-                        return command.Retry != null && Enum.IsDefined(typeof(RetryDelayStrategy), command.Retry.Strategy);
-                    })
-                    .WithMessage("'RetryStrategy' must be either 'Fixed' or 'Exponential'.");
-
-                RuleFor(command => command)
-                    .Must(command => command.Retry?.DelayInMs.HasValue == true && command.Retry.DelayInMs.Value > 0)
-                    .WithMessage("'RetryDelayInMs' must be explicitly provided and greater than 0.");
-
-                RuleFor(command => command)
-                    .Must(command =>
-                    {
-                        bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
-                        if (hasMaxDelay)
-                            return command.Retry.MaxDelayInMs.Value > 0;
-                        return true; // MaxDelayInMs is optional
-                    })
-                    .WithMessage("'RetryMaxDelayInMs' must be greater than 0 when provided.");
-
-                RuleFor(command => command)
-                    .Must(command =>
-                    {
-                        if (command.Retry == null)
-                            return false;
-
-                        if (command.Retry.Strategy == RetryDelayStrategy.Fixed)
+                    RuleFor(command => command)
+                        .Must(command =>
                         {
-                            return !command.Retry.MaxDelayInMs.HasValue;
-                        }
+                            return command.Retry != null && Enum.IsDefined(typeof(RetryDelayStrategy), command.Retry.Strategy);
+                        })
+                        .WithMessage("'RetryStrategy' must be either 'Fixed' or 'Exponential'.");
 
-                        bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
-                        if (hasMaxDelay)
+                    RuleFor(command => command)
+                        .Must(command => command.Retry?.DelayInMs.HasValue == true && command.Retry.DelayInMs.Value > 0)
+                        .WithMessage("'RetryDelayInMs' must be greater than 0.");
+
+                    RuleFor(command => command)
+                        .Must(command =>
                         {
-                            return command.Retry.DelayInMs.HasValue && command.Retry.MaxDelayInMs >= command.Retry.DelayInMs;
-                        }
-                        return true; // No constraint when MaxDelayInMs omitted
-                    })
-                    .WithMessage("For 'Fixed' strategy, 'RetryMaxDelayInMs' must be omitted. For 'Exponential' strategy, when provided, 'RetryMaxDelayInMs' must be greater than or equal to 'RetryDelayInMs'.");
-
-                RuleFor(command => command)
-                    .Must(command =>
-                    {
-                        var retryIf = command.Retry?.If?.Trim();
-                        var stopIf = command.Retry?.StopIf?.Trim();
-                        if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
+                            bool hasMaxDelay = command.Retry?.MaxDelayInMs.HasValue ?? false;
+                            if (hasMaxDelay)
+                                return command.Retry.MaxDelayInMs.Value > 0;
                             return true;
+                        })
+                        .WithMessage("'RetryMaxDelayInMs' must be greater than 0 when provided.");
 
-                        return !string.Equals(retryIf, stopIf, StringComparison.OrdinalIgnoreCase);
-                    })
-                    .WithMessage("'retry.if' and 'retry.stopIf' must not be the same expression.");
+                    RuleFor(command => command)
+                        .Must(command =>
+                        {
+                            if (command.Retry == null)
+                                return false;
+
+                            if (command.Retry.Strategy == RetryDelayStrategy.Fixed)
+                            {
+                                return !command.Retry.MaxDelayInMs.HasValue;
+                            }
+
+                            bool hasMaxDelay = command.Retry.MaxDelayInMs.HasValue;
+                            if (hasMaxDelay)
+                            {
+                                return command.Retry.DelayInMs.HasValue && command.Retry.MaxDelayInMs >= command.Retry.DelayInMs;
+                            }
+                            return true;
+                        })
+                        .WithMessage("For 'Fixed' strategy, 'RetryMaxDelayInMs' must be omitted. For 'Exponential' strategy, when provided, 'RetryMaxDelayInMs' must be greater than or equal to 'RetryDelayInMs'.");
+
+                    RuleFor(command => command)
+                        .Must(command =>
+                        {
+                            var retryIf = command.Retry?.If?.Trim();
+                            return !string.IsNullOrWhiteSpace(retryIf);
+                        })
+                        .WithMessage("'retry.if' must be provided when 'retry' is configured.");
+
+                    RuleFor(command => command)
+                        .Must(command =>
+                        {
+                            var retryIf = command.Retry?.If?.Trim();
+                            var stopIf = command.Retry?.StopIf?.Trim();
+                            if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
+                                return true;
+
+                            return !string.Equals(retryIf, stopIf, StringComparison.OrdinalIgnoreCase);
+                        })
+                        .WithMessage("'retry.if' and 'retry.stopIf' must not be the same expression.");
+                });
 
                 // Enforce HTTP when SupportH2C is true
                 When(command => command.SupportH2C == true, () =>
@@ -193,7 +204,6 @@ namespace LPS.Domain
                         .NotNull();
                     }
                 });
-
 
                 //TODO: Validate http headers
                 #endregion

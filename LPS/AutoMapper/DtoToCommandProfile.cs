@@ -131,8 +131,8 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.DownloadHtmlEmbeddedResources, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.DownloadHtmlEmbeddedResources).Result))
                 .ForMember(dest => dest.SaveResponse, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.SaveResponse).Result))
                 .ForMember(dest => dest.SupportH2C, opt => opt.MapFrom(src => ResolvePlaceholderAsync<bool>(src.SupportH2C).Result))
-                .ForMember(dest => dest.ClientCertificatePath, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.ClientCertificatePath).Result))
-                .ForMember(dest => dest.ClientCertificatePassword, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.ClientCertificatePassword).Result))
+                .ForMember(dest => dest.ClientCertificatePath, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.ClientCertificatePath ?? string.Empty).Result))
+                .ForMember(dest => dest.ClientCertificatePassword, opt => opt.MapFrom(src => ResolvePlaceholderAsync<string>(src.ClientCertificatePassword ?? string.Empty).Result))
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
                 .ForMember(dest => dest.IsValid, opt => opt.Ignore())
                 .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());
@@ -148,8 +148,11 @@ namespace LPS.AutoMapper
             .ForMember(dest => dest.ValidationErrors, opt => opt.Ignore());
         }
 
-        private RetryPolicy BuildRetryPolicy(HttpRequestDto src)
+        private RetryPolicy? BuildRetryPolicy(HttpRequestDto src)
         {
+            if (src?.Retry == null)
+                return null;
+
             string? retryIf = src?.Retry?.If;
             string? stopIf = src?.Retry?.StopIf;
             string? maxRetries = src?.Retry?.MaxRetries;
@@ -161,7 +164,6 @@ namespace LPS.AutoMapper
             bool hasDelayInput = !string.IsNullOrWhiteSpace(delay);
 
             var resolvedStrategy = ResolveRetryStrategy(strategy);
-
             return new RetryPolicy
             {
                 If = retryIf ?? string.Empty,

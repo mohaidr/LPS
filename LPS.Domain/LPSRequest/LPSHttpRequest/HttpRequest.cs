@@ -70,7 +70,7 @@ namespace LPS.Domain
 
         public string SkipIf { get; protected set; }
 
-        public RetryPolicy Retry { get; protected set; }
+        public RetryPolicy? Retry { get; protected set; }
 
         public Dictionary<string, string> HttpHeaders { get; protected set; }
 
@@ -84,7 +84,7 @@ namespace LPS.Domain
 
         public string? ClientCertificatePassword { get; protected set; }
 
-        public CaptureHandler Capture { get; protected set; }
+        public CaptureHandler? Capture { get; protected set; }
         //TODO: ReadHandler To Be Implemented 
     }
 }

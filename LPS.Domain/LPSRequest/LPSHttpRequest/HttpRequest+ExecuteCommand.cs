@@ -119,7 +119,7 @@ namespace LPS.Domain
                         await _logger.LogAsync(
                             _runtimeOperationIdProvider.OperationId,
                             $"Retries for URL {entity.Url.Url} were stopped because stopIf condition '{stopIf}' evaluated to true.",
-                            LPSLoggingLevel.Warning,
+                            LPSLoggingLevel.Verbose,
                             token);
                         return false;
                     }

@@ -22,12 +22,6 @@ namespace LPS.UI.Common.DTOs
             HttpHeaders = [];
             HttpVersion = "2.0";
             SupportH2C = "false";
-            Retry = new RetryDto
-            {
-                MaxRetries = "1",
-                Strategy = RetryDelayStrategy.Fixed.ToString(),
-                DelayInMs = "100"
-            };
         }
 
         public class RetryDto
@@ -78,7 +72,7 @@ namespace LPS.UI.Common.DTOs
         // Retry policy object (preferred).
         [YamlAlias("retry")]
         [JsonAlias("retry")]
-        public RetryDto Retry { get; set; }
+        public RetryDto? Retry { get; set; }
 
         // HTTP headers
         [YamlAlias("headers")]

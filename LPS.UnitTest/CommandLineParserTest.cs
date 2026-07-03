@@ -176,9 +176,8 @@ namespace LPS.UnitTest
         }
 
         [Fact]
-        public void DomainValidator_HttpRequest_MaxRetriesWithoutRetryIf_IsValid()
+        public void DomainValidator_HttpRequest_MaxRetriesWithoutRetryIf_IsInvalid()
         {
-            // MaxRetries without RetryIf is now valid - retries just won't happen since there's no condition
             var command = CreateBaseValidRequestCommand();
             command.Retry = new RetryPolicy
             {
@@ -188,6 +187,36 @@ namespace LPS.UnitTest
                 DelayInMs = 100,
                 MaxDelayInMs = 500
             };
+
+            ValidateRequest(command);
+
+            Assert.False(command.IsValid);
+        }
+
+        [Fact]
+        public void DomainValidator_HttpRequest_StopIfWithoutRetryIf_IsInvalid()
+        {
+            var command = CreateBaseValidRequestCommand();
+            command.Retry = new RetryPolicy
+            {
+                If = string.Empty,
+                StopIf = "${LastResponse.StatusCode} = 400",
+                MaxRetries = 2,
+                Strategy = RetryDelayStrategy.Exponential,
+                DelayInMs = 100,
+                MaxDelayInMs = 500
+            };
+
+            ValidateRequest(command);
+
+            Assert.False(command.IsValid);
+        }
+
+        [Fact]
+        public void DomainValidator_HttpRequest_WithoutRetry_IsValid()
+        {
+            var command = CreateBaseValidRequestCommand();
+            command.Retry = null;
 
             ValidateRequest(command);
 

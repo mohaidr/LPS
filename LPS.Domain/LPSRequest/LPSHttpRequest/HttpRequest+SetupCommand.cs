@@ -26,17 +26,13 @@ namespace LPS.Domain
     {
         new public class SetupCommand : ICommand<HttpRequest>, IValidCommand<HttpRequest>
         {
+            #pragma warning disable CS8618 // Non-nullable members are populated by deserialization or command construction before validation.
             public SetupCommand()
+            #pragma warning restore CS8618 // Non-nullable members are populated by deserialization or command construction before validation.
             {
                 HttpVersion = "2.0";
                 DownloadHtmlEmbeddedResources = false;
                 SaveResponse = false;
-                Retry = new RetryPolicy
-                {
-                    MaxRetries = 1,
-                    Strategy = RetryDelayStrategy.Fixed,
-                    DelayInMs = 100,
-                };
                 HttpHeaders = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
@@ -45,7 +41,7 @@ namespace LPS.Domain
             public string HttpMethod { get; set; }
             public string HttpVersion { get; set; }
             public string SkipIf { get; set; }
-            public RetryPolicy Retry { get; set; }
+            public RetryPolicy? Retry { get; set; }
             public Dictionary<string, string> HttpHeaders { get; set; }
             public Payload? Payload { get; protected set; }
             public bool? DownloadHtmlEmbeddedResources { get; set; }
@@ -88,7 +84,8 @@ namespace LPS.Domain
                 targetCommand.ClientCertificatePath = this.ClientCertificatePath;
                 targetCommand.ClientCertificatePassword = this.ClientCertificatePassword;
                 targetCommand.IsValid = this.IsValid;
-                targetCommand.ValidationErrors = this.ValidationErrors?.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
+                targetCommand.ValidationErrors = this.ValidationErrors?.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value))
+                    ?? new Dictionary<string, List<string>>();
             }
         }
 
@@ -195,7 +192,7 @@ namespace LPS.Domain
                 clone.SupportH2C = this.SupportH2C;
                 clone.ClientCertificatePath = this.ClientCertificatePath;
                 clone.ClientCertificatePassword = this.ClientCertificatePassword;
-                clone.Capture =  (CaptureHandler)this.Capture?.Clone();
+                clone.Capture = (CaptureHandler?)this.Capture?.Clone();
                 clone.HttpHeaders = [];
                 if (this.HttpHeaders != null)
                 {

@@ -71,7 +71,7 @@ namespace LPS.UI.Core.LPSValidators
                     return string.IsNullOrEmpty(url)
                         || url.StartsWith("$")
                         || url.StartsWith("/")
-                        || (Uri.TryCreate(url, UriKind.Absolute, out Uri result)
+                        || (Uri.TryCreate(url, UriKind.Absolute, out var result)
                             && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps));
                 })
                 .WithMessage("The 'URL' must be a valid URL according to RFC 3986, a URI path starting with '/' or a placeholder starting with '$'")
@@ -130,59 +130,64 @@ namespace LPS.UI.Core.LPSValidators
                 })
                 .WithMessage("'Download Html Embedded Resources' must be 'true', 'false', or a placeholder starting with '$'");
 
-            RuleFor(dto => dto)
-                .Must(dto => IsRequiredNonNegativeIntOrPlaceholder(dto?.Retry?.MaxRetries))
-                .WithMessage("'MaxRetries' must be explicitly provided and greater than or equal to 0 (or be a placeholder starting with '$').");
+            When(dto => dto.Retry != null, () =>
+            {
+                RuleFor(dto => dto)
+                    .Must(dto => IsRequiredPositiveInt(dto?.Retry?.MaxRetries))
+                    .WithMessage("'MaxRetries' must be greater than or equal to 1.");
 
-            RuleFor(dto => dto)
-                .Must(dto => IsRequiredStrategyOrPlaceholder(dto?.Retry?.Strategy))
-                .WithMessage("'RetryStrategy' must be explicitly provided as 'Fixed' or 'Exponential' (or be a placeholder starting with '$').");
+                RuleFor(dto => dto)
+                    .Must(dto => IsRequiredStrategy(dto?.Retry?.Strategy))
+                    .WithMessage("'RetryStrategy' must be explicitly provided as 'Fixed' or 'Exponential'.");
 
-            RuleFor(dto => dto)
-                .Must(dto => IsRequiredPositiveIntOrPlaceholder(dto?.Retry?.DelayInMs))
-                .WithMessage("'RetryDelayInMs' must be explicitly provided and greater than 0 (or be a placeholder starting with '$').");
+                RuleFor(dto => dto)
+                    .Must(dto => IsRequiredPositiveInt(dto?.Retry?.DelayInMs))
+                    .WithMessage("'RetryDelayInMs' must be greater than 0.");
 
-            RuleFor(dto => dto)
-                .Must(dto => IsOptionalPositiveIntOrPlaceholder(dto?.Retry?.MaxDelayInMs))
-                .WithMessage("'RetryMaxDelayInMs' must be greater than 0 when provided (or be a placeholder starting with '$').");
+                RuleFor(dto => dto)
+                    .Must(dto => IsOptionalPositiveInt(dto?.Retry?.MaxDelayInMs))
+                    .WithMessage("'RetryMaxDelayInMs' must be greater than 0 when provided.");
 
-            RuleFor(dto => dto)
-                .Must(dto =>
-                {
-                    int? delay = TryParseLiteralInt(dto?.Retry?.DelayInMs);
-                    int? maxDelay = TryParseLiteralInt(dto?.Retry?.MaxDelayInMs);
-                    var strategy = TryParseStrategyLiteral(dto?.Retry?.Strategy);
+                RuleFor(dto => dto)
+                    .Must(dto =>
+                    {
+                        int? delay = TryParseLiteralInt(dto?.Retry?.DelayInMs);
+                        int? maxDelay = TryParseLiteralInt(dto?.Retry?.MaxDelayInMs);
+                        var strategy = TryParseStrategyLiteral(dto?.Retry?.Strategy);
 
-                    // If either side is placeholder/unresolved, defer this relation check to domain/runtime evaluation.
-                    if (HasPlaceholder(dto?.Retry?.MaxDelayInMs)
-                        || HasPlaceholder(dto?.Retry?.DelayInMs)
-                        || HasPlaceholder(dto?.Retry?.Strategy))
-                        return true;
+                        if (!strategy.HasValue)
+                            return false;
 
-                    if (!strategy.HasValue)
-                        return false;
+                        if (strategy.Value == RetryDelayStrategy.Fixed)
+                            return !maxDelay.HasValue;
 
-                    if (strategy.Value == RetryDelayStrategy.Fixed)
-                        return !maxDelay.HasValue;
+                        if (!maxDelay.HasValue || !delay.HasValue)
+                            return true;
 
-                    if (!maxDelay.HasValue || !delay.HasValue)
-                        return true;
+                        return maxDelay.Value >= delay.Value;
+                    })
+                    .WithMessage("For 'Fixed' strategy, 'RetryMaxDelayInMs' must be omitted. For 'Exponential' strategy, when provided, 'RetryMaxDelayInMs' must be greater than or equal to 'RetryDelayInMs'.");
 
-                    return maxDelay.Value >= delay.Value;
-                })
-                .WithMessage("For 'Fixed' strategy, 'RetryMaxDelayInMs' must be omitted. For 'Exponential' strategy, when provided, 'RetryMaxDelayInMs' must be greater than or equal to 'RetryDelayInMs'.");
+                RuleFor(dto => dto)
+                    .Must(dto =>
+                    {
+                        var retryIf = dto?.Retry?.If?.Trim();
+                        return !string.IsNullOrWhiteSpace(retryIf);
+                    })
+                    .WithMessage("'retry.if' must be provided when 'retry' is configured.");
 
-            RuleFor(dto => dto)
-                .Must(dto =>
-                {
-                    var retryIf = dto?.Retry?.If?.Trim();
-                    var stopIf = dto?.Retry?.StopIf?.Trim();
-                    if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
-                        return true;
+                RuleFor(dto => dto)
+                    .Must(dto =>
+                    {
+                        var retryIf = dto?.Retry?.If?.Trim();
+                        var stopIf = dto?.Retry?.StopIf?.Trim();
+                        if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
+                            return true;
 
-                    return !string.Equals(retryIf, stopIf, StringComparison.OrdinalIgnoreCase);
-                })
-                .WithMessage("'retry.if' and 'retry.stopIf' must not be the same expression.");
+                        return !string.Equals(retryIf, stopIf, StringComparison.OrdinalIgnoreCase);
+                    })
+                    .WithMessage("'retry.if' and 'retry.stopIf' must not be the same expression.");
+            });
 
             // Client certificate validation
             RuleFor(dto => dto.ClientCertificatePath)
@@ -297,12 +302,12 @@ namespace LPS.UI.Core.LPSValidators
             }
         }
 
-        private static bool HasPlaceholder(string value)
+        private static bool HasPlaceholder(string? value)
         {
             return !string.IsNullOrWhiteSpace(value) && value.StartsWith("$");
         }
 
-        private static int? TryParseLiteralInt(string value)
+        private static int? TryParseLiteralInt(string? value)
         {
             if (string.IsNullOrWhiteSpace(value) || HasPlaceholder(value))
                 return null;
@@ -310,40 +315,31 @@ namespace LPS.UI.Core.LPSValidators
             return int.TryParse(value, out var parsed) ? parsed : null;
         }
 
-        private static bool IsRequiredNonNegativeIntOrPlaceholder(string value)
+        private static bool IsRequiredNonNegativeInt(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return false;
-
-            if (HasPlaceholder(value))
-                return true;
 
             return int.TryParse(value, out var parsed) && parsed >= 0;
         }
 
-        private static bool IsRequiredPositiveIntOrPlaceholder(string value)
+        private static bool IsRequiredPositiveInt(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return false;
-
-            if (HasPlaceholder(value))
-                return true;
 
             return int.TryParse(value, out var parsed) && parsed > 0;
         }
 
-        private static bool IsRequiredStrategyOrPlaceholder(string value)
+        private static bool IsRequiredStrategy(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
                 return false;
 
-            if (HasPlaceholder(value))
-                return true;
-
             return Enum.TryParse<RetryDelayStrategy>(value, ignoreCase: true, out _);
         }
 
-        private static RetryDelayStrategy? TryParseStrategyLiteral(string value)
+        private static RetryDelayStrategy? TryParseStrategyLiteral(string? value)
         {
             if (string.IsNullOrWhiteSpace(value) || HasPlaceholder(value))
                 return null;
@@ -353,12 +349,9 @@ namespace LPS.UI.Core.LPSValidators
                 : null;
         }
 
-        private static bool IsOptionalPositiveIntOrPlaceholder(string value)
+        private static bool IsOptionalPositiveInt(string? value)
         {
             if (string.IsNullOrWhiteSpace(value))
-                return true;
-
-            if (HasPlaceholder(value))
                 return true;
 
             return int.TryParse(value, out var parsed) && parsed > 0;
