@@ -14,6 +14,7 @@ namespace LPS.UI.Common.DTOs
             HttpRequest = new HttpRequestDto();
             TerminationRules = [];
             FailureRules = [];
+            Before = [];
         }
 
         // Name of the iteration
@@ -56,6 +57,9 @@ namespace LPS.UI.Common.DTOs
         // Evaluator condition (can be a variable)
         public string SkipIf { get; set; }
 
+        // Expressions run (for side-effects, e.g. $find) before this iteration's SkipIf.
+        public List<string> Before { get; set; }
+
         // Inline operator support for failure rules
         public List<FailureRuleDto> FailureRules { get; set; }
         
@@ -76,6 +80,7 @@ namespace LPS.UI.Common.DTOs
                 BatchSize = this.BatchSize,
                 CoolDownTime = this.CoolDownTime,
                 SkipIf = this.SkipIf,
+                Before = this.Before is null ? [] : [.. this.Before],
                 TerminationRules = [.. this.TerminationRules],
                 FailureRules = [.. this.FailureRules]
             };

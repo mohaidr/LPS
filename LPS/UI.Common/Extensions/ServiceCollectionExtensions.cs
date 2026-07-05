@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.PlaceHolderService.Methods;
 using LPS.Infrastructure.PlaceHolderService;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -39,6 +40,10 @@ namespace LPS.UI.Common.Extensions
             // Register Lazy<IPlaceholderResolverService> for MethodBase dependencies
             services.AddSingleton(provider => new Lazy<IPlaceholderResolverService>(() => provider.GetRequiredService<IPlaceholderResolverService>()));
 
+            // Register Lazy<IIfEvaluator> so predicate-based methods (e.g. FindMethod) can reuse the
+            // shared expression evaluator without creating a DI cycle (evaluator -> resolver -> processor -> methods).
+            services.AddSingleton(provider => new Lazy<IIfEvaluator>(() => provider.GetRequiredService<IIfEvaluator>()));
+
             // Processor and resolver
             services.AddSingleton<IPlaceholderProcessor, PlaceholderProcessor>();
             services.AddSingleton<IPlaceholderResolverService, PlaceholderResolverService>();
@@ -75,6 +80,7 @@ namespace LPS.UI.Common.Extensions
             services.AddSingleton<IPlaceholderMethod, FormatMethod>();
             services.AddSingleton<IPlaceholderMethod, GenerateEmailMethod>();
             services.AddSingleton<IPlaceholderMethod, ReadMethod>();
+            services.AddSingleton<IPlaceholderMethod, FindMethod>();
 
             return services;
         }

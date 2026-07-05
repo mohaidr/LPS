@@ -46,5 +46,7 @@ namespace LPS.Domain
         public IterationType Type { get; protected set; }
         public string SkipIf { get; protected set; }
 
+        public IReadOnlyList<string> Before { get; protected set; }
+
     }
 }

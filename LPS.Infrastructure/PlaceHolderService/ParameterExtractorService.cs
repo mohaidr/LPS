@@ -92,6 +92,28 @@ namespace LPS.Infrastructure.PlaceHolderService
             return defaultValue;
         }
 
+        /// <summary>
+        /// Extracts a parameter value WITHOUT resolving placeholders. Use this for expressions
+        /// (e.g. <c>where</c>/<c>select</c>) that must be resolved later, per-iteration.
+        /// </summary>
+        public string ExtractRawString(string parameters, string key, string defaultValue)
+        {
+            if (string.IsNullOrEmpty(parameters))
+                return defaultValue;
+
+            var keyValuePairs = SplitParametersAware(parameters);
+            foreach (var pair in keyValuePairs)
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length == 2 && parts[0].Trim() == key)
+                {
+                    return parts[1].Trim();
+                }
+            }
+
+            return defaultValue;
+        }
+
 
         public async Task<bool> ExtractBoolAsync(string parameters, string key, bool defaultValue, string sessionId, CancellationToken token)
         {
@@ -119,47 +141,41 @@ namespace LPS.Infrastructure.PlaceHolderService
             int braceDepth = 0;
             int parenthesesDepth = 0;
             int bracketDepth = 0;
+            bool inQuotes = false;
 
             foreach (char c in parameters)
             {
-                if (c == '{')
+                // Double quotes protect their content (commas, brackets, braces) from being
+                // interpreted structurally. Single quotes are left untouched so apostrophes in
+                // free text don't accidentally start a quoted region.
+                if (c == '"')
                 {
-                    braceDepth++;
+                    inQuotes = !inQuotes;
                     current.Append(c);
+                    continue;
                 }
-                else if (c == '}')
-                {
-                    braceDepth--;
-                    current.Append(c);
-                }
-                else if (c == '(')
-                {
-                    parenthesesDepth++;
-                    current.Append(c);
-                }
-                else if (c == ')')
-                {
-                    parenthesesDepth--;
-                    current.Append(c);
-                }
-                else if (c == '[')
-                {
-                    bracketDepth++;
-                    current.Append(c);
-                }
-                else if (c == ']')
-                {
-                    bracketDepth--;
-                    current.Append(c);
-                }
-                else if (c == ',' && braceDepth == 0 && parenthesesDepth == 0 && bracketDepth == 0)
-                {
-                    result.Add(current.ToString());
-                    current.Clear();
-                }
-                else
+
+                if (inQuotes)
                 {
                     current.Append(c);
+                    continue;
+                }
+
+                switch (c)
+                {
+                    case '{': braceDepth++; current.Append(c); break;
+                    case '}': braceDepth--; current.Append(c); break;
+                    case '(': parenthesesDepth++; current.Append(c); break;
+                    case ')': parenthesesDepth--; current.Append(c); break;
+                    case '[': bracketDepth++; current.Append(c); break;
+                    case ']': bracketDepth--; current.Append(c); break;
+                    case ',' when braceDepth == 0 && parenthesesDepth == 0 && bracketDepth == 0:
+                        result.Add(current.ToString());
+                        current.Clear();
+                        break;
+                    default:
+                        current.Append(c);
+                        break;
                 }
             }
 

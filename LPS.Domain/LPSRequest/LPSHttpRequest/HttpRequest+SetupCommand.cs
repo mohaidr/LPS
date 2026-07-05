@@ -34,6 +34,7 @@ namespace LPS.Domain
                 DownloadHtmlEmbeddedResources = false;
                 SaveResponse = false;
                 HttpHeaders = [];
+                Before = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             public Guid? Id { get; set; }
@@ -41,6 +42,7 @@ namespace LPS.Domain
             public string HttpMethod { get; set; }
             public string HttpVersion { get; set; }
             public string SkipIf { get; set; }
+            public List<string> Before { get; set; }
             public RetryPolicy? Retry { get; set; }
             public Dictionary<string, string> HttpHeaders { get; set; }
             public Payload? Payload { get; protected set; }
@@ -65,6 +67,7 @@ namespace LPS.Domain
                 targetCommand.HttpMethod = this.HttpMethod;
                 targetCommand.HttpVersion = this.HttpVersion;
                 targetCommand.SkipIf = this.SkipIf;
+                targetCommand.Before = this.Before == null ? [] : new List<string>(this.Before);
                 targetCommand.Retry = this.Retry == null
                     ? null
                     : new RetryPolicy
@@ -114,6 +117,7 @@ namespace LPS.Domain
                 this.HttpMethod = command.HttpMethod;
                 this.HttpVersion = command.HttpVersion;
                 this.SkipIf = command.SkipIf;
+                this.Before = command.Before ?? new List<string>();
                 string? retryIf = command.Retry?.If;
                 string? stopIf = command.Retry?.StopIf;
                 int maxRetries = command.Retry?.MaxRetries ?? 1;
@@ -175,6 +179,7 @@ namespace LPS.Domain
                 clone.Id = this.Id;
                 clone.HttpMethod = this.HttpMethod;
                 clone.HttpVersion = this.HttpVersion;
+                clone.SkipIf = this.SkipIf;
                 clone.Retry = this.Retry == null
                     ? null
                     : new RetryPolicy
@@ -193,6 +198,7 @@ namespace LPS.Domain
                 clone.ClientCertificatePath = this.ClientCertificatePath;
                 clone.ClientCertificatePassword = this.ClientCertificatePassword;
                 clone.Capture = (CaptureHandler?)this.Capture?.Clone();
+                clone.Before = this.Before == null ? new List<string>() : new List<string>(this.Before);
                 clone.HttpHeaders = [];
                 if (this.HttpHeaders != null)
                 {

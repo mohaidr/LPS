@@ -73,6 +73,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.BatchSize, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.BatchSize).Result))
                 .ForMember(dest => dest.CoolDownTime, opt => opt.MapFrom(src => ResolvePlaceholderAsync<int?>(src.CoolDownTime).Result))
                 .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => src.SkipIf))
+                .ForMember(dest => dest.Before, opt => opt.MapFrom(src => src.Before))
                 .ForMember(dest => dest.FailureRules, opt => opt.Ignore())     // we'll set it in AfterMap
                 .ForMember(dest => dest.TerminationRules, opt => opt.Ignore()) // we'll set it in AfterMap
                 .ForMember(dest => dest.Id, opt => opt.Ignore()) // Ignore unmapped properties
@@ -123,6 +124,7 @@ namespace LPS.AutoMapper
                 .ForMember(dest => dest.HttpMethod, opt => opt.MapFrom(src => src.HttpMethod))
                 .ForMember(dest => dest.HttpVersion, opt => opt.MapFrom(src => src.HttpVersion))
                 .ForMember(dest => dest.SkipIf, opt => opt.MapFrom(src => src.SkipIf))
+                .ForMember(dest => dest.Before, opt => opt.MapFrom(src => src.Before))
                 .ForMember(dest => dest.Retry, opt => opt.MapFrom(src => BuildRetryPolicy(src)))
                 .ForMember(dest => dest.HttpHeaders, opt => opt.MapFrom(src => src.HttpHeaders.ToDictionary(
                     kvp => kvp.Key,

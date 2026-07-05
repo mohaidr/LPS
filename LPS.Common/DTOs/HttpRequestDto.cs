@@ -22,6 +22,7 @@ namespace LPS.UI.Common.DTOs
             HttpHeaders = [];
             HttpVersion = "2.0";
             SupportH2C = "false";
+            Before = [];
         }
 
         public class RetryDto
@@ -68,6 +69,9 @@ namespace LPS.UI.Common.DTOs
 
         // Evaluator condition (can be a variable)
         public string SkipIf { get; set; }
+
+        // Expressions run (for side-effects, e.g. $find) before this request's SkipIf/URL/headers.
+        public List<string> Before { get; set; }
 
         // Retry policy object (preferred).
         [YamlAlias("retry")]

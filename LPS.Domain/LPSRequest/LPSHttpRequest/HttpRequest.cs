@@ -70,6 +70,8 @@ namespace LPS.Domain
 
         public string SkipIf { get; protected set; }
 
+        public IReadOnlyList<string> Before { get; protected set; }
+
         public RetryPolicy? Retry { get; protected set; }
 
         public Dictionary<string, string> HttpHeaders { get; protected set; }

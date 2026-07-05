@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
@@ -16,6 +17,12 @@ namespace LPS.Infrastructure.Skip
         private readonly ILogger _logger;
         private readonly INodeMetadata _nodeMetadata;
         ExpressionContext _ctx;
+
+        // Caches the boolean RESULT keyed by the normalized, RESOLVED expression. Safe because, after
+        // resolution, the string is pure literals (deterministic) and placeholder side-effects have
+        // already happened. Skips both the Flee compile and evaluate on a hit.
+        private static readonly ConcurrentDictionary<string, bool> ResultCache = new(StringComparer.Ordinal);
+        private const int MaxResultCacheSize = 1024;
         public IfEvaluator(
             IPlaceholderResolverService placeholderResolver,
             INodeMetadata nodeMetadata,
@@ -40,6 +47,9 @@ namespace LPS.Infrastructure.Skip
             //Make the type System.StringComparison available inside expressions
             _ctx.Imports.AddType(typeof(System.StringComparison));
 
+            _ctx.Imports.AddType(typeof(string), "String");   // enables String.IsNullOrEmpty(...)
+            _ctx.Imports.AddType(typeof(Convert), "Convert");  // enables Convert.ToInt32(...), etc.
+
         }
 
         // NOTE:
@@ -51,7 +61,6 @@ namespace LPS.Infrastructure.Skip
                 return false;
 
             string resolved = string.Empty;
-
             try
             {
                 // 1) Resolve placeholders first (your existing flow)
@@ -60,11 +69,25 @@ namespace LPS.Infrastructure.Skip
                     .ConfigureAwait(false);
                 // 2) Normalize operators: convert C#-style to Flee-compatible
                 resolved = NormalizeOperators(resolved);
-                
+
+                Console.WriteLine($"Evaluating expression: {expression} which resolved to {resolved}");
+
+                // Result cache (keyed by the normalized RESOLVED string). Resolution already ran above,
+                // so any placeholder side-effects are preserved; only the pure compile+evaluate is skipped.
+                if (ResultCache.TryGetValue(resolved, out var cachedResult))
+                {
+                    return cachedResult;
+                }
+
                 // IMPORTANT: We compile as boolean; non-boolean expressions will throw with a clear message.
                 var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
                 bool result = fleeExpr.Evaluate();
+                Console.WriteLine(result);
+
+                TrimResultCacheIfNeeded();
+                ResultCache[resolved] = result;
+
                 if (result)
                 {
                     await _logger.LogAsync(
@@ -93,9 +116,37 @@ namespace LPS.Infrastructure.Skip
                     "\r\n" +
                     $"Exception: {ex}";
                 await _logger.LogAsync(message, LPSLoggingLevel.Error).ConfigureAwait(false);
-
+                Console.WriteLine(ex.Message);
                 // treat error as 'skip = false' as we can't decide to skip or not.
                 return false;
+            }
+        }
+
+        public async Task RunAsync(string expression, string sessionId, CancellationToken token)
+        {
+            if (string.IsNullOrWhiteSpace(expression))
+                return;
+
+            try
+            {
+                // Resolve for side-effects only (e.g. $find(..., variable=x)); the value is discarded.
+                await _placeholderResolver
+                    .ResolvePlaceholdersAsync<string>(expression, sessionId, token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(
+                    $"Failed to run 'before' expression '{expression}'. Exception: {ex}",
+                    LPSLoggingLevel.Error).ConfigureAwait(false);
+            }
+        }
+
+        private static void TrimResultCacheIfNeeded()
+        {
+            if (ResultCache.Count > MaxResultCacheSize)
+            {
+                ResultCache.Clear();
             }
         }
 

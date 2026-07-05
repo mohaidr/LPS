@@ -36,6 +36,17 @@ namespace LPS.Domain
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)
             //and need to clean it up and use clear contracts as any change in the logic here will break
             //the system 
+            private async Task RunBeforeExpressionsAsync(HttpRequest entity, CancellationToken token)
+            {
+                if (entity.Before == null || entity.Before.Count == 0)
+                    return;
+
+                foreach (var expression in entity.Before)
+                {
+                    await _ifEvaluator.RunAsync(expression, _httpClientService.SessionId, token);
+                }
+            }
+
             async public Task ExecuteAsync(HttpRequest entity, CancellationToken token)
             {
                 try
@@ -48,6 +59,8 @@ namespace LPS.Domain
                     entity._logger = this._logger;
                     entity._watchdog = this._watchdog;
                     entity._runtimeOperationIdProvider = this._runtimeOperationIdProvider;
+
+                    await RunBeforeExpressionsAsync(entity, token);
 
                     if (await _ifEvaluator.EvaluateAsync(entity.SkipIf, _httpClientService.SessionId, token))
                     {

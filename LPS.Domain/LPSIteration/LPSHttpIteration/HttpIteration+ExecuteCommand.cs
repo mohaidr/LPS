@@ -50,6 +50,17 @@ namespace LPS.Domain
             private CommandExecutionStatus _executionStatus;
             public CommandExecutionStatus Status => _executionStatus;
 
+            private async Task RunBeforeExpressionsAsync(HttpIteration entity, CancellationToken token)
+            {
+                if (entity.Before == null || entity.Before.Count == 0)
+                    return;
+
+                foreach (var expression in entity.Before)
+                {
+                    await entity._ifEvaluator.RunAsync(expression, _httpClientService.SessionId, token);
+                }
+            }
+
             public async Task ExecuteAsync(HttpIteration entity, CancellationToken token)
             {
                 if (entity == null)
@@ -64,6 +75,8 @@ namespace LPS.Domain
                 entity._iterationStatusMonitor = _iterationStatusMonitor;
                 try
                 {
+                    await RunBeforeExpressionsAsync(entity, token);
+
                     if (await entity._ifEvaluator.EvaluateAsync(entity.SkipIf, _httpClientService.SessionId, token))
                     {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Iteration {entity.Name} is being skipped because the condition '{entity.SkipIf}' evaluated to true.", LPSLoggingLevel.Verbose, token);

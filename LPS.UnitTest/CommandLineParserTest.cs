@@ -465,6 +465,9 @@ namespace LPS.UnitTest
         {
             public Task<bool> EvaluateAsync(string skipIfExpression, string sessionId, CancellationToken token)
                 => Task.FromResult(false);
+
+            public Task RunAsync(string expression, string sessionId, CancellationToken token)
+                => Task.CompletedTask;
         }
 
         private sealed class StubRuntimeOperationIdProvider : IRuntimeOperationIdProvider
