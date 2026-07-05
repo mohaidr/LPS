@@ -1,4 +1,6 @@
 using System;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
@@ -32,6 +34,7 @@ namespace LPS.UnitTest
             public PlaceholderResolverService Resolver;
             public VariableManager Variables;
             public IfEvaluator IfEvaluator;
+            public Mock<ILogger> Logger;
         }
 
         private static Harness BuildHarness()
@@ -65,7 +68,7 @@ namespace LPS.UnitTest
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
             ifEvaluator = new IfEvaluator(resolver, node.Object, opId.Object, logger.Object);
 
-            return new Harness { Find = find, Resolver = resolver, Variables = variables, IfEvaluator = ifEvaluator };
+            return new Harness { Find = find, Resolver = resolver, Variables = variables, IfEvaluator = ifEvaluator, Logger = logger };
         }
 
         private async Task PutGlobalStringAsync(Harness h, string name, string value)
@@ -327,6 +330,109 @@ namespace LPS.UnitTest
             var reStored = await h.Variables.GetAsync("uid", _ct);
             Assert.NotNull(reStored);
             Assert.Equal("7", await reStored.GetRawValueAsync(_ct));
+        }
+
+        [Fact]
+        public async Task Find_BindOnce_DoesNotLogCollisionWarnings()
+        {
+            // The item binding is registered once and updated in place per element; elements 2..N
+            // must not hit the PutAsync collision branch ("already exists and will be overridden").
+            var h = BuildHarness();
+            var args = "source=" + Orders +
+                       ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=all, variable=ids";
+
+            var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
+
+            Assert.Equal("[1,3]", result);
+            h.Logger.Verify(
+                x => x.LogAsync(It.IsAny<string>(), It.Is<string>(m => m.Contains("already exists")), It.IsAny<LPSLoggingLevel>(), It.IsAny<CancellationToken>()),
+                Times.Never());
+        }
+
+        [Fact]
+        public async Task Find_ReservedItemAlias_ProducesNoNotFoundWarnings()
+        {
+            // During the outer pre-resolution pass, ${item...} refs are deferred silently — they must
+            // not produce "Variable 'item' not found" warnings.
+            var h = BuildHarness();
+            await PutGlobalJsonAsync(h, "users", "[{\"id\":7,\"username\":\"Bret\"}]");
+
+            var expr = "$find(source=${users}, where=\"${item.username}\" == \"Bret\", select=${item.id}, match=first, variable=uid)";
+            var result = await h.Resolver.ResolvePlaceholdersAsync<string>(expr, SessionId, _ct);
+
+            Assert.Equal("7", result);
+            h.Logger.Verify(
+                x => x.LogAsync(It.IsAny<string>(), It.Is<string>(m => m.Contains("item") && m.Contains("not")), It.IsAny<LPSLoggingLevel>(), It.IsAny<CancellationToken>()),
+                Times.Never());
+        }
+
+        [Fact]
+        public async Task Find_SourceWithLiteralDollarText_IsNotCorrupted()
+        {
+            // 'source' is taken raw (already resolved by the outer pass); it must not be re-resolved,
+            // which would treat literal '$' text in the body as placeholders and mangle the JSON.
+            var h = BuildHarness();
+            var body = "[{\"id\":1,\"note\":\"pay $99 now\"},{\"id\":2,\"note\":\"free\"}]";
+            var args = "source=" + body + ", where=${item.id} == 1, select=${item.note}, match=first, variable=note";
+
+            var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
+
+            Assert.Equal("pay $99 now", result);
+        }
+
+        [Fact]
+        public async Task Find_ItemBinding_ReflectsEachElement_NoStaleMemo()
+        {
+            // The holder is updated in place per element; a stale parsed-JSON memo would make every
+            // element after the first evaluate against element #1's values.
+            var h = BuildHarness();
+            var body = "[{\"id\":1,\"v\":\"a\"},{\"id\":2,\"v\":\"b\"},{\"id\":3,\"v\":\"c\"}]";
+            var args = "source=" + body + ", where=\"${item.v}\" == \"c\", select=${item.id}, match=first, variable=x";
+
+            var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
+
+            Assert.Equal("3", result);
+        }
+
+        [Fact]
+        public async Task Find_ConcurrentExecutions_OverSameCachedBody_AreCorrect()
+        {
+            // Hammers one cached body from many tasks: shared read-only JToken (SelectTokens) plus
+            // per-execution item bindings must not interfere across concurrent executions.
+            var h = BuildHarness();
+            var body = "[{\"id\":1,\"status\":\"shipped\"},{\"id\":2,\"status\":\"pending\"},{\"id\":3,\"status\":\"shipped\"}]";
+
+            var tasks = Enumerable.Range(0, 16).Select(worker => Task.Run(async () =>
+            {
+                for (int i = 0; i < 50; i++)
+                {
+                    var args = "source=" + body +
+                               ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=all, variable=ids_" + worker;
+                    var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
+                    Assert.Equal("[1,3]", result);
+                }
+            })).ToArray();
+
+            await Task.WhenAll(tasks);
+        }
+
+        [Fact]
+        public async Task Find_JsonParseCache_StaysBounded_NoFullWipe()
+        {
+            var h = BuildHarness();
+            var cacheField = typeof(FindMethod).GetField("JsonParseCache", BindingFlags.NonPublic | BindingFlags.Static);
+            Assert.NotNull(cacheField);
+            var cache = (System.Collections.ICollection)cacheField.GetValue(null);
+
+            for (int i = 0; i < 80; i++)
+            {
+                var body = "[{\"id\":" + i + "}]";
+                await h.Find.ExecuteAsync("source=" + body + ", select=${item.id}, match=first, variable=x", SessionId, _ct);
+            }
+
+            // Bounded (partial eviction may briefly overshoot by concurrent adds; here it's sequential)
+            // and NOT wiped to zero/one entry the way Clear() did.
+            Assert.InRange(cache.Count, 2, 33);
         }
     }
 }

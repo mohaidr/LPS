@@ -47,6 +47,13 @@ namespace LPS.Infrastructure.Logger
         private string _cancellationErrorMessage;
         public async Task LogAsync(string eventId, string diagnosticMessage, LPSLoggingLevel level, CancellationToken token = default)
         {
+            // Early gate: skip the escape/format/timestamp work entirely when no sink will emit
+            // this message. Mirrors the sink-side checks (ConsoleLogger re-checks its own gate).
+            bool consoleOn = _config.EnableConsoleLogging && level >= _config.ConsoleLoggingLevel;
+            bool fileOn = !_config.DisableFileLogging && level >= _config.LoggingLevel;
+            if (!consoleOn && !fileOn)
+                return;
+
             diagnosticMessage = Markup.Escape(diagnosticMessage);
             string currentDateTime = DateTime.Now.ToString("dd-MM-yyyy HH:mm:ss.fff +3:00");
             bool iSemaphoreAcquired = false;
@@ -54,9 +61,12 @@ namespace LPS.Infrastructure.Logger
             {
 
                 // Log to Console
-                await _consoleLogger.LogToConsoleAsync(currentDateTime, eventId, diagnosticMessage, level, _config);
+                if (consoleOn)
+                {
+                    await _consoleLogger.LogToConsoleAsync(currentDateTime, eventId, diagnosticMessage, level, _config);
+                }
                 // Log to File
-                if (!_config.DisableFileLogging && level >= _config.LoggingLevel)
+                if (fileOn)
                 {
                     await _semaphoreSlim.WaitAsync(token);
                     iSemaphoreAcquired = true;

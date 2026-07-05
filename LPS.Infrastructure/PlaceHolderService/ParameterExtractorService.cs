@@ -93,6 +93,34 @@ namespace LPS.Infrastructure.PlaceHolderService
         }
 
         /// <summary>
+        /// Splits the parameters string ONCE into raw (unresolved, trimmed) key/value pairs.
+        /// Mirrors the Extract* semantics exactly: first occurrence of a key wins, both key and
+        /// value are trimmed, pairs without '=' are ignored. Use this when a method reads several
+        /// parameters, instead of paying one full <see cref="SplitParametersAware"/> scan per key.
+        /// </summary>
+        public Dictionary<string, string> ParseParameters(string parameters)
+        {
+            var result = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (string.IsNullOrEmpty(parameters))
+                return result;
+
+            foreach (var pair in SplitParametersAware(parameters))
+            {
+                var parts = pair.Split('=', 2);
+                if (parts.Length == 2)
+                {
+                    var key = parts[0].Trim();
+                    if (!result.ContainsKey(key))
+                    {
+                        result[key] = parts[1].Trim();
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Extracts a parameter value WITHOUT resolving placeholders. Use this for expressions
         /// (e.g. <c>where</c>/<c>select</c>) that must be resolved later, per-iteration.
         /// </summary>

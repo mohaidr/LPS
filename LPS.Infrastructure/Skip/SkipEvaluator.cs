@@ -23,6 +23,9 @@ namespace LPS.Infrastructure.Skip
         // already happened. Skips both the Flee compile and evaluate on a hit.
         private static readonly ConcurrentDictionary<string, bool> ResultCache = new(StringComparer.Ordinal);
         private const int MaxResultCacheSize = 1024;
+        // Resolved strings longer than this are almost certainly high-cardinality (embedded ids,
+        // bodies) and would only churn the cache — evaluate them without caching.
+        private const int MaxCacheableKeyLength = 512;
         public IfEvaluator(
             IPlaceholderResolverService placeholderResolver,
             INodeMetadata nodeMetadata,
@@ -70,11 +73,10 @@ namespace LPS.Infrastructure.Skip
                 // 2) Normalize operators: convert C#-style to Flee-compatible
                 resolved = NormalizeOperators(resolved);
 
-                Console.WriteLine($"Evaluating expression: {expression} which resolved to {resolved}");
-
                 // Result cache (keyed by the normalized RESOLVED string). Resolution already ran above,
                 // so any placeholder side-effects are preserved; only the pure compile+evaluate is skipped.
-                if (ResultCache.TryGetValue(resolved, out var cachedResult))
+                var cacheable = resolved.Length <= MaxCacheableKeyLength;
+                if (cacheable && ResultCache.TryGetValue(resolved, out var cachedResult))
                 {
                     return cachedResult;
                 }
@@ -83,22 +85,14 @@ namespace LPS.Infrastructure.Skip
                 var fleeExpr = _ctx.CompileGeneric<bool>(resolved);
 
                 bool result = fleeExpr.Evaluate();
-                Console.WriteLine(result);
 
-                TrimResultCacheIfNeeded();
-                ResultCache[resolved] = result;
-
-                if (result)
+                if (cacheable)
                 {
-                    await _logger.LogAsync(
-                        $"The expression evaluation ({resolved}) failed." +
-                        $"Node Details (Name: {_nodeMetadata.NodeName}, IP: {_nodeMetadata.NodeIP})",
-                        LPSLoggingLevel.Warning).ConfigureAwait(false);
-
-                    return true;
+                    ResultCache[resolved] = result;
+                    TrimResultCacheIfNeeded();
                 }
 
-                return false;
+                return result;
             }
             catch (Exception ex)
             {
@@ -116,7 +110,6 @@ namespace LPS.Infrastructure.Skip
                     "\r\n" +
                     $"Exception: {ex}";
                 await _logger.LogAsync(message, LPSLoggingLevel.Error).ConfigureAwait(false);
-                Console.WriteLine(ex.Message);
                 // treat error as 'skip = false' as we can't decide to skip or not.
                 return false;
             }
@@ -144,19 +137,27 @@ namespace LPS.Infrastructure.Skip
 
         private static void TrimResultCacheIfNeeded()
         {
-            if (ResultCache.Count > MaxResultCacheSize)
+            // Partial eviction of arbitrary keys instead of Clear(): a full wipe caused every
+            // in-flight evaluation to recompile at once. Runs after the insert, so the bound is
+            // self-correcting even when concurrent adds overshoot it.
+            foreach (var key in ResultCache.Keys)
             {
-                ResultCache.Clear();
+                if (ResultCache.Count <= MaxResultCacheSize) break;
+                ResultCache.TryRemove(key, out _);
             }
         }
+
+        private static readonly char[] OperatorChars = { '!', '=', '&', '|' };
 
         /// <summary>
         /// Converts C#-style comparison operators to Flee-compatible operators.
         /// == becomes = and != becomes <>
+        /// KNOWN ISSUE: the replacements are not quote-aware, so substituted data values that
+        /// contain these characters inside string literals (e.g. "R&D") are rewritten too.
         /// </summary>
         private static string NormalizeOperators(string expression)
         {
-            if (string.IsNullOrEmpty(expression))
+            if (string.IsNullOrEmpty(expression) || expression.IndexOfAny(OperatorChars) < 0)
                 return expression;
 
             // Replace != with <> first (before replacing ==)

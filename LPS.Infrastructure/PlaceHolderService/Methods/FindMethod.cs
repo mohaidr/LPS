@@ -37,8 +37,15 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         // Caches parsed JSON keyed by the EXACT resolved source string. Self-invalidating: a different
         // body is a different key, so a changed capture can never return a stale tree. Cached tokens are
         // treated as READ-ONLY (find only reads them via SelectTokens/ToString; JArray-add auto-clones).
+        // Hits come from the same body being evaluated by several rules (skip-if, failure, termination,
+        // multiple finds) within one iteration. Shared read-only JToken access across sessions is
+        // covered by a concurrency stress test; if it ever proves unsafe, DeepClone on hit is the fallback.
         private static readonly ConcurrentDictionary<string, JToken> JsonParseCache = new(StringComparer.Ordinal);
         private const int MaxJsonCacheSize = 32;
+        // Bodies above this size are parsed but not cached, to bound worst-case memory retention.
+        private const int MaxCacheableJsonLength = 1_000_000;
+
+        private static int _bindingCounter;
 
         private readonly Lazy<IIfEvaluator> _ifEvaluator;
 
@@ -63,15 +70,22 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
             try
             {
-                var source = await _params.ExtractStringAsync(parameters, "source", string.Empty, sessionId, token);
-                var path = await _params.ExtractStringAsync(parameters, "path", string.Empty, sessionId, token);
-                var match = (await _params.ExtractStringAsync(parameters, "match", "first", sessionId, token)).Trim();
-                var asType = (await _params.ExtractStringAsync(parameters, "as", "auto", sessionId, token)).Trim();
-                variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
+                // Single scan of the parameters string instead of one full scan per key.
+                var args = _params.ParseParameters(parameters);
 
-                var whereRaw = _params.ExtractRawString(parameters, "where", string.Empty);
-                var selectRaw = _params.ExtractRawString(parameters, "select", string.Empty);
-                var defaultRaw = _params.ExtractRawString(parameters, "default", string.Empty);
+                // 'source' is taken RAW: the outer resolver pre-resolves any method argument string
+                // containing '$' before dispatch, so it is already the substituted body here.
+                // Resolving it again would rescan O(body) and mangle bodies containing literal '$'.
+                // where/select/default stay raw by design (resolved per element / on fallback).
+                var source = args.GetValueOrDefault("source", string.Empty);
+                var whereRaw = args.GetValueOrDefault("where", string.Empty);
+                var selectRaw = args.GetValueOrDefault("select", string.Empty);
+                var defaultRaw = args.GetValueOrDefault("default", string.Empty);
+
+                var path = await ResolveArgAsync(args, "path", string.Empty, sessionId, token);
+                var match = (await ResolveArgAsync(args, "match", "first", sessionId, token)).Trim();
+                var asType = (await ResolveArgAsync(args, "as", "auto", sessionId, token)).Trim();
+                variableName = await ResolveArgAsync(args, "variable", string.Empty, sessionId, token);
 
                 if (!TryGetElements(source, path, out var elements))
                 {
@@ -79,7 +93,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     return await StoreNoMatchAsync(variableName, defaultRaw, asType, match, sessionId, token);
                 }
 
-                bindingName = "__find_" + Guid.NewGuid().ToString("N").Substring(0, 8);
+                bindingName = "__find_" + Interlocked.Increment(ref _bindingCounter).ToString(CultureInfo.InvariantCulture);
                 var where = RewriteAlias(whereRaw, bindingName);
                 var select = RewriteAlias(selectRaw, bindingName);
 
@@ -87,12 +101,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 var matches = new List<JToken>();
                 var matchCount = 0;
+                StringVariableHolder.VMaintainer itemMaintainer = null;
 
                 foreach (var element in elements)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    await BindItemAsync(bindingName, element, token);
+                    itemMaintainer = await BindItemAsync(itemMaintainer, bindingName, element, token);
 
                     var isMatch = string.IsNullOrWhiteSpace(where) || await EvaluatePredicateAsync(where, sessionId, token);
                     if (!isMatch) continue;
@@ -207,19 +222,42 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             return DisplayString(value);
         }
 
-        private async Task BindItemAsync(string bindingName, JToken element, CancellationToken token)
+        private async Task<string> ResolveArgAsync(Dictionary<string, string> args, string key, string defaultValue, string sessionId, CancellationToken token)
+        {
+            return args.TryGetValue(key, out var raw)
+                ? await _resolver.Value.ResolvePlaceholdersAsync<string>(raw, sessionId, token)
+                : defaultValue;
+        }
+
+        /// <summary>
+        /// Binds the current element under <paramref name="bindingName"/>. The holder is created and
+        /// registered once (first element); subsequent elements update the same holder in place via
+        /// the maintainer, avoiding a PutAsync (and its collision warning) per element. The element
+        /// is passed pre-parsed so predicate/select path accesses skip re-parsing the raw string.
+        /// </summary>
+        private async Task<StringVariableHolder.VMaintainer> BindItemAsync(
+            StringVariableHolder.VMaintainer maintainer, string bindingName, JToken element, CancellationToken token)
         {
             var raw = element.Type is JTokenType.Object or JTokenType.Array
                 ? element.ToString(Formatting.None)
                 : ScalarString(element);
 
-            var holder = await new StringVariableHolder.VMaintainer(_resolver.Value, _logger, _op)
+            var register = maintainer == null;
+            maintainer ??= new StringVariableHolder.VMaintainer(_resolver.Value, _logger, _op)
                 .WithType(VariableType.JsonString)
+                .SetGlobal();
+
+            var holder = await maintainer
                 .WithRawValue(raw)
-                .SetGlobal()
+                .WithParsedToken(element)
                 .UpdateAsync(token);
 
-            await _variables.PutAsync(bindingName, holder, token);
+            if (register)
+            {
+                await _variables.SetAsync(bindingName, holder, token);
+            }
+
+            return maintainer;
         }
 
         private async Task<bool> EvaluatePredicateAsync(string where, string sessionId, CancellationToken token)
@@ -293,9 +331,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             root = null;
             if (string.IsNullOrWhiteSpace(value)) return false;
 
+            // Oversized bodies skip the cache entirely (lookup included — hashing a huge string
+            // costs O(len) and such bodies are unlikely to repeat).
+            var cacheable = value.Length <= MaxCacheableJsonLength;
+
             // Cache hit: reuse the already-parsed tree (read-only). Resolution ran before this, so
             // find still executes fully every call; only the JSON parse is skipped.
-            if (JsonParseCache.TryGetValue(value, out var cached))
+            if (cacheable && JsonParseCache.TryGetValue(value, out var cached))
             {
                 root = cached;
                 return true;
@@ -315,8 +357,11 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     }
                 }
 
-                TrimJsonCacheIfNeeded();
-                JsonParseCache[value] = parsed;
+                if (cacheable)
+                {
+                    JsonParseCache[value] = parsed;
+                    TrimJsonCacheIfNeeded();
+                }
                 root = parsed;
                 return true;
             }
@@ -328,9 +373,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
         private static void TrimJsonCacheIfNeeded()
         {
-            if (JsonParseCache.Count > MaxJsonCacheSize)
+            // Partial eviction of arbitrary keys instead of Clear(): a full wipe forced every rule
+            // evaluating the same body to reparse at once. Running after the insert makes the bound
+            // self-correcting even when concurrent adds overshoot it.
+            foreach (var key in JsonParseCache.Keys)
             {
-                JsonParseCache.Clear();
+                if (JsonParseCache.Count <= MaxJsonCacheSize) break;
+                JsonParseCache.TryRemove(key, out _);
             }
         }
 

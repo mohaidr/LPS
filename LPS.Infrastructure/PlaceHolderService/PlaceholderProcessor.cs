@@ -71,6 +71,13 @@ namespace LPS.Infrastructure.PlaceHolderService
             return string.Empty;
         }
 
+        // 'item' is a RESERVED alias used by ${find(...)}: it is only bound (rewritten to a
+        // per-execution '__find_N' name) inside find's element loop. During the outer
+        // pre-resolution pass it is intentionally unbound and must be deferred without the
+        // "not found" warning noise. A user variable literally named 'item' is not supported.
+        private const string ReservedFindAlias = "item";
+        private const string FindBindingPrefix = "__find_";
+
         private async Task<string> ProcessVariableAsync(string placeholder, string sessionId, CancellationToken token)
         {
             string variableName = placeholder;
@@ -83,13 +90,24 @@ namespace LPS.Infrastructure.PlaceHolderService
                 path = placeholder.Substring(splitIndex);
             }
 
+            // Defer the reserved find alias untouched — no lookup, no warning.
+            if (string.Equals(variableName, ReservedFindAlias, StringComparison.Ordinal))
+            {
+                return $"${{{variableName}{path}}}";
+            }
+
             var variableHolder = await _sessionManager.GetVariableAsync(sessionId, variableName, token)
                                  ?? await _variableManager.GetAsync(variableName, token);
 
 
             if (variableHolder == null)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Variable '{variableName}' not found.", LPSLoggingLevel.Warning, token);
+                // '__find_N' bindings only miss on stale references (e.g. after find removed them);
+                // warn for everything else.
+                if (!variableName.StartsWith(FindBindingPrefix, StringComparison.Ordinal))
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Variable '{variableName}' not found.", LPSLoggingLevel.Warning, token);
+                }
                 return $"${{{variableName}{path}}}";
             }
 

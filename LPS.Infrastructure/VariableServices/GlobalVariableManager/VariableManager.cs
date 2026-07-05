@@ -25,10 +25,24 @@ namespace LPS.Infrastructure.VariableServices.GlobalVariableManager
 
             if (!_variables.TryAdd(variableName, variableHolder))
             {
-                await _logger.LogAsync(_operationIdProvider.OperationId, $"Variable '{{variableName}}' already exists and will be overridden", LPSLoggingLevel.Warning, token);
+                await _logger.LogAsync(_operationIdProvider.OperationId, $"Variable '{variableName}' already exists and will be overridden", LPSLoggingLevel.Warning, token);
                 // Override the existing variable
                 _variables[variableName] = variableHolder;
             }
+        }
+
+        public Task SetAsync(string variableName, IVariableHolder variableHolder, CancellationToken token = default)
+        {
+            if (string.IsNullOrWhiteSpace(variableName))
+                throw new ArgumentException("Variable name cannot be null or whitespace.", nameof(variableName));
+
+            if (variableHolder == null)
+                throw new ArgumentNullException(nameof(variableHolder), "Variable holder cannot be null.");
+
+            // Intentional overwrite: no collision warning (PutAsync logs one per collision, which
+            // is noise for callers that rebind the same name in a loop).
+            _variables[variableName] = variableHolder;
+            return Task.CompletedTask;
         }
 
         public async Task<IVariableHolder?> GetAsync(string variableName, CancellationToken token)

@@ -31,6 +31,11 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         public string Pattern { get; private set; }
         public bool IsGlobal { get; private set; }
         public string Value { get; private set; }
+
+        // Memoized parse of Value for JsonString holders, so repeated path accesses (e.g. several
+        // ${item.x} refs in one predicate) don't re-parse the same JSON. Value is only assigned in
+        // VMaintainer.UpdateAsync, which resets this memo. Treated as read-only once parsed.
+        private JToken _parsedJson;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly VMaintainer _maintainer;
@@ -87,7 +92,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             try
             {
                 jsonPath = NormalizeBracketNumericExpressions(jsonPath);
-                var json = JToken.Parse(Value);
+                var json = _parsedJson ??= JToken.Parse(Value);
 
                 var tokenResult = json.SelectToken(jsonPath)?.ToString();
 
@@ -246,6 +251,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             private string _pattern;              // may be null/empty
             private string _rawValue;             // must be provided
             private bool _isGlobal;               // default false unless set
+            private JToken _parsedToken;          // optional pre-parsed form of _rawValue; consumed on UpdateAsync
 
             public VMaintainer(
                 IPlaceholderResolverService placeholderResolverService,
@@ -281,6 +287,17 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 return this;
             }
 
+            /// <summary>
+            /// Seeds the holder's parsed-JSON memo with an already-parsed token so the first path
+            /// access skips <see cref="JToken.Parse"/>. The token MUST be the parsed form of the
+            /// value passed to <see cref="WithRawValue"/> and is treated as read-only.
+            /// </summary>
+            public VMaintainer WithParsedToken(JToken parsedToken)
+            {
+                _parsedToken = parsedToken; // buffer locally; consumed (and cleared) on UpdateAsync
+                return this;
+            }
+
             public VMaintainer SetGlobal(bool isGlobal = true)
             {
                 _isGlobal = isGlobal; // buffer locally
@@ -306,6 +323,10 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 if (_type.HasValue) _variableHolder.Type = _type.Value;
                 _variableHolder.Pattern = _pattern ?? string.Empty;
                 _variableHolder.Value = _rawValue;
+                // New value: replace the memo with the seeded token (or null so the next path
+                // access re-parses) — a stale memo would silently serve the previous value.
+                _variableHolder._parsedJson = _parsedToken;
+                _parsedToken = null;
                 _variableHolder.IsGlobal = _isGlobal;
 
                 return _variableHolder;
