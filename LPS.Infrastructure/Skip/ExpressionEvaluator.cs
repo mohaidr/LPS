@@ -11,7 +11,7 @@ using LPS.Infrastructure.Nodes;
 
 namespace LPS.Infrastructure.Skip
 {
-    public class IfEvaluator : IIfEvaluator
+    public class ExpressionEvaluator : IExpressionEvaluator
     {
         private readonly IPlaceholderResolverService _placeholderResolver;
         private readonly ILogger _logger;
@@ -26,7 +26,7 @@ namespace LPS.Infrastructure.Skip
         // Resolved strings longer than this are almost certainly high-cardinality (embedded ids,
         // bodies) and would only churn the cache — evaluate them without caching.
         private const int MaxCacheableKeyLength = 512;
-        public IfEvaluator(
+        public ExpressionEvaluator(
             IPlaceholderResolverService placeholderResolver,
             INodeMetadata nodeMetadata,
             IRuntimeOperationIdProvider runtimeOperationIdProvider, // kept to match your ctor signature
@@ -63,18 +63,45 @@ namespace LPS.Infrastructure.Skip
             if (string.IsNullOrWhiteSpace(expression))
                 return false;
 
-            string resolved = string.Empty;
+            string resolved;
             try
             {
                 // 1) Resolve placeholders first (your existing flow)
                 resolved = await _placeholderResolver
                     .ResolvePlaceholdersAsync<string>(expression, sessionId, token)
                     .ConfigureAwait(false);
-                // 2) Normalize operators: convert C#-style to Flee-compatible
+            }
+            catch (Exception ex)
+            {
+                await LogEvaluationErrorAsync(expression, string.Empty, ex).ConfigureAwait(false);
+                return false;
+            }
+
+            return await EvaluateCoreAsync(resolved, expression).ConfigureAwait(false);
+        }
+
+        // NOTE:
+        // Evaluates an already-resolved expression (no placeholder pass). Callers that inline their
+        // own literals (e.g. $find substituting item fields) use this so string values containing
+        // '$' are not mis-read as placeholders on a second pass.
+        public Task<bool> EvaluateResolvedAsync(string resolvedExpression, CancellationToken token)
+        {
+            if (string.IsNullOrWhiteSpace(resolvedExpression))
+                return Task.FromResult(false);
+
+            return EvaluateCoreAsync(resolvedExpression, resolvedExpression);
+        }
+
+        // Shared post-resolution logic: normalize -> result cache -> compile -> evaluate.
+        private async Task<bool> EvaluateCoreAsync(string resolved, string original)
+        {
+            try
+            {
+                // Normalize operators: convert C#-style to Flee-compatible
                 resolved = NormalizeOperators(resolved);
 
-                // Result cache (keyed by the normalized RESOLVED string). Resolution already ran above,
-                // so any placeholder side-effects are preserved; only the pure compile+evaluate is skipped.
+                // Result cache (keyed by the normalized RESOLVED string). Resolution already ran, so
+                // any placeholder side-effects are preserved; only the pure compile+evaluate is skipped.
                 var cacheable = resolved.Length <= MaxCacheableKeyLength;
                 if (cacheable && ResultCache.TryGetValue(resolved, out var cachedResult))
                 {
@@ -96,23 +123,28 @@ namespace LPS.Infrastructure.Skip
             }
             catch (Exception ex)
             {
-                // Mirror your diagnostic style, updated to reflect Flee behavior.
-                var message =
-                    "Failed to evaluate the expression.\r\n" +
-                    "\r\n" +
-                    $"The Skip condition: {expression}\r\n" +
-                    $"Resolved to: {resolved}\r\n" +
-                    "\r\n" +
-                    "Why?\r\n" +
-                    "\t1- If you use a placeholder, make sure it resolves properly.\r\n" +
-                    "\t2- Ensure string values are quoted (e.g., \"OK\").\r\n" +
-                    "\t3- Flee requires the expression to be boolean (true/false). Use comparisons or ternary to return bool.\r\n" +
-                    "\r\n" +
-                    $"Exception: {ex}";
-                await _logger.LogAsync(message, LPSLoggingLevel.Error).ConfigureAwait(false);
+                await LogEvaluationErrorAsync(original, resolved, ex).ConfigureAwait(false);
                 // treat error as 'skip = false' as we can't decide to skip or not.
                 return false;
             }
+        }
+
+        private Task LogEvaluationErrorAsync(string original, string resolved, Exception ex)
+        {
+            // Mirror your diagnostic style, updated to reflect Flee behavior.
+            var message =
+                "Failed to evaluate the expression.\r\n" +
+                "\r\n" +
+                $"The Skip condition: {original}\r\n" +
+                $"Resolved to: {resolved}\r\n" +
+                "\r\n" +
+                "Why?\r\n" +
+                "\t1- If you use a placeholder, make sure it resolves properly.\r\n" +
+                "\t2- Ensure string values are quoted (e.g., \"OK\").\r\n" +
+                "\t3- Flee requires the expression to be boolean (true/false). Use comparisons or ternary to return bool.\r\n" +
+                "\r\n" +
+                $"Exception: {ex}";
+            return _logger.LogAsync(message, LPSLoggingLevel.Error);
         }
 
         public async Task RunAsync(string expression, string sessionId, CancellationToken token)

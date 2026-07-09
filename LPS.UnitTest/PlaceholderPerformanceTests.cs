@@ -28,7 +28,7 @@ namespace LPS.UnitTest
         private const string SessionId = "perf-session";
         private readonly CancellationToken _ct = CancellationToken.None;
 
-        private static (PlaceholderResolverService resolver, ParameterExtractorService extractor, IfEvaluator evaluator) BuildServices()
+        private static (PlaceholderResolverService resolver, ParameterExtractorService extractor, ExpressionEvaluator evaluator) BuildServices()
         {
             var logger = new Mock<ILogger>();
             logger.Setup(x => x.LogAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<LPSLoggingLevel>(), It.IsAny<CancellationToken>()))
@@ -51,7 +51,7 @@ namespace LPS.UnitTest
             var extractor = new ParameterExtractorService(lazyResolver, opId.Object, logger.Object);
             var processor = new PlaceholderProcessor(Array.Empty<IPlaceholderMethod>(), sessions, variables, opId.Object, logger.Object);
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
-            var evaluator = new IfEvaluator(resolver, node.Object, opId.Object, logger.Object);
+            var evaluator = new ExpressionEvaluator(resolver, node.Object, opId.Object, logger.Object);
 
             return (resolver, extractor, evaluator);
         }
@@ -133,11 +133,11 @@ namespace LPS.UnitTest
         {
             var (_, _, evaluator) = BuildServices();
 
-            var cacheField = typeof(IfEvaluator).GetField("ResultCache", BindingFlags.NonPublic | BindingFlags.Static);
+            var cacheField = typeof(ExpressionEvaluator).GetField("ResultCache", BindingFlags.NonPublic | BindingFlags.Static);
             Assert.NotNull(cacheField);
             var cache = (ConcurrentDictionary<string, bool>)cacheField.GetValue(null);
 
-            var maxField = typeof(IfEvaluator).GetField("MaxResultCacheSize", BindingFlags.NonPublic | BindingFlags.Static);
+            var maxField = typeof(ExpressionEvaluator).GetField("MaxResultCacheSize", BindingFlags.NonPublic | BindingFlags.Static);
             var max = (int)maxField.GetValue(null);
 
             cache.Clear();
@@ -161,7 +161,7 @@ namespace LPS.UnitTest
         {
             var (_, _, evaluator) = BuildServices();
 
-            var cacheField = typeof(IfEvaluator).GetField("ResultCache", BindingFlags.NonPublic | BindingFlags.Static);
+            var cacheField = typeof(ExpressionEvaluator).GetField("ResultCache", BindingFlags.NonPublic | BindingFlags.Static);
             var cache = (ConcurrentDictionary<string, bool>)cacheField.GetValue(null);
             cache.Clear();
 

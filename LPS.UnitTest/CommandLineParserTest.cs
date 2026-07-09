@@ -416,7 +416,7 @@ namespace LPS.UnitTest
         }
 
         private static HttpIteration CreateIterationInstance(
-            IIfEvaluator skipIfEvaluator,
+            IExpressionEvaluator skipIfEvaluator,
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider)
         {
@@ -425,7 +425,7 @@ namespace LPS.UnitTest
                 binder: null,
                 types:
                 [
-                    typeof(IIfEvaluator),
+                    typeof(IExpressionEvaluator),
                     typeof(ILogger),
                     typeof(IRuntimeOperationIdProvider)
                 ],
@@ -461,9 +461,12 @@ namespace LPS.UnitTest
             return entity!;
         }
 
-        private sealed class StubSkipIfEvaluator : IIfEvaluator
+        private sealed class StubSkipIfEvaluator : IExpressionEvaluator
         {
             public Task<bool> EvaluateAsync(string skipIfExpression, string sessionId, CancellationToken token)
+                => Task.FromResult(false);
+
+            public Task<bool> EvaluateResolvedAsync(string resolvedExpression, CancellationToken token)
                 => Task.FromResult(false);
 
             public Task RunAsync(string expression, string sessionId, CancellationToken token)

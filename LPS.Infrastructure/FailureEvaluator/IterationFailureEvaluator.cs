@@ -31,7 +31,7 @@ namespace LPS.Infrastructure.FailureEvaluator
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IMetricFetcher _metricFetcher;
         private readonly IRuleService _failureRulesService;
-        private readonly IIfEvaluator _ifEvaluator;
+        private readonly IExpressionEvaluator _ifEvaluator;
 
         // Default round name used when evaluating default failure rules (no specific round context)
         private const string DefaultRoundName = "__default__";
@@ -46,7 +46,7 @@ namespace LPS.Infrastructure.FailureEvaluator
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricFetcher metricFetcher,
             IRuleService failureRulesService,
-            IIfEvaluator ifEvaluator)
+            IExpressionEvaluator ifEvaluator)
         {
             _commandStatusMonitor = commandStatusMonitor;
             _nodeMetadata = nodeMetadata;

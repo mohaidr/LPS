@@ -159,7 +159,7 @@ namespace LPS
 
                 services.AddSingleton<ITerminationCheckerService, HttpIterationTerminationCheckerService>();
                 services.AddSingleton<IIterationFailureEvaluator, IterationFailureEvaluator>();
-                services.AddSingleton<IIfEvaluator, IfEvaluator>();
+                services.AddSingleton<IExpressionEvaluator, ExpressionEvaluator>();
                 services.AddSingleton<IVariableFactory, VariableFactory>();
                 services.AddSingleton<IDashboardService, DashboardService>();
                 services.AddSingleton<NodeHealthMonitorBackgroundService>();

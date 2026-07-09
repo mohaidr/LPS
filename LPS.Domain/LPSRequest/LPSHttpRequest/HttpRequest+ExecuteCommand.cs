@@ -22,7 +22,7 @@ namespace LPS.Domain
             ILogger logger,
             IWatchdog watchdog,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
-            IIfEvaluator ifEvaluator) : IAsyncCommand<HttpRequest>
+            IExpressionEvaluator ifEvaluator) : IAsyncCommand<HttpRequest>
         {
             private IClientService<HttpRequest, HttpResponse> _httpClientService { get; set; } = httpClientService;
             private readonly ISkippedRequestReporter _skippedRequestReporter = skippedRequestReporter;
@@ -30,7 +30,7 @@ namespace LPS.Domain
             readonly ILogger _logger = logger;
             readonly IWatchdog _watchdog = watchdog;
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
-            readonly IIfEvaluator _ifEvaluator = ifEvaluator;
+            readonly IExpressionEvaluator _ifEvaluator = ifEvaluator;
             private CommandExecutionStatus _executionStatus;
             public CommandExecutionStatus Status => _executionStatus;
             //TODO: This one method and the calsses uses it are tightly coupled (behavioral coupling)

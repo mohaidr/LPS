@@ -25,9 +25,9 @@ namespace LPS.Domain
             TerminationRules = [];
             FailureRules = [];  
         }
-        IIfEvaluator _ifEvaluator;
+        IExpressionEvaluator _ifEvaluator;
         private HttpIteration(
-            IIfEvaluator ifEvaluator,
+            IExpressionEvaluator ifEvaluator,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {
@@ -41,7 +41,7 @@ namespace LPS.Domain
 
 
         public HttpIteration(SetupCommand command,
-            IIfEvaluator skipIfEvaluator,
+            IExpressionEvaluator skipIfEvaluator,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider)
         {

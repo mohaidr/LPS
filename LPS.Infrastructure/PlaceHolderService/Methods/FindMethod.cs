@@ -23,16 +23,20 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
     /// alias <c>item</c>), projects a value, and stores the result with its proper type.
     ///
     /// Example:
-    ///   ${find(source=${response.body}, path=$.data.orders[*],
-    ///          where="${item.status}" == "shipped" and ${item.total} > ${threshold},
-    ///          select=${item.id}, match=first, variable=shippedOrderId)}
+    ///   ${find(source=$response.Body, path=$.data.orders[*],
+    ///          where=item.status == "shipped" and item.total > ${threshold},
+    ///          select=item.id, match=first, variable=shippedOrderId)}
     /// </summary>
     public sealed class FindMethod : MethodBase
     {
         private const string Alias = "item";
 
-        private static readonly Regex BraceAliasRegex = new(@"\$\{\s*" + Alias + @"\b", RegexOptions.Compiled);
-        private static readonly Regex StopperAliasRegex = new(@"\$" + Alias + @"\b", RegexOptions.Compiled);
+        // Matches a bare item reference: `item`, `item.company.name`, `item[0].name`, etc. Group 1 is
+        // the path portion (empty for a bare `item`). No `${}` sigil is required or supported — find
+        // substitutes these directly from the current element, auto-quoting by JSON type.
+        private static readonly Regex ItemTokenRegex = new(
+            @"\b" + Alias + @"\b((?:\.[^.\[\]\s()=<>!&|""']+|\[[^\]]*\])*)",
+            RegexOptions.Compiled);
 
         // Caches parsed JSON keyed by the EXACT resolved source string. Self-invalidating: a different
         // body is a different key, so a changed capture can never return a stale tree. Cached tokens are
@@ -45,9 +49,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         // Bodies above this size are parsed but not cached, to bound worst-case memory retention.
         private const int MaxCacheableJsonLength = 1_000_000;
 
-        private static int _bindingCounter;
-
-        private readonly Lazy<IIfEvaluator> _ifEvaluator;
+        private readonly Lazy<IExpressionEvaluator> _ifEvaluator;
 
         public FindMethod(
             ParameterExtractorService p,
@@ -55,7 +57,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             IRuntimeOperationIdProvider op,
             IVariableManager v,
             Lazy<IPlaceholderResolverService> r,
-            Lazy<IIfEvaluator> ifEvaluator)
+            Lazy<IExpressionEvaluator> ifEvaluator)
             : base(p, l, op, v, r)
         {
             _ifEvaluator = ifEvaluator;
@@ -66,7 +68,6 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
-            string bindingName = null;
 
             try
             {
@@ -75,13 +76,15 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 // 'source' is taken RAW: the outer resolver pre-resolves any method argument string
                 // containing '$' before dispatch, so it is already the substituted body here.
-                // Resolving it again would rescan O(body) and mangle bodies containing literal '$'.
-                // where/select/default stay raw by design (resolved per element / on fallback).
+                // 'default' stays raw (resolved only on the no-match fallback).
+                // Every other parameter is resolved so it can be indirected through a variable
+                // (e.g. where=$myWhereClause). Bare `item` references carry no '$', so they survive
+                // resolution and are substituted directly from each element below.
                 var source = args.GetValueOrDefault("source", string.Empty);
-                var whereRaw = args.GetValueOrDefault("where", string.Empty);
-                var selectRaw = args.GetValueOrDefault("select", string.Empty);
                 var defaultRaw = args.GetValueOrDefault("default", string.Empty);
 
+                var where = await ResolveArgAsync(args, "where", string.Empty, sessionId, token);
+                var select = await ResolveArgAsync(args, "select", string.Empty, sessionId, token);
                 var path = await ResolveArgAsync(args, "path", string.Empty, sessionId, token);
                 var match = (await ResolveArgAsync(args, "match", "first", sessionId, token)).Trim();
                 var asType = (await ResolveArgAsync(args, "as", "auto", sessionId, token)).Trim();
@@ -93,28 +96,22 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     return await StoreNoMatchAsync(variableName, defaultRaw, asType, match, sessionId, token);
                 }
 
-                bindingName = "__find_" + Interlocked.Increment(ref _bindingCounter).ToString(CultureInfo.InvariantCulture);
-                var where = RewriteAlias(whereRaw, bindingName);
-                var select = RewriteAlias(selectRaw, bindingName);
-
                 var (mode, indexTarget) = ParseMatchMode(match);
 
                 var matches = new List<JToken>();
                 var matchCount = 0;
-                StringVariableHolder.VMaintainer itemMaintainer = null;
 
                 foreach (var element in elements)
                 {
                     token.ThrowIfCancellationRequested();
 
-                    itemMaintainer = await BindItemAsync(itemMaintainer, bindingName, element, token);
-
-                    var isMatch = string.IsNullOrWhiteSpace(where) || await EvaluatePredicateAsync(where, sessionId, token);
+                    var isMatch = string.IsNullOrWhiteSpace(where)
+                        || await EvaluatePredicateAsync(SubstituteItemTokens(where, element), token);
                     if (!isMatch) continue;
 
                     if (mode == MatchMode.Count) { matchCount++; continue; }
 
-                    matches.Add(await ProjectAsync(element, select, sessionId, token));
+                    matches.Add(Project(element, select));
 
                     if (mode == MatchMode.First) break;
                     if (mode == MatchMode.Index && matches.Count - 1 == indexTarget) break;
@@ -135,13 +132,6 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             {
                 await _logger.LogAsync(_op.OperationId, $"find failed. {ex}", LPSLoggingLevel.Error, token);
                 return string.Empty;
-            }
-            finally
-            {
-                if (bindingName != null)
-                {
-                    await _variables.RemoveVariableAsync(bindingName, token);
-                }
             }
         }
 
@@ -230,58 +220,40 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         }
 
         /// <summary>
-        /// Binds the current element under <paramref name="bindingName"/>. The holder is created and
-        /// registered once (first element); subsequent elements update the same holder in place via
-        /// the maintainer, avoiding a PutAsync (and its collision warning) per element. The element
-        /// is passed pre-parsed so predicate/select path accesses skip re-parsing the raw string.
+        /// Binds nothing globally: the current element is read directly. Evaluates a fully resolved,
+        /// item-substituted predicate via the shared expression evaluator (no re-resolution).
         /// </summary>
-        private async Task<StringVariableHolder.VMaintainer> BindItemAsync(
-            StringVariableHolder.VMaintainer maintainer, string bindingName, JToken element, CancellationToken token)
-        {
-            var raw = element.Type is JTokenType.Object or JTokenType.Array
-                ? element.ToString(Formatting.None)
-                : ScalarString(element);
-
-            var register = maintainer == null;
-            maintainer ??= new StringVariableHolder.VMaintainer(_resolver.Value, _logger, _op)
-                .WithType(VariableType.JsonString)
-                .SetGlobal();
-
-            var holder = await maintainer
-                .WithRawValue(raw)
-                .WithParsedToken(element)
-                .UpdateAsync(token);
-
-            if (register)
-            {
-                await _variables.SetAsync(bindingName, holder, token);
-            }
-
-            return maintainer;
-        }
-
-        private async Task<bool> EvaluatePredicateAsync(string where, string sessionId, CancellationToken token)
+        private async Task<bool> EvaluatePredicateAsync(string predicate, CancellationToken token)
         {
             try
             {
-                return await _ifEvaluator.Value.EvaluateAsync(where, sessionId, token);
+                return await _ifEvaluator.Value.EvaluateResolvedAsync(predicate, token);
             }
             catch (Exception ex)
             {
-                await _logger.LogAsync(_op.OperationId, $"find predicate evaluation failed for '{where}'. {ex.Message}", LPSLoggingLevel.Warning, token);
+                await _logger.LogAsync(_op.OperationId, $"find predicate evaluation failed for '{predicate}'. {ex.Message}", LPSLoggingLevel.Warning, token);
                 return false;
             }
         }
 
-        private async Task<JToken> ProjectAsync(JToken element, string select, string sessionId, CancellationToken token)
+        private JToken Project(JToken element, string select)
         {
             if (string.IsNullOrWhiteSpace(select))
             {
                 return element;
             }
 
-            var resolved = await _resolver.Value.ResolvePlaceholdersAsync<string>(select, sessionId, token);
-            return StringToJToken(resolved);
+            var trimmed = select.Trim();
+
+            // Fast path: the whole projection is a single item reference (e.g. item.id) -> return the
+            // typed token directly so numbers/booleans/objects keep their type for typed storage.
+            var match = ItemTokenRegex.Match(trimmed);
+            if (match.Success && match.Index == 0 && match.Length == trimmed.Length)
+            {
+                return GetItemValue(element, match.Groups[1].Value) ?? JValue.CreateNull();
+            }
+
+            return StringToJToken(SubstituteItemTokens(trimmed, element));
         }
 
         private static bool TryGetElements(string source, string path, out List<JToken> elements)
@@ -383,13 +355,42 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             }
         }
 
-        private static string RewriteAlias(string expression, string bindingName)
+        /// <summary>
+        /// Replaces every bare <c>item</c> reference in <paramref name="expression"/> with the matching
+        /// field value from <paramref name="element"/>, quoted/typed for a Flee expression: strings are
+        /// auto-quoted, numbers/booleans are emitted bare — so the user never quotes item themselves.
+        /// </summary>
+        private static string SubstituteItemTokens(string expression, JToken element)
         {
             if (string.IsNullOrEmpty(expression)) return expression;
+            return ItemTokenRegex.Replace(expression, m => FleeLiteral(GetItemValue(element, m.Groups[1].Value)));
+        }
 
-            expression = BraceAliasRegex.Replace(expression, _ => "${" + bindingName);
-            expression = StopperAliasRegex.Replace(expression, _ => "$" + bindingName);
-            return expression;
+        private static JToken GetItemValue(JToken element, string path)
+        {
+            if (string.IsNullOrEmpty(path)) return element;
+            var jsonPath = path[0] == '.' ? path.Substring(1) : path;
+            try { return element.SelectToken(jsonPath); }
+            catch { return null; }
+        }
+
+        private static string FleeLiteral(JToken value)
+        {
+            if (value == null || value.Type == JTokenType.Null) return "\"\"";
+            return value.Type switch
+            {
+                JTokenType.Integer => value.Value<long>().ToString(CultureInfo.InvariantCulture),
+                JTokenType.Float => value.Value<double>().ToString(CultureInfo.InvariantCulture),
+                JTokenType.Boolean => value.Value<bool>() ? "true" : "false",
+                JTokenType.String => QuoteForFlee(value.Value<string>()),
+                _ => QuoteForFlee(value.ToString(Formatting.None))
+            };
+        }
+
+        private static string QuoteForFlee(string value)
+        {
+            value ??= string.Empty;
+            return "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
         }
 
         private static JToken StringToJToken(string value)

@@ -33,7 +33,7 @@ namespace LPS.UnitTest
             public FindMethod Find;
             public PlaceholderResolverService Resolver;
             public VariableManager Variables;
-            public IfEvaluator IfEvaluator;
+            public ExpressionEvaluator IfEvaluator;
             public Mock<ILogger> Logger;
         }
 
@@ -57,16 +57,16 @@ namespace LPS.UnitTest
 
             // Break the resolver <-> evaluator/method cycle with lazies (same as production DI).
             PlaceholderResolverService resolver = null;
-            IfEvaluator ifEvaluator = null;
+            ExpressionEvaluator ifEvaluator = null;
             var lazyResolver = new Lazy<IPlaceholderResolverService>(() => resolver);
-            var lazyEvaluator = new Lazy<IIfEvaluator>(() => ifEvaluator);
+            var lazyEvaluator = new Lazy<IExpressionEvaluator>(() => ifEvaluator);
 
             var paramExtractor = new ParameterExtractorService(lazyResolver, opId.Object, logger.Object);
             var find = new FindMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver, lazyEvaluator);
 
             var processor = new PlaceholderProcessor(new IPlaceholderMethod[] { find }, sessions, variables, opId.Object, logger.Object);
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
-            ifEvaluator = new IfEvaluator(resolver, node.Object, opId.Object, logger.Object);
+            ifEvaluator = new ExpressionEvaluator(resolver, node.Object, opId.Object, logger.Object);
 
             return new Harness { Find = find, Resolver = resolver, Variables = variables, IfEvaluator = ifEvaluator, Logger = logger };
         }
@@ -96,7 +96,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=first, variable=firstId";
+                       ", where=item.status == \"shipped\", select=item.id, match=first, variable=firstId";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -111,7 +111,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=all, variable=ids";
+                       ", where=item.status == \"shipped\", select=item.id, match=all, variable=ids";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -126,7 +126,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", match=count, variable=shippedCount";
+                       ", where=item.status == \"shipped\", match=count, variable=shippedCount";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -141,7 +141,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=last, variable=lastId";
+                       ", where=item.status == \"shipped\", select=item.id, match=last, variable=lastId";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -153,7 +153,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=index:1, variable=secondShipped";
+                       ", where=item.status == \"shipped\", select=item.id, match=index:1, variable=secondShipped";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -165,7 +165,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"cancelled\", select=${item.id}, match=first, default=NONE, variable=missing";
+                       ", where=item.status == \"cancelled\", select=item.id, match=first, default=NONE, variable=missing";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -179,7 +179,7 @@ namespace LPS.UnitTest
             await PutGlobalStringAsync(h, "threshold", "100");
 
             var args = "source=" + Orders +
-                       ", where=${item.total} > ${threshold}, select=${item.id}, match=all, variable=bigOrders";
+                       ", where=item.total > ${threshold}, select=item.id, match=all, variable=bigOrders";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -191,7 +191,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", match=first, variable=firstOrder";
+                       ", where=item.status == \"shipped\", match=first, variable=firstOrder";
 
             await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -208,7 +208,7 @@ namespace LPS.UnitTest
         {
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=first, variable=firstId";
+                       ", where=item.status == \"shipped\", select=item.id, match=first, variable=firstId";
 
             await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -221,7 +221,7 @@ namespace LPS.UnitTest
         public async Task Find_InvalidSource_ReturnsDefault()
         {
             var h = BuildHarness();
-            var args = "source=not-json, where=\"${item.status}\" == \"shipped\", select=${item.id}, default=fallback, variable=broken";
+            var args = "source=not-json, where=item.status == \"shipped\", select=item.id, default=fallback, variable=broken";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -234,7 +234,7 @@ namespace LPS.UnitTest
             var h = BuildHarness();
             var data = "[{\"id\":1,\"company\":{\"name\":\"Acme\"}},{\"id\":2,\"company\":{\"name\":\"Globex\"}}]";
             var args = "source=" + data +
-                       ", where=\"${item.company.name}\" == \"Globex\", select=${item.id}, match=first, variable=cid";
+                       ", where=item.company.name == \"Globex\", select=item.id, match=first, variable=cid";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -251,7 +251,7 @@ namespace LPS.UnitTest
             await PutGlobalJsonAsync(h, "users", usersJson);
 
             // Drive it through the full resolver, exactly like a config field would.
-            var expr = "$find(source=${users}, where=\"${item.company.name}\" == \"Romaguera-Crona\", select=${item.id}, match=first, variable=matchedUser)";
+            var expr = "$find(source=${users}, where=item.company.name == \"Romaguera-Crona\", select=item.id, match=first, variable=matchedUser)";
             var result = await h.Resolver.ResolvePlaceholdersAsync<string>(expr, SessionId, _ct);
 
             Assert.Equal("1", result);
@@ -268,7 +268,7 @@ namespace LPS.UnitTest
             await PutGlobalJsonAsync(h, "users", "[{\"id\":7,\"username\":\"Bret\"}]");
 
             await h.IfEvaluator.RunAsync(
-                "$find(source=${users}, where=\"${item.username}\" == \"Bret\", select=${item.id}, match=first, variable=uid)",
+                "$find(source=${users}, where=item.username == \"Bret\", select=item.id, match=first, variable=uid)",
                 SessionId, _ct);
 
             var stored = await h.Variables.GetAsync("uid", _ct);
@@ -284,9 +284,9 @@ namespace LPS.UnitTest
             var bodyA = "[{\"id\":1,\"name\":\"A\"}]";
             var bodyB = "[{\"id\":2,\"name\":\"B\"}]";
 
-            var rA1 = await h.Find.ExecuteAsync("source=" + bodyA + ", select=${item.id}, match=first, variable=x", SessionId, _ct);
-            var rB = await h.Find.ExecuteAsync("source=" + bodyB + ", select=${item.id}, match=first, variable=x", SessionId, _ct);
-            var rA2 = await h.Find.ExecuteAsync("source=" + bodyA + ", select=${item.id}, match=first, variable=x", SessionId, _ct);
+            var rA1 = await h.Find.ExecuteAsync("source=" + bodyA + ", select=item.id, match=first, variable=x", SessionId, _ct);
+            var rB = await h.Find.ExecuteAsync("source=" + bodyB + ", select=item.id, match=first, variable=x", SessionId, _ct);
+            var rA2 = await h.Find.ExecuteAsync("source=" + bodyA + ", select=item.id, match=first, variable=x", SessionId, _ct);
 
             Assert.Equal("1", rA1);
             Assert.Equal("2", rB);
@@ -299,7 +299,7 @@ namespace LPS.UnitTest
             // Guards the read-only invariant: match=all building a JArray must not mutate the cached tree.
             var h = BuildHarness();
             var body = "[{\"id\":1},{\"id\":2},{\"id\":3}]";
-            var args = "source=" + body + ", where=${item.id} > 1, select=${item.id}, match=all, variable=ids";
+            var args = "source=" + body + ", where=item.id > 1, select=item.id, match=all, variable=ids";
 
             var r1 = await h.Find.ExecuteAsync(args, SessionId, _ct);
             var r2 = await h.Find.ExecuteAsync(args, SessionId, _ct);
@@ -316,7 +316,7 @@ namespace LPS.UnitTest
             var h = BuildHarness();
             await PutGlobalJsonAsync(h, "users", "[{\"id\":7,\"username\":\"Bret\"}]");
 
-            var expr = "$find(source=${users}, where=\"${item.username}\" == \"Bret\", select=${item.id}, match=first, variable=uid) == 7";
+            var expr = "$find(source=${users}, where=item.username == \"Bret\", select=item.id, match=first, variable=uid) == 7";
 
             var r1 = await h.IfEvaluator.EvaluateAsync(expr, SessionId, _ct);
             Assert.True(r1);
@@ -339,7 +339,7 @@ namespace LPS.UnitTest
             // must not hit the PutAsync collision branch ("already exists and will be overridden").
             var h = BuildHarness();
             var args = "source=" + Orders +
-                       ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=all, variable=ids";
+                       ", where=item.status == \"shipped\", select=item.id, match=all, variable=ids";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -357,7 +357,7 @@ namespace LPS.UnitTest
             var h = BuildHarness();
             await PutGlobalJsonAsync(h, "users", "[{\"id\":7,\"username\":\"Bret\"}]");
 
-            var expr = "$find(source=${users}, where=\"${item.username}\" == \"Bret\", select=${item.id}, match=first, variable=uid)";
+            var expr = "$find(source=${users}, where=item.username == \"Bret\", select=item.id, match=first, variable=uid)";
             var result = await h.Resolver.ResolvePlaceholdersAsync<string>(expr, SessionId, _ct);
 
             Assert.Equal("7", result);
@@ -373,7 +373,7 @@ namespace LPS.UnitTest
             // which would treat literal '$' text in the body as placeholders and mangle the JSON.
             var h = BuildHarness();
             var body = "[{\"id\":1,\"note\":\"pay $99 now\"},{\"id\":2,\"note\":\"free\"}]";
-            var args = "source=" + body + ", where=${item.id} == 1, select=${item.note}, match=first, variable=note";
+            var args = "source=" + body + ", where=item.id == 1, select=item.note, match=first, variable=note";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -387,7 +387,7 @@ namespace LPS.UnitTest
             // element after the first evaluate against element #1's values.
             var h = BuildHarness();
             var body = "[{\"id\":1,\"v\":\"a\"},{\"id\":2,\"v\":\"b\"},{\"id\":3,\"v\":\"c\"}]";
-            var args = "source=" + body + ", where=\"${item.v}\" == \"c\", select=${item.id}, match=first, variable=x";
+            var args = "source=" + body + ", where=item.v == \"c\", select=item.id, match=first, variable=x";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
@@ -407,7 +407,7 @@ namespace LPS.UnitTest
                 for (int i = 0; i < 50; i++)
                 {
                     var args = "source=" + body +
-                               ", where=\"${item.status}\" == \"shipped\", select=${item.id}, match=all, variable=ids_" + worker;
+                               ", where=item.status == \"shipped\", select=item.id, match=all, variable=ids_" + worker;
                     var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
                     Assert.Equal("[1,3]", result);
                 }
@@ -427,7 +427,7 @@ namespace LPS.UnitTest
             for (int i = 0; i < 80; i++)
             {
                 var body = "[{\"id\":" + i + "}]";
-                await h.Find.ExecuteAsync("source=" + body + ", select=${item.id}, match=first, variable=x", SessionId, _ct);
+                await h.Find.ExecuteAsync("source=" + body + ", select=item.id, match=first, variable=x", SessionId, _ct);
             }
 
             // Bounded (partial eviction may briefly overshoot by concurrent adds; here it's sequential)

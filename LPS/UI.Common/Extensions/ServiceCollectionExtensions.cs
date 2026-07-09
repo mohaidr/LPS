@@ -42,7 +42,7 @@ namespace LPS.UI.Common.Extensions
 
             // Register Lazy<IIfEvaluator> so predicate-based methods (e.g. FindMethod) can reuse the
             // shared expression evaluator without creating a DI cycle (evaluator -> resolver -> processor -> methods).
-            services.AddSingleton(provider => new Lazy<IIfEvaluator>(() => provider.GetRequiredService<IIfEvaluator>()));
+            services.AddSingleton(provider => new Lazy<IExpressionEvaluator>(() => provider.GetRequiredService<IExpressionEvaluator>()));
 
             // Processor and resolver
             services.AddSingleton<IPlaceholderProcessor, PlaceholderProcessor>();

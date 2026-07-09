@@ -21,7 +21,7 @@ namespace LPS.Domain
             private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             private readonly SetupCommand _command;
             private readonly HttpIteration _entity;
-            IIfEvaluator _skipIfEvaluator;
+            IExpressionEvaluator _skipIfEvaluator;
 
             // Supported metrics for validation
             private static readonly HashSet<string> SupportedMetrics = new(StringComparer.OrdinalIgnoreCase)
@@ -63,7 +63,7 @@ namespace LPS.Domain
             };
 
             public Validator(HttpIteration entity, SetupCommand command, 
-                IIfEvaluator skipIfEvaluator,
+                IExpressionEvaluator skipIfEvaluator,
                 ILogger logger, 
                 IRuntimeOperationIdProvider runtimeOperationIdProvider)
             {

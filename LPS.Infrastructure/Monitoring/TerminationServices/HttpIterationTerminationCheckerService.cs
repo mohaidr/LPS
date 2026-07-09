@@ -34,7 +34,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly IMetricFetcher _metricFetcher;
-        private readonly IIfEvaluator _ifEvaluator;
+        private readonly IExpressionEvaluator _ifEvaluator;
 
         private readonly GrpcIterationTerminationServiceClient _grpcTermClient;
 
@@ -46,7 +46,7 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricFetcher metricFetcher,
-            IIfEvaluator ifEvaluator)
+            IExpressionEvaluator ifEvaluator)
         {
             _discoveryService = discoveryService;
             _grpcClientFactory = grpcClientFactory;
