@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
@@ -169,6 +170,165 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         {
             if (v.Type is JTokenType.Integer or JTokenType.Float) { result = v.Value<decimal>(); return true; }
             return decimal.TryParse(ScalarRaw(v), NumberStyles.Number, CultureInfo.InvariantCulture, out result);
+        }
+
+        // ---- Numeric helpers shared by the arithmetic / comparison declarative methods ----
+
+        /// <summary>
+        /// Resolves a single named numeric parameter. When <paramref name="allowPositional"/> is true
+        /// and the key is absent, falls back to the first positional (unnamed) argument.
+        /// Returns null when the value is missing or not a number.
+        /// </summary>
+        protected async Task<double?> ResolveNumberParamAsync(string parameters, string key, string sessionId, CancellationToken token, bool allowPositional = false)
+        {
+            var raw = await _params.ExtractStringAsync(parameters, key, null, sessionId, token);
+            if (raw == null && allowPositional)
+            {
+                var positional = FirstPositionalArgument(parameters);
+                if (!string.IsNullOrWhiteSpace(positional))
+                    raw = await _resolver.Value.ResolvePlaceholdersAsync<string>(positional, sessionId, token);
+            }
+
+            return TryParseNumber(raw, out var value) ? value : (double?)null;
+        }
+
+        /// <summary>
+        /// Resolves a numeric list from a <c>source</c> (or supplied key) parameter. The source may be a
+        /// JSON array (<c>[${x}, 10, 4, ${z}]</c>), a variable that resolves to a JSON array, or a single
+        /// scalar. Non-numeric elements are skipped and reported.
+        /// </summary>
+        protected async Task<List<double>> ResolveNumberArrayAsync(string parameters, string sessionId, CancellationToken token, string key = "source")
+        {
+            var values = new List<double>();
+
+            var raw = await _params.ExtractStringAsync(parameters, key, null, sessionId, token);
+            if (raw == null)
+            {
+                var positional = FirstPositionalArgument(parameters);
+                if (!string.IsNullOrWhiteSpace(positional))
+                    raw = await _resolver.Value.ResolvePlaceholdersAsync<string>(positional, sessionId, token);
+            }
+
+            if (string.IsNullOrWhiteSpace(raw))
+                return values;
+
+            raw = raw.Trim();
+            int skipped = 0;
+
+            if (raw.StartsWith("[") && raw.EndsWith("]"))
+            {
+                JArray array = null;
+                try { array = JArray.Parse(raw); } catch { array = null; }
+
+                if (array != null)
+                {
+                    foreach (var element in array)
+                    {
+                        if (TryTokenToNumber(element, out var d)) values.Add(d);
+                        else skipped++;
+                    }
+                }
+                else
+                {
+                    // Fallback for non-JSON content such as [abc, 10] where elements are unquoted.
+                    var inner = raw.Substring(1, raw.Length - 2);
+                    foreach (var part in inner.Split(','))
+                    {
+                        var trimmed = part.Trim().Trim('"');
+                        if (trimmed.Length == 0) continue;
+                        if (TryParseNumber(trimmed, out var d)) values.Add(d);
+                        else skipped++;
+                    }
+                }
+            }
+            else if (TryParseNumber(raw, out var single))
+            {
+                values.Add(single);
+            }
+            else
+            {
+                skipped++;
+            }
+
+            if (skipped > 0)
+                await _logger.LogAsync(_op.OperationId, $"{skipped} non-numeric value(s) were skipped while parsing '{key}'.", LPSLoggingLevel.Warning, token);
+
+            return values;
+        }
+
+        /// <summary>
+        /// Stores a numeric result (typed) under <paramref name="variableName"/> when provided and returns
+        /// its string form. Whole values are emitted as integers unless <paramref name="forceDouble"/> is set;
+        /// an explicit <paramref name="asType"/> override is honored by the typed store.
+        /// </summary>
+        protected async Task<string> StoreNumberResultAsync(string variableName, double value, string asType, CancellationToken token, bool forceDouble = false)
+        {
+            bool integral = !forceDouble
+                && !double.IsNaN(value) && !double.IsInfinity(value)
+                && value == Math.Floor(value)
+                && value >= long.MinValue && value <= long.MaxValue;
+
+            JToken jt;
+            string text;
+            if (integral)
+            {
+                long asLong = (long)value;
+                jt = new JValue(asLong);
+                text = asLong.ToString(CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                jt = new JValue(value);
+                text = value.ToString(CultureInfo.InvariantCulture);
+            }
+
+            if (!string.IsNullOrWhiteSpace(variableName))
+                await StoreTypedVariableAsync(variableName, jt, asType, token);
+
+            return text;
+        }
+
+        /// <summary>Logs a numeric-method failure, stores an empty result, and returns an empty string.</summary>
+        protected async Task<string> FailNumberAsync(string variableName, string methodName, CancellationToken token, string reason = "No numeric values were provided.")
+        {
+            await _logger.LogAsync(_op.OperationId, $"{methodName} failed. {reason}", LPSLoggingLevel.Warning, token);
+            await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+            return string.Empty;
+        }
+
+        protected static bool TryParseNumber(string value, out double result) =>
+            double.TryParse((value ?? string.Empty).Trim(), NumberStyles.Float | NumberStyles.AllowThousands, CultureInfo.InvariantCulture, out result);
+
+        private static bool TryTokenToNumber(JToken element, out double result)
+        {
+            switch (element.Type)
+            {
+                case JTokenType.Integer:
+                case JTokenType.Float:
+                    result = element.Value<double>();
+                    return true;
+                case JTokenType.String:
+                    return TryParseNumber(element.Value<string>(), out result);
+                default:
+                    result = 0;
+                    return false;
+            }
+        }
+
+        /// <summary>Returns the first positional (unnamed) argument, or empty when none exists.</summary>
+        protected static string FirstPositionalArgument(string parameters)
+        {
+            if (string.IsNullOrWhiteSpace(parameters))
+                return string.Empty;
+
+            foreach (var part in parameters.Split(','))
+            {
+                var trimmed = part.Trim();
+                if (!string.IsNullOrWhiteSpace(trimmed) && !trimmed.Contains('='))
+                    return trimmed;
+            }
+
+            return string.Empty;
         }
 
         protected static string Truncate(string? value, int max = 128) =>

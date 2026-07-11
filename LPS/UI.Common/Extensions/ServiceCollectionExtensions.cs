@@ -69,6 +69,7 @@ namespace LPS.UI.Common.Extensions
             services.AddSingleton<IPlaceholderMethod, Base64EncodeMethod>();
             services.AddSingleton<IPlaceholderMethod, Base64DecodeMethod>();
             services.AddSingleton<IPlaceholderMethod, HashMethod>();
+            services.AddSingleton<IPlaceholderMethod, HmacMethod>();
             services.AddSingleton<IPlaceholderMethod, ToLowerCaseMethod>();
             services.AddSingleton<IPlaceholderMethod, ToUpperCaseMethod>();
             services.AddSingleton<IPlaceholderMethod, ContainsMethod>();
@@ -77,10 +78,37 @@ namespace LPS.UI.Common.Extensions
             services.AddSingleton<IPlaceholderMethod, LengthMethod>();
             services.AddSingleton<IPlaceholderMethod, RandomItemMethod>();
             services.AddSingleton<IPlaceholderMethod, JwtClaimMethod>();
+            services.AddSingleton<IPlaceholderMethod, JwtSignMethod>();
             services.AddSingleton<IPlaceholderMethod, FormatMethod>();
+            services.AddSingleton<IPlaceholderMethod, StrcatMethod>();
             services.AddSingleton<IPlaceholderMethod, GenerateEmailMethod>();
             services.AddSingleton<IPlaceholderMethod, ReadMethod>();
             services.AddSingleton<IPlaceholderMethod, FindMethod>();
+
+            // Numeric / comparison declarative methods
+            services.AddSingleton<IPlaceholderMethod, SetVariableMethod>();
+            services.AddSingleton<IPlaceholderMethod, SumMethod>();
+            services.AddSingleton<IPlaceholderMethod, MinMethod>();
+            services.AddSingleton<IPlaceholderMethod, MaxMethod>();
+            services.AddSingleton<IPlaceholderMethod, MultiplyMethod>();
+            services.AddSingleton<IPlaceholderMethod, AverageMethod>();
+            services.AddSingleton<IPlaceholderMethod, DivideMethod>();
+            services.AddSingleton<IPlaceholderMethod, SubtractMethod>();
+            services.AddSingleton<IPlaceholderMethod, ModMethod>();
+            services.AddSingleton<IPlaceholderMethod, PowMethod>();
+            services.AddSingleton<IPlaceholderMethod, AbsMethod>();
+            services.AddSingleton<IPlaceholderMethod, FloorMethod>();
+            services.AddSingleton<IPlaceholderMethod, CeilMethod>();
+            services.AddSingleton<IPlaceholderMethod, RoundMethod>();
+            services.AddSingleton<IPlaceholderMethod, ClampMethod>();
+            services.AddSingleton<IPlaceholderMethod, GreaterThanMethod>();
+            services.AddSingleton<IPlaceholderMethod, SmallerThanMethod>();
+            services.AddSingleton<IPlaceholderMethod, GreaterThanOrEqualMethod>();
+            services.AddSingleton<IPlaceholderMethod, SmallerThanOrEqualMethod>();
+            services.AddSingleton<IPlaceholderMethod, GreaterMethod>();
+            services.AddSingleton<IPlaceholderMethod, LessMethod>();
+            services.AddSingleton<IPlaceholderMethod, EqualMethod>();
+            services.AddSingleton<IPlaceholderMethod, StringEqualsMethod>();
 
             return services;
         }

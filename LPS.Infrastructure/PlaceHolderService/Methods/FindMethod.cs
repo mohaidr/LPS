@@ -49,7 +49,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         // Bodies above this size are parsed but not cached, to bound worst-case memory retention.
         private const int MaxCacheableJsonLength = 1_000_000;
 
-        private readonly Lazy<IExpressionEvaluator> _ifEvaluator;
+        private readonly Lazy<IExpressionEvaluator> _expressionEvaluator;
 
         public FindMethod(
             ParameterExtractorService p,
@@ -57,10 +57,10 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             IRuntimeOperationIdProvider op,
             IVariableManager v,
             Lazy<IPlaceholderResolverService> r,
-            Lazy<IExpressionEvaluator> ifEvaluator)
+            Lazy<IExpressionEvaluator> expressionEvaluator)
             : base(p, l, op, v, r)
         {
-            _ifEvaluator = ifEvaluator;
+            _expressionEvaluator = expressionEvaluator;
         }
 
         public override string Name => "find";
@@ -227,7 +227,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         {
             try
             {
-                return await _ifEvaluator.Value.EvaluateResolvedAsync(predicate, token);
+                return await _expressionEvaluator.Value.EvaluateResolvedAsync(predicate, token);
             }
             catch (Exception ex)
             {

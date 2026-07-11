@@ -47,6 +47,17 @@ namespace LPS.Domain
                 }
             }
 
+            private async Task RunAfterExpressionsAsync(HttpRequest entity, CancellationToken token)
+            {
+                if (entity.After == null || entity.After.Count == 0)
+                    return;
+
+                foreach (var expression in entity.After)
+                {
+                    await _ifEvaluator.RunAsync(expression, _httpClientService.SessionId, token);
+                }
+            }
+
             async public Task ExecuteAsync(HttpRequest entity, CancellationToken token)
             {
                 try
@@ -105,6 +116,8 @@ namespace LPS.Domain
 
                         await Task.Delay(delayInMs, token);
                     }
+
+                    await RunAfterExpressionsAsync(entity, token);
 
                     if (!entity.HasFailed)
                         _executionStatus = CommandExecutionStatus.Completed;

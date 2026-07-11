@@ -61,6 +61,17 @@ namespace LPS.Domain
                 }
             }
 
+            private async Task RunAfterExpressionsAsync(HttpIteration entity, CancellationToken token)
+            {
+                if (entity.After == null || entity.After.Count == 0)
+                    return;
+
+                foreach (var expression in entity.After)
+                {
+                    await entity._ifEvaluator.RunAsync(expression, _httpClientService.SessionId, token);
+                }
+            }
+
             public async Task ExecuteAsync(HttpIteration entity, CancellationToken token)
             {
                 if (entity == null)
@@ -85,6 +96,7 @@ namespace LPS.Domain
                     }
                     _executionStatus = CommandExecutionStatus.Ongoing;
                     await entity.ExecuteAsync(this, token);
+                    await RunAfterExpressionsAsync(entity, token);
                     _executionStatus = CommandExecutionStatus.Completed;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)

@@ -48,5 +48,7 @@ namespace LPS.Domain
 
         public IReadOnlyList<string> Before { get; protected set; }
 
+        public IReadOnlyList<string> After { get; protected set; }
+
     }
 }

@@ -23,6 +23,9 @@ namespace LPS.Infrastructure.Skip
         // already happened. Skips both the Flee compile and evaluate on a hit.
         private static readonly ConcurrentDictionary<string, bool> ResultCache = new(StringComparer.Ordinal);
         private const int MaxResultCacheSize = 1024;
+        // Caches typed (non-boolean) results keyed by "<type>\u0001<normalized resolved expression>".
+        // Boxes value types, but keeps the generic path as fast as the boolean one on a cache hit.
+        private static readonly ConcurrentDictionary<string, object> ValueResultCache = new(StringComparer.Ordinal);
         // Resolved strings longer than this are almost certainly high-cardinality (embedded ids,
         // bodies) and would only churn the cache — evaluate them without caching.
         private const int MaxCacheableKeyLength = 512;
@@ -90,6 +93,55 @@ namespace LPS.Infrastructure.Skip
                 return Task.FromResult(false);
 
             return EvaluateCoreAsync(resolvedExpression, resolvedExpression);
+        }
+
+        // NOTE:
+        // Generic counterpart of EvaluateAsync: resolves placeholders, then compiles/evaluates the
+        // expression as T (string, int, double, decimal, bool, ...). The boolean path above is left
+        // untouched so its hot-path and cache stay simple. Returns defaultValue on empty/error.
+        public async Task<T> EvaluateValueAsync<T>(string expression, string sessionId, CancellationToken token, T defaultValue = default)
+        {
+            if (string.IsNullOrWhiteSpace(expression))
+                return defaultValue;
+
+            string resolved;
+            try
+            {
+                resolved = await _placeholderResolver
+                    .ResolvePlaceholdersAsync<string>(expression, sessionId, token)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                await LogEvaluationErrorAsync(expression, string.Empty, ex).ConfigureAwait(false);
+                return defaultValue;
+            }
+
+            try
+            {
+                resolved = NormalizeOperators(resolved);
+
+                var cacheable = resolved.Length <= MaxCacheableKeyLength;
+                var cacheKey = typeof(T).FullName + "\u0001" + resolved;
+                if (cacheable && ValueResultCache.TryGetValue(cacheKey, out var cached))
+                    return (T)cached;
+
+                var fleeExpr = _ctx.CompileGeneric<T>(resolved);
+                T result = fleeExpr.Evaluate();
+
+                if (cacheable)
+                {
+                    ValueResultCache[cacheKey] = result;
+                    TrimValueResultCacheIfNeeded();
+                }
+
+                return result;
+            }
+            catch (Exception ex)
+            {
+                await LogEvaluationErrorAsync(expression, resolved, ex).ConfigureAwait(false);
+                return defaultValue;
+            }
         }
 
         // Shared post-resolution logic: normalize -> result cache -> compile -> evaluate.
@@ -176,6 +228,15 @@ namespace LPS.Infrastructure.Skip
             {
                 if (ResultCache.Count <= MaxResultCacheSize) break;
                 ResultCache.TryRemove(key, out _);
+            }
+        }
+
+        private static void TrimValueResultCacheIfNeeded()
+        {
+            foreach (var key in ValueResultCache.Keys)
+            {
+                if (ValueResultCache.Count <= MaxResultCacheSize) break;
+                ValueResultCache.TryRemove(key, out _);
             }
         }
 

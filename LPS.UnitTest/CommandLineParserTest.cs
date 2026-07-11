@@ -471,6 +471,9 @@ namespace LPS.UnitTest
 
             public Task RunAsync(string expression, string sessionId, CancellationToken token)
                 => Task.CompletedTask;
+
+            public Task<T> EvaluateValueAsync<T>(string expression, string sessionId, CancellationToken token, T defaultValue = default)
+                => Task.FromResult(defaultValue);
         }
 
         private sealed class StubRuntimeOperationIdProvider : IRuntimeOperationIdProvider

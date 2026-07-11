@@ -66,6 +66,10 @@ namespace LPS.Infrastructure.PlaceHolderService
                 return await ts.ExecuteAsync(args, sessionId, token);
             if ((string.Equals(name, "counter", StringComparison.OrdinalIgnoreCase) || string.Equals(name, "loopcounter", StringComparison.OrdinalIgnoreCase)) && _methods.TryGetValue("iterate", out var it))
                 return await it.ExecuteAsync(args, sessionId, token);
+            if (string.Equals(name, "set", StringComparison.OrdinalIgnoreCase) && _methods.TryGetValue("setvariable", out var sv))
+                return await sv.ExecuteAsync(args, sessionId, token);
+            if (string.Equals(name, "avg", StringComparison.OrdinalIgnoreCase) && _methods.TryGetValue("average", out var avg))
+                return await avg.ExecuteAsync(args, sessionId, token);
 
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Unknown function '{name}'.", LPSLoggingLevel.Warning, token);
             return string.Empty;

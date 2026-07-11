@@ -35,6 +35,7 @@ namespace LPS.Domain
                 SaveResponse = false;
                 HttpHeaders = [];
                 Before = [];
+                After = [];
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             public Guid? Id { get; set; }
@@ -43,6 +44,7 @@ namespace LPS.Domain
             public string HttpVersion { get; set; }
             public string SkipIf { get; set; }
             public List<string> Before { get; set; }
+            public List<string> After { get; set; }
             public RetryPolicy? Retry { get; set; }
             public Dictionary<string, string> HttpHeaders { get; set; }
             public Payload? Payload { get; protected set; }
@@ -68,6 +70,7 @@ namespace LPS.Domain
                 targetCommand.HttpVersion = this.HttpVersion;
                 targetCommand.SkipIf = this.SkipIf;
                 targetCommand.Before = this.Before == null ? [] : new List<string>(this.Before);
+                targetCommand.After = this.After == null ? [] : new List<string>(this.After);
                 targetCommand.Retry = this.Retry == null
                     ? null
                     : new RetryPolicy
@@ -118,6 +121,7 @@ namespace LPS.Domain
                 this.HttpVersion = command.HttpVersion;
                 this.SkipIf = command.SkipIf;
                 this.Before = command.Before ?? new List<string>();
+                this.After = command.After ?? new List<string>();
                 string? retryIf = command.Retry?.If;
                 string? stopIf = command.Retry?.StopIf;
                 int maxRetries = command.Retry?.MaxRetries ?? 1;
@@ -199,6 +203,7 @@ namespace LPS.Domain
                 clone.ClientCertificatePassword = this.ClientCertificatePassword;
                 clone.Capture = (CaptureHandler?)this.Capture?.Clone();
                 clone.Before = this.Before == null ? new List<string>() : new List<string>(this.Before);
+                clone.After = this.After == null ? new List<string>() : new List<string>(this.After);
                 clone.HttpHeaders = [];
                 if (this.HttpHeaders != null)
                 {

@@ -116,13 +116,20 @@ namespace LPS.Infrastructure.Monitoring.TerminationServices
                         if (!string.IsNullOrWhiteSpace(rule.Expression))
                         {
                             bool expressionConditionMet = await _ifEvaluator.EvaluateAsync(rule.Expression, string.Empty, token);
-                            if (expressionConditionMet)
+
+                            // Use grace period tracking so the expression must hold true for the
+                            // entire grace period before terminating (consistent with metric rules).
+                            var exprKey = (iteration.Id, "expr:" + rule.Expression);
+                            var exprGraceState = _stateV2.GetOrAdd(exprKey, _ => new GracePeriodState(rule.GracePeriod));
+
+                            if (await exprGraceState.UpdateBreachAndCheckGracePeriodAsync(expressionConditionMet))
                             {
                                 _terminatedIterations.TryAdd(iteration.Id, true);
 
                                 await _logger.LogAsync(
                                     _runtimeOperationIdProvider.OperationId,
-                                    $"The iteration '{iteration.Name}' will be terminated because the expression '{rule.Expression}' evaluated to true.",
+                                    $"The iteration '{iteration.Name}' will be terminated because the expression '{rule.Expression}' " +
+                                    $"evaluated to true for the entire grace period of {rule.GracePeriod.TotalSeconds}s.",
                                     LPSLoggingLevel.Warning,
                                     token);
                                 return true;

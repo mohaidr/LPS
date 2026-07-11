@@ -23,6 +23,7 @@ namespace LPS.UI.Common.DTOs
             HttpVersion = "2.0";
             SupportH2C = "false";
             Before = [];
+            After = [];
         }
 
         public class RetryDto
@@ -73,6 +74,9 @@ namespace LPS.UI.Common.DTOs
         // Expressions run (for side-effects, e.g. $find) before this request's SkipIf/URL/headers.
         public List<string> Before { get; set; }
 
+        // Expressions run (for side-effects, e.g. $find) after this request executes.
+        public List<string> After { get; set; }
+
         // Retry policy object (preferred).
         [YamlAlias("retry")]
         [JsonAlias("retry")]
@@ -117,6 +121,8 @@ namespace LPS.UI.Common.DTOs
                 HttpMethod = this.HttpMethod,
                 HttpVersion = this.HttpVersion,
                 SkipIf = this.SkipIf,
+                Before = this.Before is null ? [] : [.. this.Before],
+                After = this.After is null ? [] : [.. this.After],
                 Retry = this.Retry == null
                     ? null
                     : new RetryDto

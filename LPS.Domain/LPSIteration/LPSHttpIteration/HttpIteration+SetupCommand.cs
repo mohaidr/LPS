@@ -52,6 +52,8 @@ namespace LPS.Domain
             public string SkipIf {  get; set; }
 
             public List<string> Before { get; set; }
+
+            public List<string> After { get; set; }
             
             // Inline operator support for termination
             public ICollection<TerminationRule> TerminationRules { get; set; }
@@ -83,6 +85,7 @@ namespace LPS.Domain
                 targetCommand.FailureRules = [.. this.FailureRules];
                 targetCommand.SkipIf = this.SkipIf;
                 targetCommand.Before = this.Before == null ? [] : new List<string>(this.Before);
+                targetCommand.After = this.After == null ? [] : new List<string>(this.After);
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
             }
         }
@@ -108,6 +111,7 @@ namespace LPS.Domain
                 this.BatchSize = command.BatchSize;
                 this.SkipIf = command.SkipIf;
                 this.Before = command.Before ?? new List<string>();
+                this.After = command.After ?? new List<string>();
                 this.FailureRules = command.FailureRules.ToList();
                 this.TerminationRules = command.TerminationRules.ToList();
                 this.IsValid = true;
@@ -136,6 +140,7 @@ namespace LPS.Domain
                 clone.MaximizeThroughput = this.MaximizeThroughput;
                 clone.SkipIf = this.SkipIf;
                 clone.Before = this.Before == null ? new List<string>() : new List<string>(this.Before);
+                clone.After = this.After == null ? new List<string>() : new List<string>(this.After);
                 clone.TerminationRules = [.. this.TerminationRules];
                 clone.FailureRules = [.. this.FailureRules];
                 clone.IsValid = true;

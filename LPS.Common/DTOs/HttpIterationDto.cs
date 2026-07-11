@@ -15,6 +15,7 @@ namespace LPS.UI.Common.DTOs
             TerminationRules = [];
             FailureRules = [];
             Before = [];
+            After = [];
         }
 
         // Name of the iteration
@@ -60,6 +61,9 @@ namespace LPS.UI.Common.DTOs
         // Expressions run (for side-effects, e.g. $find) before this iteration's SkipIf.
         public List<string> Before { get; set; }
 
+        // Expressions run (for side-effects, e.g. $find) after this iteration executes.
+        public List<string> After { get; set; }
+
         // Inline operator support for failure rules
         public List<FailureRuleDto> FailureRules { get; set; }
         
@@ -81,6 +85,7 @@ namespace LPS.UI.Common.DTOs
                 CoolDownTime = this.CoolDownTime,
                 SkipIf = this.SkipIf,
                 Before = this.Before is null ? [] : [.. this.Before],
+                After = this.After is null ? [] : [.. this.After],
                 TerminationRules = [.. this.TerminationRules],
                 FailureRules = [.. this.FailureRules]
             };
