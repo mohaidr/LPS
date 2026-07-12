@@ -84,6 +84,7 @@ namespace LPS.UI.Common.Extensions
             services.AddSingleton<IPlaceholderMethod, GenerateEmailMethod>();
             services.AddSingleton<IPlaceholderMethod, ReadMethod>();
             services.AddSingleton<IPlaceholderMethod, FindMethod>();
+            services.AddSingleton<IPlaceholderMethod, FindXmlMethod>();
 
             // Numeric / comparison declarative methods
             services.AddSingleton<IPlaceholderMethod, SetVariableMethod>();
