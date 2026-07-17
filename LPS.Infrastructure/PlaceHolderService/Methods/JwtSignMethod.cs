@@ -42,14 +42,14 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(claimsRaw))
                 {
                     await _logger.LogAsync(_op.OperationId, "jwtsign failed. 'claims' (a JSON object) is required.", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
                 if (string.IsNullOrEmpty(key))
                 {
                     await _logger.LogAsync(_op.OperationId, "jwtsign failed. A 'key' is required.", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -64,7 +64,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (signer == null)
                 {
                     await _logger.LogAsync(_op.OperationId, $"jwtsign failed. Algorithm '{algorithm}' is not supported yet. Use HS256, HS384, or HS512.", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -76,7 +76,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 catch (Exception ex)
                 {
                     await _logger.LogAsync(_op.OperationId, $"jwtsign failed. 'claims' is not valid JSON: {ex.Message}", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -93,13 +93,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 byte[] signature = signer.ComputeHash(Encoding.UTF8.GetBytes(signingInput));
                 string jwt = signingInput + "." + Base64UrlEncode(signature);
 
-                await StoreVariableIfNeededAsync(variableName, jwt, token);
+                await StoreStringVariableAsync(variableName, jwt, token);
                 return jwt;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"jwtsign failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

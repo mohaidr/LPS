@@ -74,13 +74,14 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 // Single scan of the parameters string instead of one full scan per key.
                 var args = _params.ParseParameters(parameters);
 
-                // 'source' is taken RAW: the outer resolver pre-resolves any method argument string
-                // containing '$' before dispatch, so it is already the substituted body here.
+                // 'source' is resolved here: methods now receive their args RAW (the outer resolver no
+                // longer pre-resolves method arguments). Resolving it once yields the substituted body; the
+                // body's own '$' characters are not re-scanned, so a single pass is safe.
                 // 'default' stays raw (resolved only on the no-match fallback).
                 // Every other parameter is resolved so it can be indirected through a variable
                 // (e.g. where=$myWhereClause). Bare `item` references carry no '$', so they survive
                 // resolution and are substituted directly from each element below.
-                var source = args.GetValueOrDefault("source", string.Empty);
+                var source = await ResolveArgAsync(args, "source", string.Empty, sessionId, token);
                 var defaultRaw = args.GetValueOrDefault("default", string.Empty);
 
                 var where = await ResolveArgAsync(args, "where", string.Empty, sessionId, token);

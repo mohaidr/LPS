@@ -369,11 +369,13 @@ namespace LPS.UnitTest
         [Fact]
         public async Task Find_SourceWithLiteralDollarText_IsNotCorrupted()
         {
-            // 'source' is taken raw (already resolved by the outer pass); it must not be re-resolved,
-            // which would treat literal '$' text in the body as placeholders and mangle the JSON.
+            // 'source' is a placeholder resolved ONCE by find (methods self-resolve their args). The
+            // resolved body's literal '$' text (e.g. "$99") is inserted and never re-scanned, so a single
+            // pass leaves it intact.
             var h = BuildHarness();
             var body = "[{\"id\":1,\"note\":\"pay $99 now\"},{\"id\":2,\"note\":\"free\"}]";
-            var args = "source=" + body + ", where=item.id == 1, select=item.note, match=first, variable=note";
+            await PutGlobalJsonAsync(h, "usersBody", body);
+            var args = "source=$usersBody, where=item.id == 1, select=item.note, match=first, variable=note";
 
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 

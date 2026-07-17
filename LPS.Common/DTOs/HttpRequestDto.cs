@@ -28,9 +28,11 @@ namespace LPS.UI.Common.DTOs
 
         public class RetryDto
         {
+            // Optional. When omitted, retry behaves as if 'if: true' (retry unconditionally, subject to
+            // 'stopIf' and 'maxRetries'). Left null so an absent value is distinguishable from an empty one.
             [YamlAlias("if")]
             [JsonAlias("if")]
-            public string If { get; set; } = string.Empty;
+            public string? If { get; set; }
 
             [YamlAlias("stopIf")]
             [JsonAlias("stopIf")]

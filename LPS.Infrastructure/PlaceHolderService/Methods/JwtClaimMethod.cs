@@ -30,7 +30,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 if (string.IsNullOrEmpty(tokenStr) || string.IsNullOrEmpty(claim))
                 {
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (parts.Length < 2)
                 {
                     await _logger.LogAsync(_op.OperationId, "jwtclaim: invalid token format.", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -46,13 +46,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(payloadJson);
 
                 string result = (dict != null && dict.TryGetValue(claim, out var valueObj)) ? valueObj?.ToString() ?? string.Empty : string.Empty;
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"jwtclaim failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

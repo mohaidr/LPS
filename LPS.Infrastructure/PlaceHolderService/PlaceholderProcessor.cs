@@ -68,6 +68,8 @@ namespace LPS.Infrastructure.PlaceHolderService
                 return await it.ExecuteAsync(args, sessionId, token);
             if (string.Equals(name, "set", StringComparison.OrdinalIgnoreCase) && _methods.TryGetValue("setvariable", out var sv))
                 return await sv.ExecuteAsync(args, sessionId, token);
+            if (string.Equals(name, "setif", StringComparison.OrdinalIgnoreCase) && _methods.TryGetValue("setvariableif", out var svi))
+                return await svi.ExecuteAsync(args, sessionId, token);
             if (string.Equals(name, "avg", StringComparison.OrdinalIgnoreCase) && _methods.TryGetValue("average", out var avg))
                 return await avg.ExecuteAsync(args, sessionId, token);
 

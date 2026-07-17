@@ -112,14 +112,7 @@ namespace LPS.Infrastructure.PlaceHolderService
                         int stopperIndex = FindStopperIndex(result, startIndex); // the stopper will always be }
 
                         string placeholder = result.ToString(startIndex, stopperIndex - startIndex); // Exclude closing '}'
-                        
-                        // Resolve nested placeholders first if placeholder contains '$'
-                        if (placeholder.Contains('$'))
-                        {
-                            placeholder = await ResolveAsync(placeholder, sessionId, token, depth + 1);
-                        }
-                        
-                        string resolvedValue = await _processor.ProcessPlaceholderAsync(placeholder, sessionId, token);
+                        string resolvedValue = await ResolvePlaceholderAsync(placeholder, sessionId, token, depth);
 
                         result.Remove(currentIndex, stopperIndex - currentIndex + 1); // to remove }
                         result.Insert(currentIndex, resolvedValue);
@@ -130,14 +123,7 @@ namespace LPS.Infrastructure.PlaceHolderService
                         int startIndex = currentIndex + 1;
                         int stopperIndex = FindStopperIndex(result, startIndex); // Stoppers like / ; , ] } etc., indicate the end of a variable. For example, in $x,$y, the ',' acts as a stopper, signaling that $x is a complete placeholder to resolve, so $x,$y should be treated as two separate variables.
                         string placeholder = result.ToString(startIndex, stopperIndex - startIndex);
-                        
-                        // Resolve nested placeholders first if placeholder contains '$'
-                        if (placeholder.Contains('$'))
-                        {
-                            placeholder = await ResolveAsync(placeholder, sessionId, token, depth + 1);
-                        }
-                        
-                        string resolvedValue = await _processor.ProcessPlaceholderAsync(placeholder, sessionId, token);
+                        string resolvedValue = await ResolvePlaceholderAsync(placeholder, sessionId, token, depth);
 
                         result.Remove(currentIndex, stopperIndex - currentIndex);
                         result.Insert(currentIndex, resolvedValue);
@@ -152,6 +138,41 @@ namespace LPS.Infrastructure.PlaceHolderService
 
             return result.ToString();
         }
+
+        /// <summary>
+        /// Dispatches one extracted placeholder to the processor, routing by its kind:
+        /// a variable placeholder has its nested content resolved first; a method call is dispatched raw.
+        /// </summary>
+        private Task<string> ResolvePlaceholderAsync(string placeholder, string sessionId, CancellationToken token, int depth)
+            => IsMethodCall(placeholder)
+                ? ResolveMethodPlaceholderAsync(placeholder, sessionId, token)
+                : ResolveVariablePlaceholderAsync(placeholder, sessionId, token, depth);
+
+        /// <summary>
+        /// A VARIABLE placeholder: nested placeholders inside it (indirect names like ${${x}} or dynamic
+        /// path segments/indices like ${a.${p}} / ${a[${i}]}) are resolved FIRST, because they form the
+        /// variable path itself. The fully-substituted variable is then dispatched to the processor.
+        /// </summary>
+        private async Task<string> ResolveVariablePlaceholderAsync(string placeholder, string sessionId, CancellationToken token, int depth)
+        {
+            if (placeholder.Contains('$'))
+            {
+                placeholder = await ResolveAsync(placeholder, sessionId, token, depth + 1);
+            }
+
+            return await _processor.ProcessPlaceholderAsync(placeholder, sessionId, token);
+        }
+
+        /// <summary>
+        /// A METHOD call: its args are dispatched RAW (NOT pre-resolved), so each method resolves the args
+        /// it needs on demand. This keeps a nested method's side effects from firing eagerly and avoids
+        /// double-resolving arg values.
+        /// </summary>
+        private Task<string> ResolveMethodPlaceholderAsync(string placeholder, string sessionId, CancellationToken token)
+            => _processor.ProcessPlaceholderAsync(placeholder, sessionId, token);
+
+        /// <summary>A placeholder is a method call when it ends with the closing ')'.</summary>
+        private static bool IsMethodCall(string placeholder) => placeholder.EndsWith(")");
 
         private static int FindStopperIndex(StringBuilder result, int startIndex)
         {

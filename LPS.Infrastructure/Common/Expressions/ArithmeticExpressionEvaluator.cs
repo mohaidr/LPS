@@ -67,6 +67,36 @@ namespace LPS.Infrastructure.Common.Expressions
             }
         }
 
+        public static bool TryEvaluateToDouble(string expression, out double result)
+        {
+            result = default;
+            if (!IsArithmeticExpression(expression))
+            {
+                return false;
+            }
+
+            var candidate = expression.Trim();
+
+            try
+            {
+                var doubleExpr = DoubleExpressionCache.GetOrAdd(candidate, static expr =>
+                {
+                    var ctx = CreateExpressionContext();
+                    return ctx.CompileGeneric<double>(expr);
+                });
+                result = doubleExpr.Evaluate();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                TrimExpressionCachesIfNeeded();
+            }
+        }
+
         private static ExpressionContext CreateExpressionContext()
         {
             var ctx = new ExpressionContext();

@@ -91,11 +91,10 @@ namespace LPS.UnitTest
         public async Task Resolve_MethodWithNestedVariableArgument_ResolvesSuccessfully()
         {
             // Case 5: ${SomeMethod(${param})}
+            // Option A: method args are NOT pre-resolved by the outer resolver. The method is dispatched
+            // with its args RAW and resolves them itself, so the processor receives "SomeMethod(${param})".
             _mockProcessor
-                .Setup(x => x.ProcessPlaceholderAsync("param", SessionId, _cancellationToken))
-                .ReturnsAsync("test-value");
-            _mockProcessor
-                .Setup(x => x.ProcessPlaceholderAsync("SomeMethod(test-value)", SessionId, _cancellationToken))
+                .Setup(x => x.ProcessPlaceholderAsync("SomeMethod(${param})", SessionId, _cancellationToken))
                 .ReturnsAsync("method-result");
 
             var result = await _resolver.ResolvePlaceholdersAsync<string>("${SomeMethod(${param})}", SessionId, _cancellationToken);
@@ -141,11 +140,11 @@ namespace LPS.UnitTest
         public async Task Resolve_ComplexNestedLookup_ResolvesSuccessfully()
         {
             // Case 9: ${Data[${GetIndex(${iteration})}]}
+            // Option A: the outer placeholder is a VARIABLE (ends with ']'), so its nested content is
+            // pre-resolved. The inner GetIndex(...) is a METHOD, so it is dispatched with its arg RAW
+            // ("GetIndex(${iteration})") and resolves ${iteration} itself.
             _mockProcessor
-                .Setup(x => x.ProcessPlaceholderAsync("iteration", SessionId, _cancellationToken))
-                .ReturnsAsync("5");
-            _mockProcessor
-                .Setup(x => x.ProcessPlaceholderAsync("GetIndex(5)", SessionId, _cancellationToken))
+                .Setup(x => x.ProcessPlaceholderAsync("GetIndex(${iteration})", SessionId, _cancellationToken))
                 .ReturnsAsync("12");
             _mockProcessor
                 .Setup(x => x.ProcessPlaceholderAsync("Data[12]", SessionId, _cancellationToken))

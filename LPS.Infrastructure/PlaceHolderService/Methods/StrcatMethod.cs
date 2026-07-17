@@ -34,13 +34,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 var result = Concatenate(values, separator);
 
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"strcat failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

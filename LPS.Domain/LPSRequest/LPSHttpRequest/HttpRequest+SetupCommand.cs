@@ -122,22 +122,21 @@ namespace LPS.Domain
                 this.SkipIf = command.SkipIf;
                 this.Before = command.Before ?? new List<string>();
                 this.After = command.After ?? new List<string>();
-                string? retryIf = command.Retry?.If;
-                string? stopIf = command.Retry?.StopIf;
-                int maxRetries = command.Retry?.MaxRetries ?? 1;
-                RetryDelayStrategy retryStrategy = command.Retry?.Strategy ?? RetryDelayStrategy.Fixed;
-                int? retryDelayInMs = command.Retry?.DelayInMs;
-                int? retryMaxDelayInMs = command.Retry?.MaxDelayInMs;
 
-                this.Retry = new RetryPolicy
-                {
-                    If = retryIf ?? string.Empty,
-                    StopIf = stopIf ?? string.Empty,
-                    MaxRetries = maxRetries,
-                    Strategy = retryStrategy,
-                    DelayInMs = retryDelayInMs,
-                    MaxDelayInMs = retryMaxDelayInMs
-                };
+                // Only materialize a retry policy when a 'retry' block was actually configured. A missing
+                // block means "no retries" (Retry stays null). When a block IS present, 'if' is optional and
+                // defaults to true (retry unconditionally, subject to stopIf/maxRetries).
+                this.Retry = command.Retry == null
+                    ? null
+                    : new RetryPolicy
+                    {
+                        If = string.IsNullOrWhiteSpace(command.Retry.If) ? "true" : command.Retry.If,
+                        StopIf = command.Retry.StopIf ?? string.Empty,
+                        MaxRetries = command.Retry.MaxRetries ?? 1,
+                        Strategy = command.Retry.Strategy,
+                        DelayInMs = command.Retry.DelayInMs,
+                        MaxDelayInMs = command.Retry.MaxDelayInMs
+                    };
                 this.Url = new URL(command.Url.Url);
                 if (command.Payload?.Type == Payload.PayloadType.Raw)
                 {

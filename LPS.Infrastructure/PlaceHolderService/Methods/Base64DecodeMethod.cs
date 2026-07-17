@@ -27,19 +27,19 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 if (string.IsNullOrEmpty(value))
                 {
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
                 string padded = PadBase64(value);
                 string result = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"base64decode failed for '{Truncate(value)}'. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

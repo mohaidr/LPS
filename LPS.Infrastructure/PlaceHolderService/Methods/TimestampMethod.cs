@@ -26,13 +26,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 DateTime dt = DateTime.UtcNow.AddHours(offsetHours);
                 string result = dt.ToString(format);
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"timestamp failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

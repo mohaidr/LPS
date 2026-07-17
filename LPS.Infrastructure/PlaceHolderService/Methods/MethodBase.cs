@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Infrastructure.Common.Expressions;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
 
@@ -39,18 +40,15 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public abstract string Name { get; }
         public abstract Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token);
 
-        protected async Task StoreVariableIfNeededAsync(string variableName, string value, CancellationToken token)
-        {
-            if (string.IsNullOrWhiteSpace(variableName)) return;
-
-            var holder = await new StringVariableHolder.VMaintainer(_resolver.Value, _logger, _op) // Use .Value
-                .WithType(VariableType.String)
-                .WithRawValue(value ?? string.Empty)
-                .SetGlobal()
-                .UpdateAsync(token);
-
-            await _variables.PutAsync(variableName, holder, token);
-        }
+        /// <summary>
+        /// Stores <paramref name="value"/> as a plain string variable (when <paramref name="variableName"/>
+        /// is provided). Thin wrapper over <see cref="StoreTypedVariableAsync"/> with an explicit string
+        /// type, so the string-holder construction lives in exactly one place.
+        /// </summary>
+        [Obsolete("Use StoreTypedVariableAsync(variableName, new JValue(value), \"string\", token) instead. " +
+                  "This helper only stores a plain string and remains for backward compatibility.")]
+        protected Task StoreStringVariableAsync(string variableName, string value, CancellationToken token)
+            => StoreTypedVariableAsync(variableName, new JValue(value ?? string.Empty), "string", token);
 
         /// <summary>
         /// Stores a value under <paramref name="variableName"/> using the variable type that best
@@ -65,6 +63,41 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             var targetType = MapAsType(asType) ?? InferVariableType(value);
             var holder = await BuildTypedHolderAsync(targetType, value, token);
             await _variables.PutAsync(variableName, holder, token);
+        }
+
+        /// <summary>
+        /// Builds the token to store from a resolved string <paramref name="value"/> and an
+        /// <paramref name="asType"/>: json/jsonstring is parsed (raw string on invalid JSON); a numeric
+        /// target (int/double/decimal/...) evaluates an arithmetic expression (e.g. 2+3, 1.5+1) so the
+        /// stored value is a real number; anything else stays a plain string and is coerced by
+        /// <see cref="StoreTypedVariableAsync"/>.
+        /// </summary>
+        protected static JToken BuildValueToken(string value, string asType)
+        {
+            switch ((asType ?? string.Empty).Trim().ToLowerInvariant())
+            {
+                case "json":
+                case "jsonstring":
+                    try { return JToken.Parse(value); }
+                    catch { return new JValue(value); }
+
+                case "int":
+                case "integer":
+                    return ArithmeticExpressionEvaluator.TryEvaluateToInt(value, out var i)
+                        ? new JValue(i)
+                        : new JValue(value);
+
+                case "double":
+                case "float":
+                case "number":
+                case "decimal":
+                    return ArithmeticExpressionEvaluator.TryEvaluateToDouble(value, out var d)
+                        ? new JValue(d)
+                        : new JValue(value);
+
+                default:
+                    return new JValue(value);
+            }
         }
 
         private async Task<IVariableHolder> BuildTypedHolderAsync(VariableType targetType, JToken value, CancellationToken token)
@@ -292,7 +325,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         protected async Task<string> FailNumberAsync(string variableName, string methodName, CancellationToken token, string reason = "No numeric values were provided.")
         {
             await _logger.LogAsync(_op.OperationId, $"{methodName} failed. {reason}", LPSLoggingLevel.Warning, token);
-            await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+            await StoreTypedVariableAsync(variableName, new JValue(string.Empty), "string", token);
             return string.Empty;
         }
 

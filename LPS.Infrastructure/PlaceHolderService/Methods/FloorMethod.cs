@@ -35,7 +35,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"floor failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

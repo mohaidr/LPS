@@ -10,7 +10,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     /// <summary>
     /// $setvariable(variable=name, value=..., as=int|double|decimal|bool|string|json)
-    /// Resolves 'value' and stores it (typed) into 'variable'. Alias: $set(...).
+    /// Resolves 'value' and stores it (typed) into 'variable'. When 'as' is a numeric type, an arithmetic
+    /// 'value' (e.g. 2+3, 10/4) is evaluated before storing. Alias: $set(...).
     /// </summary>
     public sealed class SetVariableMethod : MethodBase
     {
@@ -37,17 +38,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     return value;
                 }
 
-                JToken jt;
-                if (string.Equals(asType, "json", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(asType, "jsonstring", StringComparison.OrdinalIgnoreCase))
-                {
-                    try { jt = JToken.Parse(value); }
-                    catch { jt = new JValue(value); }
-                }
-                else
-                {
-                    jt = new JValue(value);
-                }
+                var jt = BuildValueToken(value, asType);
 
                 await StoreTypedVariableAsync(variableName, jt, asType, token);
                 return value;

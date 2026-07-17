@@ -152,8 +152,12 @@ namespace LPS.Domain
                 }
 
                 string retryIf = entity.Retry?.If;
-                if (string.IsNullOrWhiteSpace(retryIf) || (entity.Retry?.MaxRetries ?? 0) <= 0)
+                if ((entity.Retry?.MaxRetries ?? 0) <= 0)
                     return false;
+
+                // When 'if' is omitted it defaults to true: retry unconditionally (subject to stopIf/maxRetries).
+                if (string.IsNullOrWhiteSpace(retryIf))
+                    return true;
 
                 return await _ifEvaluator.EvaluateAsync(retryIf, _httpClientService.SessionId, token);
             }

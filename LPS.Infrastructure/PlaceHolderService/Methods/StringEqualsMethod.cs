@@ -35,13 +35,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
                 var text = string.Equals(a, b, comparison) ? "true" : "false";
 
-                await StoreVariableIfNeededAsync(variableName, text, token);
+                await StoreStringVariableAsync(variableName, text, token);
                 return text;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"stringequals failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, "false", token);
+                await StoreStringVariableAsync(variableName, "false", token);
                 return "false";
             }
         }

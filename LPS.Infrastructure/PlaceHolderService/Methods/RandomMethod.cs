@@ -27,13 +27,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
                 var rnd = new Random();
                 string result = new string(Enumerable.Repeat(chars, length).Select(s => s[rnd.Next(s.Length)]).ToArray());
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"random failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

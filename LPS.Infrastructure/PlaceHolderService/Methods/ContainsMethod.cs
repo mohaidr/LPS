@@ -22,37 +22,40 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
             try
             {
-                var source = await _params.ExtractStringAsync(parameters, "source", string.Empty, sessionId, token);
+                // Extract RAW then resolve ONCE (previously ExtractStringAsync resolved and the trailing
+                // ResolvePlaceholdersAsync resolved again — a double pass that could mangle values containing
+                // a literal '$'). The positional fallback is already raw.
+                var source = _params.ExtractRawString(parameters, "source", string.Empty);
                 if (string.IsNullOrWhiteSpace(source))
                 {
                     source = ExtractPositionalParameter(parameters);
                 }
 
-                var value = await _params.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
+                var value = _params.ExtractRawString(parameters, "value", string.Empty);
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
                 var ignoreCase = await _params.ExtractBoolAsync(parameters, "ignoreCase", false, sessionId, token);
 
-                if (string.IsNullOrWhiteSpace(source) || string.IsNullOrWhiteSpace(value))
-                {
-                    await _logger.LogAsync(_op.OperationId, "contains failed. Source and value are required.", LPSLoggingLevel.Warning, token);
-                    await StoreVariableIfNeededAsync(variableName, "false", token);
-                    return "false";
-                }
-
                 var resolvedSource = await _resolver.Value.ResolvePlaceholdersAsync<string>(source, sessionId, token) ?? string.Empty;
                 var resolvedValue = await _resolver.Value.ResolvePlaceholdersAsync<string>(value, sessionId, token) ?? string.Empty;
+
+                if (string.IsNullOrWhiteSpace(resolvedSource) || string.IsNullOrWhiteSpace(resolvedValue))
+                {
+                    await _logger.LogAsync(_op.OperationId, "contains failed. Source and value are required.", LPSLoggingLevel.Warning, token);
+                    await StoreStringVariableAsync(variableName, "false", token);
+                    return "false";
+                }
 
                 var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
                 var result = resolvedSource.IndexOf(resolvedValue, comparison) >= 0;
                 var resultText = result.ToString().ToLowerInvariant();
 
-                await StoreVariableIfNeededAsync(variableName, resultText, token);
+                await StoreStringVariableAsync(variableName, resultText, token);
                 return resultText;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"contains failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, "false", token);
+                await StoreStringVariableAsync(variableName, "false", token);
                 return "false";
             }
         }

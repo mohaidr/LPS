@@ -176,7 +176,7 @@ namespace LPS.UnitTest
         }
 
         [Fact]
-        public void DomainValidator_HttpRequest_MaxRetriesWithoutRetryIf_IsInvalid()
+        public void DomainValidator_HttpRequest_MaxRetriesWithoutRetryIf_IsValid()
         {
             var command = CreateBaseValidRequestCommand();
             command.Retry = new RetryPolicy
@@ -190,11 +190,12 @@ namespace LPS.UnitTest
 
             ValidateRequest(command);
 
-            Assert.False(command.IsValid);
+            // 'if' is optional and defaults to true, so a retry block without it is valid.
+            Assert.True(command.IsValid);
         }
 
         [Fact]
-        public void DomainValidator_HttpRequest_StopIfWithoutRetryIf_IsInvalid()
+        public void DomainValidator_HttpRequest_StopIfWithoutRetryIf_IsValid()
         {
             var command = CreateBaseValidRequestCommand();
             command.Retry = new RetryPolicy
@@ -209,7 +210,8 @@ namespace LPS.UnitTest
 
             ValidateRequest(command);
 
-            Assert.False(command.IsValid);
+            // 'if' defaults to true; 'stopIf' alone is a valid configuration.
+            Assert.True(command.IsValid);
         }
 
         [Fact]

@@ -141,14 +141,6 @@ namespace LPS.Domain
                         .Must(command =>
                         {
                             var retryIf = command.Retry?.If?.Trim();
-                            return !string.IsNullOrWhiteSpace(retryIf);
-                        })
-                        .WithMessage("'retry.if' must be provided when 'retry' is configured.");
-
-                    RuleFor(command => command)
-                        .Must(command =>
-                        {
-                            var retryIf = command.Retry?.If?.Trim();
                             var stopIf = command.Retry?.StopIf?.Trim();
                             if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
                                 return true;

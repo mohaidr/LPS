@@ -76,14 +76,14 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                     string result = current.ToString();
                     await _memoryCacheService.SetItemAsync(cacheKey, result, TimeSpan.MaxValue);
-                    await StoreVariableIfNeededAsync(variableName, result, token);
+                    await StoreStringVariableAsync(variableName, result, token);
                     return result;
                 }
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"iterate failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

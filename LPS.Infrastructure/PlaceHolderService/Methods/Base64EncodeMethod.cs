@@ -24,13 +24,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 value = await _params.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
                 variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
                 string result = string.IsNullOrEmpty(value) ? string.Empty : Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"base64encode failed for '{Truncate(value)}'. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

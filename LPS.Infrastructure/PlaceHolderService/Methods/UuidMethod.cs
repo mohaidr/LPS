@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             string prefix = await _params.ExtractStringAsync(parameters, "prefix", "", sessionId, token);
             string variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
             string result = prefix + Guid.NewGuid().ToString();
-            await StoreVariableIfNeededAsync(variableName, result, token);
+            await StoreStringVariableAsync(variableName, result, token);
             return result;
         }
     }

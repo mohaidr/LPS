@@ -25,13 +25,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
                 string unique = Guid.NewGuid().ToString("N").Substring(0, 8);
                 string email = $"{prefix}-{unique}@{domain}";
-                await StoreVariableIfNeededAsync(variableName, email, token);
+                await StoreStringVariableAsync(variableName, email, token);
                 return email;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"generateemail failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

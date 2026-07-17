@@ -38,7 +38,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrEmpty(key))
                 {
                     await _logger.LogAsync(_op.OperationId, "hmac failed. A 'key' (shared secret) is required.", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -55,7 +55,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (hmac == null)
                 {
                     await _logger.LogAsync(_op.OperationId, $"hmac failed. Unsupported algorithm '{algorithm}'. Use SHA1, SHA256, SHA384, or SHA512.", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -73,13 +73,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     result = BitConverter.ToString(mac).Replace("-", "").ToLowerInvariant();
                 }
 
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"hmac failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

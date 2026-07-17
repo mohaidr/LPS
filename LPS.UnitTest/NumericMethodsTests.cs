@@ -157,6 +157,73 @@ namespace LPS.UnitTest
             Assert.Equal("world", await RawAsync(h, "aliased"));
         }
 
+        [Fact]
+        public async Task SetVariable_AsInt_EvaluatesArithmetic()
+        {
+            var h = BuildHarness();
+
+            await h.Run("setvariable", "variable=sum, value=2+3, as=int");
+
+            var stored = await h.Variables.GetAsync("sum", _ct);
+            Assert.IsType<NumberVariableHolder>(stored);
+            Assert.Equal("5", await stored.GetRawValueAsync(_ct));
+        }
+
+        [Fact]
+        public async Task SetVariable_AsDouble_EvaluatesArithmetic()
+        {
+            var h = BuildHarness();
+
+            await h.Run("setvariable", "variable=ratio, value=1.5+1, as=double");
+
+            var stored = await h.Variables.GetAsync("ratio", _ct);
+            Assert.IsType<NumberVariableHolder>(stored);
+            Assert.Equal("2.5", await stored.GetRawValueAsync(_ct));
+        }
+
+        [Fact]
+        public async Task SetVariable_AsString_DoesNotEvaluateArithmetic()
+        {
+            var h = BuildHarness();
+
+            await h.Run("setvariable", "variable=expr, value=2+3");
+
+            var stored = await h.Variables.GetAsync("expr", _ct);
+            Assert.IsType<StringVariableHolder>(stored);
+            Assert.Equal("2+3", await stored.GetRawValueAsync(_ct));
+        }
+
+        [Fact]
+        public async Task MethodArgument_IsAnotherMethod_ResolvesInnerThenOuter()
+        {
+            // A method's parameter is itself a method placeholder: setvariable's `value` is $sum(...).
+            // Under Option A the outer method is dispatched with RAW args and resolves `value` itself,
+            // which runs the inner $sum on demand — so method-in-method-arg works end to end.
+            var h = BuildHarness();
+
+            var result = await h.Resolver.ResolvePlaceholdersAsync<string>(
+                "${setvariable(variable=total, value=$sum(source=[2,3]), as=int)}", SessionId, _ct);
+
+            Assert.Equal("5", result);
+            var stored = await h.Variables.GetAsync("total", _ct);
+            Assert.IsType<NumberVariableHolder>(stored);
+            Assert.Equal("5", await stored.GetRawValueAsync(_ct));
+        }
+
+        [Fact]
+        public async Task MethodArgument_DeeplyNestedMethods_Resolve()
+        {
+            // Two levels of method nesting inside an arg: multiply([ sum([2,3]), 2 ]) = 10.
+            var h = BuildHarness();
+
+            var result = await h.Resolver.ResolvePlaceholdersAsync<string>(
+                "${setvariable(variable=x, value=$multiply(source=[$sum(source=[2,3]), 2]), as=int)}", SessionId, _ct);
+
+            Assert.Equal("10", result);
+            var stored = await h.Variables.GetAsync("x", _ct);
+            Assert.Equal("10", await stored.GetRawValueAsync(_ct));
+        }
+
         // ---------------- aggregations ----------------
 
         [Fact]

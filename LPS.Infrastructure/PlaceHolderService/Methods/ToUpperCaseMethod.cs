@@ -33,20 +33,20 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(source))
                 {
                     await _logger.LogAsync(_op.OperationId, "touppercase failed. No source expression was provided.", LPSLoggingLevel.Warning, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
                 var resolved = await _resolver.Value.ResolvePlaceholdersAsync<string>(source, sessionId, token);
                 var result = (resolved ?? string.Empty).ToUpperInvariant();
 
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"touppercase failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

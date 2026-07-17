@@ -38,10 +38,11 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             {
                 var args = _params.ParseParameters(parameters);
 
-                // 'source' and 'default' are taken RAW (the outer resolver pre-resolves method arguments
-                // containing '$' before dispatch). Everything else is resolved so it can be indirected
-                // through a variable (e.g. path=${myPath}).
-                var source = args.GetValueOrDefault("source", string.Empty);
+                // 'source' is resolved here: methods now receive their args RAW (the outer resolver no
+                // longer pre-resolves method arguments). 'default' stays raw (resolved only on the no-match
+                // fallback). Everything else is resolved so it can be indirected through a variable
+                // (e.g. path=${myPath}).
+                var source = await ResolveArgAsync(args, "source", string.Empty, sessionId, token);
                 var defaultRaw = args.GetValueOrDefault("default", string.Empty);
 
                 var path = await ResolveArgAsync(args, "path", "/*/*", sessionId, token);
@@ -131,7 +132,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"findxml failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

@@ -34,7 +34,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(targetExpression))
                 {
                     await _logger.LogAsync(_op.OperationId, "randomItem failed. No source expression was provided.", LPSLoggingLevel.Warning, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
@@ -42,27 +42,27 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     await _logger.LogAsync(_op.OperationId, "randomItem failed. The resolved value was empty.", LPSLoggingLevel.Warning, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
                 if (!TryGetJsonArray(resolvedValue, out var array) || array.Count == 0)
                 {
                     await _logger.LogAsync(_op.OperationId, "randomItem failed. The resolved value is not a JSON array or the array is empty.", LPSLoggingLevel.Warning, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
                 var selected = array[Random.Shared.Next(array.Count)];
                 var result = selected.ToString(Newtonsoft.Json.Formatting.None);
 
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"randomItem failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

@@ -29,13 +29,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 string result = string.Format(template, args.Split(",").ToArray());
                 result = await _resolver.Value.ResolvePlaceholdersAsync<string>(result, sessionId, token);
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"format failed (template='{template}', args='{args}'). {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

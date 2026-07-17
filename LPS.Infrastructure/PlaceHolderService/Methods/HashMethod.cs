@@ -39,19 +39,19 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (hasher == null)
                 {
                     await _logger.LogAsync(_op.OperationId, $"Unsupported hash algorithm '{algorithm}'.", LPSLoggingLevel.Error, token);
-                    await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token);
                     return string.Empty;
                 }
 
                 byte[] hash = hasher.ComputeHash(Encoding.UTF8.GetBytes(value ?? string.Empty));
                 string result = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-                await StoreVariableIfNeededAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"hash failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreVariableIfNeededAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token);
                 return string.Empty;
             }
         }

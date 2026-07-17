@@ -172,14 +172,6 @@ namespace LPS.UI.Core.LPSValidators
                     .Must(dto =>
                     {
                         var retryIf = dto?.Retry?.If?.Trim();
-                        return !string.IsNullOrWhiteSpace(retryIf);
-                    })
-                    .WithMessage("'retry.if' must be provided when 'retry' is configured.");
-
-                RuleFor(dto => dto)
-                    .Must(dto =>
-                    {
-                        var retryIf = dto?.Retry?.If?.Trim();
                         var stopIf = dto?.Retry?.StopIf?.Trim();
                         if (string.IsNullOrWhiteSpace(retryIf) || string.IsNullOrWhiteSpace(stopIf))
                             return true;
