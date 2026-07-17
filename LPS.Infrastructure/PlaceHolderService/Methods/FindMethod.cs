@@ -12,6 +12,7 @@ using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
 
@@ -57,8 +58,9 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             IRuntimeOperationIdProvider op,
             IVariableManager v,
             Lazy<IPlaceholderResolverService> r,
-            Lazy<IExpressionEvaluator> expressionEvaluator)
-            : base(p, l, op, v, r)
+            Lazy<IExpressionEvaluator> expressionEvaluator,
+            ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
             _expressionEvaluator = expressionEvaluator;
         }
@@ -90,11 +92,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var match = (await ResolveArgAsync(args, "match", "first", sessionId, token)).Trim();
                 var asType = (await ResolveArgAsync(args, "as", "auto", sessionId, token)).Trim();
                 variableName = await ResolveArgAsync(args, "variable", string.Empty, sessionId, token);
+                var isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 if (!TryGetElements(source, path, out var elements))
                 {
                     await _logger.LogAsync(_op.OperationId, "find failed. The source could not be parsed as JSON.", LPSLoggingLevel.Warning, token);
-                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, match, sessionId, token);
+                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, match, sessionId, token, isGlobal);
                 }
 
                 var (mode, indexTarget) = ParseMatchMode(match);
@@ -120,9 +123,9 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 return mode switch
                 {
-                    MatchMode.Count => await StoreAndReturnAsync(variableName, new JValue(matchCount), asType, token),
-                    MatchMode.All => await StoreAndReturnAsync(variableName, new JArray(matches), asType, token),
-                    _ => await StoreSingleAsync(variableName, matches, mode, indexTarget, defaultRaw, asType, sessionId, token)
+                    MatchMode.Count => await StoreAndReturnAsync(variableName, new JValue(matchCount), asType, token, isGlobal, sessionId),
+                    MatchMode.All => await StoreAndReturnAsync(variableName, new JArray(matches), asType, token, isGlobal, sessionId),
+                    _ => await StoreSingleAsync(variableName, matches, mode, indexTarget, defaultRaw, asType, sessionId, token, isGlobal)
                 };
             }
             catch (OperationCanceledException)
@@ -168,7 +171,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             string defaultRaw,
             string asType,
             string sessionId,
-            CancellationToken token)
+            CancellationToken token,
+            bool isGlobal)
         {
             JToken picked = mode switch
             {
@@ -179,18 +183,18 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
             if (picked == null)
             {
-                return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode.ToString(), sessionId, token);
+                return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode.ToString(), sessionId, token, isGlobal);
             }
 
-            return await StoreAndReturnAsync(variableName, picked, asType, token);
+            return await StoreAndReturnAsync(variableName, picked, asType, token, isGlobal, sessionId);
         }
 
-        private async Task<string> StoreNoMatchAsync(string variableName, string defaultRaw, string asType, string match, string sessionId, CancellationToken token)
+        private async Task<string> StoreNoMatchAsync(string variableName, string defaultRaw, string asType, string match, string sessionId, CancellationToken token, bool isGlobal)
         {
             // "count" with no matches is 0, everything else falls back to the (resolved) default value.
             if (string.Equals(match?.Trim(), "count", StringComparison.OrdinalIgnoreCase))
             {
-                return await StoreAndReturnAsync(variableName, new JValue(0), asType, token);
+                return await StoreAndReturnAsync(variableName, new JValue(0), asType, token, isGlobal, sessionId);
             }
 
             JToken defaultToken;
@@ -204,12 +208,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 defaultToken = StringToJToken(resolved);
             }
 
-            return await StoreAndReturnAsync(variableName, defaultToken, asType, token);
+            return await StoreAndReturnAsync(variableName, defaultToken, asType, token, isGlobal, sessionId);
         }
 
-        private async Task<string> StoreAndReturnAsync(string variableName, JToken value, string asType, CancellationToken token)
+        private async Task<string> StoreAndReturnAsync(string variableName, JToken value, string asType, CancellationToken token, bool isGlobal, string sessionId)
         {
-            await StoreTypedVariableAsync(variableName, value, asType, token);
+            await StoreTypedVariableAsync(variableName, value, asType, token, isGlobal, sessionId);
             return DisplayString(value);
         }
 

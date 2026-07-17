@@ -45,10 +45,10 @@ namespace LPS.UnitTest
 
             var methods = new IPlaceholderMethod[]
             {
-                new EndsWithMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new StartsWithMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new ContainsMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new ToLowerCaseMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
+                new EndsWithMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new StartsWithMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new ContainsMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new ToLowerCaseMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
             };
 
             var processor = new PlaceholderProcessor(methods, sessions, variables, opId.Object, logger.Object);

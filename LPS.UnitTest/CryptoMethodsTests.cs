@@ -37,8 +37,8 @@ namespace LPS.UnitTest
             var lazyResolver = new Lazy<IPlaceholderResolverService>(() => resolver);
             var pe = new ParameterExtractorService(lazyResolver, opId.Object, logger.Object);
 
-            var hmac = new HmacMethod(pe, logger.Object, opId.Object, variables, lazyResolver);
-            var jwtsign = new JwtSignMethod(pe, logger.Object, opId.Object, variables, lazyResolver);
+            var hmac = new HmacMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions);
+            var jwtsign = new JwtSignMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions);
 
             var processor = new PlaceholderProcessor(new IPlaceholderMethod[] { hmac, jwtsign }, sessions, variables, opId.Object, logger.Object);
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);

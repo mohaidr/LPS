@@ -30,6 +30,11 @@ namespace LPS.UnitTest
         {
             public FindXmlMethod Find;
             public VariableManager Variables;
+            public SessionManager Sessions;
+
+            // findxml stores session-scoped by default; check session first, then global.
+            public async Task<IVariableHolder> GetStoredAsync(string name, CancellationToken token)
+                => await Sessions.GetVariableAsync(SessionId, name, token) ?? await Variables.GetAsync(name, token);
         }
 
         private static Harness Build()
@@ -48,16 +53,16 @@ namespace LPS.UnitTest
             var lazyResolver = new Lazy<IPlaceholderResolverService>(() => resolver);
             var pe = new ParameterExtractorService(lazyResolver, opId.Object, logger.Object);
 
-            var find = new FindXmlMethod(pe, logger.Object, opId.Object, variables, lazyResolver);
+            var find = new FindXmlMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions);
             var processor = new PlaceholderProcessor(new IPlaceholderMethod[] { find }, sessions, variables, opId.Object, logger.Object);
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
 
-            return new Harness { Find = find, Variables = variables };
+            return new Harness { Find = find, Variables = variables, Sessions = sessions };
         }
 
         private async Task<string> RawAsync(Harness h, string name)
         {
-            var holder = await h.Variables.GetAsync(name, _ct);
+            var holder = await h.GetStoredAsync(name, _ct);
             return holder == null ? null : await holder.GetRawValueAsync(_ct);
         }
 
@@ -90,7 +95,7 @@ namespace LPS.UnitTest
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
             Assert.Equal("2", result);
-            var stored = await h.Variables.GetAsync("shippedCount", _ct);
+            var stored = await h.GetStoredAsync("shippedCount", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("2", await stored.GetRawValueAsync(_ct));
         }

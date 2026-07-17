@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using Spectre.Console;
 
@@ -12,8 +13,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     public sealed class LengthMethod : MethodBase
     {
-        public LengthMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public LengthMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -22,6 +23,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -32,11 +34,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 }
 
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 if (string.IsNullOrWhiteSpace(targetExpression))
                 {
                     await _logger.LogAsync(_op.OperationId, "length failed. No source expression was provided.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "0", token);
+                    await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
                     return "0";
                 }
 
@@ -44,24 +47,24 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     await _logger.LogAsync(_op.OperationId, "length failed. The resolved value was empty.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "0", token);
+                    await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
                     return "0";
                 }
                 if (!TryGetJsonArrayLength(resolvedValue, out var length))
                 {
                     await _logger.LogAsync(_op.OperationId, "length failed. The resolved value is not a JSON array.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "0", token);
+                    await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
                     return "0";
                 }
 
                 var result = length.ToString(CultureInfo.InvariantCulture);
-                await StoreStringVariableAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"length failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, "0", token);
+                await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
                 return "0";
             }
         }

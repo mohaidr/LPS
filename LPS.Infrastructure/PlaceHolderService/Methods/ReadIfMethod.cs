@@ -11,16 +11,15 @@ using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     /// <summary>
-    /// $readif(condition=${enabled} == true, source=file, path=config.txt, variable=cfg, default=, as=string)
+    /// $readif(condition=${enabled} == true, source=file, path=config.txt, variable=cfg, default=, as=string, isGlobal=true)
     /// The conditional counterpart of $read. When <c>condition</c> (a boolean Flee expression) is true it
     /// performs the same read as $read (from a file / env / variable via source|path|name|encoding) and
     /// stores the result. When it is false, stores <c>default</c> if one was supplied; otherwise the variable
     /// is left untouched. The stored value is typed via the same <c>as</c> modes as $find / $setvariableif.
+    /// 'isGlobal' (default true) stores globally; set isGlobal=false to store scoped to the current session.
     /// </summary>
     public sealed class ReadIfMethod : ConditionalMethodBase
     {
-        private readonly ISessionManager _session;
-
         public ReadIfMethod(
             ISessionManager sessionManager,
             ParameterExtractorService p,
@@ -29,9 +28,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             IVariableManager v,
             Lazy<IPlaceholderResolverService> r,
             Lazy<IExpressionEvaluator> expressionEvaluator)
-            : base(p, l, op, v, r, expressionEvaluator)
+            : base(p, l, op, v, r, expressionEvaluator, sessionManager)
         {
-            _session = sessionManager;
         }
 
         public override string Name => "readif";
@@ -46,6 +44,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 variableName = await ResolveArgAsync(args, "variable", string.Empty, sessionId, token);
                 var asType = (await ResolveArgAsync(args, "as", "auto", sessionId, token)).Trim();
+                var isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 // 'default' stays RAW and is resolved only when the condition is false.
                 var hasDefault = args.ContainsKey("default");
@@ -67,12 +66,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (matched.Value)
                 {
                     var result = await SourceReader.ReadAsync(_params, _session, _variables, parameters, sessionId, token);
-                    return await StoreResolvedAsync(variableName, result, asType, token);
+                    return await StoreResolvedAsync(variableName, result, asType, sessionId, isGlobal, token);
                 }
 
                 if (hasDefault)
                 {
-                    return await ResolveAndStoreAsync(variableName, defaultRaw, asType, sessionId, token);
+                    return await ResolveAndStoreAsync(variableName, defaultRaw, asType, sessionId, isGlobal, token);
                 }
 
                 // Condition false and no 'default' supplied: leave the variable untouched.

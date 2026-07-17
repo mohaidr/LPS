@@ -3,14 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     public sealed class StartsWithMethod : MethodBase
     {
-        public StartsWithMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public StartsWithMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -19,6 +20,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -34,6 +36,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var value = _params.ExtractRawString(parameters, "value", string.Empty);
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
                 var ignoreCase = await _params.ExtractBoolAsync(parameters, "ignoreCase", false, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 var resolvedSource = await _resolver.Value.ResolvePlaceholdersAsync<string>(source, sessionId, token) ?? string.Empty;
                 var resolvedValue = await _resolver.Value.ResolvePlaceholdersAsync<string>(value, sessionId, token) ?? string.Empty;
@@ -41,7 +44,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(resolvedSource) || string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     await _logger.LogAsync(_op.OperationId, "startswith failed. Source and value are required.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "false", token);
+                    await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
                     return "false";
                 }
 
@@ -49,13 +52,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var result = resolvedSource.StartsWith(resolvedValue, comparison);
                 var resultText = result.ToString().ToLowerInvariant();
 
-                await StoreStringVariableAsync(variableName, resultText, token);
+                await StoreStringVariableAsync(variableName, resultText, token, sessionId, isGlobal);
                 return resultText;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"startswith failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, "false", token);
+                await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
                 return "false";
             }
         }

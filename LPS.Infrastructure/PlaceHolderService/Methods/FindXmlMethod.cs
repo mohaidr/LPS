@@ -8,6 +8,7 @@ using System.Xml;
 using Newtonsoft.Json.Linq;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
@@ -21,8 +22,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
     /// </summary>
     public sealed class FindXmlMethod : MethodBase
     {
-        public FindXmlMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public FindXmlMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -33,6 +34,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -51,12 +53,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var match = (await ResolveArgAsync(args, "match", "first", sessionId, token)).Trim();
                 var asType = (await ResolveArgAsync(args, "as", "auto", sessionId, token)).Trim();
                 variableName = await ResolveArgAsync(args, "variable", string.Empty, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 var (mode, indexTarget) = ParseMatchMode(match);
 
                 if (string.IsNullOrWhiteSpace(source))
                 {
-                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token);
+                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token, isGlobal);
                 }
 
                 // XmlResolver = null disables external entity resolution (protects against XXE).
@@ -68,7 +71,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 catch
                 {
                     await _logger.LogAsync(_op.OperationId, "findxml failed. The source could not be parsed as XML.", LPSLoggingLevel.Warning, token);
-                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token);
+                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token, isGlobal);
                 }
 
                 var effectivePath = string.IsNullOrWhiteSpace(path) ? "/*/*" : path.Trim();
@@ -85,12 +88,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 catch (Exception ex)
                 {
                     await _logger.LogAsync(_op.OperationId, $"findxml failed. Invalid XPath '{effectivePath}': {ex.Message}", LPSLoggingLevel.Warning, token);
-                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token);
+                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token, isGlobal);
                 }
 
                 if (mode == MatchMode.Count)
                 {
-                    return await StoreAndReturnAsync(variableName, new JValue(nodes?.Count ?? 0), asType, token);
+                    return await StoreAndReturnAsync(variableName, new JValue(nodes?.Count ?? 0), asType, token, isGlobal, sessionId);
                 }
 
                 var values = new List<string>();
@@ -108,7 +111,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 if (mode == MatchMode.All)
                 {
-                    return await StoreAndReturnAsync(variableName, new JArray(values.Select(v => (JToken)new JValue(v))), asType, token);
+                    return await StoreAndReturnAsync(variableName, new JArray(values.Select(v => (JToken)new JValue(v))), asType, token, isGlobal, sessionId);
                 }
 
                 string picked = mode switch
@@ -120,10 +123,10 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 if (picked == null)
                 {
-                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token);
+                    return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token, isGlobal);
                 }
 
-                return await StoreAndReturnAsync(variableName, new JValue(picked), asType, token);
+                return await StoreAndReturnAsync(variableName, new JValue(picked), asType, token, isGlobal, sessionId);
             }
             catch (OperationCanceledException)
             {
@@ -132,7 +135,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"findxml failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                 return string.Empty;
             }
         }
@@ -176,13 +179,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             return selected.Value ?? selected.InnerText ?? string.Empty;
         }
 
-        private async Task<string> StoreNoMatchAsync(string variableName, string defaultRaw, string asType, MatchMode mode, string sessionId, CancellationToken token)
+        private async Task<string> StoreNoMatchAsync(string variableName, string defaultRaw, string asType, MatchMode mode, string sessionId, CancellationToken token, bool isGlobal)
         {
             if (mode == MatchMode.Count)
-                return await StoreAndReturnAsync(variableName, new JValue(0), asType, token);
+                return await StoreAndReturnAsync(variableName, new JValue(0), asType, token, isGlobal, sessionId);
 
             if (mode == MatchMode.All)
-                return await StoreAndReturnAsync(variableName, new JArray(), asType, token);
+                return await StoreAndReturnAsync(variableName, new JArray(), asType, token, isGlobal, sessionId);
 
             JToken defaultToken;
             if (string.IsNullOrWhiteSpace(defaultRaw))
@@ -195,12 +198,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 defaultToken = new JValue(resolved ?? string.Empty);
             }
 
-            return await StoreAndReturnAsync(variableName, defaultToken, asType, token);
+            return await StoreAndReturnAsync(variableName, defaultToken, asType, token, isGlobal, sessionId);
         }
 
-        private async Task<string> StoreAndReturnAsync(string variableName, JToken value, string asType, CancellationToken token)
+        private async Task<string> StoreAndReturnAsync(string variableName, JToken value, string asType, CancellationToken token, bool isGlobal, string sessionId)
         {
-            await StoreTypedVariableAsync(variableName, value, asType, token);
+            await StoreTypedVariableAsync(variableName, value, asType, token, isGlobal, sessionId);
             return DisplayString(value);
         }
 

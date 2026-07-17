@@ -33,8 +33,13 @@ namespace LPS.UnitTest
             public FindMethod Find;
             public PlaceholderResolverService Resolver;
             public VariableManager Variables;
+            public SessionManager Sessions;
             public ExpressionEvaluator IfEvaluator;
             public Mock<ILogger> Logger;
+
+            // find stores session-scoped by default; check session first, then global.
+            public async Task<IVariableHolder> GetStoredAsync(string name, CancellationToken token)
+                => await Sessions.GetVariableAsync(SessionId, name, token) ?? await Variables.GetAsync(name, token);
         }
 
         private static Harness BuildHarness()
@@ -62,13 +67,13 @@ namespace LPS.UnitTest
             var lazyEvaluator = new Lazy<IExpressionEvaluator>(() => ifEvaluator);
 
             var paramExtractor = new ParameterExtractorService(lazyResolver, opId.Object, logger.Object);
-            var find = new FindMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver, lazyEvaluator);
+            var find = new FindMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver, lazyEvaluator, sessions);
 
             var processor = new PlaceholderProcessor(new IPlaceholderMethod[] { find }, sessions, variables, opId.Object, logger.Object);
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
             ifEvaluator = new ExpressionEvaluator(resolver, node.Object, opId.Object, logger.Object);
 
-            return new Harness { Find = find, Resolver = resolver, Variables = variables, IfEvaluator = ifEvaluator, Logger = logger };
+            return new Harness { Find = find, Resolver = resolver, Variables = variables, Sessions = sessions, IfEvaluator = ifEvaluator, Logger = logger };
         }
 
         private async Task PutGlobalStringAsync(Harness h, string name, string value)
@@ -101,7 +106,7 @@ namespace LPS.UnitTest
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
             Assert.Equal("1", result);
-            var stored = await h.Variables.GetAsync("firstId", _ct);
+            var stored = await h.GetStoredAsync("firstId", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("1", await stored.GetRawValueAsync(_ct));
         }
@@ -116,7 +121,7 @@ namespace LPS.UnitTest
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
             Assert.Equal("[1,3]", result);
-            var stored = await h.Variables.GetAsync("ids", _ct);
+            var stored = await h.GetStoredAsync("ids", _ct);
             Assert.IsType<StringVariableHolder>(stored);
             Assert.Equal("[1,3]", await stored.GetRawValueAsync(_ct));
         }
@@ -131,7 +136,7 @@ namespace LPS.UnitTest
             var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
 
             Assert.Equal("2", result);
-            var stored = await h.Variables.GetAsync("shippedCount", _ct);
+            var stored = await h.GetStoredAsync("shippedCount", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("2", await stored.GetRawValueAsync(_ct));
         }
@@ -195,7 +200,7 @@ namespace LPS.UnitTest
 
             await h.Find.ExecuteAsync(args, SessionId, _ct);
 
-            var stored = await h.Variables.GetAsync("firstOrder", _ct);
+            var stored = await h.GetStoredAsync("firstOrder", _ct);
             Assert.IsType<StringVariableHolder>(stored);
 
             // The stored object must remain path-navigable.
@@ -213,7 +218,7 @@ namespace LPS.UnitTest
             await h.Find.ExecuteAsync(args, SessionId, _ct);
 
             // No leaked internal binding variables should remain.
-            var leaked = await h.Variables.GetAsync("__find", _ct);
+            var leaked = await h.GetStoredAsync("__find", _ct);
             Assert.Null(leaked);
         }
 
@@ -255,7 +260,7 @@ namespace LPS.UnitTest
             var result = await h.Resolver.ResolvePlaceholdersAsync<string>(expr, SessionId, _ct);
 
             Assert.Equal("1", result);
-            var stored = await h.Variables.GetAsync("matchedUser", _ct);
+            var stored = await h.GetStoredAsync("matchedUser", _ct);
             Assert.NotNull(stored);
             Assert.Equal("1", await stored.GetRawValueAsync(_ct));
         }
@@ -271,7 +276,7 @@ namespace LPS.UnitTest
                 "$find(source=${users}, where=item.username == \"Bret\", select=item.id, match=first, variable=uid)",
                 SessionId, _ct);
 
-            var stored = await h.Variables.GetAsync("uid", _ct);
+            var stored = await h.GetStoredAsync("uid", _ct);
             Assert.NotNull(stored);
             Assert.Equal("7", await stored.GetRawValueAsync(_ct));
         }
@@ -316,7 +321,7 @@ namespace LPS.UnitTest
             var h = BuildHarness();
             await PutGlobalJsonAsync(h, "users", "[{\"id\":7,\"username\":\"Bret\"}]");
 
-            var expr = "$find(source=${users}, where=item.username == \"Bret\", select=item.id, match=first, variable=uid) == 7";
+            var expr = "$find(source=${users}, where=item.username == \"Bret\", select=item.id, match=first, variable=uid, isGlobal=true) == 7";
 
             var r1 = await h.IfEvaluator.EvaluateAsync(expr, SessionId, _ct);
             Assert.True(r1);

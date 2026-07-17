@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
@@ -20,8 +21,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
     /// </summary>
     public sealed class JwtSignMethod : MethodBase
     {
-        public JwtSignMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public JwtSignMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -30,6 +31,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -38,18 +40,19 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var algorithm = (await _params.ExtractStringAsync(parameters, "algorithm", "HS256", sessionId, token)).ToUpperInvariant();
                 var expiresIn = await _params.ExtractNumberAsync(parameters, "expiresIn", 0, sessionId, token);
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 if (string.IsNullOrWhiteSpace(claimsRaw))
                 {
                     await _logger.LogAsync(_op.OperationId, "jwtsign failed. 'claims' (a JSON object) is required.", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
                 if (string.IsNullOrEmpty(key))
                 {
                     await _logger.LogAsync(_op.OperationId, "jwtsign failed. A 'key' is required.", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
@@ -64,7 +67,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (signer == null)
                 {
                     await _logger.LogAsync(_op.OperationId, $"jwtsign failed. Algorithm '{algorithm}' is not supported yet. Use HS256, HS384, or HS512.", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
@@ -76,7 +79,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 catch (Exception ex)
                 {
                     await _logger.LogAsync(_op.OperationId, $"jwtsign failed. 'claims' is not valid JSON: {ex.Message}", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
@@ -93,13 +96,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 byte[] signature = signer.ComputeHash(Encoding.UTF8.GetBytes(signingInput));
                 string jwt = signingInput + "." + Base64UrlEncode(signature);
 
-                await StoreStringVariableAsync(variableName, jwt, token);
+                await StoreStringVariableAsync(variableName, jwt, token, sessionId, isGlobal);
                 return jwt;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"jwtsign failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                 return string.Empty;
             }
         }

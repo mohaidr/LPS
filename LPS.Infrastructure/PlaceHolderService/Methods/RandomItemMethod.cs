@@ -4,14 +4,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     public sealed class RandomItemMethod : MethodBase
     {
-        public RandomItemMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public RandomItemMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -20,6 +21,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -30,11 +32,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 }
 
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 if (string.IsNullOrWhiteSpace(targetExpression))
                 {
                     await _logger.LogAsync(_op.OperationId, "randomItem failed. No source expression was provided.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
@@ -42,27 +45,27 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     await _logger.LogAsync(_op.OperationId, "randomItem failed. The resolved value was empty.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
                 if (!TryGetJsonArray(resolvedValue, out var array) || array.Count == 0)
                 {
                     await _logger.LogAsync(_op.OperationId, "randomItem failed. The resolved value is not a JSON array or the array is empty.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
                 var selected = array[Random.Shared.Next(array.Count)];
                 var result = selected.ToString(Newtonsoft.Json.Formatting.None);
 
-                await StoreStringVariableAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"randomItem failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                 return string.Empty;
             }
         }

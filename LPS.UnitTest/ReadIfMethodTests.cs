@@ -27,6 +27,11 @@ namespace LPS.UnitTest
             public ReadIfMethod ReadIf;
             public PlaceholderResolverService Resolver;
             public VariableManager Variables;
+            public SessionManager Sessions;
+
+            // Variable-storing methods default to session scope; check session first, then global.
+            public async Task<IVariableHolder> GetStoredAsync(string name, CancellationToken token)
+                => await Sessions.GetVariableAsync(SessionId, name, token) ?? await Variables.GetAsync(name, token);
         }
 
         private static Harness BuildHarness()
@@ -59,7 +64,7 @@ namespace LPS.UnitTest
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
             ifEvaluator = new ExpressionEvaluator(resolver, node.Object, opId.Object, logger.Object);
 
-            return new Harness { ReadIf = readIf, Resolver = resolver, Variables = variables };
+            return new Harness { ReadIf = readIf, Resolver = resolver, Variables = variables, Sessions = sessions };
         }
 
         private async Task PutGlobalStringAsync(Harness h, string name, string value)
@@ -81,7 +86,7 @@ namespace LPS.UnitTest
             var result = await h.ReadIf.ExecuteAsync("condition=1 == 1, source=variable, name=src, variable=out", SessionId, _ct);
 
             Assert.Equal("hello", result);
-            var stored = await h.Variables.GetAsync("out", _ct);
+            var stored = await h.GetStoredAsync("out", _ct);
             Assert.Equal("hello", await stored.GetRawValueAsync(_ct));
         }
 
@@ -94,7 +99,7 @@ namespace LPS.UnitTest
             var result = await h.ReadIf.ExecuteAsync("condition=1 == 2, source=variable, name=src, variable=out", SessionId, _ct);
 
             Assert.Equal(string.Empty, result);
-            Assert.Null(await h.Variables.GetAsync("out", _ct));
+            Assert.Null(await h.GetStoredAsync("out", _ct));
         }
 
         [Fact]
@@ -106,7 +111,7 @@ namespace LPS.UnitTest
             var result = await h.ReadIf.ExecuteAsync("condition=1 == 2, source=variable, name=src, variable=out, default=fallback", SessionId, _ct);
 
             Assert.Equal("fallback", result);
-            var stored = await h.Variables.GetAsync("out", _ct);
+            var stored = await h.GetStoredAsync("out", _ct);
             Assert.Equal("fallback", await stored.GetRawValueAsync(_ct));
         }
 
@@ -122,7 +127,7 @@ namespace LPS.UnitTest
                 var result = await h.ReadIf.ExecuteAsync($"condition=true, source=file, path={path}, variable=out", SessionId, _ct);
 
                 Assert.Equal("file-content", result);
-                var stored = await h.Variables.GetAsync("out", _ct);
+                var stored = await h.GetStoredAsync("out", _ct);
                 Assert.Equal("file-content", await stored.GetRawValueAsync(_ct));
             }
             finally
@@ -142,7 +147,7 @@ namespace LPS.UnitTest
                 "${readif(condition=\"${flag}\" == \"yes\", source=variable, name=src, variable=out)}", SessionId, _ct);
 
             Assert.Equal("read-me", result);
-            var stored = await h.Variables.GetAsync("out", _ct);
+            var stored = await h.GetStoredAsync("out", _ct);
             Assert.Equal("read-me", await stored.GetRawValueAsync(_ct));
         }
 
@@ -155,7 +160,7 @@ namespace LPS.UnitTest
             var result = await h.ReadIf.ExecuteAsync("source=variable, name=src, variable=out", SessionId, _ct);
 
             Assert.Equal(string.Empty, result);
-            Assert.Null(await h.Variables.GetAsync("out", _ct));
+            Assert.Null(await h.GetStoredAsync("out", _ct));
         }
     }
 }

@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
@@ -13,8 +14,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
     /// </summary>
     public sealed class StringEqualsMethod : MethodBase
     {
-        public StringEqualsMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public StringEqualsMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -23,6 +24,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -31,17 +33,18 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var a = await _params.ExtractStringAsync(parameters, "a", string.Empty, sessionId, token) ?? string.Empty;
                 var b = await _params.ExtractStringAsync(parameters, "b", string.Empty, sessionId, token) ?? string.Empty;
                 var ignoreCase = await _params.ExtractBoolAsync(parameters, "ignoreCase", false, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
                 var text = string.Equals(a, b, comparison) ? "true" : "false";
 
-                await StoreStringVariableAsync(variableName, text, token);
+                await StoreStringVariableAsync(variableName, text, token, sessionId, isGlobal);
                 return text;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"stringequals failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, "false", token);
+                await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
                 return "false";
             }
         }

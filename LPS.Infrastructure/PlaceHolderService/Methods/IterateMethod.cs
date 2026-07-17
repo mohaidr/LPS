@@ -8,6 +8,7 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Caching;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.LPSClients.CachService;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
@@ -18,8 +19,9 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                              ILogger l, IRuntimeOperationIdProvider op,
                              IVariableManager v, 
                              Lazy<IPlaceholderResolverService> r,
-                             ICacheService<string> memoryCacheService)
-            : base(p,l,op,v,r) 
+                             ICacheService<string> memoryCacheService,
+                             ISessionManager sessionManager)
+            : base(p,l,op,v,r, sessionManager) 
         { 
             _memoryCacheService = memoryCacheService;
         }
@@ -31,13 +33,14 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
             try
             {
                 var start = await _params.ExtractNumberAsync(parameters, "start", 0, sessionId, token);
                 var reset = await _params.ExtractNumberAsync(parameters, "reset", 100000, sessionId, token);
                 var counterName = await _params.ExtractStringAsync(parameters, "name", string.Empty, sessionId, token);
                 var step = await _params.ExtractNumberAsync(parameters, "step", 1, sessionId, token);
-                var isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
                 variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
 
                 var cacheKeySuffix = string.IsNullOrEmpty(counterName) ? string.Empty : $"_{counterName.Trim()}";
@@ -76,14 +79,14 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                     string result = current.ToString();
                     await _memoryCacheService.SetItemAsync(cacheKey, result, TimeSpan.MaxValue);
-                    await StoreStringVariableAsync(variableName, result, token);
+                    await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
                     return result;
                 }
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"iterate failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                 return string.Empty;
             }
         }

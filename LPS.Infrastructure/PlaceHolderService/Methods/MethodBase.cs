@@ -10,6 +10,7 @@ using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Infrastructure.Common.Expressions;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices.VariableHolders;
 
@@ -22,6 +23,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         protected readonly IRuntimeOperationIdProvider _op;
         protected readonly IVariableManager _variables;
         protected readonly Lazy<IPlaceholderResolverService> _resolver; // Use Lazy
+        protected readonly ISessionManager _session;                    // null for methods that don't inject it (store globally)
 
         protected MethodBase(
             ParameterExtractorService @params,
@@ -29,12 +31,24 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             IRuntimeOperationIdProvider op,
             IVariableManager variables,
             Lazy<IPlaceholderResolverService> resolver) // Inject Lazy
+            : this(@params, logger, op, variables, resolver, null)
+        {
+        }
+
+        protected MethodBase(
+            ParameterExtractorService @params,
+            ILogger logger,
+            IRuntimeOperationIdProvider op,
+            IVariableManager variables,
+            Lazy<IPlaceholderResolverService> resolver,
+            ISessionManager session)
         {
             _params = @params;
             _logger = logger;
             _op = op;
             _variables = variables;
             _resolver = resolver;
+            _session = session;
         }
 
         public abstract string Name { get; }
@@ -42,27 +56,32 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
         /// <summary>
         /// Stores <paramref name="value"/> as a plain string variable (when <paramref name="variableName"/>
-        /// is provided). Thin wrapper over <see cref="StoreTypedVariableAsync"/> with an explicit string
-        /// type, so the string-holder construction lives in exactly one place.
+        /// is provided). Thin wrapper over <see cref="StoreTypedVariableAsync"/> with an explicit string type.
         /// </summary>
-        [Obsolete("Use StoreTypedVariableAsync(variableName, new JValue(value), \"string\", token) instead. " +
-                  "This helper only stores a plain string and remains for backward compatibility.")]
-        protected Task StoreStringVariableAsync(string variableName, string value, CancellationToken token)
-            => StoreTypedVariableAsync(variableName, new JValue(value ?? string.Empty), "string", token);
+        protected Task StoreStringVariableAsync(string variableName, string value, CancellationToken token, string sessionId = null, bool isGlobal = false)
+            => StoreTypedVariableAsync(variableName, new JValue(value ?? string.Empty), "string", token, isGlobal, sessionId);
 
         /// <summary>
         /// Stores a value under <paramref name="variableName"/> using the variable type that best
         /// matches the JSON token (or an explicit <paramref name="asType"/> override), so downstream
         /// placeholders can path-navigate objects/arrays or use numbers/booleans naturally.
+        /// Default scope is session (isGlobal=false); pass isGlobal=true to store globally. Session storage
+        /// requires an injected <c>_session</c> and a non-empty <paramref name="sessionId"/>; otherwise the
+        /// value falls back to the global store.
         /// </summary>
-        protected async Task StoreTypedVariableAsync(string variableName, JToken value, string asType, CancellationToken token)
+        protected async Task StoreTypedVariableAsync(string variableName, JToken value, string asType, CancellationToken token,
+            bool isGlobal = false, string sessionId = null)
         {
             if (string.IsNullOrWhiteSpace(variableName)) return;
 
             value ??= JValue.CreateNull();
             var targetType = MapAsType(asType) ?? InferVariableType(value);
-            var holder = await BuildTypedHolderAsync(targetType, value, token);
-            await _variables.PutAsync(variableName, holder, token);
+            var holder = await BuildTypedHolderAsync(targetType, value, isGlobal, token);
+
+            if (isGlobal || _session is null || string.IsNullOrEmpty(sessionId))
+                await _variables.PutAsync(variableName, holder, token);
+            else
+                await _session.PutVariableAsync(sessionId, variableName, holder, token);
         }
 
         /// <summary>
@@ -100,46 +119,46 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             }
         }
 
-        private async Task<IVariableHolder> BuildTypedHolderAsync(VariableType targetType, JToken value, CancellationToken token)
+        private async Task<IVariableHolder> BuildTypedHolderAsync(VariableType targetType, JToken value, bool isGlobal, CancellationToken token)
         {
             switch (targetType)
             {
                 case VariableType.Boolean:
                     if (TryGetBool(value, out var b))
                         return await new BooleanVariableHolder.VMaintainer(_logger, _op)
-                            .WithRawValue(b).SetGlobal().UpdateAsync(token);
+                            .WithRawValue(b).SetGlobal(isGlobal).UpdateAsync(token);
                     break;
 
                 case VariableType.Int:
                     if (TryGetLong(value, out var l) && l >= int.MinValue && l <= int.MaxValue)
                         return await new NumberVariableHolder.VMaintainer(_logger, _op)
-                            .WithRawValue((int)l).SetGlobal().UpdateAsync(token);
+                            .WithRawValue((int)l).SetGlobal(isGlobal).UpdateAsync(token);
                     if (TryGetDouble(value, out var di))
                         return await new NumberVariableHolder.VMaintainer(_logger, _op)
-                            .WithRawValue(di).SetGlobal().UpdateAsync(token);
+                            .WithRawValue(di).SetGlobal(isGlobal).UpdateAsync(token);
                     break;
 
                 case VariableType.Double:
                 case VariableType.Float:
                     if (TryGetDouble(value, out var d))
                         return await new NumberVariableHolder.VMaintainer(_logger, _op)
-                            .WithRawValue(d).SetGlobal().UpdateAsync(token);
+                            .WithRawValue(d).SetGlobal(isGlobal).UpdateAsync(token);
                     break;
 
                 case VariableType.Decimal:
                     if (TryGetDecimal(value, out var m))
                         return await new NumberVariableHolder.VMaintainer(_logger, _op)
-                            .WithRawValue(m).SetGlobal().UpdateAsync(token);
+                            .WithRawValue(m).SetGlobal(isGlobal).UpdateAsync(token);
                     break;
 
                 case VariableType.JsonString:
                     return await new StringVariableHolder.VMaintainer(_resolver.Value, _logger, _op)
-                        .WithType(VariableType.JsonString).WithRawValue(JsonRaw(value)).SetGlobal().UpdateAsync(token);
+                        .WithType(VariableType.JsonString).WithRawValue(JsonRaw(value)).SetGlobal(isGlobal).UpdateAsync(token);
             }
 
             // Fallback: store as a plain string.
             return await new StringVariableHolder.VMaintainer(_resolver.Value, _logger, _op)
-                .WithType(VariableType.String).WithRawValue(ScalarRaw(value)).SetGlobal().UpdateAsync(token);
+                .WithType(VariableType.String).WithRawValue(ScalarRaw(value)).SetGlobal(isGlobal).UpdateAsync(token);
         }
 
         private static VariableType? MapAsType(string asType) =>
@@ -294,7 +313,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         /// its string form. Whole values are emitted as integers unless <paramref name="forceDouble"/> is set;
         /// an explicit <paramref name="asType"/> override is honored by the typed store.
         /// </summary>
-        protected async Task<string> StoreNumberResultAsync(string variableName, double value, string asType, CancellationToken token, bool forceDouble = false)
+        protected async Task<string> StoreNumberResultAsync(string variableName, double value, string asType, CancellationToken token, bool forceDouble = false, string sessionId = null, bool isGlobal = false)
         {
             bool integral = !forceDouble
                 && !double.IsNaN(value) && !double.IsInfinity(value)
@@ -316,16 +335,16 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             }
 
             if (!string.IsNullOrWhiteSpace(variableName))
-                await StoreTypedVariableAsync(variableName, jt, asType, token);
+                await StoreTypedVariableAsync(variableName, jt, asType, token, isGlobal, sessionId);
 
             return text;
         }
 
         /// <summary>Logs a numeric-method failure, stores an empty result, and returns an empty string.</summary>
-        protected async Task<string> FailNumberAsync(string variableName, string methodName, CancellationToken token, string reason = "No numeric values were provided.")
+        protected async Task<string> FailNumberAsync(string variableName, string methodName, CancellationToken token, string reason = "No numeric values were provided.", string sessionId = null, bool isGlobal = false)
         {
             await _logger.LogAsync(_op.OperationId, $"{methodName} failed. {reason}", LPSLoggingLevel.Warning, token);
-            await StoreTypedVariableAsync(variableName, new JValue(string.Empty), "string", token);
+            await StoreTypedVariableAsync(variableName, new JValue(string.Empty), "string", token, isGlobal, sessionId);
             return string.Empty;
         }
 

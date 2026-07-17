@@ -5,25 +5,28 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     public sealed class HashMethod : MethodBase
     {
-        public HashMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p,l,op,v,r) { }
+        public HashMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p,l,op,v,r, sessionManager) { }
 
         public override string Name => "hash";
 
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
             try
             {
                 string value = await _params.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token);
                 string algorithm = (await _params.ExtractStringAsync(parameters, "algorithm", "SHA256", sessionId, token)).ToUpperInvariant();
                 variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 using var hasher = algorithm switch
                 {
@@ -39,19 +42,19 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (hasher == null)
                 {
                     await _logger.LogAsync(_op.OperationId, $"Unsupported hash algorithm '{algorithm}'.", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
                 byte[] hash = hasher.ComputeHash(Encoding.UTF8.GetBytes(value ?? string.Empty));
                 string result = BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-                await StoreStringVariableAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"hash failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                 return string.Empty;
             }
         }

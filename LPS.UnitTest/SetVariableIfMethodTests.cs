@@ -26,7 +26,12 @@ namespace LPS.UnitTest
             public SetVariableIfMethod SetIf;
             public PlaceholderResolverService Resolver;
             public VariableManager Variables;
+            public SessionManager Sessions;
             public PlaceholderProcessor Processor;
+
+            // Variable-storing methods default to session scope; check session first, then global.
+            public async Task<IVariableHolder> GetStoredAsync(string name, CancellationToken token)
+                => await Sessions.GetVariableAsync(SessionId, name, token) ?? await Variables.GetAsync(name, token);
         }
 
         private static Harness BuildHarness()
@@ -54,13 +59,13 @@ namespace LPS.UnitTest
             var lazyEvaluator = new Lazy<IExpressionEvaluator>(() => ifEvaluator);
 
             var paramExtractor = new ParameterExtractorService(lazyResolver, opId.Object, logger.Object);
-            var setIf = new SetVariableIfMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver, lazyEvaluator);
+            var setIf = new SetVariableIfMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver, lazyEvaluator, sessions);
 
             var processor = new PlaceholderProcessor(new IPlaceholderMethod[] { setIf }, sessions, variables, opId.Object, logger.Object);
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
             ifEvaluator = new ExpressionEvaluator(resolver, node.Object, opId.Object, logger.Object);
 
-            return new Harness { SetIf = setIf, Resolver = resolver, Variables = variables, Processor = processor };
+            return new Harness { SetIf = setIf, Resolver = resolver, Variables = variables, Sessions = sessions, Processor = processor };
         }
 
         private async Task PutGlobalNumberAsync(Harness h, string name, int value)
@@ -80,7 +85,7 @@ namespace LPS.UnitTest
             var result = await h.SetIf.ExecuteAsync("variable=size, condition=10 > 5, value=big", SessionId, _ct);
 
             Assert.Equal("big", result);
-            var stored = await h.Variables.GetAsync("size", _ct);
+            var stored = await h.GetStoredAsync("size", _ct);
             Assert.Equal("big", await stored.GetRawValueAsync(_ct));
         }
 
@@ -92,7 +97,7 @@ namespace LPS.UnitTest
             var result = await h.SetIf.ExecuteAsync("variable=size, condition=10 < 5, value=big, default=small", SessionId, _ct);
 
             Assert.Equal("small", result);
-            var stored = await h.Variables.GetAsync("size", _ct);
+            var stored = await h.GetStoredAsync("size", _ct);
             Assert.Equal("small", await stored.GetRawValueAsync(_ct));
         }
 
@@ -104,7 +109,7 @@ namespace LPS.UnitTest
             var result = await h.SetIf.ExecuteAsync("variable=size, condition=10 < 5, value=big", SessionId, _ct);
 
             Assert.Equal(string.Empty, result);
-            var stored = await h.Variables.GetAsync("size", _ct);
+            var stored = await h.GetStoredAsync("size", _ct);
             Assert.Null(stored);
         }
 
@@ -119,7 +124,7 @@ namespace LPS.UnitTest
                 "${setvariableif(variable=level, condition=${count} > 5, value=high, default=low)}", SessionId, _ct);
 
             Assert.Equal("high", result);
-            var stored = await h.Variables.GetAsync("level", _ct);
+            var stored = await h.GetStoredAsync("level", _ct);
             Assert.Equal("high", await stored.GetRawValueAsync(_ct));
         }
 
@@ -131,7 +136,7 @@ namespace LPS.UnitTest
             var result = await h.SetIf.ExecuteAsync("variable=n, condition=1 == 1, value=42, as=int", SessionId, _ct);
 
             Assert.Equal("42", result);
-            var stored = await h.Variables.GetAsync("n", _ct);
+            var stored = await h.GetStoredAsync("n", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("42", await stored.GetRawValueAsync(_ct));
         }
@@ -144,7 +149,7 @@ namespace LPS.UnitTest
             var result = await h.SetIf.ExecuteAsync("variable=obj, condition=true, value={\"a\":1}, as=json", SessionId, _ct);
 
             Assert.Equal("{\"a\":1}", result);
-            var stored = await h.Variables.GetAsync("obj", _ct);
+            var stored = await h.GetStoredAsync("obj", _ct);
             Assert.Equal("{\"a\":1}", await stored.GetRawValueAsync(_ct));
         }
 
@@ -155,7 +160,7 @@ namespace LPS.UnitTest
 
             await h.SetIf.ExecuteAsync("variable=sum, condition=true, value=2+3, as=int", SessionId, _ct);
 
-            var stored = await h.Variables.GetAsync("sum", _ct);
+            var stored = await h.GetStoredAsync("sum", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("5", await stored.GetRawValueAsync(_ct));
         }
@@ -178,7 +183,7 @@ namespace LPS.UnitTest
             var result = await h.SetIf.ExecuteAsync("variable=size, value=x", SessionId, _ct);
 
             Assert.Equal(string.Empty, result);
-            var stored = await h.Variables.GetAsync("size", _ct);
+            var stored = await h.GetStoredAsync("size", _ct);
             Assert.Null(stored);
         }
 
@@ -190,7 +195,7 @@ namespace LPS.UnitTest
             var result = await h.Processor.ProcessPlaceholderAsync("setif(variable=size, condition=2 > 1, value=big)", SessionId, _ct);
 
             Assert.Equal("big", result);
-            var stored = await h.Variables.GetAsync("size", _ct);
+            var stored = await h.GetStoredAsync("size", _ct);
             Assert.Equal("big", await stored.GetRawValueAsync(_ct));
         }
 
@@ -206,9 +211,9 @@ namespace LPS.UnitTest
                 SessionId, _ct);
 
             Assert.Equal("taken", result);
-            Assert.Equal("taken", await (await h.Variables.GetAsync("out", _ct)).GetRawValueAsync(_ct));
+            Assert.Equal("taken", await (await h.GetStoredAsync("out", _ct)).GetRawValueAsync(_ct));
             // The default's $set was in the untaken branch and must NOT have run.
-            Assert.Null(await h.Variables.GetAsync("sideEffect", _ct));
+            Assert.Null(await h.GetStoredAsync("sideEffect", _ct));
         }
 
         private static Harness BuildHarnessWithSet()
@@ -232,14 +237,14 @@ namespace LPS.UnitTest
             var lazyEvaluator = new Lazy<IExpressionEvaluator>(() => ifEvaluator);
 
             var paramExtractor = new ParameterExtractorService(lazyResolver, opId.Object, logger.Object);
-            var setIf = new SetVariableIfMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver, lazyEvaluator);
-            var set = new SetVariableMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver);
+            var setIf = new SetVariableIfMethod(paramExtractor, logger.Object, opId.Object, variables, lazyResolver, lazyEvaluator, sessions);
+            var set = new SetVariableMethod(sessions, paramExtractor, logger.Object, opId.Object, variables, lazyResolver);
 
             var processor = new PlaceholderProcessor(new IPlaceholderMethod[] { setIf, set }, sessions, variables, opId.Object, logger.Object);
             resolver = new PlaceholderResolverService(processor, opId.Object, logger.Object);
             ifEvaluator = new ExpressionEvaluator(resolver, node.Object, opId.Object, logger.Object);
 
-            return new Harness { SetIf = setIf, Resolver = resolver, Variables = variables, Processor = processor };
+            return new Harness { SetIf = setIf, Resolver = resolver, Variables = variables, Sessions = sessions, Processor = processor };
         }
     }
 }

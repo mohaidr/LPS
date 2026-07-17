@@ -4,19 +4,21 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     /// <summary>
-    /// $setvariable(variable=name, value=..., as=int|double|decimal|bool|string|json)
+    /// $setvariable(variable=name, value=..., as=int|double|decimal|bool|string|json, isGlobal=true)
     /// Resolves 'value' and stores it (typed) into 'variable'. When 'as' is a numeric type, an arithmetic
-    /// 'value' (e.g. 2+3, 10/4) is evaluated before storing. Alias: $set(...).
+    /// 'value' (e.g. 2+3, 10/4) is evaluated before storing. 'isGlobal' (default true) stores globally;
+    /// set isGlobal=false to store the value scoped to the current session. Alias: $set(...).
     /// </summary>
     public sealed class SetVariableMethod : MethodBase
     {
-        public SetVariableMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public SetVariableMethod(ISessionManager sessionManager, ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -31,6 +33,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
                 var asType = await _params.ExtractStringAsync(parameters, "as", string.Empty, sessionId, token);
                 var value = await _params.ExtractStringAsync(parameters, "value", string.Empty, sessionId, token) ?? string.Empty;
+                var isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 if (string.IsNullOrWhiteSpace(variableName))
                 {
@@ -40,7 +43,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 var jt = BuildValueToken(value, asType);
 
-                await StoreTypedVariableAsync(variableName, jt, asType, token);
+                await StoreTypedVariableAsync(variableName, jt, asType, token, isGlobal, sessionId);
                 return value;
             }
             catch (Exception ex)

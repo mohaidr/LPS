@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
@@ -16,8 +17,8 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
     /// </summary>
     public sealed class HmacMethod : MethodBase
     {
-        public HmacMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public HmacMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -26,6 +27,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -34,11 +36,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var algorithm = (await _params.ExtractStringAsync(parameters, "algorithm", "SHA256", sessionId, token)).ToUpperInvariant();
                 var encoding = (await _params.ExtractStringAsync(parameters, "encoding", "hex", sessionId, token)).ToLowerInvariant();
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 if (string.IsNullOrEmpty(key))
                 {
                     await _logger.LogAsync(_op.OperationId, "hmac failed. A 'key' (shared secret) is required.", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
@@ -55,7 +58,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (hmac == null)
                 {
                     await _logger.LogAsync(_op.OperationId, $"hmac failed. Unsupported algorithm '{algorithm}'. Use SHA1, SHA256, SHA384, or SHA512.", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
@@ -73,13 +76,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     result = BitConverter.ToString(mac).Replace("-", "").ToLowerInvariant();
                 }
 
-                await StoreStringVariableAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"hmac failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                 return string.Empty;
             }
         }

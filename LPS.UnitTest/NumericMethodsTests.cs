@@ -30,9 +30,16 @@ namespace LPS.UnitTest
             public PlaceholderResolverService Resolver;
             public PlaceholderProcessor Processor;
             public VariableManager Variables;
+            public SessionManager Sessions;
             public Dictionary<string, IPlaceholderMethod> Methods;
 
             public Task<string> Run(string name, string args) => Methods[name].ExecuteAsync(args, SessionId, CancellationToken.None);
+
+            // Scope-agnostic read: variable-storing methods default to session scope, but a few
+            // callers (and legacy inputs) still live in the global manager. Check session first,
+            // then fall back to global so assertions work regardless of where a method stored it.
+            public async Task<IVariableHolder> GetStoredAsync(string name, CancellationToken token)
+                => await Sessions.GetVariableAsync(SessionId, name, token) ?? await Variables.GetAsync(name, token);
         }
 
         private static Harness BuildHarness()
@@ -55,29 +62,29 @@ namespace LPS.UnitTest
 
             var methods = new IPlaceholderMethod[]
             {
-                new SetVariableMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new SumMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new MinMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new MaxMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new MultiplyMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new AverageMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new DivideMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new SubtractMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new ModMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new PowMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new AbsMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new FloorMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new CeilMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new RoundMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new ClampMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new GreaterThanMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new SmallerThanMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new GreaterThanOrEqualMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new SmallerThanOrEqualMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new GreaterMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new LessMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new EqualMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
-                new StringEqualsMethod(pe, logger.Object, opId.Object, variables, lazyResolver),
+                new SetVariableMethod(sessions, pe, logger.Object, opId.Object, variables, lazyResolver),
+                new SumMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new MinMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new MaxMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new MultiplyMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new AverageMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new DivideMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new SubtractMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new ModMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new PowMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new AbsMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new FloorMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new CeilMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new RoundMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new ClampMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new GreaterThanMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new SmallerThanMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new GreaterThanOrEqualMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new SmallerThanOrEqualMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new GreaterMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new LessMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new EqualMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
+                new StringEqualsMethod(pe, logger.Object, opId.Object, variables, lazyResolver, sessions),
             };
 
             var processor = new PlaceholderProcessor(methods, sessions, variables, opId.Object, logger.Object);
@@ -88,6 +95,7 @@ namespace LPS.UnitTest
                 Resolver = resolver,
                 Processor = processor,
                 Variables = variables,
+                Sessions = sessions,
                 Methods = methods.ToDictionary(m => m.Name, StringComparer.OrdinalIgnoreCase),
             };
         }
@@ -114,7 +122,7 @@ namespace LPS.UnitTest
 
         private async Task<string> RawAsync(Harness h, string name)
         {
-            var holder = await h.Variables.GetAsync(name, _ct);
+            var holder = await h.GetStoredAsync(name, _ct);
             return holder == null ? null : await holder.GetRawValueAsync(_ct);
         }
 
@@ -128,7 +136,7 @@ namespace LPS.UnitTest
             var result = await h.Run("setvariable", "variable=greeting, value=hello");
 
             Assert.Equal("hello", result);
-            var stored = await h.Variables.GetAsync("greeting", _ct);
+            var stored = await h.GetStoredAsync("greeting", _ct);
             Assert.IsType<StringVariableHolder>(stored);
             Assert.Equal("hello", await stored.GetRawValueAsync(_ct));
         }
@@ -141,7 +149,7 @@ namespace LPS.UnitTest
             var result = await h.Run("setvariable", "variable=count, value=42, as=int");
 
             Assert.Equal("42", result);
-            var stored = await h.Variables.GetAsync("count", _ct);
+            var stored = await h.GetStoredAsync("count", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("42", await stored.GetRawValueAsync(_ct));
         }
@@ -164,7 +172,7 @@ namespace LPS.UnitTest
 
             await h.Run("setvariable", "variable=sum, value=2+3, as=int");
 
-            var stored = await h.Variables.GetAsync("sum", _ct);
+            var stored = await h.GetStoredAsync("sum", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("5", await stored.GetRawValueAsync(_ct));
         }
@@ -176,7 +184,7 @@ namespace LPS.UnitTest
 
             await h.Run("setvariable", "variable=ratio, value=1.5+1, as=double");
 
-            var stored = await h.Variables.GetAsync("ratio", _ct);
+            var stored = await h.GetStoredAsync("ratio", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("2.5", await stored.GetRawValueAsync(_ct));
         }
@@ -188,9 +196,43 @@ namespace LPS.UnitTest
 
             await h.Run("setvariable", "variable=expr, value=2+3");
 
-            var stored = await h.Variables.GetAsync("expr", _ct);
+            var stored = await h.GetStoredAsync("expr", _ct);
             Assert.IsType<StringVariableHolder>(stored);
             Assert.Equal("2+3", await stored.GetRawValueAsync(_ct));
+        }
+
+        [Fact]
+        public async Task SetVariable_DefaultsToSession()
+        {
+            var h = BuildHarness();
+
+            await h.Run("setvariable", "variable=g, value=world");   // no isGlobal -> session scope
+
+            // not in the global manager...
+            Assert.Null(await h.Variables.GetAsync("g", _ct));
+            // ...but present in the session
+            var stored = await h.Sessions.GetVariableAsync(SessionId, "g", _ct);
+            Assert.NotNull(stored);
+            Assert.Equal("world", await stored.GetRawValueAsync(_ct));
+        }
+
+        [Fact]
+        public async Task SetVariable_IsGlobalFalse_StoresSessionScoped()
+        {
+            var h = BuildHarness();
+
+            // store scoped to session "sA"
+            await h.Resolver.ResolvePlaceholdersAsync<string>(
+                "${setvariable(variable=x, value=hello, isGlobal=false)}", "sA", _ct);
+
+            // not in the global variable manager
+            Assert.Null(await h.Variables.GetAsync("x", _ct));
+
+            // visible within the same session
+            Assert.Equal("hello", await h.Resolver.ResolvePlaceholdersAsync<string>("${x}", "sA", _ct));
+
+            // not visible in a different session (unresolved placeholder round-trips)
+            Assert.Equal("${x}", await h.Resolver.ResolvePlaceholdersAsync<string>("${x}", "sB", _ct));
         }
 
         [Fact]
@@ -205,7 +247,7 @@ namespace LPS.UnitTest
                 "${setvariable(variable=total, value=$sum(source=[2,3]), as=int)}", SessionId, _ct);
 
             Assert.Equal("5", result);
-            var stored = await h.Variables.GetAsync("total", _ct);
+            var stored = await h.GetStoredAsync("total", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("5", await stored.GetRawValueAsync(_ct));
         }
@@ -220,7 +262,7 @@ namespace LPS.UnitTest
                 "${setvariable(variable=x, value=$multiply(source=[$sum(source=[2,3]), 2]), as=int)}", SessionId, _ct);
 
             Assert.Equal("10", result);
-            var stored = await h.Variables.GetAsync("x", _ct);
+            var stored = await h.GetStoredAsync("x", _ct);
             Assert.Equal("10", await stored.GetRawValueAsync(_ct));
         }
 
@@ -234,7 +276,7 @@ namespace LPS.UnitTest
             var result = await h.Run("sum", "source=[1, 2, 3, 4], variable=total");
 
             Assert.Equal("10", result);
-            var stored = await h.Variables.GetAsync("total", _ct);
+            var stored = await h.GetStoredAsync("total", _ct);
             Assert.IsType<NumberVariableHolder>(stored);
             Assert.Equal("10", await stored.GetRawValueAsync(_ct));
         }

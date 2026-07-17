@@ -3,14 +3,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     public sealed class ToLowerCaseMethod : MethodBase
     {
-        public ToLowerCaseMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r)
-            : base(p, l, op, v, r)
+        public ToLowerCaseMethod(ParameterExtractorService p, ILogger l, IRuntimeOperationIdProvider op, IVariableManager v, Lazy<IPlaceholderResolverService> r, ISessionManager sessionManager)
+            : base(p, l, op, v, r, sessionManager)
         {
         }
 
@@ -19,6 +20,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         public override async Task<string> ExecuteAsync(string parameters, string sessionId, CancellationToken token)
         {
             string variableName = string.Empty;
+            bool isGlobal = false;
 
             try
             {
@@ -29,24 +31,25 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 }
 
                 variableName = await _params.ExtractStringAsync(parameters, "variable", string.Empty, sessionId, token);
+                isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
 
                 if (string.IsNullOrWhiteSpace(source))
                 {
                     await _logger.LogAsync(_op.OperationId, "tolowercase failed. No source expression was provided.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token);
+                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                     return string.Empty;
                 }
 
                 var resolved = await _resolver.Value.ResolvePlaceholdersAsync<string>(source, sessionId, token);
                 var result = (resolved ?? string.Empty).ToLowerInvariant();
 
-                await StoreStringVariableAsync(variableName, result, token);
+                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"tolowercase failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token);
+                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
                 return string.Empty;
             }
         }

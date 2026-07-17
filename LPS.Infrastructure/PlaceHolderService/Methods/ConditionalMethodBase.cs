@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients.SessionManager;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.Infrastructure.PlaceHolderService.Methods
@@ -25,8 +26,9 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             IRuntimeOperationIdProvider op,
             IVariableManager v,
             Lazy<IPlaceholderResolverService> r,
-            Lazy<IExpressionEvaluator> expressionEvaluator)
-            : base(p, l, op, v, r)
+            Lazy<IExpressionEvaluator> expressionEvaluator,
+            ISessionManager session)
+            : base(p, l, op, v, r, session)
         {
             _expressionEvaluator = expressionEvaluator;
         }
@@ -63,25 +65,26 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         /// <paramref name="variableName"/>; returns the display string. Use this when the input is a
         /// template that still needs placeholder substitution.
         /// </summary>
-        protected async Task<string> ResolveAndStoreAsync(string variableName, string raw, string asType, string sessionId, CancellationToken token)
+        protected async Task<string> ResolveAndStoreAsync(string variableName, string raw, string asType, string sessionId, bool isGlobal, CancellationToken token)
         {
             var resolved = string.IsNullOrEmpty(raw)
                 ? string.Empty
                 : await _resolver.Value.ResolvePlaceholdersAsync<string>(raw, sessionId, token) ?? string.Empty;
 
-            return await StoreResolvedAsync(variableName, resolved, asType, token);
+            return await StoreResolvedAsync(variableName, resolved, asType, sessionId, isGlobal, token);
         }
 
         /// <summary>
         /// For an **already-resolved / final** input such as content read from a file, env var, or another
         /// variable: stores it (typed via <paramref name="asType"/>) under <paramref name="variableName"/>
         /// WITHOUT a further placeholder pass; returns the display string. Use this when the input must NOT
-        /// be re-scanned for '$' (e.g. read content that may legitimately contain '$').
+        /// be re-scanned for '$' (e.g. read content that may legitimately contain '$'). When
+        /// <paramref name="isGlobal"/> is false the value is stored scoped to <paramref name="sessionId"/>.
         /// </summary>
-        protected async Task<string> StoreResolvedAsync(string variableName, string resolved, string asType, CancellationToken token)
+        protected async Task<string> StoreResolvedAsync(string variableName, string resolved, string asType, string sessionId, bool isGlobal, CancellationToken token)
         {
             var value = BuildValueToken(resolved, asType);
-            await StoreTypedVariableAsync(variableName, value, asType, token);
+            await StoreTypedVariableAsync(variableName, value, asType, token, isGlobal, sessionId);
             return DisplayString(value);
         }
 
