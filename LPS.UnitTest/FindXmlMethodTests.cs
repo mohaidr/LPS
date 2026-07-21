@@ -26,6 +26,22 @@ namespace LPS.UnitTest
             "<order><id>3</id><status>shipped</status><total>300</total></order>" +
             "</orders>";
 
+        // Same data under a DEFAULT namespace (no prefix on the elements).
+        private const string DefaultNsOrders =
+            "<orders xmlns=\"urn:acme:orders\">" +
+            "<order><id>1</id><status>shipped</status></order>" +
+            "<order><id>2</id><status>pending</status></order>" +
+            "<order><id>3</id><status>shipped</status></order>" +
+            "</orders>";
+
+        // Same data under a PREFIXED namespace.
+        private const string PrefixedNsOrders =
+            "<o:orders xmlns:o=\"urn:acme:orders\">" +
+            "<o:order><o:id>1</o:id><o:status>shipped</o:status></o:order>" +
+            "<o:order><o:id>2</o:id><o:status>pending</o:status></o:order>" +
+            "<o:order><o:id>3</o:id><o:status>shipped</o:status></o:order>" +
+            "</o:orders>";
+
         private sealed class Harness
         {
             public FindXmlMethod Find;
@@ -148,6 +164,44 @@ namespace LPS.UnitTest
             var xml = "<root><name>Leanne</name></root>";
             var args = "source=" + xml + ", path=/root/name, match=first";
             Assert.Equal("Leanne", await h.Find.ExecuteAsync(args, SessionId, _ct));
+        }
+
+        [Fact]
+        public async Task DefaultNamespace_WithoutSupport_ReturnsDefault()
+        {
+            // Documents the limitation: unprefixed XPath does not match a default-namespaced document.
+            var h = Build();
+            var args = "source=" + DefaultNsOrders + ", path=/orders/order, where=status=\"shipped\", select=id, match=first, default=NONE";
+            Assert.Equal("NONE", await h.Find.ExecuteAsync(args, SessionId, _ct));
+        }
+
+        [Fact]
+        public async Task DefaultNamespace_IgnoreNamespaces_Matches()
+        {
+            var h = Build();
+            var args = "source=" + DefaultNsOrders + ", path=/orders/order, where=status=\"shipped\", select=id, match=first, ignoreNamespaces=true, variable=firstId";
+
+            var result = await h.Find.ExecuteAsync(args, SessionId, _ct);
+
+            Assert.Equal("1", result);
+            Assert.Equal("1", await RawAsync(h, "firstId"));
+        }
+
+        [Fact]
+        public async Task PrefixedNamespace_WithDeclaredPrefix_Matches()
+        {
+            var h = Build();
+            var args = "source=" + PrefixedNsOrders + ", path=/o:orders/o:order, where=o:status=\"shipped\", select=o:id, match=all, namespaces=o=urn:acme:orders";
+            Assert.Equal("[\"1\",\"3\"]", await h.Find.ExecuteAsync(args, SessionId, _ct));
+        }
+
+        [Fact]
+        public async Task PrefixedNamespace_IgnoreNamespaces_Matches()
+        {
+            // ignoreNamespaces also handles prefixed documents: unprefixed XPath matches after stripping.
+            var h = Build();
+            var args = "source=" + PrefixedNsOrders + ", path=/orders/order, where=status=\"shipped\", select=id, match=last, ignoreNamespaces=true";
+            Assert.Equal("3", await h.Find.ExecuteAsync(args, SessionId, _ct));
         }
     }
 }

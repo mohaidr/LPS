@@ -24,16 +24,18 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             string tokenStr = string.Empty;
             string claim = string.Empty;
             bool isGlobal = false;
+            string asType = "string";
             try
             {
                 tokenStr = await _params.ExtractStringAsync(parameters, "token", "", sessionId, token);
                 claim = await _params.ExtractStringAsync(parameters, "claim", "", sessionId, token);
                 variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
                 isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
+                asType = await _params.ExtractStringAsync(parameters, "as", "string", sessionId, token);
 
                 if (string.IsNullOrEmpty(tokenStr) || string.IsNullOrEmpty(claim))
                 {
-                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken(string.Empty, asType), asType, token, isGlobal, sessionId);
                     return string.Empty;
                 }
 
@@ -41,7 +43,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (parts.Length < 2)
                 {
                     await _logger.LogAsync(_op.OperationId, "jwtclaim: invalid token format.", LPSLoggingLevel.Error, token);
-                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken(string.Empty, asType), asType, token, isGlobal, sessionId);
                     return string.Empty;
                 }
 
@@ -49,13 +51,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object>>(payloadJson);
 
                 string result = (dict != null && dict.TryGetValue(claim, out var valueObj)) ? valueObj?.ToString() ?? string.Empty : string.Empty;
-                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(result, asType), asType, token, isGlobal, sessionId);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"jwtclaim failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(string.Empty, asType), asType, token, isGlobal, sessionId);
                 return string.Empty;
             }
         }

@@ -28,13 +28,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
                 string unique = Guid.NewGuid().ToString("N").Substring(0, 8);
                 string email = $"{prefix}-{unique}@{domain}";
-                await StoreStringVariableAsync(variableName, email, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(email, "string"), "string", token, isGlobal, sessionId);
                 return email;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"generateemail failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(string.Empty, "string"), "string", token, isGlobal, sessionId);
                 return string.Empty;
             }
         }

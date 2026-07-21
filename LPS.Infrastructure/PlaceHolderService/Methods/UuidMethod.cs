@@ -22,7 +22,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             string variableName = await _params.ExtractStringAsync(parameters, "variable", "", sessionId, token);
             bool isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
             string result = prefix + Guid.NewGuid().ToString();
-            await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
+            await StoreTypedVariableAsync(variableName, BuildValueToken(result, "string"), "string", token, isGlobal, sessionId);
             return result;
         }
     }

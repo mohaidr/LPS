@@ -15,6 +15,9 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         public VariableType? Type { get; private set; }
         public bool IsGlobal { get; private set; }
 
+        // Natural CLR value; Value ("true"/"false") remains the canonical resolved form. Additive typed view.
+        private bool _bool;
+
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly VMaintainer _maintainer;
@@ -31,6 +34,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         }
 
         public ValueTask<string> GetRawValueAsync(CancellationToken token) => ValueTask.FromResult(Value);
+
+        public bool AsBool() => _bool;
 
         // ======= Builder Class =======
         //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
@@ -89,7 +94,8 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
                 }
 
                 // Assign buffered values atomically to the pre-created holder
-                _holder.Value = _rawValue.Value.ToString();
+                _holder.Value = _rawValue.Value ? "true" : "false";
+                _holder._bool = _rawValue.Value;
                 _holder.IsGlobal = _isGlobal;
 
                 return _holder; // return the same instance created in the constructor

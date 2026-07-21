@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(targetExpression))
                 {
                     await _logger.LogAsync(_op.OperationId, "length failed. No source expression was provided.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken("0", "int"), "int", token, isGlobal, sessionId);
                     return "0";
                 }
 
@@ -47,24 +47,24 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     await _logger.LogAsync(_op.OperationId, "length failed. The resolved value was empty.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken("0", "int"), "int", token, isGlobal, sessionId);
                     return "0";
                 }
                 if (!TryGetJsonArrayLength(resolvedValue, out var length))
                 {
                     await _logger.LogAsync(_op.OperationId, "length failed. The resolved value is not a JSON array.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken("0", "int"), "int", token, isGlobal, sessionId);
                     return "0";
                 }
 
                 var result = length.ToString(CultureInfo.InvariantCulture);
-                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(result, "int"), "int", token, isGlobal, sessionId);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"length failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, "0", token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken("0", "int"), "int", token, isGlobal, sessionId);
                 return "0";
             }
         }

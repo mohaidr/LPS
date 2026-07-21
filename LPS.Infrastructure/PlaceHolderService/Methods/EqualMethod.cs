@@ -36,7 +36,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (a is null || b is null)
                 {
                     await _logger.LogAsync(_op.OperationId, "equal failed. Both numeric operands 'a' and 'b' are required.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken("false", "bool"), "bool", token, isGlobal, sessionId);
                     return "false";
                 }
 
@@ -44,13 +44,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var result = Math.Abs(a.Value - b.Value) <= Math.Abs(tolerance);
                 var text = result ? "true" : "false";
 
-                await StoreStringVariableAsync(variableName, text, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(text, "bool"), "bool", token, isGlobal, sessionId);
                 return text;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"equal failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken("false", "bool"), "bool", token, isGlobal, sessionId);
                 return "false";
             }
         }

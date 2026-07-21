@@ -30,19 +30,19 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
 
                 if (string.IsNullOrEmpty(value))
                 {
-                    await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken(string.Empty, "string"), "string", token, isGlobal, sessionId);
                     return string.Empty;
                 }
 
                 string padded = PadBase64(value);
                 string result = Encoding.UTF8.GetString(Convert.FromBase64String(padded));
-                await StoreStringVariableAsync(variableName, result, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(result, "string"), "string", token, isGlobal, sessionId);
                 return result;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"base64decode failed for '{Truncate(value)}'. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(string.Empty, "string"), "string", token, isGlobal, sessionId);
                 return string.Empty;
             }
         }

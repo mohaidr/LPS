@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 using Newtonsoft.Json.Linq;
 using LPS.Domain.Common;
 using LPS.Domain.Common.Interfaces;
@@ -19,6 +20,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
     /// optionally filters it with `where` (an XPath predicate — no brackets), projects a value with
     /// `select` (a relative XPath), and stores the result using the same match modes as $find
     /// (first | last | index:N | count | all).
+    ///
+    /// Namespaces:
+    ///   - Declare prefixes with `namespaces=o=urn:acme:orders;s=http://schemas.xmlsoap.org/soap/envelope/`
+    ///     and use them in path/where/select (e.g. path=/s:Envelope/s:Body).
+    ///   - Or set `ignoreNamespaces=true` to strip all namespaces from the source so plain, unprefixed
+    ///     XPath (e.g. /orders/order) matches regardless of any xmlns on the document.
     /// </summary>
     public sealed class FindXmlMethod : MethodBase
     {
@@ -52,8 +59,10 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var select = await ResolveArgAsync(args, "select", string.Empty, sessionId, token);
                 var match = (await ResolveArgAsync(args, "match", "first", sessionId, token)).Trim();
                 var asType = (await ResolveArgAsync(args, "as", "auto", sessionId, token)).Trim();
+                var namespaces = await ResolveArgAsync(args, "namespaces", string.Empty, sessionId, token);
                 variableName = await ResolveArgAsync(args, "variable", string.Empty, sessionId, token);
                 isGlobal = await _params.ExtractBoolAsync(parameters, "isGlobal", false, sessionId, token);
+                var ignoreNamespaces = await _params.ExtractBoolAsync(parameters, "ignoreNamespaces", false, sessionId, token);
 
                 var (mode, indexTarget) = ParseMatchMode(match);
 
@@ -66,13 +75,20 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var doc = new XmlDocument { XmlResolver = null };
                 try
                 {
-                    doc.LoadXml(source);
+                    // ignoreNamespaces strips all namespace info up front so unprefixed XPath matches
+                    // regardless of any xmlns on the document; otherwise the source is loaded as-is.
+                    doc.LoadXml(ignoreNamespaces ? StripNamespaces(source) : source);
                 }
                 catch
                 {
                     await _logger.LogAsync(_op.OperationId, "findxml failed. The source could not be parsed as XML.", LPSLoggingLevel.Warning, token);
                     return await StoreNoMatchAsync(variableName, defaultRaw, asType, mode, sessionId, token, isGlobal);
                 }
+
+                // Always non-null (empty when nothing is declared) so a single SelectNodes/SelectSingleNode
+                // overload is used everywhere. Lets path/where/select reference declared prefixes; when the
+                // document was stripped there is simply nothing left to bind.
+                var nsmgr = BuildNamespaceManager(doc, ignoreNamespaces ? string.Empty : namespaces);
 
                 var effectivePath = string.IsNullOrWhiteSpace(path) ? "/*/*" : path.Trim();
                 if (!string.IsNullOrWhiteSpace(where))
@@ -83,7 +99,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 XmlNodeList nodes;
                 try
                 {
-                    nodes = doc.SelectNodes(effectivePath);
+                    nodes = doc.SelectNodes(effectivePath, nsmgr);
                 }
                 catch (Exception ex)
                 {
@@ -102,7 +118,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                     foreach (XmlNode node in nodes)
                     {
                         token.ThrowIfCancellationRequested();
-                        values.Add(ProjectXml(node, select));
+                        values.Add(ProjectXml(node, select, nsmgr));
 
                         if (mode == MatchMode.First) break;
                         if (mode == MatchMode.Index && values.Count - 1 == indexTarget) break;
@@ -135,7 +151,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"findxml failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, string.Empty, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(string.Empty, "string"), "string", token, isGlobal, sessionId);
                 return string.Empty;
             }
         }
@@ -167,16 +183,77 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         /// (or attribute value) is used; otherwise <paramref name="select"/> is a relative XPath
         /// (e.g. <c>id</c>, <c>@status</c>, <c>text()</c>).
         /// </summary>
-        private static string ProjectXml(XmlNode node, string select)
+        private static string ProjectXml(XmlNode node, string select, XmlNamespaceManager nsmgr)
         {
             if (string.IsNullOrWhiteSpace(select))
             {
                 return node.Value ?? node.InnerText ?? string.Empty;
             }
 
-            var selected = node.SelectSingleNode(select.Trim());
+            var selected = node.SelectSingleNode(select.Trim(), nsmgr);
             if (selected == null) return string.Empty;
             return selected.Value ?? selected.InnerText ?? string.Empty;
+        }
+
+        /// <summary>
+        /// Builds an <see cref="XmlNamespaceManager"/> from a <c>prefix=uri;prefix=uri</c> declaration so
+        /// path/where/select can reference namespaced nodes by prefix. Always returns a (possibly empty)
+        /// manager; unparseable bindings are skipped. Split on the FIRST '=' only because namespace URIs
+        /// routinely contain ':' and '/'.
+        /// </summary>
+        private static XmlNamespaceManager BuildNamespaceManager(XmlDocument doc, string namespaces)
+        {
+            var mgr = new XmlNamespaceManager(doc.NameTable);
+            if (string.IsNullOrWhiteSpace(namespaces))
+                return mgr;
+
+            foreach (var binding in namespaces.Split(';'))
+            {
+                if (string.IsNullOrWhiteSpace(binding)) continue;
+
+                var eq = binding.IndexOf('=');
+                if (eq <= 0) continue;
+
+                var prefix = binding.Substring(0, eq).Trim();
+                var uri = binding.Substring(eq + 1).Trim();
+                if (prefix.Length == 0 || uri.Length == 0) continue;
+
+                mgr.AddNamespace(prefix, uri);
+            }
+
+            return mgr;
+        }
+
+        /// <summary>
+        /// Returns an equivalent XML string with every namespace removed: element and attribute names are
+        /// reduced to their local name and all xmlns declarations are dropped. Lets plain, unprefixed XPath
+        /// match documents that use default or prefixed namespaces. Uses <see cref="XElement"/> whose parser
+        /// prohibits DTD processing by default, so it stays XXE-safe.
+        /// </summary>
+        private static string StripNamespaces(string xml)
+        {
+            return StripElement(XElement.Parse(xml, LoadOptions.None)).ToString(SaveOptions.DisableFormatting);
+        }
+
+        private static XElement StripElement(XElement element)
+        {
+            var stripped = new XElement(element.Name.LocalName);
+
+            foreach (var attribute in element.Attributes())
+            {
+                if (attribute.IsNamespaceDeclaration) continue;
+                stripped.SetAttributeValue(attribute.Name.LocalName, attribute.Value);
+            }
+
+            foreach (var node in element.Nodes())
+            {
+                if (node is XElement child)
+                    stripped.Add(StripElement(child));
+                else
+                    stripped.Add(node);
+            }
+
+            return stripped;
         }
 
         private async Task<string> StoreNoMatchAsync(string variableName, string defaultRaw, string asType, MatchMode mode, string sessionId, CancellationToken token, bool isGlobal)

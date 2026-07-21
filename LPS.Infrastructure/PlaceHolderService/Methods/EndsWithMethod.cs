@@ -44,7 +44,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (string.IsNullOrWhiteSpace(resolvedSource) || string.IsNullOrWhiteSpace(resolvedValue))
                 {
                     await _logger.LogAsync(_op.OperationId, "endswith failed. Source and value are required.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken("false", "bool"), "bool", token, isGlobal, sessionId);
                     return "false";
                 }
 
@@ -52,13 +52,13 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 var result = resolvedSource.EndsWith(resolvedValue, comparison);
                 var resultText = result.ToString().ToLowerInvariant();
 
-                await StoreStringVariableAsync(variableName, resultText, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(resultText, "bool"), "bool", token, isGlobal, sessionId);
                 return resultText;
             }
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"endswith failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken("false", "bool"), "bool", token, isGlobal, sessionId);
                 return "false";
             }
         }

@@ -15,6 +15,12 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
         public string Value { get; private set; }
         public VariableType? Type { get; private set; }
         public bool IsGlobal { get; private set; }
+
+        // Natural CLR value (boxed once), aligned with Type (int/double/float/decimal).
+        // Value (string) remains the canonical resolved form used by GetRawValueAsync; this is an
+        // additive typed view so typed consumers (math/comparison) don't have to re-parse the string.
+        private object _number;
+
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly VMaintainer _maintainer;
@@ -32,6 +38,12 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
         public ValueTask<string> GetRawValueAsync(CancellationToken token) => ValueTask.FromResult(Value);
 
+        // Typed views of the stored number (off the resolution hot path). Numeric-to-numeric
+        // conversions ignore culture; the invariant provider is passed only for consistency.
+        public long AsInt64() => Convert.ToInt64(_number, CultureInfo.InvariantCulture);
+        public double AsDouble() => Convert.ToDouble(_number, CultureInfo.InvariantCulture);
+        public decimal AsDecimal() => Convert.ToDecimal(_number, CultureInfo.InvariantCulture);
+
         // ====== Builder ======
         //This is a one one builder which will always return the same variable holder. If used in the intent of creating multiple different holders, this will result on logical errors
         public sealed class VMaintainer : IVariableMaintainer
@@ -42,6 +54,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
             // Local buffered state (do NOT touch _variableHolder until BuildAsync)
             private string _rawValue;
+            private object _boxedValue; // natural CLR value, boxed once, mirrors _rawValue/_type
             private VariableType _type = VariableType.Int; // default fallback
             private bool _isGlobal;
 
@@ -63,6 +76,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             public VMaintainer WithRawValue(int value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                _boxedValue = value;
                 _type = VariableType.Int;
                 return this;
             }
@@ -70,6 +84,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             public VMaintainer WithRawValue(double value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                _boxedValue = value;
                 _type = VariableType.Double;
                 return this;
             }
@@ -77,6 +92,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             public VMaintainer WithRawValue(float value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                _boxedValue = value;
                 _type = VariableType.Float;
                 return this;
             }
@@ -84,6 +100,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
             public VMaintainer WithRawValue(decimal value)
             {
                 _rawValue = value.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                _boxedValue = value;
                 _type = VariableType.Decimal;
                 return this;
             }
@@ -112,6 +129,7 @@ namespace LPS.Infrastructure.VariableServices.VariableHolders
 
                 // Assign buffered values atomically to the pre-created holder
                 _variableHolder.Value = _rawValue;
+                _variableHolder._number = _boxedValue;
                 _variableHolder.Type = _type;
                 _variableHolder.IsGlobal = _isGlobal;
 

@@ -9,9 +9,9 @@ using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 namespace LPS.Infrastructure.PlaceHolderService.Methods
 {
     /// <summary>
-    /// Shared read logic for $read and $readif. Resolves a value from a file, an environment variable,
-    /// or a stored variable based on the <c>source</c> / <c>path</c> / <c>name</c> / <c>encoding</c>
-    /// parameters, so both methods stay in lock-step without duplicating the source handling.
+    /// Shared read logic for $read, $readif and $jwtsign (key loading). Resolves a value from a file, an
+    /// environment variable, or a stored variable based on the <c>source</c> / <c>path</c> / <c>name</c> /
+    /// <c>encoding</c> parameters, so callers stay in lock-step without duplicating the source handling.
     /// </summary>
     internal static class SourceReader
     {

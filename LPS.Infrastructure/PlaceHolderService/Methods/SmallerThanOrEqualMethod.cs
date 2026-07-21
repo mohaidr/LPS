@@ -34,12 +34,12 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
                 if (a is null || b is null)
                 {
                     await _logger.LogAsync(_op.OperationId, "smallerthanorequal failed. Both numeric operands 'a' and 'b' are required.", LPSLoggingLevel.Warning, token);
-                    await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
+                    await StoreTypedVariableAsync(variableName, BuildValueToken("false", "bool"), "bool", token, isGlobal, sessionId);
                     return "false";
                 }
 
                 var text = (a.Value <= b.Value) ? "true" : "false";
-                await StoreStringVariableAsync(variableName, text, token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken(text, "bool"), "bool", token, isGlobal, sessionId);
                 if (!string.IsNullOrWhiteSpace(numberVariable))
                     await StoreNumberResultAsync(numberVariable, Math.Min(a.Value, b.Value), string.Empty, token, sessionId: sessionId, isGlobal: isGlobal);
                 return text;
@@ -47,7 +47,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
             catch (Exception ex)
             {
                 await _logger.LogAsync(_op.OperationId, $"smallerthanorequal failed. {ex}", LPSLoggingLevel.Error, token);
-                await StoreStringVariableAsync(variableName, "false", token, sessionId, isGlobal);
+                await StoreTypedVariableAsync(variableName, BuildValueToken("false", "bool"), "bool", token, isGlobal, sessionId);
                 return "false";
             }
         }

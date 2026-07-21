@@ -58,6 +58,7 @@ namespace LPS.Infrastructure.PlaceHolderService.Methods
         /// Stores <paramref name="value"/> as a plain string variable (when <paramref name="variableName"/>
         /// is provided). Thin wrapper over <see cref="StoreTypedVariableAsync"/> with an explicit string type.
         /// </summary>
+        [Obsolete("Prefer StoreTypedVariableAsync (use BuildValueToken(value, asType) to honor a method's `as`). This string-only shortcut is retained for legacy callers and is being migrated out.")]
         protected Task StoreStringVariableAsync(string variableName, string value, CancellationToken token, string sessionId = null, bool isGlobal = false)
             => StoreTypedVariableAsync(variableName, new JValue(value ?? string.Empty), "string", token, isGlobal, sessionId);
 
