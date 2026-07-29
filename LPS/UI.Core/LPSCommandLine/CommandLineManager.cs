@@ -28,7 +28,7 @@ namespace LPS.UI.Core.LPSCommandLine
         private static readonly string[] ConfigCommands =
         [
             "create", "round", "iteration", "variable", "capture",
-            "logger", "httpclient", "watchdog", "cluster", "dashboard", "influxdb"
+            "logger", "httpclient", "watchdog", "cluster", "dashboard", "influxdb", "record"
         ];
 
         /// <summary>
@@ -68,6 +68,7 @@ namespace LPS.UI.Core.LPSCommandLine
         CaptureCliCommand _captureCliCommand;
         IterationCliCommand _iterationCliCommand;
         RunCliCommand _runCliCommand;
+        RecordCliCommand _recordCliCommand;
         LoggerCliCommand _loggerCliCommand;
         WatchDogCliCommand _watchdogCliCommand;
         HttpClientCliCommand _httpClientCliCommand;
@@ -148,6 +149,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _roundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _iterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _runCliCommand = new RunCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _testOrchestratorService);
+            _recordCliCommand = new RecordCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
             _loggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.FileLoggerOptions);
             _httpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.HttpClientOptions);
             _watchdogCliCommand = new WatchDogCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.WatchdogOptions);
@@ -178,6 +180,9 @@ namespace LPS.UI.Core.LPSCommandLine
                     break;
                 case string cmd when cmd.StartsWith("capture"):
                     _captureCliCommand.SetHandler(cancellationToken);
+                    break;
+                case string cmd when cmd.StartsWith("record"):
+                    _recordCliCommand.SetHandler(cancellationToken);
                     break;
                 case string cmd when cmd.StartsWith("run"):
                     _runCliCommand.SetHandler(cancellationToken);

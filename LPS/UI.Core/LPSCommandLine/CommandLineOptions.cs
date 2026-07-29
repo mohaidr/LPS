@@ -356,6 +356,110 @@ namespace LPS.UI.Core.LPSCommandLine
                 Arity = ArgumentArity.ExactlyOne
             };
         }
+        public static class LPSRecordCommandOptions
+        {
+            static LPSRecordCommandOptions()
+            {
+                PlanNameOption.AddAlias("-n");
+                UrlOption.AddAlias("-u");
+                IgnoreContentTypeOption.AddAlias("-ict");
+                IgnoreExtensionOption.AddAlias("-iext");
+                IgnoreMethodOption.AddAlias("-im");
+                IgnoreResourceTypeOption.AddAlias("-irt");
+                OnlyHostOption.AddAlias("-oh");
+                IgnoreHostOption.AddAlias("-ih");
+                IgnorePathOption.AddAlias("-ip");
+                PromptFilesOption.AddAlias("-pf");
+            }
+
+            // Positional output file (defaults to plan.yaml). Extension selects YAML vs JSON.
+            public static Argument<string> OutputFileArgument { get; } = new Argument<string>(
+                "output",
+                () => "plan.yaml",
+                "Output plan file to write (.yaml, .yml or .json)")
+            {
+                Arity = ArgumentArity.ZeroOrOne
+            };
+
+            public static Option<string> PlanNameOption { get; } = new Option<string>(
+                "--name", () => "RecordedPlan", "Name for the generated plan")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> UrlOption { get; } = new Option<string>(
+                "--url", "Optional start URL to open when the browser launches")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> HeadlessOption { get; } = new Option<bool>(
+                "--headless", () => false, "Run the browser without a visible window")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> InstallOption { get; } = new Option<bool>(
+                "--install", () => false, "Install the Playwright Chromium browser and exit")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> PromptFilesOption { get; } = new Option<bool>(
+                "--prompt-files", () => false, "After recording, interactively ask for a local path for each captured file upload")
+            {
+                IsRequired = false
+            };
+
+            public static Option<IList<string>> IgnoreContentTypeOption { get; } = new Option<IList<string>>(
+                "--ignore-content-type", "Response content-type(s) to ignore (substring match)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> IgnoreExtensionOption { get; } = new Option<IList<string>>(
+                "--ignore-extension", "URL file extension(s) to ignore (e.g. .css .js)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> IgnoreMethodOption { get; } = new Option<IList<string>>(
+                "--ignore-method", "HTTP method(s) to ignore (e.g. OPTIONS)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> IgnoreResourceTypeOption { get; } = new Option<IList<string>>(
+                "--ignore-resource-type", "Playwright resource type(s) to ignore (e.g. image font stylesheet)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> OnlyHostOption { get; } = new Option<IList<string>>(
+                "--only-host", "Keep ONLY requests to these host(s), exact match. Best way to drop third-party noise.")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> IgnoreHostOption { get; } = new Option<IList<string>>(
+                "--ignore-host", "Host(s) to ignore, exact match (e.g. analytics/tracking domains)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> IgnorePathOption { get; } = new Option<IList<string>>(
+                "--ignore-path", "Drop requests whose URL path/query contains any of these substrings (e.g. /cdn-cgi/)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+        }
         public static class LPSCreateCommandOptions
         {
             static LPSCreateCommandOptions()

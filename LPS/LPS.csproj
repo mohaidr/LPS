@@ -1,10 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
 	<PropertyGroup>
-		<Version>3.0.5.7</Version>
-		<AssemblyVersion>3.0.5.7</AssemblyVersion>
-		<FileVersion>3.0.5.7</FileVersion>
-		<InformationalVersion>3.0.5.7</InformationalVersion>
+		<Version>3.0.5.8-Preview</Version>
+		<AssemblyVersion>3.0.5.8</AssemblyVersion>
+		<FileVersion>3.0.5.8</FileVersion>
+		<InformationalVersion>3.0.5.8-Preview</InformationalVersion>
 
 		<!-- Target -->
 		<OutputType>Exe</OutputType>
@@ -54,6 +54,10 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<InternalsVisibleTo Include="LPS.UnitTest" />
+	</ItemGroup>
+
+	<ItemGroup>
 		<None Remove="fixedlpslog.Log" />
 		<None Remove="LPS.rar" />
 	</ItemGroup>
@@ -69,6 +73,7 @@
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
 		<PackageReference Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
+		<PackageReference Include="Microsoft.Playwright" Version="1.49.0" />
 		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
 		<PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
 		<PackageReference Include="YamlDotNet" Version="16.1.3" />

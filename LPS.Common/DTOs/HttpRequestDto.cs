@@ -3,6 +3,7 @@ using LPS.Domain.LPSSession;
 using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Common.LPSSerializer;
 using System;
+using System.ComponentModel;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -68,6 +69,7 @@ namespace LPS.UI.Common.DTOs
         // HTTP version (supports placeholders)
         [YamlAlias("version")]
         [JsonAlias("version")]
+        [DefaultValue("2.0")]
         public string HttpVersion { get; set; }
 
         // Evaluator condition (can be a variable)
@@ -98,6 +100,7 @@ namespace LPS.UI.Common.DTOs
         public string SaveResponse { get; set; }
 
         // Whether to support H2C (HTTP/2 over cleartext) (supports placeholders)
+        [DefaultValue("false")]
         public string SupportH2C { get; set; }
 
         // Path to client certificate file (PFX/PEM) for mutual TLS authentication
