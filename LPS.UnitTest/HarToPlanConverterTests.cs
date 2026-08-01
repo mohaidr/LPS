@@ -105,5 +105,92 @@ namespace LPS.UnitTest
             Assert.Equal("{\"user\":\"a\"}", payload.Raw);
             Assert.Empty(result.FileUploads);
         }
+
+        [Fact]
+        public void Convert_AppliesLoadShapeOptions()
+        {
+            var har = new HarRoot
+            {
+                Log = new HarLog
+                {
+                    Entries = new List<HarEntry>
+                    {
+                        new HarEntry
+                        {
+                            ResourceType = "document",
+                            Request = new HarRequest { Method = "GET", Url = "https://api.example.com/" }
+                        }
+                    }
+                }
+            };
+
+            var shape = new RecordPlanOptions
+            {
+                NumberOfClients = "500",
+                ArrivalDelay = "50",
+                RunInParallel = true,
+                Duration = "600"
+            };
+
+            var result = new HarToPlanConverter().Convert(har, new CaptureFilter(), "P", shape);
+            var round = result.Plan.Rounds[0];
+            var iteration = round.Iterations[0];
+
+            Assert.Equal("500", round.NumberOfClients);
+            Assert.Equal("50", round.ArrivalDelay);
+            Assert.Equal("true", round.RunInParallel);
+            Assert.Equal("D", iteration.Mode);
+            Assert.Equal("600", iteration.Duration);
+        }
+
+        [Fact]
+        public void Convert_UsesRoundNameFromShape()
+        {
+            var har = new HarRoot
+            {
+                Log = new HarLog
+                {
+                    Entries = new List<HarEntry>
+                    {
+                        new HarEntry
+                        {
+                            ResourceType = "document",
+                            Request = new HarRequest { Method = "GET", Url = "https://api.example.com/" }
+                        }
+                    }
+                }
+            };
+
+            var result = new HarToPlanConverter().Convert(har, new CaptureFilter(), "P", new RecordPlanOptions { RoundName = "Login" });
+
+            Assert.Equal("Login", result.Plan.Rounds[0].Name);
+        }
+
+        [Theory]
+        [InlineData("https://api.example.com/products/1", "GET_products_1")]
+        [InlineData("https://api.example.com/products", "GET_products")]
+        [InlineData("https://api.example.com/api/v1/orders/7", "GET_orders_7")]
+        [InlineData("https://api.example.com/", "GET_api_example_com")]
+        public void Convert_IterationName_IncludesParentSegment(string url, string expectedName)
+        {
+            var har = new HarRoot
+            {
+                Log = new HarLog
+                {
+                    Entries = new List<HarEntry>
+                    {
+                        new HarEntry
+                        {
+                            ResourceType = "fetch",
+                            Request = new HarRequest { Method = "GET", Url = url }
+                        }
+                    }
+                }
+            };
+
+            var result = new HarToPlanConverter().Convert(har, new CaptureFilter(), "P");
+
+            Assert.Equal(expectedName, result.Plan.Rounds[0].Iterations[0].Name);
+        }
     }
 }

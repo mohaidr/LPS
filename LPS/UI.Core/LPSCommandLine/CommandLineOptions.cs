@@ -370,19 +370,27 @@ namespace LPS.UI.Core.LPSCommandLine
                 IgnoreHostOption.AddAlias("-ih");
                 IgnorePathOption.AddAlias("-ip");
                 PromptFilesOption.AddAlias("-pf");
+                NumberOfClientsOption.AddAlias("-nc");
+                ArrivalDelayOption.AddAlias("-ad");
+                RunInParallelOption.AddAlias("-rip");
+                RequestCountOption.AddAlias("-rc");
+                DurationOption.AddAlias("-d");
+                AppendOption.AddAlias("-a");
+                UpdateOption.AddAlias("-up");
+                RoundNameOption.AddAlias("-rn");
             }
 
             // Positional output file (defaults to plan.yaml). Extension selects YAML vs JSON.
             public static Argument<string> OutputFileArgument { get; } = new Argument<string>(
                 "output",
-                () => "plan.yaml",
+                () => "RecordedPlan.yaml",
                 "Output plan file to write (.yaml, .yml or .json)")
             {
                 Arity = ArgumentArity.ZeroOrOne
             };
 
             public static Option<string> PlanNameOption { get; } = new Option<string>(
-                "--name", () => "RecordedPlan", "Name for the generated plan")
+                "--name", "Name for the generated plan (defaults to the output file name)")
             {
                 IsRequired = false
             };
@@ -407,6 +415,54 @@ namespace LPS.UI.Core.LPSCommandLine
 
             public static Option<bool> PromptFilesOption { get; } = new Option<bool>(
                 "--prompt-files", () => false, "After recording, interactively ask for a local path for each captured file upload")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> NumberOfClientsOption { get; } = new Option<string>(
+                "--number-of-clients", "Virtual clients per round in the generated plan (default 1)")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> ArrivalDelayOption { get; } = new Option<string>(
+                "--arrival-delay", "Delay in milliseconds between client arrivals (default 0)")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> RunInParallelOption { get; } = new Option<bool>(
+                "--run-in-parallel", () => false, "Run the round's clients in parallel")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> RequestCountOption { get; } = new Option<string>(
+                "--request-count", "Requests per client for each iteration (request-count mode, default 1)")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> DurationOption { get; } = new Option<string>(
+                "--duration", "Run each iteration for this many seconds (switches to duration mode)")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> AppendOption { get; } = new Option<bool>(
+                "--append", () => false, "Append to the existing plan file instead of overwriting it")
+            {
+                IsRequired = false
+            };
+
+            public static Option<bool> UpdateOption { get; } = new Option<bool>(
+                "--update", () => false, "Update matching requests (by method + URL + body) in the existing plan instead of adding duplicates; new requests are appended")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> RoundNameOption { get; } = new Option<string>(
+                "--round", "Round for new requests (with --append or --update); also the round to create")
             {
                 IsRequired = false
             };

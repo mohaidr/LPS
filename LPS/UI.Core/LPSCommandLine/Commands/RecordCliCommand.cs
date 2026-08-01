@@ -8,6 +8,7 @@ using System.Threading;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.Common;
 using LPS.UI.Common;
 using LPS.UI.Common.DTOs;
 using LPS.UI.Common.Extensions;
@@ -69,8 +70,9 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                         return;
                     }
 
-                    var output = parse.GetValueForArgument(LPSRecordCommandOptions.OutputFileArgument) ?? "plan.yaml";
-                    var planName = parse.GetValueForOption(LPSRecordCommandOptions.PlanNameOption) ?? "RecordedPlan";
+                    var output = parse.GetValueForArgument(LPSRecordCommandOptions.OutputFileArgument) ?? "RecordedPlan.yaml";
+                    var explicitName = parse.GetValueForOption(LPSRecordCommandOptions.PlanNameOption);
+                    var planName = !string.IsNullOrWhiteSpace(explicitName) ? explicitName! : DerivePlanName(output);
                     var startUrl = parse.GetValueForOption(LPSRecordCommandOptions.UrlOption);
                     var headless = parse.GetValueForOption(LPSRecordCommandOptions.HeadlessOption);
                     var ignoreContentTypes = parse.GetValueForOption(LPSRecordCommandOptions.IgnoreContentTypeOption);
@@ -121,15 +123,84 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     }
 
                     var promptFiles = parse.GetValueForOption(LPSRecordCommandOptions.PromptFilesOption);
+                    var append = parse.GetValueForOption(LPSRecordCommandOptions.AppendOption);
+                    var update = parse.GetValueForOption(LPSRecordCommandOptions.UpdateOption);
+                    var roundNameOption = parse.GetValueForOption(LPSRecordCommandOptions.RoundNameOption);
+
+                    // --update upserts by request identity; --append always adds. If both are given, --update wins.
+                    if (append && update)
+                    {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId,
+                            "Both --append and --update were specified; using --update.", LPSLoggingLevel.Warning);
+                        append = false;
+                    }
+
+                    // --append and --update both merge into an existing file; otherwise (or if it's new/empty) we overwrite.
+                    var mergeMode = (append || update) && File.Exists(output);
+                    PlanDto? existingPlan = null;
+                    if (mergeMode)
+                    {
+                        string existingText;
+                        try
+                        {
+                            existingText = File.ReadAllText(output);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.Log(_runtimeOperationIdProvider.OperationId,
+                                $"Could not read '{output}' to merge into — aborting so it isn't overwritten. ({ex.Message})",
+                                LPSLoggingLevel.Error);
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(existingText))
+                        {
+                            // Empty/blank file: nothing to merge into, so just write a fresh plan.
+                            mergeMode = false;
+                        }
+                        else
+                        {
+                            existingPlan = ParsePlan(existingText, output);
+                            if (existingPlan == null)
+                            {
+                                _logger.Log(_runtimeOperationIdProvider.OperationId,
+                                    $"Could not parse '{output}' to merge into — aborting so it isn't overwritten.",
+                                    LPSLoggingLevel.Error);
+                                return;
+                            }
+                            existingPlan.Rounds ??= new List<RoundDto>();
+                        }
+                    }
+
+                    // Where new requests land. --update defaults to the first existing round; --append to a new round.
+                    string roundName;
+                    if (!string.IsNullOrWhiteSpace(roundNameOption))
+                        roundName = roundNameOption!;
+                    else if (!mergeMode)
+                        roundName = "Main";
+                    else if (update)
+                        roundName = existingPlan!.Rounds.FirstOrDefault()?.Name ?? "Main";
+                    else
+                        roundName = $"Round{existingPlan!.Rounds.Count + 1}";
+
+                    var shape = new RecordPlanOptions
+                    {
+                        RoundName = roundName,
+                        NumberOfClients = parse.GetValueForOption(LPSRecordCommandOptions.NumberOfClientsOption),
+                        ArrivalDelay = parse.GetValueForOption(LPSRecordCommandOptions.ArrivalDelayOption),
+                        RunInParallel = parse.GetValueForOption(LPSRecordCommandOptions.RunInParallelOption),
+                        RequestCount = parse.GetValueForOption(LPSRecordCommandOptions.RequestCountOption),
+                        Duration = parse.GetValueForOption(LPSRecordCommandOptions.DurationOption)
+                    };
 
                     var filter = new CaptureFilter(
                         ignoreContentTypes, ignoreExtensions, ignoreMethods, ignoreResourceTypes,
                         onlyHosts, ignoreHosts, ignorePaths);
-                    var conversion = new HarToPlanConverter().Convert(har ?? new HarRoot(), filter, planName);
-                    var plan = conversion.Plan;
+                    var conversion = new HarToPlanConverter().Convert(har ?? new HarRoot(), filter, planName, shape);
+                    var newRound = conversion.Plan.Rounds[0];
 
                     var capturedCount = har?.Log?.Entries?.Count ?? 0;
-                    var iterationCount = plan.Rounds.FirstOrDefault()?.Iterations.Count ?? 0;
+                    var iterationCount = newRound.Iterations?.Count ?? 0;
                     if (iterationCount == 0)
                     {
                         _logger.Log(_runtimeOperationIdProvider.OperationId,
@@ -137,7 +208,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             LPSLoggingLevel.Warning);
                         return;
                     }
-
+                    var newIterations = newRound.Iterations!;
                     if (conversion.FileUploads.Count > 0)
                     {
                         if (promptFiles)
@@ -146,16 +217,59 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             ReportFileUploads(conversion.FileUploads);
                     }
 
-                    var validation = new PlanValidator(plan).Validate();
+                    PlanDto planToSave;
+                    string summary;
+                    if (!mergeMode)
+                    {
+                        planToSave = conversion.Plan;
+                        summary = $"Recorded {iterationCount} request(s) into '{output}'.";
+                    }
+                    else if (update)
+                    {
+                        planToSave = existingPlan!;
+                        var (updated, added) = UpsertIterations(planToSave, roundName, newIterations);
+                        if (RoundShapeProvided(shape))
+                        {
+                            _logger.Log(_runtimeOperationIdProvider.OperationId,
+                                "Round-level options (--number-of-clients / --arrival-delay / --run-in-parallel) were ignored in --update mode.",
+                                LPSLoggingLevel.Warning);
+                        }
+                        summary = $"Updated {updated} and added {added} iteration(s) in '{output}'.";
+                    }
+                    else
+                    {
+                        planToSave = existingPlan!;
+                        var target = planToSave.Rounds
+                            .FirstOrDefault(r => string.Equals(r.Name, roundName, StringComparison.OrdinalIgnoreCase));
+
+                        if (target != null)
+                        {
+                            MergeIterations(target, newIterations);
+                            if (RoundShapeProvided(shape))
+                            {
+                                _logger.Log(_runtimeOperationIdProvider.OperationId,
+                                    $"Round-level options (--number-of-clients / --arrival-delay / --run-in-parallel) were ignored — the requests were added to the existing round '{target.Name}', which keeps its own settings.",
+                                    LPSLoggingLevel.Warning);
+                            }
+                            summary = $"Appended {iterationCount} request(s) to round '{target.Name}' in '{output}'.";
+                        }
+                        else
+                        {
+                            newRound.Name = UniqueRoundName(roundName, planToSave);
+                            planToSave.Rounds.Add(newRound);
+                            summary = $"Appended a new round '{newRound.Name}' with {iterationCount} request(s) to '{output}'.";
+                        }
+                    }
+
+                    var validation = new PlanValidator(planToSave).Validate();
                     if (!validation.IsValid)
                     {
                         validation.PrintValidationErrors();
                     }
 
-                    ConfigurationService.SaveConfiguration(output, plan);
+                    ConfigurationService.SaveConfiguration(output, planToSave);
 
-                    _logger.Log(_runtimeOperationIdProvider.OperationId,
-                        $"Recorded {iterationCount} request(s) into '{output}'.", LPSLoggingLevel.Information);
+                    _logger.Log(_runtimeOperationIdProvider.OperationId, summary, LPSLoggingLevel.Information);
                 }
                 catch (Exception ex)
                 {
@@ -207,6 +321,167 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     $"  - iteration '{upload.IterationName}', field '{upload.FieldName}' (was '{upload.OriginalFileName}')",
                     LPSLoggingLevel.Warning);
             }
+        }
+
+        private static PlanDto? ParsePlan(string text, string path)
+        {
+            try
+            {
+                return path.EndsWith(".json", StringComparison.OrdinalIgnoreCase)
+                    ? SerializationHelper.Deserialize<PlanDto>(text)
+                    : SerializationHelper.DeserializeFromYaml<PlanDto>(text);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static void MergeIterations(RoundDto target, List<HttpIterationDto> newIterations)
+        {
+            target.Iterations ??= new List<HttpIterationDto>();
+            var used = new HashSet<string>(
+                target.Iterations.Select(i => i.Name ?? string.Empty),
+                StringComparer.OrdinalIgnoreCase);
+
+            foreach (var iteration in newIterations)
+            {
+                iteration.Name = UniqueName(string.IsNullOrWhiteSpace(iteration.Name) ? "request" : iteration.Name, used);
+                target.Iterations.Add(iteration);
+            }
+        }
+
+        // --update: upsert each recorded iteration into the plan by request identity (method + URL + body).
+        // A match refreshes the existing request in place (keeping its name/tuning); anything new is added to the target round.
+        internal static (int updated, int added) UpsertIterations(
+            PlanDto plan, string targetRoundName, List<HttpIterationDto> newIterations)
+        {
+            plan.Rounds ??= new List<RoundDto>();
+
+            // Index every existing iteration in the plan by request identity.
+            var index = new Dictionary<string, HttpIterationDto>(StringComparer.Ordinal);
+            foreach (var round in plan.Rounds)
+            {
+                if (round.Iterations is null)
+                    continue;
+                foreach (var iteration in round.Iterations)
+                    index[RequestKey(iteration)] = iteration;
+            }
+
+            var targetRound = plan.Rounds
+                .FirstOrDefault(r => string.Equals(r.Name, targetRoundName, StringComparison.OrdinalIgnoreCase));
+            HashSet<string>? usedNames = null;
+
+            var updated = 0;
+            var added = 0;
+            foreach (var incoming in newIterations)
+            {
+                var key = RequestKey(incoming);
+                if (index.TryGetValue(key, out var existing))
+                {
+                    // Same request already in the plan: refresh what we captured, keep the user's tuning/name.
+                    existing.HttpRequest = incoming.HttpRequest;
+                    updated++;
+                }
+                else
+                {
+                    if (targetRound is null)
+                    {
+                        targetRound = new RoundDto { Name = targetRoundName };
+                        plan.Rounds.Add(targetRound);
+                    }
+                    targetRound.Iterations ??= new List<HttpIterationDto>();
+                    usedNames ??= new HashSet<string>(
+                        targetRound.Iterations.Select(i => i.Name ?? string.Empty),
+                        StringComparer.OrdinalIgnoreCase);
+
+                    incoming.Name = UniqueName(
+                        string.IsNullOrWhiteSpace(incoming.Name) ? "request" : incoming.Name, usedNames);
+                    targetRound.Iterations.Add(incoming);
+                    index[key] = incoming;
+                    added++;
+                }
+            }
+
+            return (updated, added);
+        }
+
+        private static string RequestKey(HttpIterationDto iteration)
+        {
+            var request = iteration.HttpRequest;
+            var method = (request?.HttpMethod ?? string.Empty).ToUpperInvariant();
+            var url = request?.URL ?? string.Empty;
+            return $"{method} {url} {PayloadSignature(request)}";
+        }
+
+        // A lightweight body fingerprint so two calls to the same URL with different bodies
+        // (e.g. GraphQL/RPC) are treated as different requests, not duplicates.
+        private static string PayloadSignature(HttpRequestDto? request)
+        {
+            var payload = request?.Payload;
+            if (payload is null)
+                return string.Empty;
+
+            if (!string.IsNullOrEmpty(payload.Raw))
+                return "raw:" + payload.Raw;
+
+            if (!string.IsNullOrEmpty(payload.File))
+                return "file:" + payload.File;
+
+            if (payload.Multipart is not null)
+            {
+                var fields = string.Join("&",
+                    (payload.Multipart.Fields ?? new List<TextFieldDto>()).Select(f => $"{f.Name}={f.Value}"));
+                var files = string.Join("&",
+                    (payload.Multipart.Files ?? new List<FileFieldDto>()).Select(f => f.Name));
+                return $"mp:{fields}|{files}";
+            }
+
+            return string.Empty;
+        }
+
+        private static string UniqueRoundName(string name, PlanDto plan)
+        {
+            var used = new HashSet<string>(
+                (plan.Rounds ?? new List<RoundDto>()).Select(r => r.Name ?? string.Empty),
+                StringComparer.OrdinalIgnoreCase);
+            return UniqueName(name, used);
+        }
+
+        private static string UniqueName(string name, HashSet<string> used)
+        {
+            if (used.Add(name))
+                return name;
+
+            var index = 2;
+            string candidate;
+            do
+            {
+                candidate = $"{name}_{index++}";
+            }
+            while (!used.Add(candidate));
+
+            return candidate;
+        }
+
+        private static bool RoundShapeProvided(RecordPlanOptions shape)
+        {
+            return !string.IsNullOrWhiteSpace(shape.NumberOfClients)
+                || !string.IsNullOrWhiteSpace(shape.ArrivalDelay)
+                || shape.RunInParallel;
+        }
+
+        private static string DerivePlanName(string outputPath)
+        {
+            var name = Path.GetFileNameWithoutExtension(outputPath) ?? string.Empty;
+
+            // Plan names allow letters, digits, spaces, '_', '.', and '-'; replace anything else.
+            var cleaned = new string(name
+                .Select(c => char.IsLetterOrDigit(c) || c is ' ' or '_' or '.' or '-' ? c : '_')
+                .ToArray())
+                .Trim();
+
+            return string.IsNullOrWhiteSpace(cleaned) ? "RecordedPlan" : cleaned;
         }
 
         private static void TryDelete(string path)

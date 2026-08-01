@@ -23,8 +23,10 @@ namespace LPS.UI.Core.Recording
             "proxy-connection", "transfer-encoding", "upgrade"
         };
 
-        public ConversionResult Convert(HarRoot har, CaptureFilter filter, string planName)
+        public ConversionResult Convert(HarRoot har, CaptureFilter filter, string planName, RecordPlanOptions? shape = null)
         {
+            shape ??= new RecordPlanOptions();
+
             var iterations = new List<HttpIterationDto>();
             var fileUploads = new List<PendingFileUpload>();
             var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -38,11 +40,9 @@ namespace LPS.UI.Core.Recording
                 var request = entry.Request;
                 var name = UniqueName(BuildName(request.Method, request.Url), usedNames);
 
-                iterations.Add(new HttpIterationDto
+                var iteration = new HttpIterationDto
                 {
                     Name = name,
-                    Mode = "R",
-                    RequestCount = "1",
                     HttpRequest = new HttpRequestDto
                     {
                         URL = request.Url ?? string.Empty,
@@ -50,15 +50,17 @@ namespace LPS.UI.Core.Recording
                         HttpHeaders = BuildHeaders(request.Headers),
                         Payload = BuildPayload(request, name, fileUploads)
                     }
-                });
+                };
+                ApplyIterationShape(iteration, shape);
+                iterations.Add(iteration);
             }
 
             var round = new RoundDto
             {
-                Name = "Main",
-                NumberOfClients = "1",
+                Name = string.IsNullOrWhiteSpace(shape.RoundName) ? "Main" : shape.RoundName,
                 Iterations = iterations
             };
+            ApplyRoundShape(round, shape);
 
             var plan = new PlanDto
             {
@@ -67,6 +69,32 @@ namespace LPS.UI.Core.Recording
             };
 
             return new ConversionResult { Plan = plan, FileUploads = fileUploads };
+        }
+
+        private static void ApplyRoundShape(RoundDto round, RecordPlanOptions shape)
+        {
+            round.NumberOfClients = string.IsNullOrWhiteSpace(shape.NumberOfClients) ? "1" : shape.NumberOfClients;
+
+            if (!string.IsNullOrWhiteSpace(shape.ArrivalDelay))
+                round.ArrivalDelay = shape.ArrivalDelay;
+
+            if (shape.RunInParallel)
+                round.RunInParallel = "true";
+        }
+
+        private static void ApplyIterationShape(HttpIterationDto iteration, RecordPlanOptions shape)
+        {
+            // A duration switches the iteration to duration mode; otherwise it stays request-count mode.
+            if (!string.IsNullOrWhiteSpace(shape.Duration))
+            {
+                iteration.Mode = "D";
+                iteration.Duration = shape.Duration;
+            }
+            else
+            {
+                iteration.Mode = "R";
+                iteration.RequestCount = string.IsNullOrWhiteSpace(shape.RequestCount) ? "1" : shape.RequestCount;
+            }
         }
 
         private static Dictionary<string, string> BuildHeaders(List<HarHeader> headers)
@@ -184,9 +212,11 @@ namespace LPS.UI.Core.Recording
 
             if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
             {
-                var trimmed = uri.AbsolutePath.Trim('/');
-                var last = trimmed.Split('/', StringSplitOptions.RemoveEmptyEntries).LastOrDefault();
-                segment = string.IsNullOrWhiteSpace(last) ? uri.Host : last;
+                var parts = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+                segment = parts.Length == 0
+                    ? uri.Host
+                    // Keep the parent segment for context: "/products/1" -> "products_1".
+                    : string.Join('_', parts.Skip(Math.Max(0, parts.Length - 2)));
             }
 
             var clean = new string((segment ?? "request")
@@ -231,5 +261,16 @@ namespace LPS.UI.Core.Recording
         public string FieldName { get; init; } = string.Empty;
         public string OriginalFileName { get; init; } = string.Empty;
         public Action<string> SetPath { get; init; } = _ => { };
+    }
+
+    /// <summary>Load-shape values a user can pass to `lps record` so the generated plan starts with their numbers.</summary>
+    internal sealed class RecordPlanOptions
+    {
+        public string? RoundName { get; init; }
+        public string? NumberOfClients { get; init; }
+        public string? ArrivalDelay { get; init; }
+        public bool RunInParallel { get; init; }
+        public string? RequestCount { get; init; }
+        public string? Duration { get; init; }
     }
 }
