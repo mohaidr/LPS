@@ -32,6 +32,7 @@ namespace LPS.UI.Core.Recording
             var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var entries = har?.Log?.Entries ?? new List<HarEntry>();
+            DateTimeOffset? previousKeptEnd = null;
             foreach (var entry in entries)
             {
                 if (!filter.ShouldKeep(entry))
@@ -47,11 +48,12 @@ namespace LPS.UI.Core.Recording
                     {
                         URL = request.Url ?? string.Empty,
                         HttpMethod = request.Method.ToUpperInvariant(),
-                        HttpHeaders = BuildHeaders(request.Headers),
+                        HttpHeaders = BuildHeaders(request.Headers, filter),
                         Payload = BuildPayload(request, name, fileUploads)
                     }
                 };
                 ApplyIterationShape(iteration, shape);
+                ApplyThinkTime(iteration, entry, shape, ref previousKeptEnd);
                 iterations.Add(iteration);
             }
 
@@ -97,7 +99,31 @@ namespace LPS.UI.Core.Recording
             }
         }
 
-        private static Dictionary<string, string> BuildHeaders(List<HarHeader> headers)
+        // startupDelay = idle gap since the previous kept request finished, so a sequential replay
+        // paces itself like the recorded session. First request keeps no delay.
+        private static void ApplyThinkTime(
+            HttpIterationDto iteration, HarEntry entry, RecordPlanOptions shape, ref DateTimeOffset? previousKeptEnd)
+        {
+            if (!shape.ThinkTime)
+                return;
+
+            var start = entry.StartedDateTime;
+
+            if (previousKeptEnd.HasValue)
+            {
+                var gapMs = (start - previousKeptEnd.Value).TotalMilliseconds;
+                if (gapMs < 0)
+                    gapMs = 0;
+                if (shape.MaxThinkTime.HasValue && gapMs > shape.MaxThinkTime.Value)
+                    gapMs = shape.MaxThinkTime.Value;
+                if (gapMs >= 1)
+                    iteration.StartupDelay = ((long)gapMs).ToString();
+            }
+
+            previousKeptEnd = start.AddMilliseconds(entry.Time > 0 ? entry.Time : 0);
+        }
+
+        private static Dictionary<string, string> BuildHeaders(List<HarHeader> headers, CaptureFilter filter)
         {
             var result = new Dictionary<string, string>();
             if (headers is null)
@@ -112,6 +138,8 @@ namespace LPS.UI.Core.Recording
                 if (header.Name.StartsWith(':'))
                     continue;
                 if (SkipHeaders.Contains(header.Name))
+                    continue;
+                if (filter.ShouldDropHeader(header.Name))
                     continue;
 
                 result[header.Name] = header.Value ?? string.Empty;
@@ -272,5 +300,7 @@ namespace LPS.UI.Core.Recording
         public bool RunInParallel { get; init; }
         public string? RequestCount { get; init; }
         public string? Duration { get; init; }
+        public bool ThinkTime { get; init; }
+        public int? MaxThinkTime { get; init; }
     }
 }

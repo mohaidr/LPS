@@ -55,8 +55,10 @@ namespace LPS.Infrastructure.Common
                         else if (value is IDictionary<object, object> dictValue)
                         {
                             var nestedYamlString = SerializeDictionaryToYaml(dictValue);
+                            // Keep alias support on nested types (e.g. httpRequest's url/method).
                             var nestedObject = new DeserializerBuilder()
                                 .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                                .WithTypeConverter(new YamlAliasConverter())
                                 .Build()
                                 .Deserialize(nestedYamlString, prop.PropertyType);
                             prop.SetValue(instance, nestedObject);

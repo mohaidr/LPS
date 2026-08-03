@@ -27,6 +27,10 @@ namespace LPS.UI.Core.Recording
         private static readonly string[] DefaultIgnorePaths =
             { "/cdn-cgi/" };
 
+        // Browser-fingerprint headers dropped by --minimal-headers (matched as name prefixes).
+        private static readonly string[] MinimalHeaderPrefixes =
+            { "sec-ch-", "sec-fetch-", "priority", "upgrade-insecure-requests" };
+
         private readonly HashSet<string> _ignoreResourceTypes;
         private readonly HashSet<string> _ignoreExtensions;
         private readonly List<string> _ignoreContentTypes;
@@ -34,6 +38,8 @@ namespace LPS.UI.Core.Recording
         private readonly HashSet<string> _onlyHosts;
         private readonly HashSet<string> _ignoreHosts;
         private readonly List<string> _ignorePaths;
+        private readonly List<string> _ignoreHeaderPatterns;
+        private readonly bool _minimalHeaders;
 
         public CaptureFilter(
             IEnumerable<string>? ignoreContentTypes = null,
@@ -42,7 +48,9 @@ namespace LPS.UI.Core.Recording
             IEnumerable<string>? ignoreResourceTypes = null,
             IEnumerable<string>? onlyHosts = null,
             IEnumerable<string>? ignoreHosts = null,
-            IEnumerable<string>? ignorePaths = null)
+            IEnumerable<string>? ignorePaths = null,
+            IEnumerable<string>? ignoreHeaders = null,
+            bool minimalHeaders = false)
         {
             _ignoreResourceTypes = ToLowerSet(DefaultIgnoreResourceTypes.Concat(ignoreResourceTypes ?? Enumerable.Empty<string>()));
             _ignoreMethods = ToLowerSet(ignoreMethods ?? Enumerable.Empty<string>());
@@ -52,6 +60,11 @@ namespace LPS.UI.Core.Recording
             _onlyHosts = NormalizeHosts(onlyHosts);
             _ignoreHosts = NormalizeHosts(ignoreHosts);
             _ignorePaths = ToLowerSet(DefaultIgnorePaths.Concat(ignorePaths ?? Enumerable.Empty<string>())).ToList();
+            _ignoreHeaderPatterns = (ignoreHeaders ?? Enumerable.Empty<string>())
+                .Where(h => !string.IsNullOrWhiteSpace(h))
+                .Select(h => h.Trim().ToLowerInvariant())
+                .ToList();
+            _minimalHeaders = minimalHeaders;
         }
 
         public bool ShouldKeep(HarEntry entry)
@@ -95,6 +108,29 @@ namespace LPS.UI.Core.Recording
                 return false;
 
             return true;
+        }
+
+        // Drops a header matching --minimal-headers noise or an --ignore-header pattern:
+        // exact name (case-insensitive), or a name prefix when the pattern ends with '*'.
+        public bool ShouldDropHeader(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+                return true;
+
+            var lower = name.ToLowerInvariant();
+            if (_minimalHeaders && MinimalHeaderPrefixes.Any(p => lower.StartsWith(p, StringComparison.Ordinal)))
+                return true;
+
+            foreach (var pattern in _ignoreHeaderPatterns)
+            {
+                var isMatch = pattern.EndsWith("*", StringComparison.Ordinal)
+                    ? lower.StartsWith(pattern[..^1], StringComparison.Ordinal)
+                    : string.Equals(lower, pattern, StringComparison.Ordinal);
+                if (isMatch)
+                    return true;
+            }
+
+            return false;
         }
 
         private bool HasIgnoredExtension(string url)

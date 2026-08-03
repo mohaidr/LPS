@@ -82,6 +82,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     var onlyHosts = parse.GetValueForOption(LPSRecordCommandOptions.OnlyHostOption);
                     var ignoreHosts = parse.GetValueForOption(LPSRecordCommandOptions.IgnoreHostOption);
                     var ignorePaths = parse.GetValueForOption(LPSRecordCommandOptions.IgnorePathOption);
+                    var ignoreHeaders = parse.GetValueForOption(LPSRecordCommandOptions.IgnoreHeaderOption);
+                    var minimalHeaders = parse.GetValueForOption(LPSRecordCommandOptions.MinimalHeadersOption);
 
                     var harPath = Path.Combine(Path.GetTempPath(), $"lps-record-{Guid.NewGuid():N}.har");
 
@@ -183,19 +185,35 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     else
                         roundName = $"Round{existingPlan!.Rounds.Count + 1}";
 
+                    var thinkTime = parse.GetValueForOption(LPSRecordCommandOptions.ThinkTimeOption);
+                    var maxThinkTimeRaw = parse.GetValueForOption(LPSRecordCommandOptions.MaxThinkTimeOption);
+                    int? maxThinkTime = null;
+                    if (!string.IsNullOrWhiteSpace(maxThinkTimeRaw) && int.TryParse(maxThinkTimeRaw, out var mtt) && mtt >= 0)
+                        maxThinkTime = mtt;
+
+                    var runInParallel = parse.GetValueForOption(LPSRecordCommandOptions.RunInParallelOption);
+                    if (thinkTime && runInParallel)
+                    {
+                        _logger.Log(_runtimeOperationIdProvider.OperationId,
+                            "--think-time sets a per-step startupDelay, which paces a sequential journey; with --run-in-parallel the steps start together, so it acts as a fixed offset instead.",
+                            LPSLoggingLevel.Warning);
+                    }
+
                     var shape = new RecordPlanOptions
                     {
                         RoundName = roundName,
                         NumberOfClients = parse.GetValueForOption(LPSRecordCommandOptions.NumberOfClientsOption),
                         ArrivalDelay = parse.GetValueForOption(LPSRecordCommandOptions.ArrivalDelayOption),
-                        RunInParallel = parse.GetValueForOption(LPSRecordCommandOptions.RunInParallelOption),
+                        RunInParallel = runInParallel,
                         RequestCount = parse.GetValueForOption(LPSRecordCommandOptions.RequestCountOption),
-                        Duration = parse.GetValueForOption(LPSRecordCommandOptions.DurationOption)
+                        Duration = parse.GetValueForOption(LPSRecordCommandOptions.DurationOption),
+                        ThinkTime = thinkTime,
+                        MaxThinkTime = maxThinkTime
                     };
 
                     var filter = new CaptureFilter(
                         ignoreContentTypes, ignoreExtensions, ignoreMethods, ignoreResourceTypes,
-                        onlyHosts, ignoreHosts, ignorePaths);
+                        onlyHosts, ignoreHosts, ignorePaths, ignoreHeaders, minimalHeaders);
                     var conversion = new HarToPlanConverter().Convert(har ?? new HarRoot(), filter, planName, shape);
                     var newRound = conversion.Plan.Rounds[0];
 

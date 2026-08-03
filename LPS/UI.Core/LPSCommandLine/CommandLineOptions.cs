@@ -369,12 +369,16 @@ namespace LPS.UI.Core.LPSCommandLine
                 OnlyHostOption.AddAlias("-oh");
                 IgnoreHostOption.AddAlias("-ih");
                 IgnorePathOption.AddAlias("-ip");
+                IgnoreHeaderOption.AddAlias("-ihdr");
+                MinimalHeadersOption.AddAlias("-mh");
                 PromptFilesOption.AddAlias("-pf");
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
                 RunInParallelOption.AddAlias("-rip");
                 RequestCountOption.AddAlias("-rc");
                 DurationOption.AddAlias("-d");
+                ThinkTimeOption.AddAlias("-tt");
+                MaxThinkTimeOption.AddAlias("-mtt");
                 AppendOption.AddAlias("-a");
                 UpdateOption.AddAlias("-up");
                 RoundNameOption.AddAlias("-rn");
@@ -449,6 +453,18 @@ namespace LPS.UI.Core.LPSCommandLine
                 IsRequired = false
             };
 
+            public static Option<bool> ThinkTimeOption { get; } = new Option<bool>(
+                "--think-time", () => false, "Write each request's think time (the idle gap in the recording) as the iteration's startupDelay")
+            {
+                IsRequired = false
+            };
+
+            public static Option<string> MaxThinkTimeOption { get; } = new Option<string>(
+                "--max-think-time", "Cap each think-time value in milliseconds (clamps long human pauses)")
+            {
+                IsRequired = false
+            };
+
             public static Option<bool> AppendOption { get; } = new Option<bool>(
                 "--append", () => false, "Append to the existing plan file instead of overwriting it")
             {
@@ -514,6 +530,19 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false,
                 AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<IList<string>> IgnoreHeaderOption { get; } = new Option<IList<string>>(
+                "--ignore-header", "Drop request header(s) by exact name, or by prefix with a trailing '*' (e.g. cookie sec-*)")
+            {
+                IsRequired = false,
+                AllowMultipleArgumentsPerToken = true
+            };
+
+            public static Option<bool> MinimalHeadersOption { get; } = new Option<bool>(
+                "--minimal-headers", () => false, "Drop common browser-fingerprint headers (sec-ch-*, sec-fetch-*, priority, upgrade-insecure-requests)")
+            {
+                IsRequired = false
             };
         }
         public static class LPSCreateCommandOptions

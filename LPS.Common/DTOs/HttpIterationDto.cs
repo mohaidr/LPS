@@ -1,8 +1,9 @@
 ﻿using LPS.Domain;
+using LPS.Infrastructure.Common.LPSSerializer;
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using YamlDotNet.Serialization;
-using System.Collections.Generic;
 
 namespace LPS.UI.Common.DTOs
 {
@@ -21,11 +22,13 @@ namespace LPS.UI.Common.DTOs
         // Name of the iteration
         public string Name { get; set; }
 
+        // Startup delay (can be a variable)
+        [YamlAlias("delay")]
+        [YamlMember(Alias = "delay")]
+        public string StartupDelay { get; set; }
+
         // HTTP request details
         public HttpRequestDto HttpRequest { get; set; }
-
-        // Startup delay (can be a variable)
-        public string StartupDelay { get; set; }
 
         // Maximize throughput (can be a variable)
         public string MaximizeThroughput { get; set; }

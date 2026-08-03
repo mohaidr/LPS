@@ -1,4 +1,5 @@
 #nullable disable
+using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
@@ -24,6 +25,13 @@ namespace LPS.UI.Core.Recording.Har
         // Playwright-specific field: "document" | "fetch" | "xhr" | "stylesheet" | "script" | "image" | "font" | ...
         [JsonPropertyName("_resourceType")]
         public string ResourceType { get; set; }
+
+        [JsonPropertyName("startedDateTime")]
+        public DateTimeOffset StartedDateTime { get; set; }
+
+        // Total elapsed time of the request in milliseconds.
+        [JsonPropertyName("time")]
+        public double Time { get; set; }
 
         [JsonPropertyName("request")]
         public HarRequest Request { get; set; }
