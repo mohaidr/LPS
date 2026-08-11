@@ -29,4 +29,8 @@
     <ProjectReference Include="..\LPS.Protos.Shared\LPS.Protos.Shared.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="LPS.UnitTest" />
+  </ItemGroup>
+
 </Project>

@@ -43,6 +43,7 @@ using LPS.Infrastructure.VariableServices;
 using LPS.Infrastructure.Monitoring.MetricsVariables;
 using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Monitoring.Cumulative;
+using LPS.Infrastructure.Monitoring.Hosts;
 using LPS.Infrastructure.PlaceHolderService;
 
 namespace LPS
@@ -143,6 +144,7 @@ namespace LPS
                 services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                 services.AddSingleton<IHttpHeadersService, HttpHeadersService>();
                 services.AddSingleton<IMetricsService, MetricsService>();
+                services.AddSingleton<IHostMetricsAggregatorFactory, HostMetricsAggregatorFactory>();
                 services.AddSingleton<ISkippedRequestReporter, SkippedRequestReporter>();
                 services.AddSingleton<IUrlSanitizationService, UrlSanitizationService>();
                 services.AddSingleton<IMessageService, MessageService>();
@@ -168,6 +170,7 @@ namespace LPS
                 // Coordinator fires OnWindowClosed event, aggregators subscribe and push to queue
                 // Pusher reads from queue and sends to SignalR (registered in Apis project)
                 services.AddSingleton<IWindowedMetricsQueue, WindowedMetricsQueue>();
+                services.AddSingleton<IHostWindowedMetricsQueue, HostWindowedMetricsQueue>();
                 services.AddSingleton<IWindowedMetricsCoordinator>(sp =>
                 {
                     // Read refresh rate from config, default to 3 seconds
@@ -182,6 +185,7 @@ namespace LPS
                 // Cumulative metrics - separate coordinator with same refresh interval
                 // This pushes cumulative data (cards/summary) at RefreshRate interval
                 services.AddSingleton<ICumulativeMetricsQueue, CumulativeMetricsQueue>();
+                services.AddSingleton<IHostCumulativeMetricsQueue, HostCumulativeMetricsQueue>();
                 services.AddSingleton<ICumulativeMetricsCoordinator>(sp =>
                 {
                     // Read refresh rate from config, default to 3 seconds

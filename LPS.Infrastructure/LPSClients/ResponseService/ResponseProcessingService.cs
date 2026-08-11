@@ -19,6 +19,7 @@ using LPS.Infrastructure.LPSClients.CachService;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Domain.LPSRequest.LPSHttpRequest;
 using AsyncKeyedLock;
+using LPS.Infrastructure.Monitoring.Hosts;
 
 namespace LPS.Infrastructure.LPSClients.ResponseService
 {
@@ -41,6 +42,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             HttpResponseMessage responseMessage,
             HttpRequest httpRequest,
             bool cacheResponse,
+            IHostMetricsAggregator hostMetricsAggregator,
             CancellationToken token)
         {
             Stopwatch streamStopwatch = Stopwatch.StartNew();
@@ -96,6 +98,8 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         {
                             transferredSize += bytesRead;
                             await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, token);
+                            if (hostMetricsAggregator != null)
+                                await hostMetricsAggregator.UpdateDataReceivedAsync(bytesRead, token);
 
                             // Write to memoryStream for caching
                             if (memoryStream != null)

@@ -1,4 +1,5 @@
 ﻿using LPS.Domain;
+using LPS.Infrastructure.Monitoring.Hosts;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,6 +16,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             HttpResponseMessage response,
             HttpRequest httpRequest,
             bool cacheResponse,
+            IHostMetricsAggregator hostMetricsAggregator,
             CancellationToken token);
     }
 }

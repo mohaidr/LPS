@@ -57,6 +57,9 @@ namespace LPS.Apis
             // Cumulative metrics SignalR pusher (reads from queue, pushes to SignalR hub)
             // Cumulative data is pushed at its own interval (RefreshRate), separate from windowed data
             services.AddHostedService<CumulativeMetricsDispatcher>();
+
+            services.AddHostedService<HostWindowedMetricsDispatcher>();
+            services.AddHostedService<HostCumulativeMetricsDispatcher>();
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
