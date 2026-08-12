@@ -28,7 +28,8 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         ILogger logger,
         IRuntimeOperationIdProvider runtimeOperationIdProvider,
         IResponsePersistenceFactory responsePersistenceFactory,
-        IMetricsService metricsService, IUrlSanitizationService urlSanitizationService) : IResponseProcessingService
+        IMetricsService metricsService, IUrlSanitizationService urlSanitizationService,
+        IHostMetricsService hostMetricsService) : IResponseProcessingService
     {
         private readonly ICacheService<string> _memoryCacheService = memoryCacheService;
         private static readonly ArrayPool<byte> _bufferPool = ArrayPool<byte>.Shared;
@@ -37,12 +38,13 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider = runtimeOperationIdProvider;
         private readonly IMetricsService _metricsService = metricsService;
         private readonly IUrlSanitizationService _urlSanitizationService = urlSanitizationService;
+        private readonly IHostMetricsService _hostMetricsService = hostMetricsService;
         private static readonly AsyncKeyedLocker<string> _locker = new();
         public async Task<(HttpResponse.SetupCommand command, double dataReceivedSize, TimeSpan streamTime)> ProcessResponseAsync(
             HttpResponseMessage responseMessage,
             HttpRequest httpRequest,
             bool cacheResponse,
-            IHostMetricsAggregator hostMetricsAggregator,
+            HostKey hostKey,
             CancellationToken token)
         {
             Stopwatch streamStopwatch = Stopwatch.StartNew();
@@ -98,8 +100,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         {
                             transferredSize += bytesRead;
                             await _metricsService.TryUpdateDataReceivedAsync(httpRequest.Id, bytesRead, token);
-                            if (hostMetricsAggregator != null)
-                                await hostMetricsAggregator.UpdateDataReceivedAsync(bytesRead, token);
+                            await _hostMetricsService.UpdateDataReceivedAsync(hostKey, bytesRead, token);
 
                             // Write to memoryStream for caching
                             if (memoryStream != null)

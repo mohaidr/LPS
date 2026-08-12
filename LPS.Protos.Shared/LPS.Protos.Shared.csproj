@@ -19,6 +19,7 @@
 	</ItemGroup>
 	<ItemGroup>
 	  <None Remove="Protos\entityservice.proto" />
+	  <None Remove="Protos\hostmetrics.proto" />
 	  <None Remove="Protos\metrics.proto" />
 	  <None Remove="Protos\metricsquery.proto" />
 	  <None Remove="Protos\monitor.proto" />

@@ -29,21 +29,24 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
         private readonly ICacheService<string> _memoryCacheService;
         private const int _bufferSize = 8 * 1024;
         private readonly IMetricsService _metricsService;
-        private readonly IHostMetricsAggregator _hostMetricsAggregator;
+        private readonly IHostMetricsService _hostMetricsService;
+        private readonly HostKey _hostKey;
         public HtmlResourceDownloaderService(
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider,
             HttpClient httpClient,
             IMetricsService metricsService,
             ICacheService<string> memoryCacheService,
-            IHostMetricsAggregator hostMetricsAggregator)
+            IHostMetricsService hostMetricsService,
+            HostKey hostKey)
         {
             _logger = logger;
             _operationIdProvider = operationIdProvider;
             _httpClient = httpClient;
             _memoryCacheService = memoryCacheService;
             _metricsService = metricsService;
-            _hostMetricsAggregator = hostMetricsAggregator;
+            _hostMetricsService = hostMetricsService;
+            _hostKey = hostKey;
         }
 
         public async Task DownloadResourcesAsync(
@@ -179,8 +182,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                             }
                             timeToDownloadWatch.Stop();
                             await _metricsService.TryUpdateDataReceivedAsync(requestId, totalBytes, cancellationToken);
-                            if (_hostMetricsAggregator != null)
-                                await _hostMetricsAggregator.UpdateDataReceivedAsync(totalBytes, cancellationToken);
+                            await _hostMetricsService.UpdateDataReceivedAsync(_hostKey, totalBytes, cancellationToken);
                         }
                         finally
                         {

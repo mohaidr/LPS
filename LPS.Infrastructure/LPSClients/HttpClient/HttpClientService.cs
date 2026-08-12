@@ -48,7 +48,7 @@ namespace LPS.Infrastructure.LPSClients
         readonly ICacheService<IHttpResponseVariableHolder> _httpResponseVariableHolderCacheInstance;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IMetricsService _metricsService;
-        readonly IHostMetricsAggregatorFactory _hostMetricsAggregatorFactory;
+        readonly IHostMetricsService _hostMetricsService;
         readonly IMessageService _messageService;
         readonly IResponseProcessingService _responseProcessingService;
         readonly ISessionManager _sessionManager;
@@ -65,7 +65,7 @@ namespace LPS.Infrastructure.LPSClients
             ISessionManager sessionManager,
             IMessageService messageService,
             IMetricsService metricsService,
-            IHostMetricsAggregatorFactory hostMetricsAggregatorFactory,
+            IHostMetricsService hostMetricsService,
             IResponseProcessingService responseProcessingService,
             IVariableManager variableManager,
             IPlaceholderResolverService placeholderResolver)
@@ -75,7 +75,7 @@ namespace LPS.Infrastructure.LPSClients
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _memoryCacheService = memoryCacheService;
             _metricsService = metricsService;
-            _hostMetricsAggregatorFactory = hostMetricsAggregatorFactory;
+            _hostMetricsService = hostMetricsService;
             _sessionManager = sessionManager;
             _messageService = messageService;
             _responseProcessingService = responseProcessingService;
@@ -175,7 +175,7 @@ namespace LPS.Infrastructure.LPSClients
             double dnsResolutionTime = 0;
             double uploadTime = 0;
             HttpRequestMessage httpRequestMessage = null;
-            IHostMetricsAggregator? hostMetricsAggregator = null;
+            HostKey? hostKey = null;
             try
             {
                 using var timeoutCts = new CancellationTokenSource();
@@ -186,10 +186,9 @@ namespace LPS.Infrastructure.LPSClients
 
                         #region Build The Message
                         (httpRequestMessage, long dataSentSize) = await _messageService.BuildAsync(httpRequestEntity, this.SessionId, linkedCts.Token);
-                        hostMetricsAggregator = _hostMetricsAggregatorFactory.GetOrCreate(
-                            httpRequestMessage.RequestUri,
-                            httpRequestEntity.Id);
-                        httpRequestMessage.Content = httpRequestMessage.Content != null ? WrapWithProgressContentAsync(httpRequestEntity, httpRequestMessage.Content, httpRequestMessage, hostMetricsAggregator, linkedCts.Token) : httpRequestMessage.Content;
+                        var resolvedHostKey = HostKey.From(httpRequestMessage.RequestUri);
+                        hostKey = resolvedHostKey;
+                        httpRequestMessage.Content = httpRequestMessage.Content != null ? WrapWithProgressContentAsync(httpRequestEntity, httpRequestMessage.Content, httpRequestMessage, resolvedHostKey, linkedCts.Token) : httpRequestMessage.Content;
                         #endregion
 
                         #region Set Client Certificate
@@ -202,7 +201,7 @@ namespace LPS.Infrastructure.LPSClients
 
                         //Update Throughput Metric
                         await _metricsService.TryIncreaseConnectionsCountAsync(httpRequestEntity.Id, token);
-                        await hostMetricsAggregator.IncreaseConnectionsCountAsync(token);
+                        await _hostMetricsService.IncreaseConnectionsCountAsync(resolvedHostKey, httpRequestEntity.Id, token);
 
                         // Initialize connection for first request to host (OPTIONS pre-flight)
                         var optionsTiming = await _connectionInitService.InitializeConnectionAsync(
@@ -238,7 +237,7 @@ namespace LPS.Infrastructure.LPSClients
 
                         //Read the Response and total time spent to read the data represented as timespan
                         // Received bytes (iteration + host) are reported per-chunk inside ProcessResponseAsync
-                        (HttpResponse.SetupCommand command, double _, downStreamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, httpRequestEntity, cacheResponse, hostMetricsAggregator, linkedCts.Token));
+                        (HttpResponse.SetupCommand command, double _, downStreamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, httpRequestEntity, cacheResponse, resolvedHostKey, linkedCts.Token));
                         HttpResponse.SetupCommand responseCommand = command;
 
                         #region Capture Response
@@ -334,7 +333,7 @@ namespace LPS.Infrastructure.LPSClients
                         #endregion
 
                         // Download Html Embdedded Resources, conditonally
-                        (bool hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, hostMetricsAggregator, linkedCts.Token);
+                        (bool hasDownloaded, htmlDownloadTime) = await TryDownloadHtmlResourcesAsync(responseCommand, httpRequestEntity, httpClient, resolvedHostKey, linkedCts.Token);
                         // Total time includes connection establishment (DNS/TCP/TLS) + TTFB + Download + HTML resources
                         var connectionTime = TimeSpan.FromMilliseconds(dnsResolutionTime + tcpHandshakeTime + tlsHandshakeTime);
                         responseCommand.TotalTime = timeToHeadersWatch.Elapsed + htmlDownloadTime + downStreamTime + connectionTime;
@@ -343,27 +342,27 @@ namespace LPS.Infrastructure.LPSClients
 
                         //Update Response Break Down Metrics
                         await _metricsService.TryUpdateResponseMetricsAsync(httpRequestEntity.Id, responseCommand, linkedCts.Token);
-                        await hostMetricsAggregator.UpdateResponseAsync(responseCommand, linkedCts.Token);
+                        await _hostMetricsService.UpdateResponseAsync(resolvedHostKey, responseCommand, linkedCts.Token);
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ReceivingTime, downStreamTime.TotalMilliseconds, linkedCts.Token); // RENAMED
-                        await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.ReceivingTime, downStreamTime.TotalMilliseconds, linkedCts.Token);
+                        await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.ReceivingTime, downStreamTime.TotalMilliseconds, linkedCts.Token);
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TotalTime, responseCommand.TotalTime.TotalMilliseconds, linkedCts.Token);
-                        await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.TotalTime, responseCommand.TotalTime.TotalMilliseconds, linkedCts.Token);
+                        await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.TotalTime, responseCommand.TotalTime.TotalMilliseconds, linkedCts.Token);
 
                         // Update TCP, TLS, Upload (Sending), TTFB, and Waiting Time metrics
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, linkedCts.Token);
-                        await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, linkedCts.Token);
+                        await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, linkedCts.Token);
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, linkedCts.Token);
-                        await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, linkedCts.Token);
+                        await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, linkedCts.Token);
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.SendingTime, uploadTime, linkedCts.Token); // RENAMED
-                        await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.SendingTime, uploadTime, linkedCts.Token);
+                        await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.SendingTime, uploadTime, linkedCts.Token);
                         var ttfb = timeToHeadersWatch.Elapsed.TotalMilliseconds + dnsResolutionTime + tcpHandshakeTime + tlsHandshakeTime;
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TimeToFirstByte, ttfb, linkedCts.Token);
-                        await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.TimeToFirstByte, ttfb, linkedCts.Token);
+                        await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.TimeToFirstByte, ttfb, linkedCts.Token);
 
                         // Calculate and update Waiting Time (TTFB - DNS - TCP - TLS - Upload)
                         double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds - uploadTime;
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
-                        await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
+                        await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
 
                         // Extract and update Server Time from response header (if configured)
                         if (ServerTimingParser.TryParse(responseMessage.Headers, _serverTimeHeader, _serverTimeFormat, out var serverTimeBreakdown))
@@ -372,24 +371,24 @@ namespace LPS.Infrastructure.LPSClients
                             if (serverTimeBreakdown.Total > 0)
                             {
                                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTime, serverTimeBreakdown.Total, linkedCts.Token);
-                                await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.ServerTime, serverTimeBreakdown.Total, linkedCts.Token);
+                                await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.ServerTime, serverTimeBreakdown.Total, linkedCts.Token);
                             }
                             
                             // Report breakdown metrics if available (from Server-Timing header)
                             if (serverTimeBreakdown.DB > 0)
                             {
                                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTimeDB, serverTimeBreakdown.DB, linkedCts.Token);
-                                await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.ServerTimeDB, serverTimeBreakdown.DB, linkedCts.Token);
+                                await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.ServerTimeDB, serverTimeBreakdown.DB, linkedCts.Token);
                             }
                             if (serverTimeBreakdown.Cache > 0)
                             {
                                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTimeCache, serverTimeBreakdown.Cache, linkedCts.Token);
-                                await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.ServerTimeCache, serverTimeBreakdown.Cache, linkedCts.Token);
+                                await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.ServerTimeCache, serverTimeBreakdown.Cache, linkedCts.Token);
                             }
                             if (serverTimeBreakdown.App > 0)
                             {
                                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ServerTimeApp, serverTimeBreakdown.App, linkedCts.Token);
-                                await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.ServerTimeApp, serverTimeBreakdown.App, linkedCts.Token);
+                                await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.ServerTimeApp, serverTimeBreakdown.App, linkedCts.Token);
                             }
                         }
 
@@ -397,7 +396,7 @@ namespace LPS.Infrastructure.LPSClients
 
                         //Update Throughput Metrics
                         await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, linkedCts.Token);
-                        await hostMetricsAggregator.DecreaseConnectionsCountAsync(linkedCts.Token);
+                        await _hostMetricsService.DecreaseConnectionsCountAsync(resolvedHostKey, linkedCts.Token);
                     }
                 }
             }
@@ -405,8 +404,8 @@ namespace LPS.Infrastructure.LPSClients
             {
                 //Decrease Connections On Failure
                 await _metricsService.TryDecreaseConnectionsCountAsync(httpRequestEntity.Id, token);
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.DecreaseConnectionsCountAsync(token);
+                if (hostKey != null)
+                    await _hostMetricsService.DecreaseConnectionsCountAsync(hostKey.Value, token);
 
                 HttpResponse.SetupCommand lpsResponseCommand = new()
                 {
@@ -421,31 +420,31 @@ namespace LPS.Infrastructure.LPSClients
                 lpsHttpResponse = new HttpResponse(lpsResponseCommand, _logger, _runtimeOperationIdProvider);
                 lpsHttpResponse.SetHttpRequest(httpRequestEntity);
                 await _metricsService.TryUpdateResponseMetricsAsync(httpRequestEntity.Id, lpsResponseCommand, token);
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.UpdateResponseAsync(lpsResponseCommand, token);
+                if (hostKey != null)
+                    await _hostMetricsService.UpdateResponseAsync(hostKey.Value, lpsResponseCommand, token);
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.ReceivingTime, downStreamTime.TotalMilliseconds, token); // RENAMED
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.ReceivingTime, downStreamTime.TotalMilliseconds, token);
+                if (hostKey != null)
+                    await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.ReceivingTime, downStreamTime.TotalMilliseconds, token);
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TotalTime, lpsResponseCommand.TotalTime.TotalMilliseconds, token);
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.TotalTime, lpsResponseCommand.TotalTime.TotalMilliseconds, token);
+                if (hostKey != null)
+                    await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.TotalTime, lpsResponseCommand.TotalTime.TotalMilliseconds, token);
 
                 // Update TCP, TLS, Sending, and Waiting metrics even on failure
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, token);
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, token);
+                if (hostKey != null)
+                    await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, token);
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, token);
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, token);
+                if (hostKey != null)
+                    await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, token);
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.SendingTime, uploadTime, token); // RENAMED
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.SendingTime, uploadTime, token);
+                if (hostKey != null)
+                    await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.SendingTime, uploadTime, token);
 
                 // Calculate and update Waiting Time even on failure
                 double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime - uploadTime;
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, token);
-                if (hostMetricsAggregator != null)
-                    await hostMetricsAggregator.UpdateDurationAsync(DurationMetricType.WaitingTime, waitingTime, token);
+                if (hostKey != null)
+                    await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.WaitingTime, waitingTime, token);
 
                 if (ex.Message.Contains("socket") || ex.Message.Contains("buffer") || ex.InnerException != null && (ex.InnerException.Message.Contains("socket") || ex.InnerException.Message.Contains("buffer")))
                 {
@@ -458,7 +457,7 @@ namespace LPS.Infrastructure.LPSClients
             return lpsHttpResponse;
         }
 
-        private HttpContent WrapWithProgressContentAsync(HttpRequest request, HttpContent content, HttpRequestMessage httpRequestMessage, IHostMetricsAggregator hostMetricsAggregator, CancellationToken token)
+        private HttpContent WrapWithProgressContentAsync(HttpRequest request, HttpContent content, HttpRequestMessage httpRequestMessage, HostKey hostKey, CancellationToken token)
         {
             if (content is null)
             {
@@ -468,13 +467,13 @@ namespace LPS.Infrastructure.LPSClients
             var progress = new Progress<long>(async (bytesRead) =>
             {
                 await _metricsService.TryUpdateDataSentAsync(request.Id, bytesRead, token);
-                await hostMetricsAggregator.UpdateDataSentAsync(bytesRead, token);
+                await _hostMetricsService.UpdateDataSentAsync(hostKey, bytesRead, token);
             });
 
             return new ProgressContent(content, progress, httpRequestMessage, token);
         }
 
-        private async Task<(bool, TimeSpan)> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpRequest httpRequest, HttpClient client, IHostMetricsAggregator hostMetricsAggregator, CancellationToken token = default)
+        private async Task<(bool, TimeSpan)> TryDownloadHtmlResourcesAsync(HttpResponse.SetupCommand responseCommand, HttpRequest httpRequest, HttpClient client, HostKey hostKey, CancellationToken token = default)
         {
             Stopwatch downloadWatch = new();
 
@@ -488,7 +487,7 @@ namespace LPS.Infrastructure.LPSClients
                 if (responseCommand.ContentType == MimeType.TextHtml && responseCommand.IsSuccessStatusCode && httpRequest.Id == responseCommand.HttpRequestId)
                 {
                     downloadWatch.Start();
-                    var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, client, _metricsService, _memoryCacheService, hostMetricsAggregator);
+                    var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, client, _metricsService, _memoryCacheService, _hostMetricsService, hostKey);
                     await htmlResourceDownloader.DownloadResourcesAsync(httpRequest.Url.Url, httpRequest.Id, token);
                     downloadWatch.Stop();
                 }

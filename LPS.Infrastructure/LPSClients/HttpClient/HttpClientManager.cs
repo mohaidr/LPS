@@ -21,7 +21,7 @@ namespace LPS.Infrastructure.LPSClients
         ISessionManager sessionManager,
         IMessageService messageService,
         IMetricsService metricsService,
-        IHostMetricsAggregatorFactory hostMetricsAggregatorFactory,
+        IHostMetricsService hostMetricsService,
         IResponseProcessingService responseProcessingService, 
         IVariableManager variableManager, IPlaceholderResolverService placeholderResolverService) : IHttpClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>>
     {
@@ -33,21 +33,21 @@ namespace LPS.Infrastructure.LPSClients
         readonly ISessionManager _sessionManager = sessionManager;
         readonly IMessageService _messageService = messageService;
         readonly IMetricsService _metricsService = metricsService;
-        readonly IHostMetricsAggregatorFactory _hostMetricsAggregatorFactory = hostMetricsAggregatorFactory;
+        readonly IHostMetricsService _hostMetricsService = hostMetricsService;
         readonly IResponseProcessingService _responseProcessingService = responseProcessingService;
         readonly IVariableManager _variableManager = variableManager;
         readonly IPlaceholderResolverService _placeholderResolverService = placeholderResolverService;
 
         public IClientService<HttpRequest, HttpResponse> CreateInstance(IClientConfiguration<HttpRequest> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _hostMetricsAggregatorFactory, _responseProcessingService, _variableManager, _placeholderResolverService);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _hostMetricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created", LPSLoggingLevel.Verbose);
             return client;
         }
 
         public void CreateAndQueueClient(IClientConfiguration<HttpRequest> config)
         {
-            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _hostMetricsAggregatorFactory, _responseProcessingService, _variableManager, _placeholderResolverService);
+            var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _hostMetricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
             _clientsQueue.Enqueue(client);
             _logger.Log(_runtimeOperationIdProvider.OperationId, $"Client with Id {client.SessionId} has been created and queued", LPSLoggingLevel.Verbose);
         }
@@ -79,7 +79,7 @@ namespace LPS.Infrastructure.LPSClients
             {
                 if (byPassQueueIfEmpty)
                 {
-                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _hostMetricsAggregatorFactory, _responseProcessingService, _variableManager, _placeholderResolverService);
+                    var client = new HttpClientService(config, _logger, _runtimeOperationIdProvider, _memoryCache, _httpResponseVariableHolderCacheInstance, _sessionManager, _messageService, _metricsService, _hostMetricsService, _responseProcessingService, _variableManager, _placeholderResolverService);
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"Queue was empty but a client with Id {client.SessionId} was created", LPSLoggingLevel.Information);
                     return client;
                 }

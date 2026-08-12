@@ -16,7 +16,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             HttpResponseMessage response,
             HttpRequest httpRequest,
             bool cacheResponse,
-            IHostMetricsAggregator hostMetricsAggregator,
+            HostKey hostKey,
             CancellationToken token);
     }
 }

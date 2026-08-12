@@ -1,0 +1,59 @@
+syntax = "proto3";
+import "Protos/metrics.proto";
+
+option csharp_namespace = "LPS.Protos.Shared";
+
+package hostmetrics;
+
+// Cross-cluster host-level metrics. Workers forward per-event updates to the
+// master, which aggregates them into its host pipeline and serves the dashboard.
+service HostMetricsProtoService {
+    rpc IncreaseConnections(HostIncreaseConnectionsRequest) returns (HostMetricsResponse);
+    rpc DecreaseConnections(HostDecreaseConnectionsRequest) returns (HostMetricsResponse);
+    rpc IncreaseSkippedRequests(HostSkippedRequestsRequest) returns (HostMetricsResponse);
+    rpc UpdateResponse(HostUpdateResponseRequest) returns (HostMetricsResponse);
+    rpc UpdateDuration(HostUpdateDurationRequest) returns (HostMetricsResponse);
+    rpc UpdateDataTransmission(HostUpdateDataTransmissionRequest) returns (HostMetricsResponse);
+}
+
+message HostKey {
+    string scheme = 1;
+    string host = 2;
+    int32 port = 3;
+}
+
+message HostMetricsResponse {
+    bool success = 1;
+}
+
+message HostIncreaseConnectionsRequest {
+    HostKey host_key = 1;
+    string request_id = 2; // used on the master to associate the host with its iteration for status
+}
+
+message HostDecreaseConnectionsRequest {
+    HostKey host_key = 1;
+}
+
+message HostSkippedRequestsRequest {
+    HostKey host_key = 1;
+}
+
+message HostUpdateResponseRequest {
+    HostKey host_key = 1;
+    int32 status_code = 2;
+    string status_reason = 3;
+    bool is_success = 4;
+}
+
+message HostUpdateDurationRequest {
+    HostKey host_key = 1;
+    metrics.DurationMetricType metric_type = 2;
+    double value_ms = 3;
+}
+
+message HostUpdateDataTransmissionRequest {
+    HostKey host_key = 1;
+    double data_size = 2;
+    bool is_sent = 3; // true = sent, false = received
+}

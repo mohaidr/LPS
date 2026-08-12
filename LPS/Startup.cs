@@ -145,6 +145,7 @@ namespace LPS
                 services.AddSingleton<IHttpHeadersService, HttpHeadersService>();
                 services.AddSingleton<IMetricsService, MetricsService>();
                 services.AddSingleton<IHostMetricsAggregatorFactory, HostMetricsAggregatorFactory>();
+                services.AddSingleton<IHostMetricsService, HostMetricsService>();
                 services.AddSingleton<ISkippedRequestReporter, SkippedRequestReporter>();
                 services.AddSingleton<IUrlSanitizationService, UrlSanitizationService>();
                 services.AddSingleton<IMessageService, MessageService>();

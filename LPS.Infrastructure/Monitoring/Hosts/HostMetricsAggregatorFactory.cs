@@ -45,11 +45,12 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             _executionStatus = new HostExecutionStatusTracker(iterationStatusMonitor);
         }
 
-        public IHostMetricsAggregator GetOrCreate(Uri targetUri)
+        public IHostMetricsAggregator GetOrCreate(Uri targetUri) => GetOrCreate(HostKey.From(targetUri));
+
+        public IHostMetricsAggregator GetOrCreate(HostKey hostKey)
         {
             ObjectDisposedException.ThrowIf(_disposed, this);
 
-            var hostKey = HostKey.From(targetUri);
             return _aggregators.GetOrAdd(
                 hostKey,
                 key => new Lazy<Entry>(
@@ -57,14 +58,17 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                     isThreadSafe: true)).Value.Aggregator;
         }
 
-        public IHostMetricsAggregator GetOrCreate(Uri targetUri, Guid requestId)
+        public IHostMetricsAggregator GetOrCreate(Uri targetUri, Guid requestId) =>
+            GetOrCreate(HostKey.From(targetUri), requestId);
+
+        public IHostMetricsAggregator GetOrCreate(HostKey hostKey, Guid requestId)
         {
-            var aggregator = GetOrCreate(targetUri);
+            var aggregator = GetOrCreate(hostKey);
             var iteration = _metricAggregatorFactory?.Iterations
                 .SingleOrDefault(candidate => candidate.HttpRequest.Id == requestId);
 
             if (iteration != null)
-                _executionStatus?.Track(aggregator.HostKey, iteration);
+                _executionStatus?.Track(hostKey, iteration);
 
             return aggregator;
         }

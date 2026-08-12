@@ -86,6 +86,7 @@ namespace LPS.Apis
                 // gRPC services
                 endpoints.MapGrpcService<NodeGRPCService>();
                 endpoints.MapGrpcService<MetricsGrpcService>();
+                endpoints.MapGrpcService<HostMetricsGrpcService>();
                 endpoints.MapGrpcService<EntityDiscoveryGrpcService>();
                 endpoints.MapGrpcService<MonitorGRPCService>();
                 endpoints.MapGrpcService<MetricsQueryGrpcService>();
