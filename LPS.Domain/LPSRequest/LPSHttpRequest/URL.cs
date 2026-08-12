@@ -1,4 +1,5 @@
 ﻿using LPS.Domain.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +22,7 @@ namespace LPS.Domain.LPSRequest.LPSHttpRequest
 
             if (mainParts.Length == 2)
             {
-                Schema = IsPlaceholder(mainParts[0]) || IsValidSchema(mainParts[0]) ? mainParts[0] : null;
+                Schema = mainParts[0].IsPlaceholder() || IsValidSchema(mainParts[0]) ? mainParts[0] : null;
                 var rest = mainParts[1];
                 ParseRest(rest);
             }
@@ -61,7 +62,7 @@ namespace LPS.Domain.LPSRequest.LPSHttpRequest
                     port = hostPart.Substring(colonIndex + 1);
                 }
                 // Validate host (without port)
-                bool isValidHost = IsPlaceholder(host) || IsValidHostname(host);
+                bool isValidHost = host.IsPlaceholder() || IsValidHostname(host);
                 bool isValidPort = port == null || int.TryParse(port, out _);
 
                 // Retain original hostPart (with port) if valid
@@ -88,11 +89,6 @@ namespace LPS.Domain.LPSRequest.LPSHttpRequest
                     })
                     .ToList();
             }
-        }
-
-        private bool IsPlaceholder(string value)
-        {
-            return !string.IsNullOrEmpty(value) && value.StartsWith("$");
         }
 
         private bool IsValidSchema(string value)

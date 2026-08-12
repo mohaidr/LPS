@@ -1,5 +1,6 @@
 ﻿using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Extensions;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Metrics;
@@ -144,12 +145,7 @@ namespace LPS.Infrastructure.Monitoring.Status
 
         // ---------- Helpers ----------
 
-        private static bool IsTerminalStatus(EntityExecutionStatus status) =>
-            status == EntityExecutionStatus.Skipped ||
-            status == EntityExecutionStatus.Failed ||
-            status == EntityExecutionStatus.Success ||
-            status == EntityExecutionStatus.Cancelled ||
-            status == EntityExecutionStatus.Terminated;
+        private static bool IsTerminalStatus(EntityExecutionStatus status) => status.IsTerminal();
 
         private static bool TryGetCachedTerminal(HttpIteration httpIteration, out EntityExecutionStatus status)
         {

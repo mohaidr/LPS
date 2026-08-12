@@ -28,5 +28,6 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         IHostMetricsAggregator GetOrCreate(HostKey hostKey);
         IHostMetricsAggregator GetOrCreate(HostKey hostKey, System.Guid requestId);
         bool TryGet(HostKey hostKey, out IHostMetricsAggregator aggregator);
+        void Prefill();
     }
 }

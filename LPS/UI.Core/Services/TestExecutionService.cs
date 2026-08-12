@@ -21,6 +21,7 @@ using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Monitoring.Cumulative;
+using LPS.Infrastructure.Monitoring.Hosts;
 using LPS.Infrastructure.Monitoring.MetricsServices;
 using System.Text.Json.Serialization;
 using System.Text.Json;
@@ -57,6 +58,7 @@ namespace LPS.UI.Core.Services
         private readonly IWindowedMetricDataStore _windowedMetricStore;
         private readonly ICumulativeMetricDataStore _cumulativeMetricStore;
         private readonly IWarmUpService _warmupService;
+        private readonly IHostMetricsAggregatorFactory _hostMetricsAggregatorFactory;
         private readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator;
         private readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator;
         private readonly IPlanExecutionContext _planContext;
@@ -89,6 +91,7 @@ namespace LPS.UI.Core.Services
             IPlanExecutionContext planContext,
             ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
             IWarmUpService warmUpService,
+            IHostMetricsAggregatorFactory hostMetricsAggregatorFactory,
             CancellationTokenSource cts)
         {
             _logger = logger;
@@ -116,6 +119,7 @@ namespace LPS.UI.Core.Services
             _cumulativeMetricStore = cumulativeMetricStore;
             _nodeMetaData = nodeMetaData;
             _warmupService = warmUpService;
+            _hostMetricsAggregatorFactory = hostMetricsAggregatorFactory;
             _windowedMetricsCoordinator = windowedMetricsCoordinator;
             _cumulativeMetricsCoordinator = cumulativeMetricsCoordinator;
             _planContext = planContext;
@@ -265,6 +269,7 @@ namespace LPS.UI.Core.Services
                 await _warmupService.TryWarmUpAsync(hosts.Distinct(), requestsPerHost: 1, ct: parameters.CancellationToken);
                 
                 await RegisterEntities(plan);
+                _hostMetricsAggregatorFactory.Prefill();
                 await localNode.SetNodeStatus(NodeStatus.Running);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);

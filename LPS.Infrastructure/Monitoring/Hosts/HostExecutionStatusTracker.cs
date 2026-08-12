@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using LPS.Domain;
 using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Extensions;
 using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.Infrastructure.Monitoring.Hosts
@@ -44,17 +45,10 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                 .Select(getStatus => getStatus())
                 .ToArray();
 
-            return currentStatuses.All(IsTerminal)
+            return currentStatuses.All(status => status.IsTerminal())
                 ? HostExecutionStatus.Completed
                 : HostExecutionStatus.Ongoing;
         }
-
-        private static bool IsTerminal(EntityExecutionStatus status) =>
-            status is EntityExecutionStatus.Success
-                or EntityExecutionStatus.Failed
-                or EntityExecutionStatus.Terminated
-                or EntityExecutionStatus.Cancelled
-                or EntityExecutionStatus.Skipped;
     }
 
     internal enum HostExecutionStatus

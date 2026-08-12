@@ -2,8 +2,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
+using LPS.Domain;
+using LPS.Domain.Domain.Common.Extensions;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
+using LPS.Infrastructure.Entity;
 using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.Windowed;
 
@@ -22,6 +25,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         private readonly IHostCumulativeMetricsQueue? _cumulativeQueue;
         private readonly ICumulativeMetricsCoordinator? _cumulativeCoordinator;
         private readonly IMetricAggregatorFactory? _metricAggregatorFactory;
+        private readonly IEntityRepositoryService? _entityRepositoryService;
         private readonly HostExecutionStatusTracker? _executionStatus;
         private bool _disposed;
 
@@ -35,6 +39,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             IHostCumulativeMetricsQueue cumulativeQueue,
             ICumulativeMetricsCoordinator cumulativeCoordinator,
             IMetricAggregatorFactory metricAggregatorFactory,
+            IEntityRepositoryService entityRepositoryService,
             IIterationStatusMonitor iterationStatusMonitor)
         {
             _windowedQueue = windowedQueue;
@@ -42,6 +47,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             _cumulativeQueue = cumulativeQueue;
             _cumulativeCoordinator = cumulativeCoordinator;
             _metricAggregatorFactory = metricAggregatorFactory;
+            _entityRepositoryService = entityRepositoryService;
             _executionStatus = new HostExecutionStatusTracker(iterationStatusMonitor);
         }
 
@@ -71,6 +77,28 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                 _executionStatus?.Track(hostKey, iteration);
 
             return aggregator;
+        }
+
+        // Pre-create aggregators and seed status for every iteration whose host is already resolved
+        // (non-placeholder), so host status reflects the full iteration set from the start.
+        public void Prefill()
+        {
+            if (_entityRepositoryService == null)
+                return;
+
+            foreach (var iteration in _entityRepositoryService.Query<HttpIteration>())
+            {
+                var url = iteration.HttpRequest?.Url;
+                if (url is null || string.IsNullOrEmpty(url.HostName) || url.HostName.IsPlaceholder())
+                    continue;
+
+                if (!Uri.TryCreate(url.BaseUrl, UriKind.Absolute, out var uri))
+                    continue;
+
+                var hostKey = HostKey.From(uri);
+                GetOrCreate(hostKey);
+                _executionStatus?.Track(hostKey, iteration);
+            }
         }
 
         public bool TryGet(HostKey hostKey, out IHostMetricsAggregator aggregator)
