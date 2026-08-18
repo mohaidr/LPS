@@ -48,7 +48,7 @@ namespace LPS.Infrastructure.Common
                         if (prop.PropertyType == typeof(Dictionary<string, string>))
                         {
                             var stringDict = ((IDictionary<object, object>)value)
-                                .ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToString());
+                                .ToDictionary(kvp => kvp.Key.ToString(), kvp => kvp.Value?.ToString() ?? string.Empty);
                             prop.SetValue(instance, stringDict);
                         }
                         // Handle nested complex objects
@@ -119,9 +119,14 @@ namespace LPS.Infrastructure.Common
                 return value;
             }
 
-            if (value is IDictionary<string, object> dict)
+            if (value is IDictionary<object, object> dictionary)
             {
-                return deserializer(targetType);
+                var nestedYamlString = SerializeDictionaryToYaml(dictionary);
+                return new DeserializerBuilder()
+                    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+                    .WithTypeConverter(new YamlAliasConverter())
+                    .Build()
+                    .Deserialize(nestedYamlString, targetType);
             }
 
             if (typeof(IEnumerable).IsAssignableFrom(targetType) && targetType != typeof(string))

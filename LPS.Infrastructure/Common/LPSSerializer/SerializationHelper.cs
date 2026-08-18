@@ -63,7 +63,7 @@ namespace LPS.Infrastructure.Common
         {
             try
             {
-                var serializableObject = obj;
+                var serializableObject = obj.CloneObject();
                 if (JsonSerializerOptions.DefaultIgnoreCondition == JsonIgnoreCondition.WhenWritingDefault)
                 {
                     CleanDefaultValues(serializableObject);
@@ -80,7 +80,7 @@ namespace LPS.Infrastructure.Common
         {
             try
             {
-                var serializableObject = obj;
+                var serializableObject = obj.CloneObject();
                 if (YamlCurrentDefaultValuesHandling == DefaultValuesHandling.OmitDefaults)
                 {
                     CleanDefaultValues(serializableObject);

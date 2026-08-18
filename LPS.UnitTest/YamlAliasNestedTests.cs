@@ -46,6 +46,83 @@ namespace LPS.UnitTest
         }
 
         [Fact]
+        public void Iteration_RuleCollections_Resolve()
+        {
+            var yaml =
+                "name: step3\n" +
+                "failureRules:\n" +
+                "  - metric: ErrorRate > 0.05\n" +
+                "terminationRules:\n" +
+                "  - metric: TotalTime.P90 > 2000\n" +
+                "    gracePeriod: 00:00:05\n";
+
+            var dto = SerializationHelper.DeserializeFromYaml<HttpIterationDto>(yaml);
+
+            Assert.Equal("ErrorRate > 0.05", dto.FailureRules[0].Metric);
+            Assert.Equal("TotalTime.P90 > 2000", dto.TerminationRules[0].Metric);
+            Assert.Equal("00:00:05", dto.TerminationRules[0].GracePeriod);
+        }
+
+        [Fact]
+        public void Request_NullHeaderValue_ResolvesAsEmptyString()
+        {
+            var yaml =
+                "url: https://example.com\n" +
+                "method: GET\n" +
+                "headers:\n" +
+                "  x-optional:\n";
+
+            var dto = SerializationHelper.DeserializeFromYaml<HttpRequestDto>(yaml);
+
+            Assert.Equal(string.Empty, dto.HttpHeaders["x-optional"]);
+        }
+
+        [Fact]
+        public void Request_SerializesWithCanonicalAliases()
+        {
+            var dto = new HttpRequestDto
+            {
+                URL = "https://example.com",
+                HttpMethod = "GET",
+                HttpVersion = "1.1",
+                HttpHeaders = new Dictionary<string, string> { ["accept"] = "application/json" }
+            };
+
+            var yaml = SerializationHelper.SerializeToYaml(dto);
+
+            Assert.Contains("url:", yaml);
+            Assert.Contains("method:", yaml);
+            Assert.Contains("version:", yaml);
+            Assert.Contains("headers:", yaml);
+            Assert.DoesNotContain("uRL:", yaml);
+            Assert.DoesNotContain("httpMethod:", yaml);
+            Assert.DoesNotContain("httpVersion:", yaml);
+            Assert.DoesNotContain("httpHeaders:", yaml);
+        }
+
+        [Fact]
+        public void Serialization_DoesNotMutateInputCollections()
+        {
+            var dto = new HttpIterationDto
+            {
+                Name = "step4",
+                HttpRequest = new HttpRequestDto
+                {
+                    URL = "https://example.com",
+                    HttpMethod = "GET"
+                }
+            };
+
+            SerializationHelper.SerializeToYaml(dto);
+
+            Assert.NotNull(dto.FailureRules);
+            Assert.NotNull(dto.TerminationRules);
+            Assert.NotNull(dto.Before);
+            Assert.NotNull(dto.After);
+            Assert.NotNull(dto.HttpRequest.HttpHeaders);
+        }
+
+        [Fact]
         public void Iteration_StartupDelay_SerializesAsDelay_AndRoundTrips()
         {
             var dto = new HttpIterationDto { Name = "s", StartupDelay = "7942" };

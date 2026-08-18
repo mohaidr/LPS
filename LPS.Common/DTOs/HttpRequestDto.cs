@@ -58,16 +58,19 @@ namespace LPS.UI.Common.DTOs
 
         // URL for the HTTP request (supports placeholders)
         [YamlAlias("url")]
+        [YamlMember(Alias = "url")]
         [JsonAlias("url")]
         public string URL { get; set; }
 
         // HTTP method (supports placeholders)
         [YamlAlias("method")]
+        [YamlMember(Alias = "method")]
         [JsonAlias("method")]
         public string HttpMethod { get; set; }
 
         // HTTP version (supports placeholders)
         [YamlAlias("version")]
+        [YamlMember(Alias = "version")]
         [JsonAlias("version")]
         [DefaultValue("2.0")]
         public string HttpVersion { get; set; }
@@ -88,6 +91,7 @@ namespace LPS.UI.Common.DTOs
 
         // HTTP headers
         [YamlAlias("headers")]
+        [YamlMember(Alias = "headers")]
         [JsonAlias("headers")]
         public Dictionary<string, string> HttpHeaders { get; set; }
 
