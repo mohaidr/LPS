@@ -44,6 +44,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             HttpResponseMessage responseMessage,
             HttpRequest httpRequest,
             bool cacheResponse,
+            string sessionId,
             HostKey hostKey,
             CancellationToken token)
         {
@@ -66,7 +67,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                 {
                     // Calculate the headers size (both response and content headers)
                     transferredSize += CalculateHeadersSize(responseMessage);
-                    string cacheKey = $"{CachePrefixes.Content}{httpRequest.Id}";
+                    string cacheKey = $"{CachePrefixes.Content}{httpRequest.Id}-{sessionId}";
                     string content = await _memoryCacheService.GetItemAsync(cacheKey);
 
                     using Stream contentStream = await responseMessage.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
@@ -135,7 +136,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
                         }
                         if (responsePersistence != null)
                         {
-                            await _memoryCacheService.SetItemAsync(sampleResponseCacheKey, responsePersistence.ResponseFilePath); // All data written to the file, we now set it to the default to save after 30 seconds
+                            await _memoryCacheService.SetItemAsync(sampleResponseCacheKey, responsePersistence.ResponseFilePath, TimeSpan.FromSeconds(1)); // All data written to the file, we now set it to the default to save after 30 seconds
                             await responsePersistence.DisposeAsync();
                         }
                     }

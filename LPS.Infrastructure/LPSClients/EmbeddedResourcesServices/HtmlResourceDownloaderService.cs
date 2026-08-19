@@ -52,6 +52,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
         public async Task DownloadResourcesAsync(
             string baseUrl,
             Guid requestId,
+            string sessionId,
             CancellationToken cancellationToken)
         {
             try
@@ -74,7 +75,7 @@ namespace LPS.Infrastructure.LPSClients.EmbeddedResourcesServices
                 else
                 {
                     // Retrieve HTML content if resource URLs are not cached
-                    string contentCacheKey = $"{CachePrefixes.Content}{requestId}";
+                    string contentCacheKey = $"{CachePrefixes.Content}{requestId}-{sessionId}";
                     string htmlContent = await _memoryCacheService.GetItemAsync(contentCacheKey);
                     if (string.IsNullOrEmpty(htmlContent))
                     {

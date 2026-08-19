@@ -16,6 +16,7 @@ namespace LPS.Infrastructure.LPSClients.ResponseService
             HttpResponseMessage response,
             HttpRequest httpRequest,
             bool cacheResponse,
+            string sessionId,
             HostKey hostKey,
             CancellationToken token);
     }

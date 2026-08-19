@@ -237,8 +237,9 @@ namespace LPS.Infrastructure.LPSClients
 
                         //Read the Response and total time spent to read the data represented as timespan
                         // Received bytes (iteration + host) are reported per-chunk inside ProcessResponseAsync
-                        (HttpResponse.SetupCommand command, double _, downStreamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, httpRequestEntity, cacheResponse, resolvedHostKey, linkedCts.Token));
+                        (HttpResponse.SetupCommand command, double _, downStreamTime) = (await _responseProcessingService.ProcessResponseAsync(responseMessage, httpRequestEntity, cacheResponse, SessionId, resolvedHostKey, linkedCts.Token));
                         HttpResponse.SetupCommand responseCommand = command;
+
 
                         #region Capture Response
                         if (captureResponse)
@@ -254,7 +255,7 @@ namespace LPS.Infrastructure.LPSClients
                                     var cachedVariable = await _httpResponseVariableHolderCacheInstance.GetItemAsync(cacheKey);
                                     if (cachedVariable == null)
                                     {
-                                        var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{httpRequestEntity.Id}");
+                                        var rawContent = await _memoryCacheService.GetItemAsync($"{CachePrefixes.Content}{httpRequestEntity.Id}-{SessionId}");
                                         bool typeDetected = httpRequestEntity.Capture.As.TryToVariableType(out VariableType type);
 
                                         // auto detect type if type if not provided, if not detected; default to string if not
@@ -302,6 +303,7 @@ namespace LPS.Infrastructure.LPSClients
                                             .WithRawValue(rawContent)
                                             .UpdateAsync(token)
                                         : null;
+
 
                                         responseVariableHolder = await responseVariableMaintainer
                                              .WithBody(bodyVariableHolder)
@@ -488,7 +490,7 @@ namespace LPS.Infrastructure.LPSClients
                 {
                     downloadWatch.Start();
                     var htmlResourceDownloader = new HtmlResourceDownloaderService(_logger, _runtimeOperationIdProvider, client, _metricsService, _memoryCacheService, _hostMetricsService, hostKey);
-                    await htmlResourceDownloader.DownloadResourcesAsync(httpRequest.Url.Url, httpRequest.Id, token);
+                    await htmlResourceDownloader.DownloadResourcesAsync(httpRequest.Url.Url, httpRequest.Id, SessionId, token);
                     downloadWatch.Stop();
                 }
                 return (true, downloadWatch.Elapsed);
