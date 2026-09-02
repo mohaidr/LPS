@@ -67,10 +67,14 @@ namespace LPS.Infrastructure.Watchdog
         private readonly Stopwatch _resetToCoolingStopwatch = new Stopwatch();
         private DateTime _lastGcUtc = DateTime.MinValue;
 
-        // ---- Slow-start admission control ----
-        private volatile bool _admissionLimited;   // read by callers, written by sampler
-        private int _admissionsPerTick;             // sampler-owned ramp budget
-        private int _remainingAdmissions;           // tokens left this tick (Interlocked)
+        // ---- Slow-start admission control (per target host) ----
+        private sealed class HostAdmission
+        {
+            public volatile bool Limited;   // sampler-written, caller-read
+            public int PerTick;             // sampler-owned ramp budget
+            public int Remaining;           // caller Interlocked.Decrement, sampler Volatile.Write
+        }
+        private readonly ConcurrentDictionary<string, HostAdmission> _hostAdmissions = new();
 
         // ---- Sampler lifecycle ----
         private readonly CancellationTokenSource _samplerCts = new CancellationTokenSource();
@@ -142,7 +146,7 @@ namespace LPS.Infrastructure.Watchdog
             if (!string.IsNullOrEmpty(hostName))
                 _observedHosts.TryAdd(hostName, 0);
 
-            if (EvaluateSnapshot(hostName) == ResourceState.Cool && TryAdmit())
+            if (EvaluateSnapshot(hostName) == ResourceState.Cool && TryAdmit(hostName))
                 return new ValueTask<ResourceState>(ResourceState.Cool);
 
             return new ValueTask<ResourceState>(BalanceInternalAsync(hostName, token));
@@ -152,7 +156,7 @@ namespace LPS.Infrastructure.Watchdog
         {
             while (!token.IsCancellationRequested)
             {
-                if (EvaluateSnapshot(hostName) == ResourceState.Cool && TryAdmit())
+                if (EvaluateSnapshot(hostName) == ResourceState.Cool && TryAdmit(hostName))
                     return ResourceState.Cool;
 
                 await _nextSampleSignal.Task.WaitAsync(token).ConfigureAwait(false);
@@ -320,8 +324,8 @@ namespace LPS.Infrastructure.Watchdog
                 }
             }
 
-            UpdateAdmissionRamp(next);
             SetState(next);
+            UpdateAdmissionRamps();
         }
         
         private ResourceState EvaluateSnapshot(string hostName)
@@ -362,29 +366,41 @@ namespace LPS.Infrastructure.Watchdog
                 return ResourceState.Cooling;
             return ResourceState.Cool;
         }
-        // Slow-start release: engage limiting under pressure, then widen the per-tick budget each
-        // Cool tick until it reaches the concurrency cap, after which admissions run free.
-        private void UpdateAdmissionRamp(ResourceState next)
+        // Slow-start + headroom release, evaluated PER target host: a host that is not Cool shuts its
+        // gate and resets its ramp; when Cool it admits each tick the smaller of its ramp budget and its
+        // free slots below the concurrency cap (headroom). Keying off the same per-host snapshot callers
+        // see means one host's pressure never throttles another.
+        private void UpdateAdmissionRamps()
         {
-            if (next != ResourceState.Cool)
+            foreach (var pair in _hostConnectionCounts)
             {
-                _admissionLimited = true;
-                _admissionsPerTick = AdmissionRampBasePerTick;
-                Volatile.Write(ref _remainingAdmissions, 0);
-            }
-            else if (_admissionLimited)
-            {
-                Volatile.Write(ref _remainingAdmissions, _admissionsPerTick);
-                if (_admissionsPerTick >= MaxConcurrentConnectionsCountPerHostName)
-                    _admissionLimited = false;
-                else
-                    _admissionsPerTick = Math.Min(_admissionsPerTick * AdmissionRampGrowthFactor,
-                                                  MaxConcurrentConnectionsCountPerHostName);
+                var adm = _hostAdmissions.GetOrAdd(pair.Key, static _ => new HostAdmission());
+
+                if (EvaluateSnapshot(pair.Key) != ResourceState.Cool)
+                {
+                    adm.Limited = true;
+                    adm.PerTick = AdmissionRampBasePerTick;
+                    Volatile.Write(ref adm.Remaining, 0);
+                }
+                else if (adm.Limited)
+                {
+                    int headroom = Math.Max(0, MaxConcurrentConnectionsCountPerHostName - pair.Value);
+                    Volatile.Write(ref adm.Remaining, Math.Min(adm.PerTick, headroom));
+                    adm.PerTick = Math.Min(adm.PerTick * AdmissionRampGrowthFactor,
+                                           MaxConcurrentConnectionsCountPerHostName);
+                }
             }
         }
 
-        private bool TryAdmit()
-            => !_admissionLimited || Interlocked.Decrement(ref _remainingAdmissions) >= 0;
+        private bool TryAdmit(string hostName)
+        {
+            if (string.IsNullOrEmpty(hostName)
+                || !_hostAdmissions.TryGetValue(hostName, out var adm)
+                || !adm.Limited)
+                return true;
+
+            return Interlocked.Decrement(ref adm.Remaining) >= 0;
+        }
         private static TaskCompletionSource<bool> CreateSampleSignal()
             => new(TaskCreationOptions.RunContinuationsAsynchronously);
 
