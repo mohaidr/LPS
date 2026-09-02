@@ -40,6 +40,10 @@ namespace LPS.Infrastructure.Watchdog
         private const int SamplingIntervalMs = 1000;
         private const int GcMinIntervalSeconds = 30;
 
+        // Slow-start release: after pressure, admit gently and widen the valve each Cool tick.
+        private const int AdmissionRampBasePerTick = 50;
+        private const int AdmissionRampGrowthFactor = 2;
+
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _operationIdProvider;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
@@ -62,6 +66,11 @@ namespace LPS.Infrastructure.Watchdog
         private readonly Stopwatch _maxCoolingStopwatch = new Stopwatch();
         private readonly Stopwatch _resetToCoolingStopwatch = new Stopwatch();
         private DateTime _lastGcUtc = DateTime.MinValue;
+
+        // ---- Slow-start admission control ----
+        private volatile bool _admissionLimited;   // read by callers, written by sampler
+        private int _admissionsPerTick;             // sampler-owned ramp budget
+        private int _remainingAdmissions;           // tokens left this tick (Interlocked)
 
         // ---- Sampler lifecycle ----
         private readonly CancellationTokenSource _samplerCts = new CancellationTokenSource();
@@ -133,7 +142,7 @@ namespace LPS.Infrastructure.Watchdog
             if (!string.IsNullOrEmpty(hostName))
                 _observedHosts.TryAdd(hostName, 0);
 
-            if (EvaluateSnapshot(hostName) == ResourceState.Cool)
+            if (EvaluateSnapshot(hostName) == ResourceState.Cool && TryAdmit())
                 return new ValueTask<ResourceState>(ResourceState.Cool);
 
             return new ValueTask<ResourceState>(BalanceInternalAsync(hostName, token));
@@ -143,7 +152,7 @@ namespace LPS.Infrastructure.Watchdog
         {
             while (!token.IsCancellationRequested)
             {
-                if (EvaluateSnapshot(hostName) == ResourceState.Cool)
+                if (EvaluateSnapshot(hostName) == ResourceState.Cool && TryAdmit())
                     return ResourceState.Cool;
 
                 await _nextSampleSignal.Task.WaitAsync(token).ConfigureAwait(false);
@@ -311,17 +320,10 @@ namespace LPS.Infrastructure.Watchdog
                 }
             }
 
+            UpdateAdmissionRamp(next);
             SetState(next);
         }
-        private static TaskCompletionSource<bool> CreateSampleSignal()
-            => new(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        private void SignalSampleAvailable()
-        {
-            _nextSampleSignal.TrySetResult(true);
-            _nextSampleSignal = CreateSampleSignal();
-        }
-
+        
         private ResourceState EvaluateSnapshot(string hostName)
         {
             if (string.IsNullOrWhiteSpace(hostName))
@@ -360,6 +362,39 @@ namespace LPS.Infrastructure.Watchdog
                 return ResourceState.Cooling;
             return ResourceState.Cool;
         }
+        // Slow-start release: engage limiting under pressure, then widen the per-tick budget each
+        // Cool tick until it reaches the concurrency cap, after which admissions run free.
+        private void UpdateAdmissionRamp(ResourceState next)
+        {
+            if (next != ResourceState.Cool)
+            {
+                _admissionLimited = true;
+                _admissionsPerTick = AdmissionRampBasePerTick;
+                Volatile.Write(ref _remainingAdmissions, 0);
+            }
+            else if (_admissionLimited)
+            {
+                Volatile.Write(ref _remainingAdmissions, _admissionsPerTick);
+                if (_admissionsPerTick >= MaxConcurrentConnectionsCountPerHostName)
+                    _admissionLimited = false;
+                else
+                    _admissionsPerTick = Math.Min(_admissionsPerTick * AdmissionRampGrowthFactor,
+                                                  MaxConcurrentConnectionsCountPerHostName);
+            }
+        }
+
+        private bool TryAdmit()
+            => !_admissionLimited || Interlocked.Decrement(ref _remainingAdmissions) >= 0;
+        private static TaskCompletionSource<bool> CreateSampleSignal()
+            => new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        private void SignalSampleAvailable()
+        {
+            _nextSampleSignal.TrySetResult(true);
+            _nextSampleSignal = CreateSampleSignal();
+        }
+
+
 
 
 
