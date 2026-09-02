@@ -356,7 +356,7 @@ namespace LPS.Infrastructure.Watchdog
 
             if (hot)
                 return ResourceState.Hot;
-            if (cooling)
+            if (cooling && _currentState != ResourceState.Cool)
                 return ResourceState.Cooling;
             return ResourceState.Cool;
         }

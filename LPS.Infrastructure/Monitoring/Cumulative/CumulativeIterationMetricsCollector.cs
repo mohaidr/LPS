@@ -21,12 +21,13 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         private readonly HttpIteration _httpIteration;
         private readonly string _roundName;
         private readonly ICumulativeMetricsQueue _queue;
-        private readonly ICumulativeMetricDataStore _dataStore;
+        private readonly IHistoricalCumulativeMetricDataStore _historicalDataStore;
         private readonly ICumulativeMetricsCoordinator _coordinator;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         private readonly IPlanExecutionContext _planContext;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
 
+        private int _pushInProgress;
         private bool _disposed;
         private bool _finalSnapshotSent;
 
@@ -42,7 +43,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             HttpIteration httpIteration,
             string roundName,
             ICumulativeMetricsQueue queue,
-            ICumulativeMetricDataStore dataStore,
+            IHistoricalCumulativeMetricDataStore dataStore,
             ICumulativeMetricsCoordinator coordinator,
             IIterationStatusMonitor iterationStatusMonitor,
             IPlanExecutionContext planContext)
@@ -50,7 +51,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-            _dataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
+            _historicalDataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
@@ -61,12 +62,13 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
 
         private async void OnPushInterval()
         {
-            if (_disposed || _finalSnapshotSent) return;
+            if (_disposed || _finalSnapshotSent || Interlocked.Exchange(ref _pushInProgress, 1) != 0) return;
 
             try
             {
                 // Get authoritative status from IIterationStatusMonitor
                 var status = await _iterationStatusMonitor.GetTerminalStatusAsync(_httpIteration, CancellationToken.None);
+                if (_disposed) return;
 
                 switch (status)
                 {
@@ -96,6 +98,10 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             catch
             {
                 // Swallow exceptions to prevent coordinator timer from dying
+            }
+            finally
+            {
+                Volatile.Write(ref _pushInProgress, 0);
             }
         }
 
@@ -136,7 +142,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                 {
                     _queue.TryEnqueue(snapshot);
                     // Also store for persistence
-                    _ = _dataStore.PushAsync(_httpIteration.Id, snapshot);
+                    _ = _historicalDataStore.PushAsync(_httpIteration.Id, snapshot);
                 }
             }
             finally
@@ -150,7 +156,6 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             if (_disposed) return;
             _disposed = true;
             _coordinator.OnPushInterval -= OnPushInterval;
-            _semaphore.Dispose();
         }
     }
 }

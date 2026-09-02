@@ -55,8 +55,8 @@ namespace LPS.UI.Core.Services
         public readonly IVariableFactory _variableFactory;
         private readonly INodeMetadata _nodeMetaData;
         private readonly ILiveMetricDataStore _metricStore;
-        private readonly IWindowedMetricDataStore _windowedMetricStore;
-        private readonly ICumulativeMetricDataStore _cumulativeMetricStore;
+        private readonly IHistoricalWindowedMetricDataStore _historicalWindowedMetricStore;
+        private readonly IHistoricalCumulativeMetricDataStore _historicalCumulativeMetricStore;
         private readonly IWarmUpService _warmupService;
         private readonly IHostMetricsAggregatorFactory _hostMetricsAggregatorFactory;
         private readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator;
@@ -83,8 +83,8 @@ namespace LPS.UI.Core.Services
             IExpressionEvaluator skipIfEvaluator,
             IVariableFactory variableFactory,
             ILiveMetricDataStore metricStore,             // NEW
-            IWindowedMetricDataStore windowedMetricStore, // NEW
-            ICumulativeMetricDataStore cumulativeMetricStore, // NEW
+            IHistoricalWindowedMetricDataStore windowedMetricStore, // NEW
+            IHistoricalCumulativeMetricDataStore cumulativeMetricStore, // NEW
             INodeMetadata nodeMetaData,               // NEW
             IWindowedMetricsCoordinator windowedMetricsCoordinator,  // NEW: Windowed metrics coordinator
             ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,  // NEW: Cumulative metrics coordinator
@@ -115,8 +115,8 @@ namespace LPS.UI.Core.Services
             _skipIfEvaluator = skipIfEvaluator;
             _variableFactory = variableFactory;
             _metricStore = metricStore;
-            _windowedMetricStore = windowedMetricStore;
-            _cumulativeMetricStore = cumulativeMetricStore;
+            _historicalWindowedMetricStore = windowedMetricStore;
+            _historicalCumulativeMetricStore = cumulativeMetricStore;
             _nodeMetaData = nodeMetaData;
             _warmupService = warmUpService;
             _hostMetricsAggregatorFactory = hostMetricsAggregatorFactory;
@@ -437,7 +437,7 @@ namespace LPS.UI.Core.Services
                         if (DateTime.UtcNow >= deadline) break;
 
                         // Save cumulative metrics from the cumulative store
-                        if (_cumulativeMetricStore.TryGet(iter.Id, out var cumulativeSnaps) && cumulativeSnaps.Count > 0)
+                        if (_historicalCumulativeMetricStore.TryGet(iter.Id, out var cumulativeSnaps) && cumulativeSnaps.Count > 0)
                         {
                             // Extract Throughput metrics from all cumulative snapshots
                             var throughputHistory = cumulativeSnaps
@@ -513,7 +513,7 @@ namespace LPS.UI.Core.Services
                         }
                         
                         // Save windowed metrics for this iteration - split by metric type like cumulative
-                        if (DateTime.UtcNow < deadline && _windowedMetricStore.TryGet(iter.Id, out var windowedSnaps) && windowedSnaps.Count > 0)
+                        if (DateTime.UtcNow < deadline && _historicalWindowedMetricStore.TryGet(iter.Id, out var windowedSnaps) && windowedSnaps.Count > 0)
                         {
                             // Extract Throughput metrics from all windows
                             var throughputWindows = windowedSnaps

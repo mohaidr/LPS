@@ -47,7 +47,7 @@ The metrics monitoring system collects, aggregates, and pushes real-time metrics
 | `WindowedIterationMetricsCollector` | Windowed/ | Collects windowed data from aggregators per iteration |
 | `CumulativeIterationMetricsCollector` | Cumulative/ | Collects cumulative data from aggregators per iteration |
 | `LiveMetricDataStore` | MetricsServices/ | Real-time metric store for UI/gRPC queries (reduced capacity: 256) |
-| `WindowedMetricDataStore` | Windowed/ | Stores windowed snapshots history |
+| `HistoricalWindowedMetricDataStore` | Windowed/ | Stores windowed snapshots history |
 | `*MetricsPusher` | Windowed/ & Cumulative/ | Push to SignalR |
 
 ## Data Flow Diagram
@@ -101,7 +101,7 @@ These services continue to work with immediate updates from cumulative aggregato
    - Reduced capacity (256 per metric type) - only needs recent history
    - Updated immediately on every aggregator update
 
-2. **WindowedMetricDataStore**:
+2. **HistoricalWindowedMetricDataStore**:
    - Stores windowed snapshots for historical viewing
    - Only updated on window close events
 

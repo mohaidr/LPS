@@ -21,13 +21,14 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private readonly HttpIteration _httpIteration;
         private readonly string _roundName;
         private readonly IWindowedMetricsQueue _queue;
-        private readonly IWindowedMetricDataStore _dataStore;
+        private readonly IHistoricalWindowedMetricDataStore _historicalDataStore;
         private readonly IWindowedMetricsCoordinator _coordinator;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         private readonly IPlanExecutionContext _planContext;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private int _windowSequence;
+        private int _pushInProgress;
         private DateTime _windowStart = DateTime.UtcNow;
         private bool _disposed;
         private bool _finalSnapshotSent;
@@ -44,7 +45,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             HttpIteration httpIteration,
             string roundName,
             IWindowedMetricsQueue queue,
-            IWindowedMetricDataStore dataStore,
+            IHistoricalWindowedMetricDataStore dataStore,
             IWindowedMetricsCoordinator coordinator,
             IIterationStatusMonitor iterationStatusMonitor,
             IPlanExecutionContext planContext)
@@ -52,7 +53,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
-            _dataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
+            _historicalDataStore = dataStore ?? throw new ArgumentNullException(nameof(dataStore));
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
@@ -63,12 +64,13 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
         private async void OnWindowClosed()
         {
-            if (_disposed || _finalSnapshotSent) return;
+            if (_disposed || _finalSnapshotSent || Interlocked.Exchange(ref _pushInProgress, 1) != 0) return;
 
             try
             {
                 // Get authoritative status from IIterationStatusMonitor
                 var status = await _iterationStatusMonitor.GetTerminalStatusAsync(_httpIteration, CancellationToken.None);
+                if (_disposed) return;
 
                 switch (status)
                 {
@@ -98,6 +100,10 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             catch
             {
                 // Swallow exceptions to prevent coordinator timer from dying
+            }
+            finally
+            {
+                Volatile.Write(ref _pushInProgress, 0);
             }
         }
 
@@ -160,7 +166,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                 {
                     _queue.TryEnqueue(snapshot);
                     // Also store for persistence
-                    _ = _dataStore.PushAsync(_httpIteration.Id, snapshot);
+                    _ = _historicalDataStore.PushAsync(_httpIteration.Id, snapshot);
                 }
 
                 if (!isFinal)
@@ -179,7 +185,6 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             if (_disposed) return;
             _disposed = true;
             _coordinator.OnWindowClosed -= OnWindowClosed;
-            _semaphore.Dispose();
         }
     }
 }

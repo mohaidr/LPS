@@ -10,13 +10,10 @@ using LPS.Infrastructure.Common.Interfaces;
 namespace LPS.Infrastructure.Monitoring.Cumulative
 {
     /// <summary>
-    /// In-memory implementation for ICumulativeMetricDataStore.
-    /// Keeps a per-iteration queue of cumulative snapshots.
-    /// Thread-safe, lock-free with ConcurrentDictionary + ConcurrentQueue.
-    /// Bounded to prevent memory overflow during long tests.
-    /// Similar to WindowedMetricDataStore but for cumulative snapshots.
+    /// In-memory historical store for cumulative metric snapshots.
+    /// Keeps a bounded, thread-safe snapshot history per iteration.
     /// </summary>
-    public sealed class CumulativeMetricDataStore : ICumulativeMetricDataStore
+    public sealed class HistoricalCumulativeMetricDataStore : IHistoricalCumulativeMetricDataStore
     {
         private readonly ILogger _logger;
         private readonly IRuntimeOperationIdProvider _op;
@@ -27,13 +24,13 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             public readonly ConcurrentQueue<CumulativeIterationSnapshot> Queue = new();
             private CumulativeIterationSnapshot? _latest;
             public CumulativeIterationSnapshot? Latest => Volatile.Read(ref _latest);
-            public void SetLatest(CumulativeIterationSnapshot s) => Volatile.Write(ref _latest, s);
-            public int Count; // approximate, maintained with Interlocked
+            public void SetLatest(CumulativeIterationSnapshot snapshot) => Volatile.Write(ref _latest, snapshot);
+            public int Count;
         }
 
         private readonly ConcurrentDictionary<Guid, Entry> _store = new();
 
-        public CumulativeMetricDataStore(
+        public HistoricalCumulativeMetricDataStore(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             int capacity = 2048)
@@ -52,58 +49,34 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             }
 
             var entry = _store.GetOrAdd(iterationId, _ => new Entry());
-
-            // Push to history
             entry.Queue.Enqueue(snapshot);
             Interlocked.Increment(ref entry.Count);
-
-            // Publish latest (O(1), lock-free)
             entry.SetLatest(snapshot);
 
-            // Best-effort bound without O(n) q.Count
-            // Drop oldest snapshots if capacity exceeded
             while (Volatile.Read(ref entry.Count) > _capacity && entry.Queue.TryDequeue(out _))
-            {
                 Interlocked.Decrement(ref entry.Count);
-            }
         }
 
         public bool TryGet(Guid iterationId, out IReadOnlyList<CumulativeIterationSnapshot> snapshots)
         {
             snapshots = Array.Empty<CumulativeIterationSnapshot>();
-
             if (!_store.TryGetValue(iterationId, out var entry)) return false;
-
-            snapshots = entry.Queue.ToArray(); // snapshot the queue
+            snapshots = entry.Queue.ToArray();
             return snapshots.Count > 0;
         }
 
         public bool TryGetLatest(Guid iterationId, out CumulativeIterationSnapshot? snapshot)
         {
             snapshot = null;
-
             if (!_store.TryGetValue(iterationId, out var entry)) return false;
-
             snapshot = entry.Latest;
             return snapshot is not null;
         }
 
         public IEnumerable<Guid> IterationIds => _store.Keys;
-
-        public bool Remove(Guid iterationId)
-        {
-            return _store.TryRemove(iterationId, out _);
-        }
-
-        public void Clear()
-        {
-            _store.Clear();
-        }
-
-        public int GetCount(Guid iterationId)
-        {
-            if (!_store.TryGetValue(iterationId, out var entry)) return 0;
-            return Volatile.Read(ref entry.Count);
-        }
+        public bool Remove(Guid iterationId) => _store.TryRemove(iterationId, out _);
+        public void Clear() => _store.Clear();
+        public int GetCount(Guid iterationId) =>
+            _store.TryGetValue(iterationId, out var entry) ? Volatile.Read(ref entry.Count) : 0;
     }
 }

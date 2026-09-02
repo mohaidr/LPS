@@ -28,6 +28,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         protected override IMetricShapshot Snapshot => _snapshot;
 
         private readonly Stopwatch _throughputWatch;
+        private readonly int _publishIntervalMs;
         private Timer _timer;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
         private bool _isStarted;
@@ -47,11 +48,14 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
             IRuleService failureRulesService,
-            ILiveMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
+            ILiveMetricDataStore metricDataStore,
+            LiveMetricsPublishingOptions publishingOptions) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _failureRulesService = failureRulesService ?? throw new ArgumentNullException(nameof(failureRulesService));
+            ArgumentNullException.ThrowIfNull(publishingOptions);
+            _publishIntervalMs = publishingOptions.PublishIntervalMs;
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
 
             _snapshot = new ThroughputMetricSnapshot(
@@ -65,10 +69,10 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             
-            PushMetricAsync(default).Wait();
+            PushMetricAsync(_snapshot.CreateCopy(), default).Wait();
         }
 
-        private async ValueTask<bool> UpdateMetricsAsync(CancellationToken token)
+        private void UpdateMetrics()
         {
             bool isCoolDown = _httpIteration.Mode == IterationMode.DCB
                            || _httpIteration.Mode == IterationMode.CRB
@@ -78,93 +82,98 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             // We later should add a check if not started but now in the current design it causes exceptions or logical errors 
 
-
-            try
+            int successCount = 0;
+            int failedCount = 0;
+            if (_metricDataStore.TryGetLatest(_httpIteration.Id, LPSMetricType.ResponseCode, out ResponseCodeMetricSnapshot snapshot))
             {
-                int successCount = 0;
-                int failedCount = 0;
-                if (_metricDataStore.TryGetLatest(_httpIteration.Id, LPSMetricType.ResponseCode, out ResponseCodeMetricSnapshot snapshot))
+                // Calculate success/failed based on error status codes from failure rules
+                foreach (var summary in snapshot.ResponseSummaries)
                 {
-                    // Calculate success/failed based on error status codes from failure rules
-                    foreach (var summary in snapshot.ResponseSummaries)
+                    int statusCode = (int)summary.HttpStatusCode;
+                    if (_failureRulesService.IsErrorStatusCode(_httpIteration, _roundName, statusCode))
                     {
-                        int statusCode = (int)summary.HttpStatusCode;
-                        if (_failureRulesService.IsErrorStatusCode(_httpIteration, _roundName, statusCode))
-                        {
-                            failedCount += summary.Count;
-                        }
-                        else
-                        {
-                            successCount += summary.Count;
-                        }
+                        failedCount += summary.Count;
+                    }
+                    else
+                    {
+                        successCount += summary.Count;
                     }
                 }
-
-                var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
-                var requestsRate = new RequestsRate(string.Empty, 0);
-                var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
-
-                if (timeElapsed > 1000)
-                {
-                    requestsRate = new RequestsRate("1s", Math.Round((successCount / (timeElapsed / 1000)), 2));
-                }
-                if (isCoolDown && timeElapsed > cooldownPeriodMs)
-                {
-                    requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriodMs}ms",
-                        Math.Round((successCount / timeElapsed) * cooldownPeriodMs, 2));
-                }
-
-                _snapshot.Update(
-                    _maxConcurrentRequests,
-                    _currentActiveRequests,
-                    _requestsCount,
-                    _skippedRequestsCount,
-                    successCount,
-                    failedCount,
-                    timeElapsed,
-                    requestsRate,
-                    requestsRatePerCoolDown);
-
-                await PushMetricAsync(token); // NEW
-                return true;
             }
-            catch (Exception ex)
+
+            var timeElapsed = _throughputWatch.Elapsed.TotalMilliseconds;
+            var requestsRate = new RequestsRate(string.Empty, 0);
+            var requestsRatePerCoolDown = new RequestsRate(string.Empty, 0);
+
+            if (timeElapsed > 1000)
             {
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                    $"Failed to update throughput metrics \n{ex}", LPSLoggingLevel.Error, token);
-                return false;
+                requestsRate = new RequestsRate("1s", Math.Round((successCount / (timeElapsed / 1000)), 2));
             }
+            if (isCoolDown && timeElapsed > cooldownPeriodMs)
+            {
+                requestsRatePerCoolDown = new RequestsRate($"{cooldownPeriodMs}ms",
+                    Math.Round((successCount / timeElapsed) * cooldownPeriodMs, 2));
+            }
+
+            _snapshot.Update(
+                _maxConcurrentRequests,
+                _currentActiveRequests,
+                _requestsCount,
+                _skippedRequestsCount,
+                successCount,
+                failedCount,
+                timeElapsed,
+                requestsRate,
+                requestsRatePerCoolDown);
         }
 
         // A timer is necessary for periods of inactivity while the test is still running
         private void ScheduleMetricsUpdate()
         {
             _timer?.Dispose(); // To avoid multuple timers running at the same time.
-            _timer = new Timer(_ =>
+            _timer = new Timer(OnMetricsUpdate, state: null, dueTime: _publishIntervalMs, period: Timeout.Infinite);
+        }
+
+        private async void OnMetricsUpdate(object state)
+        {
+            if (!_isStarted || _disposed) return;
+
+            bool lockTaken = false;
+            try
             {
-                if (!_isStarted || _disposed) return;
+                await _semaphore.WaitAsync().ConfigureAwait(false);
+                lockTaken = true;
+                UpdateMetrics();
+                var snapshot = _snapshot.CreateCopy();
+                _semaphore.Release();
+                lockTaken = false;
 
-                try
-                {
-                    // Serialize with the rest of the aggregator operations
-                    _semaphore.Wait();
+                await PushMetricAsync(snapshot, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException) when (_disposed)
+            {
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"Failed to update throughput metrics\n{ex}", LPSLoggingLevel.Error);
+            }
+            finally
+            {
+                if (lockTaken)
+                    _semaphore.Release();
 
-                    // Fully synchronous inside the callback to avoid async-void pitfalls:
-                    UpdateMetricsAsync(CancellationToken.None)
-                        .AsTask().GetAwaiter().GetResult();
-                }
-                catch (Exception ex)
+                if (!_disposed)
                 {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId,
-                        $"Failed to update throughput metrics\n{ex}", LPSLoggingLevel.Error);
+                    try
+                    {
+                        _timer?.Change(_publishIntervalMs, Timeout.Infinite);
+                    }
+                    catch (ObjectDisposedException) when (_disposed)
+                    {
+                    }
                 }
-                finally
-                {
-                    // Ensure release even if UpdateMetricsAsync throws
-                    if (_semaphore.CurrentCount == 0)
-                        _semaphore.Release();
-                }
-            }, state: null, dueTime: 0, period: 1000); // first tick after 1s is fine
+            }
         }
 
         /// <summary>
@@ -197,7 +206,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                     _maxConcurrentRequests = _currentActiveRequests;
                 }
                 ++_requestsCount;
-                await UpdateMetricsAsync(token);
                 return true;
             }
             finally
@@ -215,7 +223,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 await _semaphore.WaitAsync(token); // Keep the is lock taken as a best practice - do not move the await _semaphore.WaitAsync(token); before the try immediatly and remove the isLockTaken
                 isLockTaken = true;
                 --_currentActiveRequests;
-                await UpdateMetricsAsync(token);
                 return true;
             }
             finally
@@ -230,12 +237,11 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             bool isLockTaken = false;
             try
             {
-                await _semaphore.WaitAsync(token);
+                    await _semaphore.WaitAsync(token);
                 isLockTaken = true;
 
                 EnsureStarted();
                 ++_skippedRequestsCount;
-                await UpdateMetricsAsync(token);
                 return true;
             }
             finally
@@ -253,7 +259,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _throughputWatch.Stop();
             _timer?.Dispose();
             _timer = null;
-            _semaphore.Dispose();
         }
 
         /// <summary>
@@ -289,17 +294,13 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         #nullable restore
 
         // NEW: Serialize and push to Metrics variable system
-        private async Task PushMetricAsync(CancellationToken token)
+        private async Task PushMetricAsync(ThroughputMetricSnapshot snapshot, CancellationToken token)
         {
-            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false
-            });
+            var json = JsonSerializer.Serialize(snapshot, MetricJsonSerializerOptions);
 
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
 
-            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
+            await _metricDataStore.PushAsync(_httpIteration, snapshot, token);
         }
 
     }
@@ -330,6 +331,23 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             HttpMethod = httpMethod;
             URL = url;
             HttpVersion = httpVersion;
+        }
+
+        public ThroughputMetricSnapshot CreateCopy()
+        {
+            return new ThroughputMetricSnapshot(RoundName, IterationId, IterationName, HttpMethod, URL, HttpVersion)
+            {
+                TimeStamp = TimeStamp,
+                TimeElapsed = TimeElapsed,
+                RequestsRate = RequestsRate,
+                RequestsRatePerCoolDownPeriod = RequestsRatePerCoolDownPeriod,
+                RequestsCount = RequestsCount,
+                SkippedRequestsCount = SkippedRequestsCount,
+                MaxConcurrentRequests = MaxConcurrentRequests,
+                CurrentActiveRequests = CurrentActiveRequests,
+                SuccessfulRequestCount = SuccessfulRequestCount,
+                FailedRequestsCount = FailedRequestsCount
+            };
         }
 
         public override LPSMetricType MetricType => LPSMetricType.Throughput;

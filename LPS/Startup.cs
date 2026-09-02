@@ -41,6 +41,7 @@ using LPS.Infrastructure.Skip;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.VariableServices;
 using LPS.Infrastructure.Monitoring.MetricsVariables;
+using LPS.Infrastructure.Monitoring.Metrics;
 using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.Hosts;
@@ -114,8 +115,11 @@ namespace LPS
                 services.AddSingleton<IMetricAggregatorFactory, MetricAggregatorFactory>();
                 services.AddSingleton<IMetricsUiService, MetricsUiService>();
                 services.AddSingleton<ILiveMetricDataStore, LiveMetricDataStore>();
-                services.AddSingleton<IWindowedMetricDataStore, WindowedMetricDataStore>();
-                services.AddSingleton<ICumulativeMetricDataStore, CumulativeMetricDataStore>();
+                services.AddSingleton<IHistoricalWindowedMetricDataStore, HistoricalWindowedMetricDataStore>();
+                services.AddSingleton<IHistoricalCumulativeMetricDataStore, HistoricalCumulativeMetricDataStore>();
+                services.AddSingleton(hostContext.Configuration
+                    .GetSection("LPSAppSettings:LiveMetrics")
+                    .Get<LiveMetricsPublishingOptions>() ?? new LiveMetricsPublishingOptions());
                 services.AddSingleton<IPlanExecutionContext, PlanExecutionContext>();
                 services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                 services.AddSingleton<IMetricsVariableService, MetricsVariableService>();

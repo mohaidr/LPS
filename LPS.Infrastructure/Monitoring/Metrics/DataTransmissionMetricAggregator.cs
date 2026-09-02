@@ -28,6 +28,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
         // Lifetime active wall-clock (resumes across Start/Stop)
         private readonly Stopwatch _watch = new();
+        private readonly int _publishIntervalMs;
         private Timer _timer;
         private bool _isStarted;
         private bool _disposed;
@@ -43,7 +44,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
-            ILiveMetricDataStore metricDataStore)
+            ILiveMetricDataStore metricDataStore,
+            LiveMetricsPublishingOptions publishingOptions)
             : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
@@ -51,6 +53,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+            ArgumentNullException.ThrowIfNull(publishingOptions);
+            _publishIntervalMs = publishingOptions.PublishIntervalMs;
 
             _snapshot = new DataTransmissionMetricSnapshot(
                 _roundName,
@@ -61,7 +65,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 httpIteration.HttpRequest.HttpVersion);
 
             // Seed an initial snapshot
-            _ = PushMetricAsync(CancellationToken.None);
+            PushMetricAsync(_snapshot.CreateCopy(), CancellationToken.None).Wait();
         }
 
         /// <summary>
@@ -123,38 +127,55 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
-        // ---- Timer (same safe pattern you used in Throughput) ----
         private void ScheduleMetricsUpdate()
         {
             _timer?.Dispose(); // avoid duplicate timers if Start called again
-
-            _timer = new Timer(_ =>
-            {
-                if (!_isStarted || _disposed) return;
-
-                try
-                {
-                    _semaphore.Wait();
-
-                    // lifetime Bps = totals / elapsedActiveSeconds
-                    UpdateAndPushAsync(CancellationToken.None)
-                        .AsTask().GetAwaiter().GetResult();
-                }
-                catch (Exception ex)
-                {
-                    _logger.Log(_runtimeOperationIdProvider.OperationId,
-                        $"Failed to update data transmission metrics\n{ex}", LPSLoggingLevel.Error);
-                }
-                finally
-                {
-                    if (_semaphore.CurrentCount == 0)
-                        _semaphore.Release();
-                }
-            }, null, /*due*/ 0, /*period*/ 1000);
+            _timer = new Timer(OnMetricsUpdate, state: null, dueTime: _publishIntervalMs, period: Timeout.Infinite);
         }
 
-        // Under lock: compute lifetime metrics + push
-        private async ValueTask UpdateAndPushAsync(CancellationToken token)
+        private async void OnMetricsUpdate(object state)
+        {
+            if (!_isStarted || _disposed) return;
+
+            bool lockTaken = false;
+            try
+            {
+                await _semaphore.WaitAsync().ConfigureAwait(false);
+                lockTaken = true;
+                UpdateMetrics();
+                var snapshot = _snapshot.CreateCopy();
+                _semaphore.Release();
+                lockTaken = false;
+
+                await PushMetricAsync(snapshot, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException) when (_disposed)
+            {
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"Failed to update data transmission metrics\n{ex}", LPSLoggingLevel.Error);
+            }
+            finally
+            {
+                if (lockTaken)
+                    _semaphore.Release();
+
+                if (!_disposed)
+                {
+                    try
+                    {
+                        _timer?.Change(_publishIntervalMs, Timeout.Infinite);
+                    }
+                    catch (ObjectDisposedException) when (_disposed)
+                    {
+                    }
+                }
+            }
+        }
+
+        private void UpdateMetrics()
         {
             double elapsedSec = _watch.Elapsed.TotalSeconds;
             if (elapsedSec < 0.001) elapsedSec = 0.001; // guard early ticks
@@ -170,20 +191,14 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _snapshot.UpdateDataSent(_totalSentBytes, avgSentPerReq, upBps, wallMs);
             _snapshot.UpdateDataReceived(_totalRecvBytes, avgRecvPerReq, downBps, wallMs);
             _snapshot.UpdateAverageBytes(allBps, wallMs);
-
-            await PushMetricAsync(token);
         }
 
-        private async Task PushMetricAsync(CancellationToken token)
+        private async Task PushMetricAsync(DataTransmissionMetricSnapshot snapshot, CancellationToken token)
         {
-            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false
-            });
+            var json = JsonSerializer.Serialize(snapshot, MetricJsonSerializerOptions);
 
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
-            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
+            await _metricDataStore.PushAsync(_httpIteration, snapshot, token);
         }
 
         // Read the canonical lifetime RequestsCount from Throughput snapshot
@@ -202,7 +217,6 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _watch.Stop();
             _timer?.Dispose();
             _timer = null;
-            _semaphore.Dispose();
         }
 
         /// <summary>
@@ -246,6 +260,22 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             HttpMethod = httpMethod;
             URL = url;
             HttpVersion = httpVersion;
+        }
+
+        public DataTransmissionMetricSnapshot CreateCopy()
+        {
+            return new DataTransmissionMetricSnapshot(RoundName, IterationId, IterationName, HttpMethod, URL, HttpVersion)
+            {
+                TimeStamp = TimeStamp,
+                TimeElpased = TimeElpased,
+                DataSent = DataSent,
+                DataReceived = DataReceived,
+                AverageDataSent = AverageDataSent,
+                AverageDataReceived = AverageDataReceived,
+                UpstreamThroughputBps = UpstreamThroughputBps,
+                DownstreamThroughputBps = DownstreamThroughputBps,
+                ThroughputBps = ThroughputBps
+            };
         }
 
         public override LPSMetricType MetricType => LPSMetricType.DataTransmission;

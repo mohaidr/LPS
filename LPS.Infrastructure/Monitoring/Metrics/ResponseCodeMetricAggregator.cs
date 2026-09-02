@@ -18,7 +18,7 @@ using LPS.Infrastructure.Monitoring.MetricsServices;
 
 namespace LPS.Infrastructure.Monitoring.Metrics
 {
-    public class ResponseCodeMetricAggregator : BaseMetricAggregator, IResponseMetricCollector
+    public class ResponseCodeMetricAggregator : BaseMetricAggregator, IResponseMetricCollector, IDisposable
     {
 
         private const string MetricName = "ResponseCode";
@@ -30,13 +30,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         // NEW: metrics variable service
         private readonly IMetricsVariableService _metricsVariableService;
         private readonly string _roundName;
+        private readonly int _publishIntervalMs;
+        private Timer _timer;
+        private bool _isStarted;
+        private bool _disposed;
         internal ResponseCodeMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService // NEW
-        , ILiveMetricDataStore metricDataStore) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
+        , ILiveMetricDataStore metricDataStore,
+            LiveMetricsPublishingOptions publishingOptions) : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
@@ -51,7 +56,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
-            PushMetricAsync(default).Wait();
+            ArgumentNullException.ThrowIfNull(publishingOptions);
+            _publishIntervalMs = publishingOptions.PublishIntervalMs;
+            PushMetricAsync(_snapshot.CreateCopy(), default).Wait();
         }
 
         protected override IMetricShapshot Snapshot => _snapshot;
@@ -68,16 +75,63 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             isLockTaken = true;
             try
             {
+                EnsureStarted();
                 _snapshot.Update(response);
                 _eventSource.WriteResponseBreakDownMetrics(response.StatusCode);
-
-                await PushMetricAsync(token); // NEW
             }
             finally
             {
                 if (isLockTaken) _semaphore.Release();
             }
             return this;
+        }
+
+        private void EnsureStarted()
+        {
+            if (_isStarted || _disposed) return;
+            _isStarted = true;
+            _timer = new Timer(OnMetricsUpdate, state: null, dueTime: _publishIntervalMs, period: Timeout.Infinite);
+        }
+
+        private async void OnMetricsUpdate(object state)
+        {
+            if (!_isStarted || _disposed) return;
+
+            bool lockTaken = false;
+            try
+            {
+                await _semaphore.WaitAsync().ConfigureAwait(false);
+                lockTaken = true;
+                var snapshot = _snapshot.CreateCopy();
+                _semaphore.Release();
+                lockTaken = false;
+
+                await PushMetricAsync(snapshot, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException) when (_disposed)
+            {
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"Failed to publish response-code metrics\n{ex}", LPSLoggingLevel.Error);
+            }
+            finally
+            {
+                if (lockTaken)
+                    _semaphore.Release();
+
+                if (!_disposed)
+                {
+                    try
+                    {
+                        _timer?.Change(_publishIntervalMs, Timeout.Infinite);
+                    }
+                    catch (ObjectDisposedException) when (_disposed)
+                    {
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -110,17 +164,21 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         #nullable restore
 
         // NEW: serialize and publish the dimension set to the variable system
-        private async Task PushMetricAsync(CancellationToken token)
+        private async Task PushMetricAsync(ResponseCodeMetricSnapshot snapshot, CancellationToken token)
         {
-            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false
-            });
+            var json = JsonSerializer.Serialize(snapshot, MetricJsonSerializerOptions);
 
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
 
-            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
+            await _metricDataStore.PushAsync(_httpIteration, snapshot, token);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _timer?.Dispose();
+            _timer = null;
         }
 
 
@@ -167,6 +225,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
 
             TimeStamp = DateTime.UtcNow;
+        }
+
+        public ResponseCodeMetricSnapshot CreateCopy()
+        {
+            var copy = new ResponseCodeMetricSnapshot(RoundName, IterationId, IterationName, HttpMethod, URL, HttpVersion)
+            {
+                TimeStamp = TimeStamp
+            };
+
+            foreach (var summary in _responseSummaries)
+            {
+                copy._responseSummaries.Add(new HttpResponseSummary(
+                    summary.HttpStatusCode,
+                    summary.HttpStatusReason,
+                    summary.Count));
+            }
+
+            return copy;
         }
 
         public override LPSMetricType MetricType => LPSMetricType.ResponseCode;

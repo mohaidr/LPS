@@ -4,6 +4,8 @@ using LPS.Infrastructure.Common;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.EventSources;
 using System;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,6 +13,12 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 {
     public abstract class BaseMetricAggregator(HttpIteration httpIteration, ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider, ILiveMetricDataStore metricDataStore) : IMetricAggregator
     {
+        protected static readonly JsonSerializerOptions MetricJsonSerializerOptions = new()
+        {
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            WriteIndented = false
+        };
+
         protected HttpIteration _httpIteration = httpIteration;
         protected abstract IMetricShapshot Snapshot { get; }
         protected ILogger _logger = logger;

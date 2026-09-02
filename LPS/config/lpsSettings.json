@@ -33,6 +33,9 @@
       "Port": 8009,
       "RefreshRate": 3
     },
+    "LiveMetrics": {
+      "PublishIntervalMs": 250
+    },
     "InfluxDB": {
       "Enabled": false,
       "Url": "<YOUR_INFLUXDB_URL>",

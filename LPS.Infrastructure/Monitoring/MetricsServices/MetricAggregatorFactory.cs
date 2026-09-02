@@ -23,6 +23,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly IMetricsVariableService _metricsVarSvc;
         private readonly ILiveMetricDataStore _metricDataStore;
         private readonly IRuleService _rulesService;
+        private readonly LiveMetricsPublishingOptions _publishingOptions;
 
         private sealed record Entry(HttpIteration Iteration, IReadOnlyList<IMetricAggregator> Aggregators);
 
@@ -34,13 +35,17 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
             ILiveMetricDataStore metricDataStore,
-            IRuleService rulesService)
+            IRuleService rulesService,
+            LiveMetricsPublishingOptions publishingOptions)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVarSvc = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
             _metricDataStore = metricDataStore ?? throw new ArgumentNullException(nameof(metricDataStore));
             _rulesService = rulesService ?? throw new ArgumentNullException(nameof(rulesService));
+            _publishingOptions = publishingOptions ?? throw new ArgumentNullException(nameof(publishingOptions));
+            if (_publishingOptions.PublishIntervalMs <= 0)
+                throw new ArgumentOutOfRangeException(nameof(publishingOptions), "PublishIntervalMs must be greater than zero.");
         }
 
         public IReadOnlyList<IMetricAggregator> GetOrCreate(HttpIteration iteration, string roundName)
@@ -103,10 +108,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             // are started lazily on first data record, not at creation time.
             var cumulative = new List<IMetricAggregator>
             {
-                new ResponseCodeMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
-                new DurationMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore),
-                new ThroughputMetricAggregator(httpIteration, roundName , _logger, _op, _metricsVarSvc, _rulesService, _metricDataStore),
-                new DataTransmissionMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore)
+                new ResponseCodeMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore, _publishingOptions),
+                new DurationMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore, _publishingOptions),
+                new ThroughputMetricAggregator(httpIteration, roundName , _logger, _op, _metricsVarSvc, _rulesService, _metricDataStore, _publishingOptions),
+                new DataTransmissionMetricAggregator(httpIteration, roundName, _logger, _op, _metricsVarSvc, _metricDataStore, _publishingOptions)
             };
 
             // Windowed aggregators (lightweight - no queue/coordinator dependency)

@@ -31,7 +31,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         ServerTimeApp       // Server-Timing: app;dur=X
     }
 
-    public class DurationMetricAggregator : BaseMetricAggregator, IDurationMetricCollector
+    public class DurationMetricAggregator : BaseMetricAggregator, IDurationMetricCollector, IDisposable
     {
         private const string MetricName = "Duration";
 
@@ -40,13 +40,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         private readonly ResponseMetricEventSource _eventSource;
         private readonly IMetricsVariableService _metricsVariableService; // NEW
         private readonly string _roundName;
+        private readonly int _publishIntervalMs;
+        private Timer _timer;
+        private bool _isStarted;
+        private bool _disposed;
         internal DurationMetricAggregator(
             HttpIteration httpIteration,
             string roundName,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IMetricsVariableService metricsVariableService,
-            ILiveMetricDataStore metricDataStore) // NEW
+            ILiveMetricDataStore metricDataStore,
+            LiveMetricsPublishingOptions publishingOptions) // NEW
             : base(httpIteration, logger, runtimeOperationIdProvider, metricDataStore)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
@@ -54,6 +59,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _runtimeOperationIdProvider = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
             _metricsVariableService = metricsVariableService ?? throw new ArgumentNullException(nameof(metricsVariableService));
+            ArgumentNullException.ThrowIfNull(publishingOptions);
+            _publishIntervalMs = publishingOptions.PublishIntervalMs;
             _eventSource = ResponseMetricEventSource.GetInstance(_httpIteration);
             _snapshot = new DurationMetricSnapshot(
                 roundName,
@@ -62,7 +69,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
                 httpIteration.HttpRequest.HttpMethod,
                 httpIteration.HttpRequest.Url.Url,
                 httpIteration.HttpRequest.HttpVersion, _logger);
-            PushMetricAsync(default).Wait();
+            PushMetricAsync(_snapshot.CreateCopy(), default).Wait();
 
         }
 
@@ -75,10 +82,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.TotalTime, totalTime, token);
                 _eventSource.WriteTimeMetrics(totalTime);
-
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -92,8 +98,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.ReceivingTime, receivingTime, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -107,8 +113,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.SendingTime, sendingTime, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -122,8 +128,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.TLSHandshakeTime, tlsHandshakeTime, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -137,10 +143,9 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.TCPHandshakeTime, tcpHandshakeTime, token);
                 _eventSource.WriteTimeMetrics(tcpHandshakeTime);
-
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -154,8 +159,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.TimeToFirstByte, timeToFirstByte, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -169,8 +174,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.WaitingTime, waitingTime, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -184,8 +189,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.ServerTime, serverTime, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -199,8 +204,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.ServerTimeDB, serverTimeDB, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -214,8 +219,8 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.ServerTimeCache, serverTimeCache, token);
-                await PushMetricAsync(token);
             }
             finally
             {
@@ -229,14 +234,62 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _semaphore.WaitAsync(token);
             try
             {
+                EnsureStarted();
                 await _snapshot.UpdateAsync(DurationMetricType.ServerTimeApp, serverTimeApp, token);
-                await PushMetricAsync(token);
             }
             finally
             {
                 _semaphore.Release();
             }
             return this;
+        }
+
+        private void EnsureStarted()
+        {
+            if (_isStarted || _disposed) return;
+            _isStarted = true;
+            _timer = new Timer(OnMetricsUpdate, state: null, dueTime: _publishIntervalMs, period: Timeout.Infinite);
+        }
+
+        private async void OnMetricsUpdate(object state)
+        {
+            if (!_isStarted || _disposed) return;
+
+            bool lockTaken = false;
+            try
+            {
+                await _semaphore.WaitAsync().ConfigureAwait(false);
+                lockTaken = true;
+                var snapshot = _snapshot.CreateCopy();
+                _semaphore.Release();
+                lockTaken = false;
+
+                await PushMetricAsync(snapshot, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (ObjectDisposedException) when (_disposed)
+            {
+            }
+            catch (Exception ex)
+            {
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"Failed to publish duration metrics\n{ex}", LPSLoggingLevel.Error);
+            }
+            finally
+            {
+                if (lockTaken)
+                    _semaphore.Release();
+
+                if (!_disposed)
+                {
+                    try
+                    {
+                        _timer?.Change(_publishIntervalMs, Timeout.Infinite);
+                    }
+                    catch (ObjectDisposedException) when (_disposed)
+                    {
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -287,17 +340,21 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             };
         }
 
-        private async Task PushMetricAsync(CancellationToken token)
+        private async Task PushMetricAsync(DurationMetricSnapshot snapshot, CancellationToken token)
         {
-            var json = JsonSerializer.Serialize(_snapshot, new JsonSerializerOptions
-            {
-                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-                WriteIndented = false
-            });
+            var json = JsonSerializer.Serialize(snapshot, MetricJsonSerializerOptions);
 
             await _metricsVariableService.PutMetricAsync(_roundName, _httpIteration.Name, MetricName, json, token);
 
-            await _metricDataStore.PushAsync(_httpIteration, _snapshot, token);
+            await _metricDataStore.PushAsync(_httpIteration, snapshot, token);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            _timer?.Dispose();
+            _timer = null;
         }
     }
 
@@ -374,6 +431,28 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
 
         }
+
+        public DurationMetricSnapshot CreateCopy()
+        {
+            var copy = new DurationMetricSnapshot(RoundName, IterationId, IterationName, HttpMethod, URL, HttpVersion, _logger)
+            {
+                TimeStamp = TimeStamp
+            };
+
+            copy.TotalTime.CopyFrom(TotalTime);
+            copy.TCPHandshakeTime.CopyFrom(TCPHandshakeTime);
+            copy.SSLHandshakeTime.CopyFrom(SSLHandshakeTime);
+            copy.TimeToFirstByte.CopyFrom(TimeToFirstByte);
+            copy.WaitingTime.CopyFrom(WaitingTime);
+            copy.ReceivingTime.CopyFrom(ReceivingTime);
+            copy.SendingTime.CopyFrom(SendingTime);
+            copy.ServerTime.CopyFrom(ServerTime);
+            copy.DBServerTime.CopyFrom(DBServerTime);
+            copy.ServerCacheTime.CopyFrom(ServerCacheTime);
+            copy.ServerAppTime.CopyFrom(ServerAppTime);
+            return copy;
+        }
+
         public override LPSMetricType MetricType => LPSMetricType.Time;
         
         // Cumulative metrics (never reset - for final summary)
@@ -402,6 +481,18 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             public double P90 { get; private set; }
             public double P95 { get; private set; }
             public double P99 { get; private set; }
+
+            public void CopyFrom(LatencyMetric source)
+            {
+                Sum = source.Sum;
+                Average = source.Average;
+                Min = source.Min;
+                Max = source.Max;
+                P50 = source.P50;
+                P90 = source.P90;
+                P95 = source.P95;
+                P99 = source.P99;
+            }
 
             public void Update(double valueMs)
             {
