@@ -249,7 +249,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private double _sum;
         private double _min = double.MaxValue;
         private double _max;
-        private bool _hasNonZeroValues;
+        private bool _hasValues;
 
         public void Record(double valueMs)
         {
@@ -258,21 +258,13 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _min = Math.Min(_min, valueMs);
             _max = Math.Max(_max, valueMs);
 
-            // Only record to histogram if value is meaningful (> 0)
-            // This prevents 0-value metrics from skewing percentiles
-            if (valueMs > 0)
-            {
-                _hasNonZeroValues = true;
-                long histValue = Math.Min((long)Math.Ceiling(valueMs), 1000000);
-                histValue = Math.Max(1, histValue); // Histogram requires minimum 1
-                _histogram.RecordValue(histValue);
-            }
+            _hasValues = true;
+            _histogram.RecordValue(Math.Clamp((long)Math.Ceiling(valueMs), 0, 1000000));
         }
 
         public WindowedTimingMetric ToMetric()
         {
-            // If no non-zero values were recorded, return 0 for percentiles
-            var hasData = _hasNonZeroValues && _histogram.TotalCount > 0;
+            var hasData = _hasValues && _histogram.TotalCount > 0;
             
             return new WindowedTimingMetric
             {

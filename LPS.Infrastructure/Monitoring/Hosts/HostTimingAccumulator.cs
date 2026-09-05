@@ -21,8 +21,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             _min = Math.Min(_min, value);
             _max = Math.Max(_max, value);
 
-            if (value > 0)
-                _histogram.RecordValue(Math.Clamp((long)Math.Ceiling(value), 1, 1000000));
+            _histogram.RecordValue(Math.Clamp((long)Math.Ceiling(value), 0, 1000000));
         }
 
         public CumulativeTimingMetric ToCumulativeMetric() => new()

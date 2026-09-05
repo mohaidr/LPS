@@ -25,6 +25,7 @@ using Node = LPS.Infrastructure.Nodes.Node;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Monitoring.Cumulative;
+using LPS.Infrastructure.Monitoring.Hosts;
 
 namespace LPS.UI.Core.Host
 {
@@ -52,6 +53,10 @@ namespace LPS.UI.Core.Host
         ITestExecutionService testExecutionService,
         IWindowedMetricsCoordinator windowedMetricsCoordinator,
         ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,
+        IWindowedMetricsQueue windowedMetricsQueue,
+        ICumulativeMetricsQueue cumulativeMetricsQueue,
+        IHostWindowedMetricsQueue hostWindowedMetricsQueue,
+        IHostCumulativeMetricsQueue hostCumulativeMetricsQueue,
         CancellationTokenSource cts) : IHostedService
     {
         readonly NodeHealthMonitorBackgroundService _nodeHealthMonitorBackgroundService = nodeHealthMonitorBackgroundService;
@@ -76,6 +81,10 @@ namespace LPS.UI.Core.Host
         readonly ITestOrchestratorService _testOrchestratorService = testOrchestratorService;
         readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator = windowedMetricsCoordinator;
         readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator = cumulativeMetricsCoordinator;
+        readonly IWindowedMetricsQueue _windowedMetricsQueue = windowedMetricsQueue;
+        readonly ICumulativeMetricsQueue _cumulativeMetricsQueue = cumulativeMetricsQueue;
+        readonly IHostWindowedMetricsQueue _hostWindowedMetricsQueue = hostWindowedMetricsQueue;
+        readonly IHostCumulativeMetricsQueue _hostCumulativeMetricsQueue = hostCumulativeMetricsQueue;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
         INode? _localNode;
@@ -92,6 +101,7 @@ namespace LPS.UI.Core.Host
                 {
                     RegisterLocalNode();
                     _localNode = _nodeRegistry.GetLocalNode();
+                    _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(_cts.Token); });
                     // Start metrics coordinators (they fire events for collectors to push data)
                     await _windowedMetricsCoordinator.StartAsync(_cts.Token);
                     await _cumulativeMetricsCoordinator.StartAsync(_cts.Token);
@@ -103,7 +113,7 @@ namespace LPS.UI.Core.Host
 
                 if (_command_args != null && _command_args.Length > 0)
                 {
-                    var commandLineManager = new CommandLineManager(_command_args, _testOrchestratorService, _testExecutionService, _nodeRegistry, _clusterConfiguration, _entityDiscoveryService, _testTriggerNotifier, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _cts);
+                    var commandLineManager = new CommandLineManager(_command_args, _testOrchestratorService, _testExecutionService, _nodeRegistry, _clusterConfiguration, _entityDiscoveryService, _testTriggerNotifier, _logger, _httpClientManager, _config, _watchdog, _runtimeOperationIdProvider, _appSettings, _httpIterationExecutionCommandStatusMonitor, _metricDataMonitor, _variableManager, _placeholderResolverService, _dashboardService, _cts);
                     await commandLineManager.RunAsync(_cts.Token);
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Command execution has completed", LPSLoggingLevel.Verbose, cancellationToken);
                 }
@@ -143,11 +153,24 @@ namespace LPS.UI.Core.Host
                     
                     await _cumulativeMetricsCoordinator.StopAsync(CancellationToken.None);
                     await _windowedMetricsCoordinator.StopAsync(CancellationToken.None);
+                    await WaitForMetricsQueuesToDrainAsync();
                     await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
                 }
 
             }
         }
+
+        private async Task WaitForMetricsQueuesToDrainAsync()
+        {
+            while (_windowedMetricsQueue.Reader.Count > 0
+                || _cumulativeMetricsQueue.Reader.Count > 0
+                || _hostWindowedMetricsQueue.Reader.Count > 0
+                || _hostCumulativeMetricsQueue.Reader.Count > 0)
+            {
+                await Task.Delay(100);
+            }
+        }
+
         private void RegisterLocalNode()
         {
             Node node = _nodeMetadata.NodeType == NodeType.Master ? new MasterNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory) : new WorkerNode(_nodeMetadata, _clusterConfiguration, _nodeRegistry, _customGrpcClientFactory);

@@ -362,7 +362,7 @@ namespace LPS.Infrastructure.LPSClients
                         await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.TimeToFirstByte, ttfb, linkedCts.Token);
 
                         // Calculate and update Waiting Time (TTFB - DNS - TCP - TLS - Upload)
-                        double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds - uploadTime;
+                        double waitingTime = Math.Max(0, timeToHeadersWatch.Elapsed.TotalMilliseconds - uploadTime);
                         await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
                         await _hostMetricsService.UpdateDurationAsync(resolvedHostKey, DurationMetricType.WaitingTime, waitingTime, linkedCts.Token);
 
@@ -443,7 +443,7 @@ namespace LPS.Infrastructure.LPSClients
                     await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.SendingTime, uploadTime, token);
 
                 // Calculate and update Waiting Time even on failure
-                double waitingTime = timeToHeadersWatch.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime - uploadTime;
+                double waitingTime = Math.Max(0, timeToHeadersWatch.Elapsed.TotalMilliseconds - dnsResolutionTime - tcpHandshakeTime - tlsHandshakeTime - uploadTime);
                 await _metricsService.TryUpdateDurationMetricAsync(httpRequestEntity.Id, DurationMetricType.WaitingTime, waitingTime, token);
                 if (hostKey != null)
                     await _hostMetricsService.UpdateDurationAsync(hostKey.Value, DurationMetricType.WaitingTime, waitingTime, token);

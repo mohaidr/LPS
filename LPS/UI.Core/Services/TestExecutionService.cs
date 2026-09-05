@@ -135,6 +135,16 @@ namespace LPS.UI.Core.Services
 
         public async Task ExecuteAsync(TestRunParameters parameters)
         {
+            await RunAsync(parameters, true);
+        }
+
+        public Task<bool> PrepareAsync(TestRunParameters parameters)
+        {
+            return RunAsync(parameters, false);
+        }
+
+        private async Task<bool> RunAsync(TestRunParameters parameters, bool executePlan)
+        {
             var localNode = _nodeRegistry.GetLocalNode();
             var planDto = parameters.IsInline
                 ? parameters.PlanDto
@@ -146,7 +156,7 @@ namespace LPS.UI.Core.Services
             if (!planResults.IsValid)
             {
                 planResults.PrintValidationErrors(_logger);
-                return;
+                return false;
             }
 
             var planCommand = _mapper.Map<Plan.SetupCommand>(planDto);
@@ -168,7 +178,7 @@ namespace LPS.UI.Core.Services
                     if (!varResults.IsValid)
                     {
                         varResults.PrintValidationErrors(_logger);
-                        return;
+                        return false;
                     }
 
                     var variableHolder = await BuildVariableHolder(variableDto, true, parameters.CancellationToken);
@@ -187,7 +197,7 @@ namespace LPS.UI.Core.Services
                         if (!envResults.IsValid)
                         {
                             envResults.PrintValidationErrors(_logger);
-                            return;
+                            return false;
                         }
 
                         foreach (var variableDto in environmentDto.Variables)
@@ -196,7 +206,7 @@ namespace LPS.UI.Core.Services
                             if (!varResults.IsValid)
                             {
                                 varResults.PrintValidationErrors(_logger);
-                                return;
+                                return false;
                             }
                             var variableHolder = await BuildVariableHolder(variableDto, false, parameters.CancellationToken);
                             _variableManager.PutAsync(variableDto.Name, variableHolder, parameters.CancellationToken).Wait();
@@ -224,7 +234,7 @@ namespace LPS.UI.Core.Services
                     if (!roundResults.IsValid)
                     {
                         roundResults.PrintValidationErrors();
-                        return;
+                        return false;
                     }
 
                     if (roundEntity.IsValid)
@@ -265,11 +275,22 @@ namespace LPS.UI.Core.Services
 
             if (plan.GetReadOnlyRounds().Any())
             {
-                var hosts = plan.GetReadOnlyRounds().SelectMany(r => r.GetReadOnlyIterations().Select(iteration =>  ((HttpIteration)iteration).HttpRequest.Url.BaseUrl));
-                await _warmupService.TryWarmUpAsync(hosts.Distinct(), requestsPerHost: 1, ct: parameters.CancellationToken);
+                if (executePlan)
+                {
+                    var hosts = plan.GetReadOnlyRounds().SelectMany(r => r.GetReadOnlyIterations().Select(iteration =>  ((HttpIteration)iteration).HttpRequest.Url.BaseUrl));
+                    await _warmupService.TryWarmUpAsync(hosts.Distinct(), requestsPerHost: 1, ct: parameters.CancellationToken);
+                }
                 
                 await RegisterEntities(plan);
                 _hostMetricsAggregatorFactory.Prefill();
+
+                if (!executePlan)
+                {
+                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                        $"Plan '{plan.Name}' is ready for worker metrics", LPSLoggingLevel.Information);
+                    return true;
+                }
+
                 await localNode.SetNodeStatus(NodeStatus.Running);
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
@@ -285,10 +306,12 @@ namespace LPS.UI.Core.Services
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
                 await PersistAllSnapshotsAsync(plan, _cts.Token);
+                return true;
             }
             else
             {
                 _logger.Log(_runtimeOperationIdProvider.OperationId, "No rounds to execute", LPSLoggingLevel.Information);
+                return false;
             }
         }
 

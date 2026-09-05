@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,7 +15,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         /// <summary>
         /// Event fired when it's time to push cumulative metrics.
         /// </summary>
-        event Action? OnPushInterval;
+        event Func<Task>? OnPushInterval;
 
         /// <summary>
         /// Start the coordinator timer.
@@ -55,8 +56,9 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
         private Timer? _timer;
         private bool _isRunning;
         private bool _disposed;
+        private readonly SemaphoreSlim _callbackLock = new(1, 1);
 
-        public event Action? OnPushInterval;
+        public event Func<Task>? OnPushInterval;
 
         public int IntervalMs { get; }
         public bool IsRunning => _isRunning;
@@ -92,7 +94,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             // Fire one final event so collectors can push final state
             try
             {
-                OnPushInterval?.Invoke();
+                InvokePushIntervalAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -110,23 +112,49 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask StopAsync(CancellationToken token)
+        public async ValueTask StopAsync(CancellationToken token)
         {
-            Stop();
-            return ValueTask.CompletedTask;
+            if (!_isRunning) return;
+            _timer?.Change(Timeout.Infinite, Timeout.Infinite);
+            try
+            {
+                await InvokePushIntervalAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                _isRunning = false;
+            }
         }
 
-        private void OnTimerTick(object? state)
+        private async void OnTimerTick(object? state)
         {
             if (!_isRunning) return;
 
             try
             {
-                OnPushInterval?.Invoke();
+                await InvokePushIntervalAsync();
             }
             catch
             {
                 // Swallow exceptions from handlers to prevent timer from dying
+            }
+        }
+
+        private async Task InvokePushIntervalAsync()
+        {
+            await _callbackLock.WaitAsync();
+            try
+            {
+                var handlers = OnPushInterval?.GetInvocationList().Cast<Func<Task>>() ?? [];
+                await Task.WhenAll(handlers.Select(handler => handler()));
+            }
+            finally
+            {
+                _callbackLock.Release();
             }
         }
 

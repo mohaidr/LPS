@@ -29,8 +29,8 @@ namespace LPS.UI.Core.LPSValidators
 
             RuleFor(config => config.ExpectedNumberOfWorkers)
                 .NotNull()
-                .GreaterThanOrEqualTo(1)
-                .WithMessage("ExpectedNumberOfWorkers must be at least 1.");
+                .GreaterThanOrEqualTo(0)
+                .WithMessage("ExpectedNumberOfWorkers cannot be negative.");
         }
     }
 

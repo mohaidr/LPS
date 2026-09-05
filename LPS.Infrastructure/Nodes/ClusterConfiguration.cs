@@ -17,7 +17,7 @@ namespace LPS.Infrastructure.Nodes
         {
             MasterNodeIP = masterNodeIp;
             GRPCPort = defaultGrpcPort;
-            ExpectedNumberOfWorkers = 1;
+            ExpectedNumberOfWorkers = 0;
             MasterNodeIsWorker = true;
         }
 

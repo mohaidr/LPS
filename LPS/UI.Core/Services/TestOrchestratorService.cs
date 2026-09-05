@@ -30,11 +30,9 @@ namespace LPS.UI.Core.Services
         private readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         private readonly ITestExecutionService _testExecutionService;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
-        readonly NodeHealthMonitorBackgroundService _nodeHealthMonitorBackgroundService;
         INodeMetadata _nodeMetadata;
         TestRunParameters _parameters;
         public TestOrchestratorService(
-            NodeHealthMonitorBackgroundService nodeHealthMonitorBackgroundService,
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             INodeRegistry nodeRegistry,
@@ -51,14 +49,11 @@ namespace LPS.UI.Core.Services
             _nodeRegistry = nodeRegistry;
             _customGrpcClientFactory = customGrpcClientFactory;
             _logger = logger;
-            _nodeHealthMonitorBackgroundService = nodeHealthMonitorBackgroundService;
             _nodeMetadata = nodeMetadata;
         } 
         public async Task RunAsync(TestRunParameters parameters)
         {
             //RegisterLocalNode();
-            _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(parameters.CancellationToken); });
-
             _parameters = parameters;
             var localNode = _nodeRegistry.GetLocalNode();
             if (localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
@@ -70,7 +65,16 @@ namespace LPS.UI.Core.Services
                 }
                 else
                 {
+                    if (!await _testExecutionService.PrepareAsync(parameters))
+                        return;
+
                     await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
+
+                    var workersToWaitFor = Math.Max(1, _clusterConfiguration.ExpectedNumberOfWorkers);
+                    while (_nodeRegistry.Query(node => node.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker).Count() < workersToWaitFor)
+                    {
+                        await Task.Delay(500, parameters.CancellationToken);
+                    }
                 }
                 // notify slave nodes to run
                 foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))

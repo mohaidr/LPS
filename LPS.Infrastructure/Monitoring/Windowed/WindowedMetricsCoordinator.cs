@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         /// Event fired when a window closes. Subscribers should snapshot their data,
         /// push to queue, and reset.
         /// </summary>
-        event Action? OnWindowClosed;
+        event Func<Task>? OnWindowClosed;
 
         /// <summary>
         /// Start the coordinator timer.
@@ -62,8 +63,9 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private int _windowSequence;
         private bool _isRunning;
         private bool _disposed;
+        private readonly SemaphoreSlim _callbackLock = new(1, 1);
 
-        public event Action? OnWindowClosed;
+        public event Func<Task>? OnWindowClosed;
 
         public int WindowIntervalMs { get; }
         public int WindowSequence => _windowSequence;
@@ -102,7 +104,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             try
             {
 
-                OnWindowClosed?.Invoke();
+                InvokeWindowClosedAsync().GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {
@@ -120,13 +122,26 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             return ValueTask.CompletedTask;
         }
 
-        public ValueTask StopAsync(CancellationToken token)
+        public async ValueTask StopAsync(CancellationToken token)
         {
-            Stop();
-            return ValueTask.CompletedTask;
+            if (!_isRunning) return;
+            _timer?.Change(Timeout.Infinite, Timeout.Infinite);
+            Interlocked.Increment(ref _windowSequence);
+            try
+            {
+                await InvokeWindowClosedAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.ToString());
+            }
+            finally
+            {
+                _isRunning = false;
+            }
         }
 
-        private void OnTimerTick(object? state)
+        private async void OnTimerTick(object? state)
         {
             if (!_isRunning) return;
 
@@ -134,11 +149,25 @@ namespace LPS.Infrastructure.Monitoring.Windowed
 
             try
             {
-                OnWindowClosed?.Invoke();
+                await InvokeWindowClosedAsync();
             }
             catch
             {
                 // Swallow exceptions from handlers to prevent timer from dying
+            }
+        }
+
+        private async Task InvokeWindowClosedAsync()
+        {
+            await _callbackLock.WaitAsync();
+            try
+            {
+                var handlers = OnWindowClosed?.GetInvocationList().Cast<Func<Task>>() ?? [];
+                await Task.WhenAll(handlers.Select(handler => handler()));
+            }
+            finally
+            {
+                _callbackLock.Release();
             }
         }
 

@@ -472,6 +472,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
         public class LatencyMetric
         {
             private readonly LongHistogram _histogram = new(1, 1000000, 3);  // Each instance has its own
+            private long _count;
 
             public double Sum { get; private set; }
             public double Average { get; private set; }
@@ -484,6 +485,7 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             public void CopyFrom(LatencyMetric source)
             {
+                _count = source._count;
                 Sum = source.Sum;
                 Average = source.Average;
                 Min = source.Min;
@@ -496,19 +498,24 @@ namespace LPS.Infrastructure.Monitoring.Metrics
 
             public void Update(double valueMs)
             {
-                // incremental mean without keeping a counter field:
-                // Average != 0 implies we've had N = Sum/Average samples so far
-                double n = Average != 0 ? (Sum / Average) : 0;
-                Max = Math.Max(valueMs, Max);
-                Min = n == 0 ? valueMs : Math.Min(valueMs, Min);
-                Sum += valueMs;
-                Average = Sum / (n + 1);
+                if (!double.IsFinite(valueMs))
+                    return;
 
-                _histogram.RecordValue((long)valueMs);
-                P50 = _histogram.GetValueAtPercentile(50);
-                P90 = _histogram.GetValueAtPercentile(90);
-                P95 = _histogram.GetValueAtPercentile(95);
-                P99 = _histogram.GetValueAtPercentile(99);
+                valueMs = Math.Max(0, valueMs);
+                _count++;
+                Max = Math.Max(valueMs, Max);
+                Min = _count == 1 ? valueMs : Math.Min(valueMs, Min);
+                Sum += valueMs;
+                Average = Sum / _count;
+
+                _histogram.RecordValue(Math.Clamp((long)Math.Ceiling(valueMs), 0, 1000000));
+                if (_histogram.TotalCount > 0)
+                {
+                    P50 = _histogram.GetValueAtPercentile(50);
+                    P90 = _histogram.GetValueAtPercentile(90);
+                    P95 = _histogram.GetValueAtPercentile(95);
+                    P99 = _histogram.GetValueAtPercentile(99);
+                }
             }
         }
 

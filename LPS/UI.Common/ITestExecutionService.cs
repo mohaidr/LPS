@@ -10,5 +10,6 @@ namespace LPS.UI.Common
     public interface ITestExecutionService
     {
         Task ExecuteAsync(TestRunParameters parameters);
+        Task<bool> PrepareAsync(TestRunParameters parameters);
     }
 }

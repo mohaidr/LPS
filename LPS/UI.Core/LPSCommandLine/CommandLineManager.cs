@@ -18,6 +18,7 @@ using LPS.AutoMapper;
 using LPS.Infrastructure.Nodes;
 using LPS.Common.Interfaces;
 using LPS.UI.Core.Services;
+using LPS.UI.Core.Host;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 
 namespace LPS.UI.Core.LPSCommandLine
@@ -68,6 +69,7 @@ namespace LPS.UI.Core.LPSCommandLine
         CaptureCliCommand _captureCliCommand;
         IterationCliCommand _iterationCliCommand;
         RunCliCommand _runCliCommand;
+        MasterCliCommand _masterCliCommand;
         RecordCliCommand _recordCliCommand;
         LoggerCliCommand _loggerCliCommand;
         WatchDogCliCommand _watchdogCliCommand;
@@ -80,6 +82,7 @@ namespace LPS.UI.Core.LPSCommandLine
         readonly CancellationTokenSource _cts;
         readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
         readonly IPlaceholderResolverService _placeholderResolverService;
+        readonly IDashboardService _dashboardService;
         readonly IMapper _mapper;
         readonly IEntityDiscoveryService _entityDiscoveryService;
         readonly ITestTriggerNotifier _testTriggerNotifier;
@@ -104,6 +107,7 @@ namespace LPS.UI.Core.LPSCommandLine
             IMetricsDataMonitor lpsMonitoringEnroller,
             IVariableManager variableManager,
             IPlaceholderResolverService placeholderResolverService,
+            IDashboardService dashboardService,
             CancellationTokenSource cts)
         {
             _entityDiscoveryService = entityDiscoveryService;
@@ -124,6 +128,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _variableManager = variableManager;
             _cts = cts;
             _placeholderResolverService = placeholderResolverService;
+            _dashboardService = dashboardService;
             
             // Initialize shared command context for other services
             CommandContext.Initialize(_command_args, IsTestExecutionCommand(_command_args));
@@ -149,6 +154,7 @@ namespace LPS.UI.Core.LPSCommandLine
             _roundCliCommand = new RoundCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _iterationCliCommand = new IterationCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
             _runCliCommand = new RunCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _testOrchestratorService);
+            _masterCliCommand = new MasterCliCommand(_rootCliCommand, _nodeRegistry, _clusterConfiguration, _testExecutionService, _dashboardService, _logger, _runtimeOperationIdProvider);
             _recordCliCommand = new RecordCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider);
             _loggerCliCommand = new LoggerCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.FileLoggerOptions);
             _httpClientCliCommand = new HttpClientCliCommand(_rootCliCommand, _logger, _runtimeOperationIdProvider, _appSettings.HttpClientOptions);
@@ -186,6 +192,9 @@ namespace LPS.UI.Core.LPSCommandLine
                     break;
                 case string cmd when cmd.StartsWith("run"):
                     _runCliCommand.SetHandler(cancellationToken);
+                    break;
+                case string cmd when cmd.StartsWith("master"):
+                    _masterCliCommand.SetHandler(cancellationToken);
                     break;
                 case string cmd when cmd.StartsWith("logger"):
                     _loggerCliCommand.SetHandler(cancellationToken);

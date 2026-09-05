@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             _coordinator.OnPushInterval += OnPushInterval;
         }
 
-        private async void OnPushInterval()
+        private async Task OnPushInterval()
         {
             if (_disposed || Interlocked.Exchange(ref _pushInProgress, 1) != 0) return;
             try
@@ -128,7 +128,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             _coordinator.OnWindowClosed += OnWindowClosed;
         }
 
-        private void OnWindowClosed()
+        private Task OnWindowClosed()
         {
             if (!_disposed)
             {
@@ -144,6 +144,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                 ApplyStatus(snapshot, _executionStatus?.GetStatus(_aggregator.HostKey));
                 _queue.TryEnqueue(snapshot);
             }
+
+            return Task.CompletedTask;
         }
 
         private static void ApplyStatus(
