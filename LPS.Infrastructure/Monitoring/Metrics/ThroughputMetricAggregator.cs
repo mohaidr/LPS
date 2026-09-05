@@ -251,6 +251,26 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             }
         }
 
+        // Recomputes success/failure from the latest response codes and republishes, so the final snapshot reconciles with Total.
+        public async Task ReconcileAsync(CancellationToken token)
+        {
+            if (_disposed) return;
+
+            ThroughputMetricSnapshot snapshot;
+            await _semaphore.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                UpdateMetrics();
+                snapshot = _snapshot.CreateCopy();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+
+            await PushMetricAsync(snapshot, token).ConfigureAwait(false);
+        }
+
         public void Dispose()
         {
             if (_disposed) return;

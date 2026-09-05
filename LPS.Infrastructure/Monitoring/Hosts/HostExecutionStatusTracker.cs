@@ -36,6 +36,11 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             System.Func<EntityExecutionStatus> getStatus) =>
             _hosts.GetOrAdd(hostKey, static _ => new()).TryAdd(iterationId, getStatus);
 
+        internal System.Collections.Generic.IReadOnlyCollection<System.Guid> GetIterationIds(HostKey hostKey) =>
+            _hosts.TryGetValue(hostKey, out var statuses)
+                ? statuses.Keys.ToArray()
+                : System.Array.Empty<System.Guid>();
+
         internal HostExecutionStatus GetStatus(HostKey hostKey)
         {
             if (!_hosts.TryGetValue(hostKey, out var statuses) || statuses.IsEmpty)

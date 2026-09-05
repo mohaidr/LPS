@@ -89,20 +89,19 @@ namespace LPS.UI.Common.Extensions
                         HttpClientConfigSection);
 
                     var fileLogger = serviceProvider.GetRequiredService<ILogger>();
-                    HttpClientConfiguration instance = HttpClientConfiguration.GetDefaultInstance();
 
-                    if (!isValid)
+                    HttpClientConfiguration instance;
+                    if (isValid && validOptions != null)
                     {
-                        LogConfigurationIssue(fileLogger, "Http Client", HttpClientConfigSection, validOptions == null);
+                        instance = MapToHttpClientConfiguration(validOptions);
                     }
                     else
                     {
-                        instance = validOptions != null
-                            ? MapToHttpClientConfiguration(validOptions)
-                            : instance;
+                        LogConfigurationIssue(fileLogger, "Http Client", HttpClientConfigSection, validOptions == null);
+                        instance = HttpClientConfiguration.GetDefaultInstance();
                     }
 
-                    LogAppliedConfiguration(instance, !isValid || validOptions ==null, "LPS Http Client", fileLogger);
+                    LogAppliedConfiguration(instance, !isValid || validOptions == null, "LPS Http Client", fileLogger);
                     return instance;
                 });
             });
@@ -129,17 +128,17 @@ namespace LPS.UI.Common.Extensions
                     var clusterConfiguration = serviceProvider.GetRequiredService<IClusterConfiguration>();
                     var operationIdProvider = serviceProvider.GetRequiredService<IRuntimeOperationIdProvider>();
 
-                    Watchdog watchdog = Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration);
-
-                    if (!isValid)
+                    // Construct exactly one Watchdog: its constructor starts a background sampler, so an
+                    // eagerly-created default would leak a second sampler that keeps logging/throttling.
+                    Watchdog watchdog;
+                    if (isValid && validOptions != null)
                     {
-                        LogConfigurationIssue(fileLogger, "Watchdog", WatchdogConfigSection, validOptions == null);
+                        watchdog = MapToWatchdog(validOptions, fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration);
                     }
                     else
                     {
-                        watchdog = validOptions != null
-                            ? MapToWatchdog(validOptions, fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration)
-                            : watchdog;
+                        LogConfigurationIssue(fileLogger, "Watchdog", WatchdogConfigSection, validOptions == null);
+                        watchdog = Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration);
                     }
 
                     LogAppliedConfiguration(watchdog, !isValid || validOptions == null, "Watchdog Configuration", fileLogger);
@@ -166,17 +165,16 @@ namespace LPS.UI.Common.Extensions
 
                     var logger = serviceProvider.GetRequiredService<ILogger>();
 
-                    //In case the cluster options were not provided, we assume that this is a single node test.
-                    ClusterConfiguration instance = ClusterConfiguration.GetDefaultInstance(INode.NodeIP, GlobalSettings.DefaultGRPCPort);
-                    if (!isValid)
+                    // Invalid/missing cluster options -> assume a single-node test (default).
+                    ClusterConfiguration instance;
+                    if (isValid && validOptions != null)
                     {
-                        LogConfigurationIssue(logger, "Cluster", ClusterConfigSection, validOptions == null);
+                        instance = MapToClusterConfiguration(validOptions);
                     }
                     else
                     {
-                        instance = validOptions!=null 
-                        ? MapToClusterConfiguration(validOptions)
-                        : instance;
+                        LogConfigurationIssue(logger, "Cluster", ClusterConfigSection, validOptions == null);
+                        instance = ClusterConfiguration.GetDefaultInstance(INode.NodeIP, GlobalSettings.DefaultGRPCPort);
                     }
 
                     LogAppliedConfiguration(instance, !isValid || validOptions == null, "LPS Cluster Configuration", logger);

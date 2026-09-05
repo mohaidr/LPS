@@ -57,11 +57,12 @@ public sealed class HostMetricsAggregatorTests
         await aggregator.UpdateDataReceivedAsync(70, CancellationToken.None);
         await aggregator.DecreaseConnectionsCountAsync(CancellationToken.None);
 
-        var firstWindow = aggregator.GetWindowedSnapshotAndReset();
-        var emptyWindow = aggregator.GetWindowedSnapshotAndReset();
-        var cumulative = aggregator.GetCumulativeSnapshot();
+        var firstWindow = aggregator.GetWindowedSnapshotAndReset(new HostFailureCounts(1, 0));
+        var emptyWindow = aggregator.GetWindowedSnapshotAndReset(default);
+        var cumulative = aggregator.GetCumulativeSnapshot(new HostFailureCounts(1, 0));
 
         Assert.Equal(1, firstWindow.Throughput.RequestsCount);
+        Assert.Equal(1, firstWindow.Throughput.SuccessfulRequestCount);
         Assert.Equal(2, firstWindow.Duration.TotalTime.Count);
         Assert.Equal(150, firstWindow.Duration.TotalTime.Average);
         Assert.Equal(30, firstWindow.DataTransmission.DataSent);
@@ -69,10 +70,12 @@ public sealed class HostMetricsAggregatorTests
         Assert.Single(firstWindow.ResponseCodes.ResponseSummaries);
 
         Assert.Equal(0, emptyWindow.Throughput.RequestsCount);
+        Assert.Equal(0, emptyWindow.Throughput.SuccessfulRequestCount);
         Assert.Equal(0, emptyWindow.Duration.TotalTime.Count);
         Assert.Empty(emptyWindow.ResponseCodes.ResponseSummaries);
 
         Assert.Equal(1, cumulative.Throughput.RequestsCount);
+        Assert.Equal(1, cumulative.Throughput.SuccessfulRequestCount);
         Assert.Equal(150, cumulative.Duration.TotalTime?.Average);
         Assert.Equal(30, cumulative.DataTransmission.DataSent);
         Assert.Equal(70, cumulative.DataTransmission.DataReceived);
@@ -102,7 +105,7 @@ public sealed class HostMetricsAggregatorTests
         });
 
         await Task.WhenAll(updates);
-        var cumulative = aggregator.GetCumulativeSnapshot();
+        var cumulative = aggregator.GetCumulativeSnapshot(new HostFailureCounts(updateCount, 0));
 
         Assert.Equal(updateCount, cumulative.Throughput.RequestsCount);
         Assert.Equal(updateCount, cumulative.Throughput.SuccessfulRequestCount);

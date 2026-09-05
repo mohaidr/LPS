@@ -12,8 +12,6 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         private bool _disposed;
         private int _requestsCount;
         private int _skippedRequestsCount;
-        private int _successfulRequestsCount;
-        private int _failedRequestsCount;
         private int _activeRequests;
         private int _maxConcurrentRequests;
 
@@ -61,24 +59,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             }
         }
 
-        public async ValueTask UpdateResponseOutcomeAsync(bool isSuccessful, CancellationToken token)
-        {
-            await _semaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                ThrowIfDisposed();
-                if (isSuccessful)
-                    _successfulRequestsCount++;
-                else
-                    _failedRequestsCount++;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public WindowedThroughputData GetWindowDataAndReset(double elapsedSeconds)
+        // Success/failure are folded from the host's iterations (rule-based) per window; the host itself never classifies responses.
+        public WindowedThroughputData GetWindowDataAndReset(double elapsedSeconds, long successful, long failed)
         {
             _semaphore.Wait();
             try
@@ -88,19 +70,17 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                 {
                     RequestsCount = _requestsCount,
                     SkippedRequestsCount = _skippedRequestsCount,
-                    SuccessfulRequestCount = _successfulRequestsCount,
-                    FailedRequestsCount = _failedRequestsCount,
+                    SuccessfulRequestCount = (int)successful,
+                    FailedRequestsCount = (int)failed,
                     MaxConcurrentRequests = _maxConcurrentRequests,
                     RequestsPerSecond = _requestsCount / elapsedSeconds,
                     ErrorRate = _requestsCount > 0
-                        ? (double)_failedRequestsCount / _requestsCount * 100
+                        ? (double)failed / _requestsCount * 100
                         : 0
                 };
 
                 _requestsCount = 0;
                 _skippedRequestsCount = 0;
-                _successfulRequestsCount = 0;
-                _failedRequestsCount = 0;
                 _maxConcurrentRequests = _activeRequests;
                 return data;
             }

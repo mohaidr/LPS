@@ -173,6 +173,25 @@ namespace LPS.Infrastructure.Monitoring.Metrics
             await _metricDataStore.PushAsync(_httpIteration, snapshot, token);
         }
 
+        // Publishes the current response-code counts to the store on demand, so a final reconcile reads them.
+        public async Task FlushAsync(CancellationToken token)
+        {
+            if (_disposed) return;
+
+            ResponseCodeMetricSnapshot snapshot;
+            await _semaphore.WaitAsync(token).ConfigureAwait(false);
+            try
+            {
+                snapshot = _snapshot.CreateCopy();
+            }
+            finally
+            {
+                _semaphore.Release();
+            }
+
+            await PushMetricAsync(snapshot, token).ConfigureAwait(false);
+        }
+
         public void Dispose()
         {
             if (_disposed) return;

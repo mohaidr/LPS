@@ -26,6 +26,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         private readonly ICumulativeMetricsCoordinator? _cumulativeCoordinator;
         private readonly IMetricAggregatorFactory? _metricAggregatorFactory;
         private readonly IEntityRepositoryService? _entityRepositoryService;
+        private readonly ILiveMetricDataStore? _liveMetricDataStore;
         private readonly HostExecutionStatusTracker? _executionStatus;
         private bool _disposed;
 
@@ -40,7 +41,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             ICumulativeMetricsCoordinator cumulativeCoordinator,
             IMetricAggregatorFactory metricAggregatorFactory,
             IEntityRepositoryService entityRepositoryService,
-            IIterationStatusMonitor iterationStatusMonitor)
+            IIterationStatusMonitor iterationStatusMonitor,
+            ILiveMetricDataStore liveMetricDataStore)
         {
             _windowedQueue = windowedQueue;
             _windowedCoordinator = windowedCoordinator;
@@ -48,6 +50,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             _cumulativeCoordinator = cumulativeCoordinator;
             _metricAggregatorFactory = metricAggregatorFactory;
             _entityRepositoryService = entityRepositoryService;
+            _liveMetricDataStore = liveMetricDataStore;
             _executionStatus = new HostExecutionStatusTracker(iterationStatusMonitor);
         }
 
@@ -135,10 +138,10 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         {
             var aggregator = new HostMetricsAggregator(hostKey);
             var windowedCollector = _windowedQueue != null && _windowedCoordinator != null
-                ? new HostWindowedMetricsCollector(aggregator, _windowedQueue, _windowedCoordinator, _executionStatus)
+                ? new HostWindowedMetricsCollector(aggregator, _windowedQueue, _windowedCoordinator, _executionStatus, _liveMetricDataStore)
                 : null;
             var cumulativeCollector = _cumulativeQueue != null && _cumulativeCoordinator != null
-                ? new HostCumulativeMetricsCollector(aggregator, _cumulativeQueue, _cumulativeCoordinator, _executionStatus)
+                ? new HostCumulativeMetricsCollector(aggregator, _cumulativeQueue, _cumulativeCoordinator, _executionStatus, _liveMetricDataStore, _metricAggregatorFactory)
                 : null;
 
             return new Entry(aggregator, windowedCollector, cumulativeCollector);

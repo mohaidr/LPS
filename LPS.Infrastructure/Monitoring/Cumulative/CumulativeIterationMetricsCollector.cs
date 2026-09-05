@@ -88,8 +88,16 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
                     case EntityExecutionStatus.Cancelled:
                     case EntityExecutionStatus.Terminated:
                     case EntityExecutionStatus.Skipped:
-                        // Terminal - push final and cleanup
+                        // Terminal - fold the last responses in so Successful + Failed == Total, then push final and cleanup
                         _finalSnapshotSent = true;
+                        try
+                        {
+                            if (ResponseCodeAggregator != null)
+                                await ResponseCodeAggregator.FlushAsync(CancellationToken.None);
+                            if (ThroughputAggregator != null)
+                                await ThroughputAggregator.ReconcileAsync(CancellationToken.None);
+                        }
+                        catch { /* still emit the final snapshot below */ }
                         PushSnapshot(isFinal: true, status.ToString());
                         Dispose(); // Unsubscribe from coordinator
                         break;

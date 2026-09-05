@@ -17,8 +17,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         ValueTask UpdateDurationAsync(DurationMetricType metricType, double valueMs, CancellationToken token);
         ValueTask UpdateDataSentAsync(double totalBytes, CancellationToken token);
         ValueTask UpdateDataReceivedAsync(double totalBytes, CancellationToken token);
-        HostCumulativeMetricsSnapshot GetCumulativeSnapshot();
-        HostWindowedMetricsSnapshot GetWindowedSnapshotAndReset();
+        HostCumulativeMetricsSnapshot GetCumulativeSnapshot(HostFailureCounts counts);
+        HostWindowedMetricsSnapshot GetWindowedSnapshotAndReset(HostFailureCounts windowCounts);
     }
 
     public interface IHostMetricsAggregatorFactory

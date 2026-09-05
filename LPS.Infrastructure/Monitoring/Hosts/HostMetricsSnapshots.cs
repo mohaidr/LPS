@@ -5,6 +5,9 @@ using LPS.Infrastructure.Monitoring.Windowed;
 
 namespace LPS.Infrastructure.Monitoring.Hosts
 {
+    /// <summary>Rule-based success/failure totals folded from a host's iterations.</summary>
+    public readonly record struct HostFailureCounts(long Successful, long Failed);
+
     public sealed class HostCumulativeMetricsSnapshot
     {
         public HostKey HostKey { get; init; }

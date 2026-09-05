@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -219,21 +220,26 @@ namespace LPS.Infrastructure.Watchdog
             Volatile.Write(ref _latestCPUPercentage, cpuPct);
 
 
-            int hostsExceeded = 0;
-            int hostsCooldown = 0;
             int hostCount = 0;
+            var hostsOverMax = new List<string>();
+            var hostsOverCooldown = new List<string>();
             foreach (var host in _observedHosts.Keys)
             {
                 int active = await GetHostActiveConnectionsCountAsync(host).ConfigureAwait(false);
                 if (active < 0) continue; // failure already logged
                 _hostConnectionCounts[host] = active;
                 hostCount++;
-                if (active > MaxConcurrentConnectionsCountPerHostName) hostsExceeded++;
-                if (active > CoolDownConcurrentConnectionsCountPerHostName) hostsCooldown++;
+                if (active > MaxConcurrentConnectionsCountPerHostName)
+                    hostsOverMax.Add($"{host} ({active} active)");
+                if (active > CoolDownConcurrentConnectionsCountPerHostName)
+                    hostsOverCooldown.Add($"{host} ({active} active)");
             }
 
-
-            bool memExceeded = memoryMB > MaxMemoryMB;
+            bool memExceeded = false;
+            if (memoryMB > MaxMemoryMB)
+            {
+                memExceeded = true;
+            }
             bool cpuExceeded = cpuPct >= MaxCPUPercentage;
             bool memCooldown = memoryMB > CoolDownMemoryMB;
             bool cpuCooldown = cpuPct >= CoolDownCPUPercentage;
@@ -241,13 +247,13 @@ namespace LPS.Infrastructure.Watchdog
             bool hot, cooling;
             if (SuspensionMode == SuspensionMode.All)
             {
-                hot = memExceeded && cpuExceeded && (hostCount > 0 && hostsExceeded == hostCount);
-                cooling = memCooldown && cpuCooldown && (hostCount > 0 && hostsCooldown == hostCount);
+                hot = memExceeded && cpuExceeded && (hostCount > 0 && hostsOverMax.Count == hostCount);
+                cooling = memCooldown && cpuCooldown && (hostCount > 0 && hostsOverCooldown.Count == hostCount);
             }
             else
             {
-                hot = memExceeded || cpuExceeded || (hostsExceeded > 0);
-                cooling = memCooldown || cpuCooldown || (hostsCooldown > 0);
+                hot = memExceeded || cpuExceeded || (hostsOverMax.Count > 0);
+                cooling = memCooldown || cpuCooldown || (hostsOverCooldown.Count > 0);
             }
 
             // ----- Resume cooling if pause window elapsed -----
@@ -282,11 +288,28 @@ namespace LPS.Infrastructure.Watchdog
             // ----- Manage cooling lifecycle -----
             if (next != ResourceState.Cool)
             {
+                // Attribute pressure to what crossed the threshold for the CURRENT state:
+                // Hot -> the max thresholds that triggered it; Cooling -> the cooldown thresholds still above the recovery watermark.
+                var drivers = new List<string>();
+                if (next == ResourceState.Hot)
+                {
+                    if (memExceeded) drivers.Add($"memory={memoryMB:F0}MB");
+                    if (cpuExceeded) drivers.Add($"cpu={cpuPct:F0}%");
+                    if (hostsOverMax.Count > 0) drivers.Add($"hosts=[{string.Join(", ", hostsOverMax)}]");
+                }
+                else  
+                {
+                    if (memCooldown) drivers.Add($"memory={memoryMB:F0}MB");
+                    if (cpuCooldown) drivers.Add($"cpu={cpuPct:F0}%");
+                    if (hostsOverCooldown.Count > 0) drivers.Add($"hosts=[{string.Join(", ", hostsOverCooldown)}]");
+                }
+                string coolingDriver = drivers.Count > 0 ? string.Join(" ", drivers) : "no active pressure";
+
                 if (!_isCoolingStarted)
                 {
                     _isCoolingStarted = true;
                     _maxCoolingStopwatch.Restart();
-                    await _logger.LogAsync(_operationIdProvider.OperationId, "Watchdog: cooling has started", LPSLoggingLevel.Information, token).ConfigureAwait(false);
+                    await _logger.LogAsync(_operationIdProvider.OperationId, $"Watchdog: cooling has started ({coolingDriver})", LPSLoggingLevel.Information, token).ConfigureAwait(false);
                 }
 
                 if (_maxCoolingStopwatch.Elapsed.TotalSeconds > MaxCoolingPeriod)
@@ -296,7 +319,7 @@ namespace LPS.Infrastructure.Watchdog
                     _maxCoolingStopwatch.Reset();
                     _isCoolingStarted = false;
                     await _logger.LogAsync(_operationIdProvider.OperationId,
-                        $"Watchdog: max cooling period reached - pausing cooling for {ResumeCoolingAfter}s", LPSLoggingLevel.Warning, token).ConfigureAwait(false);
+                        $"Watchdog: max cooling period reached - pausing cooling for {ResumeCoolingAfter}s ({coolingDriver})", LPSLoggingLevel.Warning, token).ConfigureAwait(false);
                     next = ResourceState.Cool;
                 }
                 else
@@ -311,7 +334,7 @@ namespace LPS.Infrastructure.Watchdog
                     }
 
                     await _logger.LogAsync(_operationIdProvider.OperationId,
-                        $"Watchdog: pressure detected (mem={memoryMB:F0}MB cpu={cpuPct:F0}% state={next})",
+                        $"Watchdog: pressure detected ({coolingDriver}; state={next})",
                         LPSLoggingLevel.Warning, token).ConfigureAwait(false);
                 }
             }
@@ -384,8 +407,13 @@ namespace LPS.Infrastructure.Watchdog
                 }
                 else if (adm.Limited)
                 {
+                    // Free slots left before this host hits its concurrency cap.
                     int headroom = Math.Max(0, MaxConcurrentConnectionsCountPerHostName - pair.Value);
+
+                    // Admit this tick the smaller of the ramp budget and the free slots, so we never overshoot the cap.
                     Volatile.Write(ref adm.Remaining, Math.Min(adm.PerTick, headroom));
+
+                    // Widen the ramp for the next tick (slow-start), never past the concurrency cap.
                     adm.PerTick = Math.Min(adm.PerTick * AdmissionRampGrowthFactor,
                                            MaxConcurrentConnectionsCountPerHostName);
                 }

@@ -60,8 +60,6 @@ namespace LPS.Infrastructure.Monitoring.Hosts
 
             await _cumulativeResponseCodes.UpdateAsync(response, token).ConfigureAwait(false);
             await _windowedResponseCodes.UpdateAsync(response, token).ConfigureAwait(false);
-            await _cumulativeThroughput.UpdateResponseOutcomeAsync(response.IsSuccessStatusCode, token).ConfigureAwait(false);
-            await _windowedThroughput.UpdateResponseOutcomeAsync(response.IsSuccessStatusCode, token).ConfigureAwait(false);
         }
 
         public async ValueTask UpdateDurationAsync(DurationMetricType metricType, double valueMs, CancellationToken token)
@@ -85,12 +83,12 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             await _windowedDataTransmission.UpdateDataReceivedAsync(totalBytes, token).ConfigureAwait(false);
         }
 
-        public HostCumulativeMetricsSnapshot GetCumulativeSnapshot()
+        public HostCumulativeMetricsSnapshot GetCumulativeSnapshot(HostFailureCounts counts)
         {
             ThrowIfDisposed();
             var timestamp = DateTime.UtcNow;
             var elapsedSeconds = Math.Max((timestamp - _startedAt).TotalSeconds, 0.001);
-            var throughput = _cumulativeThroughput.GetCumulativeData(elapsedSeconds);
+            var throughput = _cumulativeThroughput.GetCumulativeData(elapsedSeconds, counts.Successful, counts.Failed);
 
             return new HostCumulativeMetricsSnapshot
             {
@@ -103,7 +101,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             };
         }
 
-        public HostWindowedMetricsSnapshot GetWindowedSnapshotAndReset()
+        public HostWindowedMetricsSnapshot GetWindowedSnapshotAndReset(HostFailureCounts windowCounts)
         {
             _windowSnapshotSemaphore.Wait();
             try
@@ -116,7 +114,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                     HostKey = HostKey,
                     WindowStart = _windowStartedAt,
                     WindowEnd = windowEnd,
-                    Throughput = _windowedThroughput.GetWindowDataAndReset(elapsedSeconds),
+                    Throughput = _windowedThroughput.GetWindowDataAndReset(elapsedSeconds, windowCounts.Successful, windowCounts.Failed),
                     Duration = _windowedDuration.GetWindowDataAndReset(),
                     DataTransmission = _windowedDataTransmission.GetWindowDataAndReset(elapsedSeconds),
                     ResponseCodes = _windowedResponseCodes.GetWindowDataAndReset()

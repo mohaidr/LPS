@@ -12,8 +12,6 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         private bool _disposed;
         private long _requestsCount;
         private long _skippedRequestsCount;
-        private long _successfulRequestsCount;
-        private long _failedRequestsCount;
         private int _activeRequests;
         private int _maxConcurrentRequests;
 
@@ -61,24 +59,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             }
         }
 
-        public async ValueTask UpdateResponseOutcomeAsync(bool isSuccessful, CancellationToken token)
-        {
-            await _semaphore.WaitAsync(token).ConfigureAwait(false);
-            try
-            {
-                ThrowIfDisposed();
-                if (isSuccessful)
-                    _successfulRequestsCount++;
-                else
-                    _failedRequestsCount++;
-            }
-            finally
-            {
-                _semaphore.Release();
-            }
-        }
-
-        public CumulativeThroughputData GetCumulativeData(double elapsedSeconds)
+        // Success/failure are folded from the host's iterations (rule-based); the host itself never classifies responses.
+        public CumulativeThroughputData GetCumulativeData(double elapsedSeconds, long successful, long failed)
         {
             _semaphore.Wait();
             try
@@ -88,11 +70,11 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                 {
                     RequestsCount = _requestsCount,
                     SkippedRequestsCount = _skippedRequestsCount,
-                    SuccessfulRequestCount = _successfulRequestsCount,
-                    FailedRequestsCount = _failedRequestsCount,
+                    SuccessfulRequestCount = successful,
+                    FailedRequestsCount = failed,
                     MaxConcurrentRequests = _maxConcurrentRequests,
                     RequestsPerSecond = _requestsCount / elapsedSeconds,
-                    ErrorRate = _requestsCount > 0 ? (double)_failedRequestsCount / _requestsCount * 100 : 0,
+                    ErrorRate = _requestsCount > 0 ? (double)failed / _requestsCount * 100 : 0,
                     TimeElapsedMs = elapsedSeconds * 1000
                 };
             }
