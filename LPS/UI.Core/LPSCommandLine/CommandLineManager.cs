@@ -40,6 +40,12 @@ namespace LPS.UI.Core.LPSCommandLine
             if (args == null || args.Length == 0)
                 return false;
 
+            if (args.Any(arg => arg.Equals("--version", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("--help", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("-h", StringComparison.OrdinalIgnoreCase)
+                || arg.Equals("-?", StringComparison.OrdinalIgnoreCase)))
+                return false;
+
             string joinedCommand = string.Join(" ", args).ToLowerInvariant().Trim();
 
             foreach (var configCmd in ConfigCommands)
