@@ -26,6 +26,7 @@ using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.Hosts;
+using Microsoft.Extensions.Hosting;
 
 namespace LPS.UI.Core.Host
 {
@@ -57,7 +58,8 @@ namespace LPS.UI.Core.Host
         ICumulativeMetricsQueue cumulativeMetricsQueue,
         IHostWindowedMetricsQueue hostWindowedMetricsQueue,
         IHostCumulativeMetricsQueue hostCumulativeMetricsQueue,
-        CancellationTokenSource cts) : IHostedService
+        IHostApplicationLifetime applicationLifetime,
+        CancellationTokenSource cts) : BackgroundService
     {
         readonly NodeHealthMonitorBackgroundService _nodeHealthMonitorBackgroundService = nodeHealthMonitorBackgroundService;
         readonly ICustomGrpcClientFactory _customGrpcClientFactory= customGrpcClientFactory;
@@ -85,10 +87,11 @@ namespace LPS.UI.Core.Host
         readonly ICumulativeMetricsQueue _cumulativeMetricsQueue = cumulativeMetricsQueue;
         readonly IHostWindowedMetricsQueue _hostWindowedMetricsQueue = hostWindowedMetricsQueue;
         readonly IHostCumulativeMetricsQueue _hostCumulativeMetricsQueue = hostCumulativeMetricsQueue;
+        readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
         INode? _localNode;
-        public async Task StartAsync(CancellationToken cancellationToken)
+        protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
             try
             {
@@ -157,6 +160,7 @@ namespace LPS.UI.Core.Host
                     await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
                 }
 
+                _applicationLifetime.StopApplication();
             }
         }
 
@@ -178,8 +182,9 @@ namespace LPS.UI.Core.Host
             _nodeRegistry.RegisterNode(node); // register locally
         }
 
-        public async Task StopAsync(CancellationToken cancellationToken)
+        public override async Task StopAsync(CancellationToken cancellationToken)
         {
+            await base.StopAsync(cancellationToken);
             await _logger.FlushAsync();
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "--------------  LPS V1 - App Exited  --------------", LPSLoggingLevel.Verbose, cancellationToken);
             _programCompleted = true;
