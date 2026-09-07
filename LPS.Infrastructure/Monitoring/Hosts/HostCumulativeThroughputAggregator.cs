@@ -73,7 +73,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                     SuccessfulRequestCount = successful,
                     FailedRequestsCount = failed,
                     MaxConcurrentRequests = _maxConcurrentRequests,
-                    RequestsPerSecond = _requestsCount / elapsedSeconds,
+                    RequestsPerSecond = successful / elapsedSeconds,
                     ErrorRate = _requestsCount > 0 ? (double)failed / _requestsCount * 100 : 0,
                     TimeElapsedMs = elapsedSeconds * 1000
                 };

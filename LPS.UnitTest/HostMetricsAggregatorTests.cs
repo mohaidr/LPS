@@ -10,6 +10,19 @@ namespace LPS.UnitTest;
 public sealed class HostMetricsAggregatorTests
 {
     [Fact]
+    public void CumulativeRequestRate_UsesSuccessfulRequestsAcrossIterations()
+    {
+        using var aggregator = new HostCumulativeThroughputAggregator();
+
+        var cumulative = aggregator.GetCumulativeData(
+            elapsedSeconds: 2,
+            successful: 20,
+            failed: 5);
+
+        Assert.Equal(10, cumulative.RequestsPerSecond);
+    }
+
+    [Fact]
     public void HostStatus_IsCompletedOnlyWhenAllTrackedIterationsAreTerminal()
     {
         var firstStatus = EntityExecutionStatus.Success;

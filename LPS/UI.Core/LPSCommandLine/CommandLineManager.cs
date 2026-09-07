@@ -25,13 +25,6 @@ namespace LPS.UI.Core.LPSCommandLine
 {
     public class CommandLineManager
     {
-        // Config commands that are NOT test execution commands
-        private static readonly string[] ConfigCommands =
-        [
-            "create", "round", "iteration", "variable", "capture",
-            "logger", "httpclient", "watchdog", "cluster", "dashboard", "influxdb", "record"
-        ];
-
         /// <summary>
         /// Determines if the command arguments represent a test execution command.
         /// </summary>
@@ -46,15 +39,10 @@ namespace LPS.UI.Core.LPSCommandLine
                 || arg.Equals("-?", StringComparison.OrdinalIgnoreCase)))
                 return false;
 
-            string joinedCommand = string.Join(" ", args).ToLowerInvariant().Trim();
-
-            foreach (var configCmd in ConfigCommands)
-            {
-                if (joinedCommand.StartsWith(configCmd))
-                    return false;
-            }
-
-            return true;
+            return args[0].Equals("run", StringComparison.OrdinalIgnoreCase)
+                || args[0].Equals("master", StringComparison.OrdinalIgnoreCase)
+                || args.Any(arg => arg.Equals("--url", StringComparison.OrdinalIgnoreCase)
+                    || arg.Equals("-u", StringComparison.OrdinalIgnoreCase));
         }
 
         private string[] _command_args;
