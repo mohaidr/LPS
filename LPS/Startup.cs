@@ -169,6 +169,7 @@ namespace LPS
                 services.AddSingleton<IExpressionEvaluator, ExpressionEvaluator>();
                 services.AddSingleton<IVariableFactory, VariableFactory>();
                 services.AddSingleton<IDashboardService, DashboardService>();
+                services.AddSingleton<IFinalizationDisplay, FinalizationDisplay>();
                 services.AddSingleton<NodeHealthMonitorBackgroundService>();
 
                 // Windowed metrics - new clean architecture
@@ -226,6 +227,10 @@ namespace LPS
             .UseInfluxDB()
             .ConfigureLogging(logging =>
             {
+                logging.Services.AddSingleton<Spectre.Console.IAnsiConsole>(Spectre.Console.AnsiConsole.Console);
+                logging.Services.AddSingleton<ILiveConsoleOutput, LiveConsoleOutput>();
+                logging.AddConsole(options => options.FormatterName = "spectre")
+                    .AddConsoleFormatter<LPS.UI.Core.Host.SpectreConsoleFormatter, Microsoft.Extensions.Logging.Console.SimpleConsoleFormatterOptions>();
                 // Suppress verbose System.Net.Http logging - only show warnings and errors
                 logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
             })

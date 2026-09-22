@@ -97,6 +97,15 @@ namespace LPS.UI.Core.LPSValidators
             })
             .WithMessage("'Run In Parallel' must be 'true', 'false', or a placeholder starting with '$'");
 
+            RuleFor(dto => dto.RunClientsSequentially)
+            .Must(value =>
+            {
+                return string.IsNullOrEmpty(value)
+                || value.StartsWith("$")
+                || bool.TryParse(value, out _);
+            })
+            .WithMessage("'Run Clients Sequentially' must be 'true', 'false', or a placeholder starting with '$'");
+
             // Validate stages if provided
             RuleForEach(dto => dto.Stages)
                 .ChildRules(stage =>

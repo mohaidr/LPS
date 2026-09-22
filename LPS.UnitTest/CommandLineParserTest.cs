@@ -8,11 +8,26 @@ using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Domain.LPSRequest.LPSHttpRequest;
+using LPS.UI.Core.LPSCommandLine;
+using System.CommandLine;
+using System.CommandLine.Parsing;
 
 namespace LPS.UnitTest
 {
     public class CommandLineParserTest
     {
+        [Fact]
+        public void RunClientsSequentially_WithoutValue_ParsesAsTrue()
+        {
+            var command = new RootCommand();
+            CommandLineOptions.AddOptionsToCommand(command, typeof(CommandLineOptions.LPSCommandOptions));
+
+            var result = command.Parse("--url https://wrnice.azure-api.net --numberofclients 100 -rc 100 --runClientsSequentially");
+
+            Assert.Empty(result.Errors);
+            Assert.Equal("true", result.GetValueForOption(CommandLineOptions.LPSCommandOptions.RunClientsSequentiallyOption));
+        }
+
         [Fact]
         public void DomainValidator_FailureRule_WithSkipRatio_IsValid()
         {

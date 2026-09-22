@@ -283,6 +283,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                     if (!validation.IsValid)
                     {
                         validation.PrintValidationErrors();
+                        ctx.ExitCode = 1;
+                        return;
                     }
 
                     ConfigurationService.SaveConfiguration(output, planToSave);

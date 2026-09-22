@@ -60,6 +60,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
                 RunInParallelOption.AddAlias("-rip");
+                RunClientsSequentiallyOption.AddAlias("-rcs");
                 SaveOption.AddAlias("-s");
                 IterationNameOption.AddAlias("-in");
                 RequestCountOption.AddAlias("-rc");
@@ -92,6 +93,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
                 AddCaseInsensitiveAliases(RunInParallelOption, "--runinparallel");
+                AddCaseInsensitiveAliases(RunClientsSequentiallyOption, "--runClientsSequentially");
                 AddCaseInsensitiveAliases(SaveOption, "--save");
                 AddCaseInsensitiveAliases(IterationNameOption, "--iterationname");
                 AddCaseInsensitiveAliases(RequestCountOption, "--requestcount");
@@ -194,6 +196,15 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
+            };
+
+            public static Option<string> RunClientsSequentiallyOption { get; } = new Option<string>(
+                name: "--runClientsSequentially",
+                description: "Run each client after the previous client completes",
+                parseArgument: ParseBoolOptionArgument)
+            {
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne
             };
 
             public static Option<bool> SaveOption { get; } = new Option<bool>(
@@ -579,6 +590,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 NumberOfClientsOption.AddAlias("-nc");
                 ArrivalDelayOption.AddAlias("-ad");
                 RunInParallel.AddAlias("-rip");
+                RunClientsSequentially.AddAlias("-rcs");
                 TagOption.AddAlias("-t");
 
                 // Add case-insensitive aliases
@@ -589,6 +601,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 AddCaseInsensitiveAliases(NumberOfClientsOption, "--numberofclients");
                 AddCaseInsensitiveAliases(ArrivalDelayOption, "--arrivaldelay");
                 AddCaseInsensitiveAliases(RunInParallel, "--runinparallel");
+                AddCaseInsensitiveAliases(RunClientsSequentially, "--runClientsSequentially");
                 AddCaseInsensitiveAliases(TagOption, "--tag");
             }
             public static Argument<string> ConfigFileArgument { get; } = new Argument<string>(
@@ -648,6 +661,15 @@ namespace LPS.UI.Core.LPSCommandLine
             {
                 IsRequired = false,
                 Arity = ArgumentArity.ZeroOrOne // Allows zero or one argument
+            };
+
+            public static Option<string?> RunClientsSequentially { get; } = new Option<string?>(
+                name: "--runClientsSequentially",
+                description: "Run each client after the previous client completes",
+                parseArgument: ParseBoolOptionArgument)
+            {
+                IsRequired = false,
+                Arity = ArgumentArity.ZeroOrOne
             };
 
             public static Option<IList<string>> TagOption { get; } = new Option<IList<string>>(

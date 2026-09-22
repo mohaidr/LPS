@@ -38,6 +38,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private Option<string?> _arrivalDelayOption;
         private Option<string> _delayClientCreationOption;
         private Option<string> _runInParallerOption;
+        private Option<string> _runClientsSequentiallyOption;
         private Option<IList<string>> _failureRuleOption;
         private Option<IList<string>> _terminationRuleOption;
         private Option<string?> _clientCertificatePathOption;
@@ -51,6 +52,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             Option<string?>? arrivalDelayOption = null,
             Option<string>? delayClientCreationOption = null,
             Option<string>? runInParallerOption = null,
+            Option<string>? runClientsSequentiallyOption = null,
             Option<string>? httpIterationNameOption = null,
             Option<string?>? requestCountOption = null,
             Option<string>? iterationModeOption = null,
@@ -78,6 +80,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSCommandOptions.ArrivalDelayOption;
             _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSCommandOptions.DelayClientCreationOption;
             _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSCommandOptions.RunInParallelOption;
+            _runClientsSequentiallyOption = runClientsSequentiallyOption ?? CommandLineOptions.LPSCommandOptions.RunClientsSequentiallyOption;
             _httpIterationNameOption = httpIterationNameOption ?? CommandLineOptions.LPSCommandOptions.IterationNameOption;
             _iterationModeOption = iterationModeOption ?? CommandLineOptions.LPSCommandOptions.IterationModeOption;
             _duration = duratiion ?? CommandLineOptions.LPSCommandOptions.Duration;
@@ -123,6 +126,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                         ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                         DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                         RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
+                        RunClientsSequentially = bindingContext.ParseResult.GetValueForOption(_runClientsSequentiallyOption),
                         Iterations = new List<HttpIterationDto>()
                         {
                             new()

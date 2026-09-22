@@ -7,7 +7,7 @@ namespace LPS.UnitTest
 {
     public class SerializationDefaultValueTests
     {
-        private static PlanDto BuildPlan(string? httpVersion = null, string? supportH2C = null)
+        private static PlanDto BuildPlan(string? httpVersion = null, string? supportH2C = null, string? runClientsSequentially = null)
         {
             var request = new HttpRequestDto
             {
@@ -26,6 +26,7 @@ namespace LPS.UnitTest
                     new RoundDto
                     {
                         Name = "R",
+                        RunClientsSequentially = runClientsSequentially,
                         Iterations = new List<HttpIterationDto>
                         {
                             new HttpIterationDto { Name = "I", HttpRequest = request }
@@ -43,6 +44,7 @@ namespace LPS.UnitTest
 
             Assert.DoesNotContain("httpVersion", yaml);
             Assert.DoesNotContain("supportH2C", yaml);
+            Assert.DoesNotContain("runClientsSequentially", yaml);
             Assert.Contains("example.com", yaml);
         }
 
@@ -53,6 +55,16 @@ namespace LPS.UnitTest
 
             Assert.Contains("1.1", yaml);
             Assert.Contains("supportH2C", yaml);
+        }
+
+        [Fact]
+        public void RunClientsSequentially_RoundTripsInYaml()
+        {
+            var yaml = SerializationHelper.SerializeToYaml(BuildPlan(runClientsSequentially: "true"));
+            var plan = SerializationHelper.DeserializeFromYaml<PlanDto>(yaml);
+
+            Assert.Contains("runClientsSequentially: true", yaml);
+            Assert.Equal("true", plan.Rounds[0].RunClientsSequentially);
         }
     }
 }

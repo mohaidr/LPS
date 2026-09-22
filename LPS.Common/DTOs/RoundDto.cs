@@ -61,6 +61,9 @@ namespace LPS.UI.Common.DTOs
         // Run in parallel (can be a variable)
         public string RunInParallel { get; set; }
 
+        // Run clients sequentially (can be a variable)
+        public string RunClientsSequentially { get; set; }
+
         // Stages for ramping load
         public List<StageDto> Stages { get; set; }
 
@@ -79,6 +82,7 @@ namespace LPS.UI.Common.DTOs
                 ArrivalDelay = this.ArrivalDelay,
                 DelayClientCreationUntilIsNeeded = this.DelayClientCreationUntilIsNeeded,
                 RunInParallel = this.RunInParallel,
+                RunClientsSequentially = this.RunClientsSequentially,
                 Tags = new List<string>(this.Tags),
                 Iterations = this.Iterations?.Select(iteration =>
                 {

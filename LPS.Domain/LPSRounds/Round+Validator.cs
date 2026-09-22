@@ -65,6 +65,9 @@ namespace LPS.Domain
                 RuleFor(command => command.RunInParallel)
                 .NotNull().WithMessage("'Run In Parallel' must be (y) or (n)");
 
+                RuleFor(command => command.RunClientsSequentially)
+                .NotNull().WithMessage("'Run Clients Sequentially' must be (y) or (n)");
+
                 RuleForEach(command => command.Stages).ChildRules(stage =>
                 {
                     stage.RuleFor(s => s.NumberOfClients)

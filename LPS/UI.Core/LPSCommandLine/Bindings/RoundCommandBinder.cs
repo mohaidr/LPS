@@ -20,6 +20,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         Option<string>? arrivalDelayOption = null,
         Option<string>? delayClientCreationOption = null,
         Option<string?>? runInParallerOption = null,
+        Option<string?>? runClientsSequentiallyOption = null,
         Option<IList<string>>? tagOption = null) : BinderBase<RoundDto>
     {
         private readonly Option<string> _roundNameOption = roundNameOption ?? CommandLineOptions.LPSRoundCommandOptions.RoundNameOption;
@@ -29,6 +30,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
         private readonly Option<string> _arrivalDelayOption = arrivalDelayOption ?? CommandLineOptions.LPSRoundCommandOptions.ArrivalDelayOption;
         private readonly Option<string> _delayClientCreationOption = delayClientCreationOption ?? CommandLineOptions.LPSRoundCommandOptions.DelayClientCreation;
         private readonly Option<string?> _runInParallerOption = runInParallerOption ?? CommandLineOptions.LPSRoundCommandOptions.RunInParallel;
+        private readonly Option<string?> _runClientsSequentiallyOption = runClientsSequentiallyOption ?? CommandLineOptions.LPSRoundCommandOptions.RunClientsSequentially;
         private readonly Option<IList<string>>? _tagOption = tagOption ?? CommandLineOptions.LPSRoundCommandOptions.TagOption;
         #pragma warning disable CS8601 // Possible null reference assignment.
         protected override RoundDto GetBoundValue(BindingContext bindingContext) =>
@@ -41,6 +43,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
                 ArrivalDelay = bindingContext.ParseResult.GetValueForOption(_arrivalDelayOption),
                 DelayClientCreationUntilIsNeeded = bindingContext.ParseResult.GetValueForOption(_delayClientCreationOption),
                 RunInParallel = bindingContext.ParseResult.GetValueForOption(_runInParallerOption),
+                RunClientsSequentially = bindingContext.ParseResult.GetValueForOption(_runClientsSequentiallyOption),
                 Tags = bindingContext.ParseResult.GetValueForOption(_tagOption),
             };
             #pragma warning restore CS8601 // Possible null reference assignment.

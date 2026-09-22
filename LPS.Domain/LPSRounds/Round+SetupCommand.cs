@@ -22,6 +22,7 @@ namespace LPS.Domain
                 Tags = [];
                 DelayClientCreationUntilIsNeeded = false;
                 RunInParallel = false;
+                RunClientsSequentially = false;
                 ValidationErrors = new Dictionary<string, List<string>>();
             }
             public void Execute(Round entity)
@@ -38,6 +39,7 @@ namespace LPS.Domain
             public int ArrivalDelay { get; set; }
             public bool? DelayClientCreationUntilIsNeeded { get; set; }
             public bool? RunInParallel { get; set; }
+            public bool? RunClientsSequentially { get; set; }
             public IList<string> Tags { get; set; } // TODO: Make domain level
             public IList<Stage> Stages { get; set; }
 
@@ -57,6 +59,7 @@ namespace LPS.Domain
                 targetCommand.ArrivalDelay = this.ArrivalDelay;
                 targetCommand.DelayClientCreationUntilIsNeeded = this.DelayClientCreationUntilIsNeeded;
                 targetCommand.RunInParallel = this.RunInParallel;
+                targetCommand.RunClientsSequentially = this.RunClientsSequentially;
                 targetCommand.Stages = this.Stages?.ToList();
                 targetCommand.IsValid = this.IsValid;
                 targetCommand.ValidationErrors = this.ValidationErrors.ToDictionary(entry => entry.Key, entry => new List<string>(entry.Value));
@@ -118,6 +121,7 @@ namespace LPS.Domain
                 this.DelayClientCreationUntilIsNeeded = command.DelayClientCreationUntilIsNeeded;
                 this.IsValid = true;
                 this.RunInParallel = command.RunInParallel;
+                this.RunClientsSequentially = command.RunClientsSequentially;
                 this.Tags = command.Tags;
                 this.Stages = command.Stages?.ToList();
             }

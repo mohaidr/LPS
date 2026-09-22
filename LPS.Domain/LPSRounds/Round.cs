@@ -39,6 +39,7 @@ namespace LPS.Domain
         public bool IsRedo { get; private set; }
         public bool? DelayClientCreationUntilIsNeeded { get; private set; }
         public bool? RunInParallel { get; private set; }
+        public bool? RunClientsSequentially { get; private set; }
         public bool IsValid { get; private set; }
         public int NumberOfClients { get; private set; }
         public int? ArrivalDelay { get; private set; }

@@ -50,6 +50,12 @@ namespace LPS.Domain
             private CommandExecutionStatus _executionStatus;
             public CommandExecutionStatus Status => _executionStatus;
 
+            internal void CancelIfScheduled()
+            {
+                if (_executionStatus == CommandExecutionStatus.Scheduled)
+                    _executionStatus = CommandExecutionStatus.Cancelled;
+            }
+
             private async Task RunBeforeExpressionsAsync(HttpIteration entity, CancellationToken token)
             {
                 if (entity.Before == null || entity.Before.Count == 0)

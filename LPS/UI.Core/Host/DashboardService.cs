@@ -1,15 +1,11 @@
 ﻿using LPS.Domain.Common.Interfaces;
-using LPS.Infrastructure.Logger;
 using LPS.Infrastructure.Nodes;
 using LPS.UI.Common;
 using LPS.UI.Common.Options;
 using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LPS.UI.Core.Host
@@ -19,6 +15,7 @@ namespace LPS.UI.Core.Host
     {
         readonly ILogger _logger;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
+        readonly IFinalizationDisplay _finalizationDisplay;
 
         IOptions<DashboardConfigurationOptions> _dashboardConfig;
         IClusterConfiguration _clusterConfiguration;
@@ -26,12 +23,14 @@ namespace LPS.UI.Core.Host
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IOptions<DashboardConfigurationOptions> dashboardConfig,
-            IClusterConfiguration clusterConfiguration)
+            IClusterConfiguration clusterConfiguration,
+            IFinalizationDisplay finalizationDisplay)
         {
             _dashboardConfig = dashboardConfig;
             _clusterConfiguration = clusterConfiguration;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
+            _finalizationDisplay = finalizationDisplay;
         }
         public void Start()
         {
@@ -44,9 +43,12 @@ namespace LPS.UI.Core.Host
         public async Task EnsureDashboardUpdateBeforeExitAsync()
         {
             var refreshInterval = _dashboardConfig.Value.RefreshRate.HasValue ? _dashboardConfig.Value.RefreshRate.Value * 2 : 10;
-            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Looks like the test is done — hang tight while we finalize things before exiting!", LPSLoggingLevel.Information);
-            await Task.Delay(TimeSpan.FromSeconds(refreshInterval));
+            var finalizationDuration = TimeSpan.FromSeconds(refreshInterval);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Test complete. Finalizing results...", LPSLoggingLevel.Information);
+            _finalizationDisplay.Start(finalizationDuration);
+            await Task.Delay(finalizationDuration);
         }
+
         private static void OpenBrowser(string url)
         {
             try

@@ -67,6 +67,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                             selectedRound.ArrivalDelay = round.ArrivalDelay;
                             selectedRound.DelayClientCreationUntilIsNeeded = round.DelayClientCreationUntilIsNeeded;
                             selectedRound.RunInParallel = round.RunInParallel;
+                            selectedRound.RunClientsSequentially = round.RunClientsSequentially;
                             selectedRound.Tags = round.Tags;
                         }
                         else

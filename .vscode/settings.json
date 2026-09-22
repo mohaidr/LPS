@@ -3,6 +3,7 @@
         "dotnet test": true,
         "dotnet build": true,
         "dotnet-dump": true,
-        "dotnet vstest": true
+        "dotnet vstest": true,
+        "Copy-Item": true
     }
 }
