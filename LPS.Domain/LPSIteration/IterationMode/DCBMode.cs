@@ -21,6 +21,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         readonly HttpIteration _httpIteration;
         readonly IIterationStatusMonitor _iterationStatusMonitor;
         readonly IWatchdog _watchdog;
+        private readonly IMetricsDataMonitor _metrics;
 
         public DCBMode(
             HttpRequest.ExecuteCommand command,
@@ -31,7 +32,8 @@ namespace LPS.Domain.LPSRun.IterationMode
             IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor,
             HttpIteration httpIteration,
             IIterationStatusMonitor iterationStatusMonitor,
-            IWatchdog watchdog)
+            IWatchdog watchdog,
+            IMetricsDataMonitor metrics = null)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
@@ -42,6 +44,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
+            _metrics = metrics;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
@@ -55,27 +58,42 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
 
-            while (continueCondition() && !await _iterationStatusMonitor.IsTerminatedAsync(_httpIteration, cancellationToken))
+            IDisposable cooling = null;
+            try
             {
-                if (_maximizeThroughput)
+                while (continueCondition() && !await _iterationStatusMonitor.IsTerminatedAsync(_httpIteration, cancellationToken))
                 {
-                    if (newBatch)
+                    if (_maximizeThroughput)
+                    {
+                        if (newBatch)
+                        {
+                            cooling?.Dispose();
+                            cooling = null;
+                            coolDownWatch.Restart();
+                            await Task.Yield();
+                            await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, cancellationToken);
+                            awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
+                            if (continueCondition() && coolDownWatch.Elapsed.TotalMilliseconds < _coolDownTime)
+                                cooling = _metrics?.BeginBatchCooldown(_httpIteration);
+                        }
+                        newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
+                    }
+                    else
                     {
                         coolDownWatch.Restart();
-                        await Task.Yield();
                         await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, cancellationToken);
                         awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
+                        if (continueCondition())
+                        {
+                            using var pause = _metrics?.BeginBatchCooldown(_httpIteration);
+                            await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
+                        }
                     }
-                    newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                 }
-                else
-                {
-                    coolDownWatch.Restart();
-                    await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, cancellationToken);
-                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, cancellationToken));
-                    if (continueCondition())
-                        await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), cancellationToken);
-                }
+            }
+            finally
+            {
+                cooling?.Dispose();
             }
 
             coolDownWatch.Stop();

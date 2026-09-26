@@ -1,5 +1,7 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
+using LPS.Domain;
 using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.Windowed;
 
@@ -27,6 +29,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         public DateTime WindowEnd { get; init; }
         public string ExecutionStatus { get; set; } = "Ongoing";
         public bool IsFinal { get; set; }
+        public IReadOnlyList<CoolingPeriod> CoolingPeriods { get; set; } = Array.Empty<CoolingPeriod>();
         public WindowedThroughputData Throughput { get; init; } = new();
         public WindowedDurationData Duration { get; init; } = new();
         public WindowedDataTransmissionData DataTransmission { get; init; } = new();

@@ -1,8 +1,10 @@
 #nullable enable
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Extensions;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
@@ -28,6 +30,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         private readonly IEntityRepositoryService? _entityRepositoryService;
         private readonly ILiveMetricDataStore? _liveMetricDataStore;
         private readonly HostExecutionStatusTracker? _executionStatus;
+        private readonly ICoolingTracker? _coolingTracker;
         private bool _disposed;
 
         public HostMetricsAggregatorFactory()
@@ -42,7 +45,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             IMetricAggregatorFactory metricAggregatorFactory,
             IEntityRepositoryService entityRepositoryService,
             IIterationStatusMonitor iterationStatusMonitor,
-            ILiveMetricDataStore liveMetricDataStore)
+            ILiveMetricDataStore liveMetricDataStore,
+            ICoolingTracker? coolingTracker = null)
         {
             _windowedQueue = windowedQueue;
             _windowedCoordinator = windowedCoordinator;
@@ -51,6 +55,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             _metricAggregatorFactory = metricAggregatorFactory;
             _entityRepositoryService = entityRepositoryService;
             _liveMetricDataStore = liveMetricDataStore;
+            _coolingTracker = coolingTracker;
             _executionStatus = new HostExecutionStatusTracker(iterationStatusMonitor);
         }
 
@@ -116,6 +121,13 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             return false;
         }
 
+        public IReadOnlyList<HostCumulativeMetricsSnapshot> GetLatestCumulativeSnapshots() =>
+            _aggregators.Values
+                .Where(entry => entry.IsValueCreated)
+                .Select(entry => entry.Value.CumulativeCollector?.LatestSnapshot)
+                .OfType<HostCumulativeMetricsSnapshot>()
+                .ToArray();
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -138,7 +150,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         {
             var aggregator = new HostMetricsAggregator(hostKey);
             var windowedCollector = _windowedQueue != null && _windowedCoordinator != null
-                ? new HostWindowedMetricsCollector(aggregator, _windowedQueue, _windowedCoordinator, _executionStatus, _liveMetricDataStore)
+                ? new HostWindowedMetricsCollector(aggregator, _windowedQueue, _windowedCoordinator, _executionStatus, _liveMetricDataStore, _coolingTracker)
                 : null;
             var cumulativeCollector = _cumulativeQueue != null && _cumulativeCoordinator != null
                 ? new HostCumulativeMetricsCollector(aggregator, _cumulativeQueue, _cumulativeCoordinator, _executionStatus, _liveMetricDataStore, _metricAggregatorFactory)

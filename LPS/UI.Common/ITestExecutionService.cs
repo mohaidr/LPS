@@ -11,5 +11,6 @@ namespace LPS.UI.Common
     {
         Task ExecuteAsync(TestRunParameters parameters);
         Task<bool> PrepareAsync(TestRunParameters parameters);
+        Task PersistMetricsAsync(CancellationToken token);
     }
 }

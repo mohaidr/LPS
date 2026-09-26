@@ -33,7 +33,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             // Throughput metrics
             if (snapshot.Throughput != null)
             {
-                lines.Add(ConvertWindowedThroughput(tags, snapshot.Throughput, timestamp));
+                lines.Add(ConvertWindowedThroughput(tags, snapshot.Throughput, snapshot.IsIdle,
+                    (snapshot.WindowEnd - snapshot.WindowStart).TotalMilliseconds, timestamp));
             }
 
             // Response code distribution
@@ -49,6 +50,13 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
 
             // Final iteration status (only written once when iteration completes)
+            foreach (var period in snapshot.CoolingPeriods)
+            {
+                var fields = $"start_ns={ToNanosecondTimestamp(period.Start)}i,end_ns={ToNanosecondTimestamp(period.End)}i," +
+                    $"duration_ms={FormatFloat((period.End - period.Start).TotalMilliseconds)}";
+                lines.Add(BuildLine("windowed_cooling", $"{tags},source={EscapeTag(period.Source)}", fields, ToNanosecondTimestamp(period.End)));
+            }
+
             if (snapshot.IsFinal)
             {
                 lines.Add(ConvertIterationFinalStatus(tags, snapshot.ExecutionStatus, timestamp));
@@ -131,7 +139,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        private static string ConvertWindowedThroughput(string tags, WindowedThroughputData throughput, long timestamp)
+        private static string ConvertWindowedThroughput(string tags, WindowedThroughputData throughput, bool isIdle, double windowDurationMs, long timestamp)
         {
             var fields = new StringBuilder();
             // Request counts per window
@@ -139,7 +147,10 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             fields.Append($"skipped_count={throughput.SkippedRequestsCount}i,");
             fields.Append($"successful_count={throughput.SuccessfulRequestCount}i,");
             fields.Append($"failed_count={throughput.FailedRequestsCount}i,");
-            fields.Append($"max_concurrent_requests={throughput.MaxConcurrentRequests}i");
+            fields.Append($"max_concurrent_requests={throughput.MaxConcurrentRequests}i,");
+            fields.Append($"requests_per_second={FormatFloat(throughput.RequestsPerSecond)},");
+            fields.Append($"window_duration_ms={FormatFloat(windowDurationMs)},");
+            fields.Append($"is_idle={(isIdle ? "true" : "false")}");
 
             return BuildLine("windowed_requests", tags, fields.ToString(), timestamp);
         }

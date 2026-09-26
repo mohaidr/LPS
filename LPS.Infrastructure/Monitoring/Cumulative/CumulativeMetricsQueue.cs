@@ -10,6 +10,7 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
     public interface ICumulativeMetricsQueue
     {
         bool TryEnqueue(CumulativeIterationSnapshot snapshot);
+        void Complete();
         ChannelReader<CumulativeIterationSnapshot> Reader { get; }
     }
 
@@ -34,6 +35,8 @@ namespace LPS.Infrastructure.Monitoring.Cumulative
 
         public bool TryEnqueue(CumulativeIterationSnapshot snapshot)
             => _channel.Writer.TryWrite(snapshot);
+
+        public void Complete() => _channel.Writer.TryComplete();
 
         public ChannelReader<CumulativeIterationSnapshot> Reader => _channel.Reader;
     }

@@ -1,7 +1,9 @@
 ﻿using Apis.AutoMapper;
 using Apis.GrpcServices;
 using Apis.Hubs;
+using Apis.Middleware;
 using Apis.Services;
+using LPS.Common.Interfaces;
 using LPS.GrpcServices;
 using LPS.Infrastructure.Monitoring.GRPCServices;
 using Microsoft.AspNetCore.Builder;
@@ -52,14 +54,23 @@ namespace LPS.Apis
                     });
 
             // Windowed metrics SignalR pusher (reads from queue, pushes to SignalR hub)
-            services.AddHostedService<WindowedMetricsDispatcher>();
+            services.AddSingleton<WindowedMetricsDispatcher>();
+            services.AddSingleton<IMetricsDispatcher>(provider => provider.GetRequiredService<WindowedMetricsDispatcher>());
+            services.AddHostedService(provider => provider.GetRequiredService<WindowedMetricsDispatcher>());
             
             // Cumulative metrics SignalR pusher (reads from queue, pushes to SignalR hub)
             // Cumulative data is pushed at its own interval (RefreshRate), separate from windowed data
-            services.AddHostedService<CumulativeMetricsDispatcher>();
+            services.AddSingleton<CumulativeMetricsDispatcher>();
+            services.AddSingleton<IMetricsDispatcher>(provider => provider.GetRequiredService<CumulativeMetricsDispatcher>());
+            services.AddHostedService(provider => provider.GetRequiredService<CumulativeMetricsDispatcher>());
 
-            services.AddHostedService<HostWindowedMetricsDispatcher>();
-            services.AddHostedService<HostCumulativeMetricsDispatcher>();
+            services.AddSingleton<HostWindowedMetricsDispatcher>();
+            services.AddSingleton<IMetricsDispatcher>(provider => provider.GetRequiredService<HostWindowedMetricsDispatcher>());
+            services.AddHostedService(provider => provider.GetRequiredService<HostWindowedMetricsDispatcher>());
+
+            services.AddSingleton<HostCumulativeMetricsDispatcher>();
+            services.AddSingleton<IMetricsDispatcher>(provider => provider.GetRequiredService<HostCumulativeMetricsDispatcher>());
+            services.AddHostedService(provider => provider.GetRequiredService<HostCumulativeMetricsDispatcher>());
         }
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -70,7 +81,10 @@ namespace LPS.Apis
                 app.UseHsts();
             }
 
-            app.UseDefaultFiles(); 
+            if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LPS_WORKSPACE_RUN")))
+                app.UseMiddleware<LocalWorkspaceAccessMiddleware>();
+
+            app.UseDefaultFiles();
             app.UseStaticFiles();
             app.UseRouting();
 

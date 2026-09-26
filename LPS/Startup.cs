@@ -84,11 +84,18 @@ namespace LPS
 
                 webBuilder.ConfigureKestrel(serverOptions =>
                 {
-                    serverOptions.ListenAnyIP(gRPCPort, listenOptions =>
+                    if (LPS.UI.Core.Web.WorkspaceRunner.IsManaged)
                     {
-                        listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2;
-                    });
-                    serverOptions.ListenAnyIP(port);
+                        serverOptions.Listen(System.Net.IPAddress.Loopback, gRPCPort, listenOptions =>
+                            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+                        serverOptions.Listen(System.Net.IPAddress.Loopback, port);
+                    }
+                    else
+                    {
+                        serverOptions.ListenAnyIP(gRPCPort, listenOptions =>
+                            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+                        serverOptions.ListenAnyIP(port);
+                    }
                     serverOptions.AllowSynchronousIO = false;
 
                 })
@@ -121,6 +128,7 @@ namespace LPS
                     .GetSection("LPSAppSettings:LiveMetrics")
                     .Get<LiveMetricsPublishingOptions>() ?? new LiveMetricsPublishingOptions());
                 services.AddSingleton<IPlanExecutionContext, PlanExecutionContext>();
+                services.AddSingleton<ICoolingTracker, LPS.Infrastructure.Monitoring.CoolingTracker>();
                 services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                 services.AddSingleton<IMetricsVariableService, MetricsVariableService>();
                 services.AddSingleton<IIterationStatusMonitor, IterationStatusMonitor>();
@@ -227,10 +235,7 @@ namespace LPS
             .UseInfluxDB()
             .ConfigureLogging(logging =>
             {
-                logging.Services.AddSingleton<Spectre.Console.IAnsiConsole>(Spectre.Console.AnsiConsole.Console);
-                logging.Services.AddSingleton<ILiveConsoleOutput, LiveConsoleOutput>();
-                logging.AddConsole(options => options.FormatterName = "spectre")
-                    .AddConsoleFormatter<LPS.UI.Core.Host.SpectreConsoleFormatter, Microsoft.Extensions.Logging.Console.SimpleConsoleFormatterOptions>();
+                logging.AddLiveConsole();
                 // Suppress verbose System.Net.Http logging - only show warnings and errors
                 logging.AddFilter("System.Net.Http.HttpClient", LogLevel.Warning);
             })

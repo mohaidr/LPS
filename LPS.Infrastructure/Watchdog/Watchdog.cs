@@ -49,6 +49,7 @@ namespace LPS.Infrastructure.Watchdog
         private readonly IRuntimeOperationIdProvider _operationIdProvider;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         private readonly IClusterConfiguration _clusterConfiguration;
+        private readonly ICoolingTracker _coolingTracker;
         private readonly ResourceEventListener _resourceListener = new ResourceEventListener();
 
         // Hostnames seen by BalanceAsync callers - the sampler will poll connection counts for these.
@@ -109,7 +110,8 @@ namespace LPS.Infrastructure.Watchdog
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider,
             ICustomGrpcClientFactory customGrpcClientFactory,
-            IClusterConfiguration clusterConfiguration)
+            IClusterConfiguration clusterConfiguration,
+            ICoolingTracker coolingTracker = null)
         {
             MaxMemoryMB = memoryLimitMB;
             MaxCPUPercentage = cpuLimit;
@@ -126,16 +128,17 @@ namespace LPS.Infrastructure.Watchdog
             _operationIdProvider = operationIdProvider;
             _customGrpcClientFactory = customGrpcClientFactory;
             _clusterConfiguration = clusterConfiguration;
+            _coolingTracker = coolingTracker;
             _grpcClient = customGrpcClientFactory.GetClient<GrpcMetricsQueryServiceClient>(clusterConfiguration.MasterNodeIP);
 
             _samplerTask = Task.Run(() => SamplerLoopAsync(_samplerCts.Token));
         }
 
-        public static Watchdog GetDefaultInstance(ILogger logger, IRuntimeOperationIdProvider operationIdProvider, ICustomGrpcClientFactory customGrpcClientFactory, IClusterConfiguration clusterConfiguration)
+        public static Watchdog GetDefaultInstance(ILogger logger, IRuntimeOperationIdProvider operationIdProvider, ICustomGrpcClientFactory customGrpcClientFactory, IClusterConfiguration clusterConfiguration, ICoolingTracker coolingTracker = null)
         {
             return new Watchdog(
                 1000, 50, 500, 30, 1000, 100, 100, 60, 300,
-                SuspensionMode.Any, logger, operationIdProvider, customGrpcClientFactory, clusterConfiguration);
+                SuspensionMode.Any, logger, operationIdProvider, customGrpcClientFactory, clusterConfiguration, coolingTracker);
         }
 
         /// <summary>
@@ -448,6 +451,8 @@ namespace LPS.Infrastructure.Watchdog
         private void SetState(ResourceState next)
         {
             _currentState = next;
+            foreach (var host in _observedHosts.Keys)
+                _coolingTracker?.SetWatchdogState(host, EvaluateSnapshot(host));
         }
 
         private async Task<int> GetHostActiveConnectionsCountAsync(string hostName)
@@ -481,6 +486,8 @@ namespace LPS.Infrastructure.Watchdog
             }
             finally
             {
+                foreach (var host in _observedHosts.Keys)
+                    _coolingTracker?.SetWatchdogState(host, ResourceState.Cool);
                 _samplerCts.Dispose();
                 _nextSampleSignal.TrySetResult(true);
             }

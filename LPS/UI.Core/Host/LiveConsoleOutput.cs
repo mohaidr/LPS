@@ -4,23 +4,25 @@ using System.Collections.Concurrent;
 
 namespace LPS.UI.Core.Host
 {
-    internal sealed class LiveConsoleOutput(IAnsiConsole console) : ILiveConsoleOutput
+    internal sealed class LiveConsoleOutput(IAnsiConsole console, IAnsiConsole errorConsole) : ILiveConsoleOutput
     {
+        private const int MaxLogsPerFrame = 128;
         private readonly object _outputLock = new();
-        private readonly ConcurrentQueue<IRenderable> _pendingLogs = new();
+        private readonly ConcurrentQueue<(IRenderable Message, bool StandardError)> _pendingLogs = new();
+        private readonly Queue<IRenderable> _terminalErrors = new();
         private bool _liveDisplayActive;
 
-        public void Write(IRenderable message)
+        public void Write(IRenderable message, bool standardError = false)
         {
             lock (_outputLock)
             {
                 if (_liveDisplayActive)
                 {
-                    _pendingLogs.Enqueue(message);
+                    _pendingLogs.Enqueue((message, standardError));
                 }
                 else
                 {
-                    console.Write(message);
+                    (standardError ? errorConsole : console).Write(message);
                 }
             }
         }
@@ -35,9 +37,13 @@ namespace LPS.UI.Core.Host
 
         public void FlushPendingLogs()
         {
-            while (_pendingLogs.TryDequeue(out var message))
+            var count = Math.Min(_pendingLogs.Count, MaxLogsPerFrame);
+            while (count-- > 0 && _pendingLogs.TryDequeue(out var entry))
             {
-                console.Write(message);
+                if (_liveDisplayActive && entry.StandardError && errorConsole.Profile.Out.IsTerminal)
+                    _terminalErrors.Enqueue(entry.Message);
+                else
+                    (entry.StandardError ? errorConsole : console).Write(entry.Message);
             }
         }
 
@@ -46,7 +52,10 @@ namespace LPS.UI.Core.Host
             lock (_outputLock)
             {
                 _liveDisplayActive = false;
-                FlushPendingLogs();
+                while (_terminalErrors.TryDequeue(out var message))
+                    errorConsole.Write(message);
+                while (_pendingLogs.TryDequeue(out var entry))
+                    (entry.StandardError ? errorConsole : console).Write(entry.Message);
             }
         }
     }

@@ -3,21 +3,19 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Console;
 using Microsoft.Extensions.Options;
 using Spectre.Console;
+using Spectre.Console.Rendering;
 using System.Globalization;
-using System.IO;
 
 namespace LPS.UI.Core.Host
 {
-    internal sealed class SpectreConsoleFormatter(
-        ILiveConsoleOutput output,
-        IOptionsMonitor<SimpleConsoleFormatterOptions> options) : ConsoleFormatter("spectre")
+    internal sealed class SpectreConsoleFormatter(IOptionsMonitor<SimpleConsoleFormatterOptions> options)
     {
-        public override void Write<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider, TextWriter textWriter)
+        public IRenderable? Format<TState>(in LogEntry<TState> logEntry, IExternalScopeProvider? scopeProvider)
         {
             var message = logEntry.Formatter(logEntry.State, logEntry.Exception);
             if (string.IsNullOrEmpty(message) && logEntry.Exception == null)
             {
-                return;
+                return null;
             }
 
             var settings = options.CurrentValue;
@@ -54,7 +52,7 @@ namespace LPS.UI.Core.Host
                 text.Append(separator + logEntry.Exception.ToString().ReplaceLineEndings(separator));
             }
             text.Append(Environment.NewLine);
-            output.Write(text);
+            return text;
         }
     }
 }

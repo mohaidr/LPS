@@ -35,6 +35,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
         private readonly ICumulativeMetricsCoordinator _cumulativeCoordinator;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         private readonly IPlanExecutionContext _planContext;
+        private readonly ICoolingTracker _coolingTracker;
 
         // Track collectors for lifecycle management
         private readonly ConcurrentDictionary<Guid, WindowedIterationMetricsCollector> _windowedCollectors = new();
@@ -51,7 +52,8 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             IHistoricalCumulativeMetricDataStore cumulativeDataStore,
             ICumulativeMetricsCoordinator cumulativeCoordinator,
             IIterationStatusMonitor iterationStatusMonitor,
-            IPlanExecutionContext planContext)
+            IPlanExecutionContext planContext,
+            ICoolingTracker coolingTracker)
         {
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _op = runtimeOperationIdProvider ?? throw new ArgumentNullException(nameof(runtimeOperationIdProvider));
@@ -64,6 +66,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             _cumulativeCoordinator = cumulativeCoordinator ?? throw new ArgumentNullException(nameof(cumulativeCoordinator));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
+            _coolingTracker = coolingTracker ?? throw new ArgumentNullException(nameof(coolingTracker));
         }
 
         /// <summary>
@@ -100,7 +103,7 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
 
                 // Create windowed collector and wire up aggregators
                 var windowedCollector = new WindowedIterationMetricsCollector(
-                    httpIteration, roundName, _windowedQueue, _historicalWindowedDataStore, _windowedCoordinator, _iterationStatusMonitor, _planContext)
+                    httpIteration, roundName, _windowedQueue, _historicalWindowedDataStore, _windowedCoordinator, _iterationStatusMonitor, _planContext, _coolingTracker)
                 {
                     DurationAggregator = windowedDuration,
                     ThroughputAggregator = windowedThroughput,
@@ -130,6 +133,9 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
                 throw;
             }
         }
+
+        public IDisposable BeginBatchCooldown(HttpIteration iteration) =>
+            _coolingTracker.BeginBatchCooldown(iteration.Id, iteration.HttpRequest?.Url?.HostName ?? string.Empty);
 
         public void Dispose()
         {

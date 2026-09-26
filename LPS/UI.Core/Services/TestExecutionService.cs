@@ -26,6 +26,7 @@ using LPS.Infrastructure.Monitoring.MetricsServices;
 using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Globalization;
+using LPS.UI.Core.Web;
 
 namespace LPS.UI.Core.Services
 {
@@ -135,12 +136,19 @@ namespace LPS.UI.Core.Services
 
         public async Task ExecuteAsync(TestRunParameters parameters)
         {
-            await RunAsync(parameters, true);
+            if (!await RunAsync(parameters, true))
+                await WorkspaceRunner.ReportAsync("Failed");
         }
 
         public Task<bool> PrepareAsync(TestRunParameters parameters)
         {
             return RunAsync(parameters, false);
+        }
+
+        public async Task PersistMetricsAsync(CancellationToken token)
+        {
+            foreach (var plan in _entityRepositoryService.Query<Plan>())
+                await PersistAllSnapshotsAsync(plan, token);
         }
 
         private async Task<bool> RunAsync(TestRunParameters parameters, bool executePlan)
@@ -305,7 +313,8 @@ namespace LPS.UI.Core.Services
                 
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                     $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
-                await PersistAllSnapshotsAsync(plan, _cts.Token);
+                if (!WorkspaceRunner.IsManaged)
+                    await PersistAllSnapshotsAsync(plan, _cts.Token);
                 return true;
             }
             else
@@ -448,6 +457,17 @@ namespace LPS.UI.Core.Services
                     Converters = { new JsonStringEnumConverter() }
                 };
 
+                if (WorkspaceRunner.IsManaged)
+                {
+                    var hostIndex = 0;
+                    foreach (var snapshot in _hostMetricsAggregatorFactory.GetLatestCumulativeSnapshots())
+                    {
+                        var file = Path.Combine(root, $"{++hostIndex}_HostCumulative.json");
+                        var json = JsonSerializer.Serialize(new[] { snapshot }, jsonOpts);
+                        await File.WriteAllTextAsync(file, json, persistToken);
+                    }
+                }
+
                 foreach (var round in plan.GetReadOnlyRounds())
                 {
                     if (DateTime.UtcNow >= deadline) break;
@@ -462,6 +482,9 @@ namespace LPS.UI.Core.Services
                         // Save cumulative metrics from the cumulative store
                         if (_historicalCumulativeMetricStore.TryGet(iter.Id, out var cumulativeSnaps) && cumulativeSnaps.Count > 0)
                         {
+                            if (WorkspaceRunner.IsManaged && cumulativeSnaps.Any(snapshot => snapshot.IsFinal && snapshot.ExecutionStatus == nameof(EntityExecutionStatus.Failed)))
+                                await WorkspaceRunner.ReportAsync("Failed");
+
                             // Extract Throughput metrics from all cumulative snapshots
                             var throughputHistory = cumulativeSnaps
                                 .Where(s => s.Throughput != null)

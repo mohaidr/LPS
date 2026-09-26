@@ -48,6 +48,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             return _channel.Reader.TryRead(out snapshot);
         }
 
+        public void Complete() => _channel.Writer.TryComplete();
+
         public ChannelReader<WindowedIterationSnapshot> Reader => _channel.Reader;
 
         public int Count => _channel.Reader.Count;

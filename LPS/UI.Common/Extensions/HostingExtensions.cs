@@ -133,12 +133,12 @@ namespace LPS.UI.Common.Extensions
                     Watchdog watchdog;
                     if (isValid && validOptions != null)
                     {
-                        watchdog = MapToWatchdog(validOptions, fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration);
+                        watchdog = MapToWatchdog(validOptions, fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration, serviceProvider.GetRequiredService<ICoolingTracker>());
                     }
                     else
                     {
                         LogConfigurationIssue(fileLogger, "Watchdog", WatchdogConfigSection, validOptions == null);
-                        watchdog = Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration);
+                        watchdog = Watchdog.GetDefaultInstance(fileLogger, operationIdProvider, grpcClientFactory, clusterConfiguration, serviceProvider.GetRequiredService<ICoolingTracker>());
                     }
 
                     LogAppliedConfiguration(watchdog, !isValid || validOptions == null, "Watchdog Configuration", fileLogger);
@@ -338,7 +338,8 @@ namespace LPS.UI.Common.Extensions
             ILogger logger,
             IRuntimeOperationIdProvider operationIdProvider,
                         ICustomGrpcClientFactory customGrpcClientFactory,
-            IClusterConfiguration clusterConfiguration)
+            IClusterConfiguration clusterConfiguration,
+            ICoolingTracker coolingTracker)
         {
             #pragma warning disable CS8629 // Nullable value type may be null.
             return new Watchdog(
@@ -355,7 +356,7 @@ namespace LPS.UI.Common.Extensions
                 logger,
                 operationIdProvider, 
                 customGrpcClientFactory, 
-                clusterConfiguration);
+                clusterConfiguration, coolingTracker);
             #pragma warning restore CS8629 // Nullable value type may be null.
         }
 

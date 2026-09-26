@@ -6,8 +6,8 @@ namespace LPS.UI.Core.Host
 {
     internal static class FinalizationFrameRenderer
     {
-        private static readonly string[] LargeFinalizationLogo = CreateFigletLogo("L -- P {} S ^", 2);
-        private static readonly string[] FinalizationLogo = CreateFigletLogo("L -- P {} S ^");
+        private static readonly string[] LargeFinalizationLogo = CreateFigletLogo("L - P {} S ^", 2);
+        private static readonly string[] FinalizationLogo = CreateFigletLogo("L - P {} S ^");
         private static readonly string[] CompactFinalizationLogo = CreateFigletLogo("LPS");
 
         internal static Rows Render(double completion, int frame, int terminalWidth)

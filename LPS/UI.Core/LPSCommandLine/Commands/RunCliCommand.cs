@@ -1,6 +1,7 @@
 ﻿using LPS.Domain.Common.Interfaces;
 using LPS.UI.Common;
 using System.CommandLine;
+using LPS.UI.Core.Web;
 using static LPS.UI.Core.LPSCommandLine.CommandLineOptions;
 
 
@@ -54,6 +55,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 }
                 catch (Exception ex)
                 {
+                    await WorkspaceRunner.ReportAsync("Failed");
                     _logger.Log(_runtimeOperationIdProvider.OperationId, $"{ex.Message}\r\n{ex.InnerException?.Message}\r\n{ex.StackTrace}", LPSLoggingLevel.Error);
                 }
             },

@@ -15,7 +15,8 @@ namespace LPS.Infrastructure.Common
         public static readonly string EnvironmentCurrentDirectory = Environment.CurrentDirectory;
         #pragma warning restore CS8601 // Possible null reference assignment.
         public static readonly string AppSettingsFileName = "lpsSettings.json";
-        public static readonly string AppSettingsFileLocation = Path.Combine(AppExecutableLocation, "config", AppConstants.AppSettingsFileName);
+        public static readonly string AppSettingsFileLocation = Environment.GetEnvironmentVariable("LPS_SETTINGS_FILE")
+            ?? Path.Combine(AppExecutableLocation, "config", AppConstants.AppSettingsFileName);
         public static readonly string EmptyLogId = "0000-0000-0000-0000";
     }
 }

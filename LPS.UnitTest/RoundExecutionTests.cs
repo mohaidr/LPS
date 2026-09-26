@@ -51,6 +51,82 @@ namespace LPS.UnitTest
         [InlineData(false, true)]
         [InlineData(true, false)]
         [InlineData(true, true)]
+        public void Schedule_FlatLoadUsesOnlyClientArrivalSettings(bool sequential, bool emptyStages)
+        {
+            var round = CreateRound(new Round.SetupCommand
+            {
+                NumberOfClients = 4,
+                ArrivalDelay = 70,
+                StartupDelay = 10000,
+                RunClientsSequentially = sequential,
+                Stages = emptyStages ? Array.Empty<Stage>() : null
+            });
+
+            var schedule = RoundScheduleBuilder.Build(round).ToArray();
+
+            Assert.Equal(new long[] { 0, sequential ? 0 : 70, sequential ? 0 : 140, sequential ? 0 : 210 },
+                schedule.Select(client => client.ArrivalOffsetMs));
+            Assert.Equal(new[] { 0, 1, 2, 3 }, schedule.Select(client => client.ClientIndex));
+            Assert.All(schedule, client =>
+            {
+                Assert.Equal(0, client.StageIndex);
+                Assert.Equal(0, client.StartupDelayMs);
+            });
+            Assert.Equal(schedule, RoundScheduleBuilder.Build(round).ToArray());
+            _clients.VerifyNoOtherCalls();
+            Assert.Empty(_registered);
+            Assert.Empty(_requests);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Schedule_StagesSeparateConcurrentOffsetsFromSequentialPauses(bool sequential)
+        {
+            var round = CreateRound(new Round.SetupCommand
+            {
+                NumberOfClients = 99,
+                ArrivalDelay = 60000,
+                RunClientsSequentially = sequential,
+                Stages = new[] { new Stage(2, 40, 30), new Stage(1, 60000, 80), new Stage(2, 60, 25) }
+            });
+
+            var schedule = RoundScheduleBuilder.Build(round).ToArray();
+
+            Assert.Equal(new[] { 0, 0, 1, 2, 2 }, schedule.Select(client => client.StageIndex));
+            Assert.Equal(new[] { 0, 1, 0, 0, 1 }, schedule.Select(client => client.ClientIndex));
+            Assert.Equal(sequential ? new long[5] : new long[] { 30, 70, 150, 175, 235 },
+                schedule.Select(client => client.ArrivalOffsetMs));
+            Assert.Equal(sequential ? new[] { 30, 0, 80, 25, 0 } : new int[5],
+                schedule.Select(client => client.StartupDelayMs));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Schedule_UsesWideOffsetsWithoutAllocatingClients(bool staged)
+        {
+            var round = CreateRound(new Round.SetupCommand
+            {
+                NumberOfClients = 3,
+                ArrivalDelay = int.MaxValue,
+                Stages = staged ? new[] { new Stage(2, int.MaxValue, int.MaxValue), new Stage(1, 0, int.MaxValue) } : null
+            });
+
+            var schedule = RoundScheduleBuilder.Build(round).ToArray();
+            var firstOffset = staged ? (long)int.MaxValue : 0;
+
+            Assert.Equal(new[] { firstOffset, firstOffset + int.MaxValue, firstOffset + 2L * int.MaxValue },
+                schedule.Select(client => client.ArrivalOffsetMs));
+            _clients.VerifyNoOtherCalls();
+            Assert.Empty(_registered);
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
         public async Task ExecuteAsync_RegistersEveryClientBeforeFirstRequest(bool sequential, bool staged)
         {
             var countsAtExecution = new List<int>();
@@ -235,6 +311,47 @@ namespace LPS.UnitTest
         }
 
         [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public async Task ExecuteAsync_ConcurrentArrivalTimelineStartsAfterPreparation(bool staged, bool delayClientCreation)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            var starts = new ConcurrentDictionary<string, long>();
+            long preparationCompletedAt = 0;
+            _repository.Setup(repository => repository.Add(It.IsAny<HttpIteration>(), It.IsAny<IAsyncCommand<HttpIteration>>()))
+                .Callback<HttpIteration, IAsyncCommand<HttpIteration>>((iteration, command) =>
+                {
+                    _registered.Add((HttpIteration.ExecuteCommand)command);
+                    if (_registered.Count == 3)
+                    {
+                        Task.Delay(350).GetAwaiter().GetResult();
+                        preparationCompletedAt = stopwatch.ElapsedMilliseconds;
+                    }
+                });
+            _sendAsync = (sessionId, request, token) =>
+            {
+                starts[sessionId] = stopwatch.ElapsedMilliseconds - preparationCompletedAt;
+                return Task.FromResult(_response);
+            };
+            var round = CreateRound(new Round.SetupCommand
+            {
+                ArrivalDelay = 100,
+                DelayClientCreationUntilIsNeeded = delayClientCreation,
+                Stages = staged ? new[] { new Stage(2, 100, 80), new Stage(1, 0, 150) } : null
+            });
+
+            await RunAsync(round).WaitAsync(TimeSpan.FromSeconds(5));
+
+            Assert.Equal(3, starts.Count);
+            Assert.True(starts["client-1"] >= (staged ? 70 : 0));
+            Assert.True(starts["client-2"] >= (staged ? 170 : 90));
+            Assert.True(starts["client-3"] >= (staged ? 320 : 190));
+            Assert.All(_registered, command => Assert.Equal(CommandExecutionStatus.Completed, command.Status));
+        }
+
+        [Theory]
         [InlineData(false)]
         [InlineData(true)]
         public async Task ExecuteAsync_CancellationDuringRequestsDoesNotStartLaterClients(bool parallelIterations)
@@ -333,7 +450,35 @@ namespace LPS.UnitTest
             Assert.All(_registered, command => Assert.Equal(CommandExecutionStatus.Cancelled, command.Status));
         }
 
-        private Round CreateRound(Round.SetupCommand setup, int iterationCount = 1, int iterationStartupDelay = 0)
+        [Theory]
+        [InlineData(IterationMode.CRB, false)]
+        [InlineData(IterationMode.CRB, true)]
+        [InlineData(IterationMode.CB, false)]
+        [InlineData(IterationMode.CB, true)]
+        [InlineData(IterationMode.DCB, false)]
+        [InlineData(IterationMode.DCB, true)]
+        public async Task BatchModes_RecordRealCooldownsAndCloseThemOnCancellation(IterationMode mode, bool maximizeThroughput)
+        {
+            var tracker = new LPS.Infrastructure.Monitoring.CoolingTracker();
+            Mock.Get(_metrics).Setup(value => value.BeginBatchCooldown(It.IsAny<HttpIteration>()))
+                .Returns<HttpIteration>(iteration => tracker.BeginBatchCooldown(iteration.Id, iteration.HttpRequest.Url.HostName));
+            var round = CreateRound(new Round.SetupCommand { NumberOfClients = 1 }, mode: mode, maximizeThroughput: maximizeThroughput);
+            var start = DateTime.UtcNow;
+            _cancellation.CancelAfter(TimeSpan.FromMilliseconds(250));
+            try { await RunAsync(round); }
+            catch (OperationCanceledException) when (_cancellation.IsCancellationRequested) { }
+            var end = DateTime.UtcNow;
+
+            var periods = tracker.GetPeriods("example.com", start, end);
+            Assert.NotEmpty(periods);
+            Assert.All(periods, period => Assert.Equal("BatchCooldown", period.Source));
+            Assert.All(periods, period => Assert.True(period.End > period.Start));
+            Assert.Empty(tracker.GetPeriods("example.com", end, end.AddSeconds(1)));
+            Mock.Get(_metrics).Verify(value => value.BeginBatchCooldown(It.IsAny<HttpIteration>()), Times.AtLeastOnce());
+        }
+
+        private Round CreateRound(Round.SetupCommand setup, int iterationCount = 1, int iterationStartupDelay = 0,
+            IterationMode mode = IterationMode.R, bool maximizeThroughput = false)
         {
             setup.Name ??= "Round";
             setup.NumberOfClients ??= setup.Stages?.Sum(stage => stage.NumberOfClients) ?? 3;
@@ -344,8 +489,12 @@ namespace LPS.UnitTest
                 var iteration = new HttpIteration(new HttpIteration.SetupCommand
                 {
                     Name = $"Iteration-{index}",
-                    Mode = IterationMode.R,
-                    RequestCount = 1,
+                    Mode = mode,
+                    RequestCount = mode == IterationMode.R ? 1 : mode == IterationMode.CRB ? 2 : null,
+                    Duration = mode == IterationMode.DCB ? 1 : null,
+                    BatchSize = mode == IterationMode.R ? null : 1,
+                    CoolDownTime = mode == IterationMode.R ? null : 20,
+                    MaximizeThroughput = maximizeThroughput,
                     StartupDelay = iterationStartupDelay,
                     After = new List<string> { $"after-{index}" }
                 }, _expressions.Object, _logger, _operationId);

@@ -20,6 +20,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         readonly HttpIteration _httpIteration;
         readonly IIterationStatusMonitor _iterationStatusMonitor;
         readonly IWatchdog _watchdog;
+        private readonly IMetricsDataMonitor _metrics;
         public CBMode(
             HttpRequest.ExecuteCommand command,
             int coolDownTime,
@@ -28,7 +29,8 @@ namespace LPS.Domain.LPSRun.IterationMode
             IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor, 
             HttpIteration httpIteration,
             IIterationStatusMonitor iterationStatusMonitor,
-            IWatchdog watchdog)
+            IWatchdog watchdog,
+            IMetricsDataMonitor metrics = null)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _coolDownTime = coolDownTime;
@@ -38,6 +40,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             _httpIteration = httpIteration ?? throw new ArgumentNullException();
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException();
             _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
+            _metrics = metrics;
         }
 
         public async Task<int> ExecuteAsync(CancellationToken token)
@@ -49,26 +52,39 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
 
-            while (continueCondition() && !await _iterationStatusMonitor.IsTerminatedAsync(_httpIteration, token))
+            IDisposable cooling = null;
+            try
             {
-                if (_maximizeThroughput)
+                while (continueCondition() && !await _iterationStatusMonitor.IsTerminatedAsync(_httpIteration, token))
                 {
-                    if (newBatch)
+                    if (_maximizeThroughput)
+                    {
+                        if (newBatch)
+                        {
+                            cooling?.Dispose();
+                            cooling = null;
+                            coolDownWatch.Restart();
+                            await Task.Yield();
+                            await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, token);
+                            awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
+                            if (continueCondition() && coolDownWatch.Elapsed.TotalMilliseconds < _coolDownTime)
+                                cooling = _metrics?.BeginBatchCooldown(_httpIteration);
+                        }
+                        newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
+                    }
+                    else
                     {
                         coolDownWatch.Restart();
-                        await Task.Yield();
                         await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, token);
                         awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
+                        using var pause = _metrics?.BeginBatchCooldown(_httpIteration);
+                        await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), token);
                     }
-                    newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                 }
-                else
-                {
-                    coolDownWatch.Restart();
-                    await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, token);
-                    awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
-                    await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), token);
-                }
+            }
+            finally
+            {
+                cooling?.Dispose();
             }
 
             coolDownWatch.Stop();

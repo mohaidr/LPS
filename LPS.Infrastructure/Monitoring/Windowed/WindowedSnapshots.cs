@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net;
+using LPS.Domain;
 
 namespace LPS.Infrastructure.Monitoring.Windowed
 {
@@ -31,12 +32,20 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         /// Frontend should update status display when this is true.
         /// </summary>
         public bool IsFinal { get; init; }
+        public IReadOnlyList<CoolingPeriod> CoolingPeriods { get; init; } = Array.Empty<CoolingPeriod>();
 
         // Windowed data (for charts - trends over time)
         public WindowedDurationData? Duration { get; init; }
         public WindowedThroughputData? Throughput { get; init; }
         public WindowedResponseCodeData? ResponseCodes { get; init; }
         public WindowedDataTransmissionData? DataTransmission { get; init; }
+
+        public bool IsIdle => Throughput is
+            { RequestsCount: 0, MaxConcurrentRequests: 0, SkippedRequestsCount: 0, SuccessfulRequestCount: 0, FailedRequestsCount: 0 }
+            && (Duration?.TotalTime.Count ?? 0) == 0
+            && (DataTransmission?.DataSent ?? 0) == 0
+            && (DataTransmission?.DataReceived ?? 0) == 0
+            && ResponseCodes?.ResponseSummaries.Exists(summary => summary.Count > 0) != true;
 
         public bool HasData => Duration != null || Throughput != null || 
                                ResponseCodes != null || DataTransmission != null;

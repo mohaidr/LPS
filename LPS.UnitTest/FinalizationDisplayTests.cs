@@ -101,24 +101,30 @@ namespace LPS.UnitTest
                 Interactive = InteractionSupport.Yes,
                 Out = terminal
             });
-            var output = new LiveConsoleOutput(console);
+            var output = new LiveConsoleOutput(console, console);
             var display = new FinalizationDisplay(console, output);
             display.Start(TimeSpan.Zero);
+            var shutdown = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var rendering = display.ShowUntilShutdownAsync(shutdown.Task);
+            output.Write(new Text("Buffered error retained."), standardError: true);
 
             if (shutdownFails)
             {
                 var failure = new InvalidOperationException("Shutdown failed");
+                shutdown.SetException(failure);
                 var actual = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-                    display.ShowUntilShutdownAsync(Task.FromException(failure)));
+                    rendering.WaitAsync(TimeSpan.FromSeconds(2)));
                 Assert.Same(failure, actual);
                 Assert.DoesNotContain("RUN COMPLETE", writer.ToString());
             }
             else
             {
-                await display.ShowUntilShutdownAsync(Task.CompletedTask);
+                shutdown.SetResult();
+                await rendering.WaitAsync(TimeSpan.FromSeconds(2));
                 Assert.Contains("RUN COMPLETE", writer.ToString());
             }
 
+            Assert.Contains("Buffered error retained.", writer.ToString());
             output.Write(new Text("Normal output restored."));
             Assert.Contains("Normal output restored.", writer.ToString());
         }
@@ -133,7 +139,7 @@ namespace LPS.UnitTest
                 Interactive = InteractionSupport.Yes,
                 Out = new AnsiConsoleOutput(writer)
             });
-            var display = new FinalizationDisplay(console, new LiveConsoleOutput(console));
+            var display = new FinalizationDisplay(console, new LiveConsoleOutput(console, console));
             display.Start(TimeSpan.Zero);
 
             await display.ShowUntilShutdownAsync(Task.CompletedTask);
@@ -149,7 +155,7 @@ namespace LPS.UnitTest
                 Interactive = InteractionSupport.No,
                 Out = new AnsiConsoleOutput(TextWriter.Null)
             });
-            return new FinalizationDisplay(console, new LiveConsoleOutput(console));
+            return new FinalizationDisplay(console, new LiveConsoleOutput(console, console));
         }
     }
 }

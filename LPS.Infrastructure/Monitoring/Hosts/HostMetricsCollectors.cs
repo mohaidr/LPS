@@ -3,6 +3,8 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
 using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.Metrics;
@@ -21,6 +23,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         private int _pushInProgress;
         private bool _finalReconcileDone;
         private bool _disposed;
+
+        public HostCumulativeMetricsSnapshot? LatestSnapshot { get; private set; }
 
         public HostCumulativeMetricsCollector(
             IHostMetricsAggregator aggregator,
@@ -59,6 +63,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                 var counts = HostThroughputRollup.Fold(_aggregator.HostKey, _executionStatus, _metricDataStore);
                 var snapshot = _aggregator.GetCumulativeSnapshot(counts);
                 ApplyStatus(snapshot, status);
+                LatestSnapshot = snapshot;
                 _queue.TryEnqueue(snapshot);
             }
             finally
@@ -109,6 +114,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         private readonly IWindowedMetricsCoordinator _coordinator;
         private readonly HostExecutionStatusTracker? _executionStatus;
         private readonly ILiveMetricDataStore? _metricDataStore;
+        private readonly ICoolingTracker? _coolingTracker;
         private long _lastSuccessful;
         private long _lastFailed;
         private bool _disposed;
@@ -118,13 +124,15 @@ namespace LPS.Infrastructure.Monitoring.Hosts
             IHostWindowedMetricsQueue queue,
             IWindowedMetricsCoordinator coordinator,
             HostExecutionStatusTracker? executionStatus = null,
-            ILiveMetricDataStore? metricDataStore = null)
+            ILiveMetricDataStore? metricDataStore = null,
+            ICoolingTracker? coolingTracker = null)
         {
             _aggregator = aggregator;
             _queue = queue;
             _coordinator = coordinator;
             _executionStatus = executionStatus;
             _metricDataStore = metricDataStore;
+            _coolingTracker = coolingTracker;
             _coordinator.OnWindowClosed += OnWindowClosed;
         }
 
@@ -141,6 +149,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
                 _lastFailed = total.Failed;
 
                 var snapshot = _aggregator.GetWindowedSnapshotAndReset(windowCounts);
+                snapshot.CoolingPeriods = _coolingTracker?.GetPeriods(_aggregator.HostKey.Host,
+                    snapshot.WindowStart, snapshot.WindowEnd) ?? Array.Empty<CoolingPeriod>();
                 ApplyStatus(snapshot, _executionStatus?.GetStatus(_aggregator.HostKey));
                 _queue.TryEnqueue(snapshot);
             }

@@ -25,8 +25,8 @@ using Node = LPS.Infrastructure.Nodes.Node;
 using LPS.Infrastructure.VariableServices.GlobalVariableManager;
 using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Monitoring.Cumulative;
-using LPS.Infrastructure.Monitoring.Hosts;
 using Microsoft.Extensions.Hosting;
+using LPS.UI.Core.Web;
 
 namespace LPS.UI.Core.Host
 {
@@ -54,10 +54,7 @@ namespace LPS.UI.Core.Host
         ITestExecutionService testExecutionService,
         IWindowedMetricsCoordinator windowedMetricsCoordinator,
         ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,
-        IWindowedMetricsQueue windowedMetricsQueue,
-        ICumulativeMetricsQueue cumulativeMetricsQueue,
-        IHostWindowedMetricsQueue hostWindowedMetricsQueue,
-        IHostCumulativeMetricsQueue hostCumulativeMetricsQueue,
+        IEnumerable<IMetricsDispatcher> metricsDispatchers,
         IHostApplicationLifetime applicationLifetime,
         CancellationTokenSource cts) : BackgroundService
     {
@@ -83,10 +80,7 @@ namespace LPS.UI.Core.Host
         readonly ITestOrchestratorService _testOrchestratorService = testOrchestratorService;
         readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator = windowedMetricsCoordinator;
         readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator = cumulativeMetricsCoordinator;
-        readonly IWindowedMetricsQueue _windowedMetricsQueue = windowedMetricsQueue;
-        readonly ICumulativeMetricsQueue _cumulativeMetricsQueue = cumulativeMetricsQueue;
-        readonly IHostWindowedMetricsQueue _hostWindowedMetricsQueue = hostWindowedMetricsQueue;
-        readonly IHostCumulativeMetricsQueue _hostCumulativeMetricsQueue = hostCumulativeMetricsQueue;
+        readonly IEnumerable<IMetricsDispatcher> _metricsDispatchers = metricsDispatchers;
         readonly IHostApplicationLifetime _applicationLifetime = applicationLifetime;
         readonly string[] _command_args = command_args.args;
         readonly CancellationTokenSource _cts = cts;
@@ -102,6 +96,7 @@ namespace LPS.UI.Core.Host
                 // Only start metrics coordinators for test execution commands (not config commands)
                 if (isPlanExecutionCommand)
                 {
+                    await WorkspaceRunner.ReportAsync("Running");
                     RegisterLocalNode();
                     _localNode = _nodeRegistry.GetLocalNode();
                     _ = Task.Run(async () => { await _nodeHealthMonitorBackgroundService.StartAsync(_cts.Token); });
@@ -112,7 +107,7 @@ namespace LPS.UI.Core.Host
 
                 #pragma warning disable CS8622 // Nullability of reference types in type of parameter doesn't match the target delegate (possibly because of nullability attributes).
                 Console.CancelKeyPress += CancelKeyPressHandler;
-                _ = WatchForCancellationAsync();
+                _ = WorkspaceRunner.IsManaged ? Task.Run(WatchForCancellationAsync) : WatchForCancellationAsync();
 
                 if (_command_args != null && _command_args.Length > 0)
                 {
@@ -134,6 +129,7 @@ namespace LPS.UI.Core.Host
             }
             catch (Exception ex)
             {
+                await WorkspaceRunner.ReportAsync("Failed");
                 Console.WriteLine(ex.ToString() );
                 _logger.Log(ex.ToString(), LPSLoggingLevel.Error);
                 if (_localNode != null)
@@ -145,6 +141,7 @@ namespace LPS.UI.Core.Host
                 bool isTestExecution = CommandLineManager.IsTestExecutionCommand(_command_args);
                 if (isTestExecution)
                 {
+                    await WorkspaceRunner.ReportAsync("Finalizing");
                     if (_localNode?.Metadata.NodeType == NodeType.Master)
                     {
                         // Wait for all workers to complete before stopping coordinators
@@ -156,22 +153,13 @@ namespace LPS.UI.Core.Host
                     
                     await _cumulativeMetricsCoordinator.StopAsync(CancellationToken.None);
                     await _windowedMetricsCoordinator.StopAsync(CancellationToken.None);
-                    await WaitForMetricsQueuesToDrainAsync();
+                    await Task.WhenAll(_metricsDispatchers.Select(dispatcher => dispatcher.CompleteAsync(CancellationToken.None)));
                     await _dashboardService.EnsureDashboardUpdateBeforeExitAsync();
+                    if (WorkspaceRunner.IsManaged)
+                        await _testExecutionService.PersistMetricsAsync(CancellationToken.None);
                 }
 
                 _applicationLifetime.StopApplication();
-            }
-        }
-
-        private async Task WaitForMetricsQueuesToDrainAsync()
-        {
-            while (_windowedMetricsQueue.Reader.Count > 0
-                || _cumulativeMetricsQueue.Reader.Count > 0
-                || _hostWindowedMetricsQueue.Reader.Count > 0
-                || _hostCumulativeMetricsQueue.Reader.Count > 0)
-            {
-                await Task.Delay(100);
             }
         }
 
@@ -230,6 +218,29 @@ namespace LPS.UI.Core.Host
         static bool _programCompleted;
         private async Task WatchForCancellationAsync()
         {
+            if (Console.IsInputRedirected)
+            {
+                if (!WorkspaceRunner.IsManaged)
+                    return;
+                using var stopping = CancellationTokenSource.CreateLinkedTokenSource(_cts.Token, _applicationLifetime.ApplicationStopping);
+                try
+                {
+                    while (!stopping.IsCancellationRequested)
+                    {
+                        var input = await Console.In.ReadLineAsync(stopping.Token);
+                        if (input == null || input == "stop")
+                        {
+                            RequestCancellation();
+                            return;
+                        }
+                    }
+                }
+                catch (OperationCanceledException) when (stopping.IsCancellationRequested)
+                {
+                }
+                return;
+            }
+
             while (!_cts.IsCancellationRequested && !_programCompleted)
             {
                 if (Console.KeyAvailable) // Check for the Escape key

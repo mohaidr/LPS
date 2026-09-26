@@ -10,6 +10,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
     /// </summary>
     public interface IWindowedMetricsQueue
     {
+        void Complete();
+
         /// <summary>
         /// Enqueue a completed window snapshot.
         /// </summary>

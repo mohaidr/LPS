@@ -198,7 +198,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _iterationStatusMonitor, _watchdog
+                            this, _iterationStatusMonitor, _watchdog, _lpsMonitoringEnroller
                         );
                         break;
 
@@ -211,7 +211,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _iterationStatusMonitor, _watchdog
+                            this, _iterationStatusMonitor, _watchdog, _lpsMonitoringEnroller
                         );
                         break;
 
@@ -223,7 +223,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _iterationStatusMonitor, _watchdog
+                            this, _iterationStatusMonitor, _watchdog, _lpsMonitoringEnroller
                         );
                         break;
 

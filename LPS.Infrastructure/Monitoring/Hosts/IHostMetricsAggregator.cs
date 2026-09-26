@@ -1,4 +1,5 @@
 #nullable enable
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain;
@@ -28,6 +29,7 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         IHostMetricsAggregator GetOrCreate(HostKey hostKey);
         IHostMetricsAggregator GetOrCreate(HostKey hostKey, System.Guid requestId);
         bool TryGet(HostKey hostKey, out IHostMetricsAggregator aggregator);
+        IReadOnlyList<HostCumulativeMetricsSnapshot> GetLatestCumulativeSnapshots();
         void Prefill();
     }
 }

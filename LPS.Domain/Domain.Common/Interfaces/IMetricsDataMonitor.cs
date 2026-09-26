@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 
 namespace LPS.Domain.Common.Interfaces
 {
@@ -13,5 +14,6 @@ namespace LPS.Domain.Common.Interfaces
         /// The collectors are created and automatically start listening to coordinator events.
         /// </summary>
         ValueTask<bool> TryRegisterAsync(string roundName, HttpIteration lpsHttpIteration);
+        IDisposable BeginBatchCooldown(HttpIteration iteration);
     }
 }

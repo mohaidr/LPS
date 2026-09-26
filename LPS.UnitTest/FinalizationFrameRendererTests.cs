@@ -35,7 +35,7 @@ namespace LPS.UnitTest
 
         [Theory]
         [InlineData(40, "LPS")]
-        [InlineData(80, "L -- P {} S ^")]
+        [InlineData(80, "L - P {} S ^")]
         public void Render_UsesBannerFigletFont(int width, string text)
         {
             var expected = RenderContent(new FigletText(text), width).Split('\n')
@@ -55,7 +55,7 @@ namespace LPS.UnitTest
         [InlineData(220)]
         public void Render_EnlargesOutlineWithoutRepeatingHorizontalStrokes(int width)
         {
-            var original = RenderContent(new FigletText("L -- P {} S ^"), width).Split('\n')
+            var original = RenderContent(new FigletText("L - P {} S ^"), width).Split('\n')
                 .Where(line => !string.IsNullOrWhiteSpace(line)).ToArray();
             var artwork = Render(1, 0, width).Split('\n').Skip(3).Take(original.Length * 2).ToArray();
 

@@ -6,12 +6,14 @@ namespace LPS.Infrastructure.Monitoring.Hosts
     public interface IHostCumulativeMetricsQueue
     {
         bool TryEnqueue(HostCumulativeMetricsSnapshot snapshot);
+        void Complete();
         ChannelReader<HostCumulativeMetricsSnapshot> Reader { get; }
     }
 
     public interface IHostWindowedMetricsQueue
     {
         bool TryEnqueue(HostWindowedMetricsSnapshot snapshot);
+        void Complete();
         ChannelReader<HostWindowedMetricsSnapshot> Reader { get; }
     }
 
@@ -33,6 +35,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
         public bool TryEnqueue(HostCumulativeMetricsSnapshot snapshot) =>
             _channel.Writer.TryWrite(snapshot);
 
+        public void Complete() => _channel.Writer.TryComplete();
+
         public ChannelReader<HostCumulativeMetricsSnapshot> Reader => _channel.Reader;
     }
 
@@ -53,6 +57,8 @@ namespace LPS.Infrastructure.Monitoring.Hosts
 
         public bool TryEnqueue(HostWindowedMetricsSnapshot snapshot) =>
             _channel.Writer.TryWrite(snapshot);
+
+        public void Complete() => _channel.Writer.TryComplete();
 
         public ChannelReader<HostWindowedMetricsSnapshot> Reader => _channel.Reader;
     }

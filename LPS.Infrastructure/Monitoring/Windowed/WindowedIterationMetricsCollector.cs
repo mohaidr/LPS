@@ -3,6 +3,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain;
+using LPS.Domain.Common.Interfaces;
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using LPS.Infrastructure.Common.Interfaces;
@@ -25,6 +26,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
         private readonly IWindowedMetricsCoordinator _coordinator;
         private readonly IIterationStatusMonitor _iterationStatusMonitor;
         private readonly IPlanExecutionContext _planContext;
+        private readonly ICoolingTracker? _coolingTracker;
         private readonly SemaphoreSlim _semaphore = new(1, 1);
 
         private int _windowSequence;
@@ -48,7 +50,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             IHistoricalWindowedMetricDataStore dataStore,
             IWindowedMetricsCoordinator coordinator,
             IIterationStatusMonitor iterationStatusMonitor,
-            IPlanExecutionContext planContext)
+            IPlanExecutionContext planContext,
+            ICoolingTracker? coolingTracker = null)
         {
             _httpIteration = httpIteration ?? throw new ArgumentNullException(nameof(httpIteration));
             _roundName = roundName ?? throw new ArgumentNullException(nameof(roundName));
@@ -57,6 +60,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException(nameof(iterationStatusMonitor));
             _planContext = planContext ?? throw new ArgumentNullException(nameof(planContext));
+            _coolingTracker = coolingTracker;
 
             // Subscribe to window close events
             _coordinator.OnWindowClosed += OnWindowClosed;
@@ -153,6 +157,8 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                     WindowEnd = windowEnd,
                     ExecutionStatus = executionStatus,
                     IsFinal = isFinal,
+                    CoolingPeriods = _coolingTracker?.GetPeriods(_httpIteration.HttpRequest?.Url?.HostName ?? string.Empty,
+                        _windowStart, windowEnd, _httpIteration.Id) ?? Array.Empty<CoolingPeriod>(),
                     
                     // Windowed (for charts)
                     Duration = durationData,

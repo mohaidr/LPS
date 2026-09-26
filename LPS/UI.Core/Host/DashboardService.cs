@@ -42,14 +42,14 @@ namespace LPS.UI.Core.Host
         }
         public async Task EnsureDashboardUpdateBeforeExitAsync()
         {
-            var refreshInterval = _dashboardConfig.Value.RefreshRate.HasValue ? _dashboardConfig.Value.RefreshRate.Value * 2 : 10;
+            var refreshInterval = Math.Max(_dashboardConfig.Value.RefreshRate ?? 5, 5) * 2;
             var finalizationDuration = TimeSpan.FromSeconds(refreshInterval);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Test complete. Finalizing results...", LPSLoggingLevel.Information);
             _finalizationDisplay.Start(finalizationDuration);
             await Task.Delay(finalizationDuration);
         }
 
-        private static void OpenBrowser(string url)
+        internal static void OpenBrowser(string url)
         {
             try
             {

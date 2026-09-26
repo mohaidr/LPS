@@ -1,0 +1,79 @@
+@baseUrl = http://127.0.0.1:8010
+@planId = {{createPlan.response.body.$.id}}
+@runId = {{startRun.response.body.$.id}}
+@hostInstanceId = {{getHost.response.body.$.instanceId}}
+
+### Identify the running local UI host
+# @name getHost
+GET {{baseUrl}}/api/workspace/host
+X-LPS-Workspace: 1
+
+### Stop that exact host gracefully (202; a changed instance returns 409)
+POST {{baseUrl}}/api/workspace/host/stop?instanceId={{hostInstanceId}}
+X-LPS-Workspace: 1
+
+### List saved plans
+GET {{baseUrl}}/api/workspace/plans
+X-LPS-Workspace: 1
+
+### Save a local test (start a target on port 8098 before running)
+# @name createPlan
+POST {{baseUrl}}/api/workspace/plans
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{
+  "plan": {
+    "name": "Local test",
+    "rounds": [{
+      "name": "Main",
+      "numberOfClients": "1",
+      "arrivalDelay": "0",
+      "runClientsSequentially": "false",
+      "iterations": [{
+        "name": "Request",
+        "mode": "R",
+        "requestCount": "10",
+        "httpRequest": {
+          "url": "http://127.0.0.1:8098/test",
+          "httpMethod": "GET",
+          "httpVersion": "1.1"
+        }
+      }]
+    }]
+  }
+}
+
+### Export a CLI-compatible plan
+GET {{baseUrl}}/api/workspace/plans/{{planId}}/export
+X-LPS-Workspace: 1
+
+### Start an isolated run (201; a second active run returns 409)
+# @name startRun
+POST {{baseUrl}}/api/workspace/runs
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{ "planId": "{{planId}}" }
+
+### Read status, recent logs, and retained final metrics
+GET {{baseUrl}}/api/workspace/runs/{{runId}}
+X-LPS-Workspace: 1
+
+### Request graceful stop (202; already-finished runs return 409)
+POST {{baseUrl}}/api/workspace/runs/{{runId}}/stop
+X-LPS-Workspace: 1
+
+### Validation failure (400 Problem Details)
+POST {{baseUrl}}/api/workspace/plans
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{ "plan": { "name": "Empty test" } }
+
+### Requests without the workspace header are rejected (403)
+GET {{baseUrl}}/api/workspace/plans
+
+### Delete a saved plan; history remains available
+DELETE {{baseUrl}}/api/workspace/plans/{{planId}}
+X-LPS-Workspace: 1
