@@ -47,6 +47,11 @@ lps ui
 
 # ⚡ Quick Test Examples
 
+CB, CRB, and DCB modes track each in-flight batch separately. A background cleanup
+checks every 5 seconds and removes completed batches while retaining request totals
+and failure outcomes. This does not cap concurrency or change batch scheduling.
+On exit, outstanding batches are awaited before results or errors are returned.
+
 ### 1️⃣ Ramp up 1000 clients gradually
 ```bash
 lps --url https://www.example.com --numberofclients 1000 --arrivaldelay 100
@@ -117,4 +122,3 @@ Explore full docs in the [📖 LPS Docs Repo](https://github.com/mohaidr/lps-doc
 > **🔄 Breaking Change in v3.0.2.6:** The `failureCriteria` and old `terminationRules` formats have been **permanently removed**. The last version supporting the old format was **v3.0.2.5**. See the [Migration Guide](https://github.com/mohaidr/lps-docs/blob/main/articles/10.MigrationGuide.md) for details on the new `failureRules` and `terminationRules` inline metric expression format.
 
 ---
-

@@ -2,9 +2,7 @@
 using LPS.Domain.Domain.Common.Enums;
 using LPS.Domain.Domain.Common.Interfaces;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -49,7 +47,8 @@ namespace LPS.Domain.LPSRun.IterationMode
 
         public async Task<int> ExecuteAsync(CancellationToken cancellationToken)
         {
-            List<Task<int>> awaitableTasks = [];
+            var awaitableTasks = new BatchTaskTracker();
+            Exception executionError = null;
 
             var stopwatch = Stopwatch.StartNew();
             var coolDownWatch = Stopwatch.StartNew();
@@ -91,6 +90,10 @@ namespace LPS.Domain.LPSRun.IterationMode
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                executionError = ex;
+            }
             finally
             {
                 cooling?.Dispose();
@@ -99,15 +102,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             coolDownWatch.Stop();
             stopwatch.Stop();
 
-            try
-            {
-                var results = await Task.WhenAll(awaitableTasks);
-                return results.Sum();
-            }
-            catch
-            {
-                throw;
-            }
+            return await awaitableTasks.CompleteAsync(executionError);
         }
     }
 }

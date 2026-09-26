@@ -3,6 +3,8 @@ using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
 using LPS.Domain.Common.Interfaces;
+using LPS.Domain.Domain.Common.Enums;
+using LPS.Domain.Domain.Common.Extensions;
 using LPS.Domain.Domain.Common.Interfaces;
 
 namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
@@ -98,7 +100,7 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
 
         /// <summary>
         /// Background task that monitors for iteration termination and cancels the CancellationTokenSource when detected.
-        /// One watcher per iteration, shared by all clients.
+        /// One watcher per iteration, shared by all clients; stops when the whole iteration is terminal.
         /// </summary>
         private async Task StartTerminationWatcherAsync(
             HttpIteration httpIteration,
@@ -109,7 +111,8 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
             {
                 while (!externalToken.IsCancellationRequested && !iterationCts.IsCancellationRequested)
                 {
-                    if (await _iterationStatusMonitor.IsTerminatedAsync(httpIteration, externalToken))
+                    var status = await _iterationStatusMonitor.GetTerminalStatusAsync(httpIteration, externalToken);
+                    if (status == EntityExecutionStatus.Terminated)
                     {
                         await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                             $"Iteration '{httpIteration.Name}' terminated - cancelling all waiting clients",
@@ -118,6 +121,9 @@ namespace LPS.Domain.LPSRun.LPSHttpIteration.Scheduler
                         iterationCts.Cancel();
                         break;
                     }
+
+                    if (status.IsTerminal())
+                        break;
 
                     // Poll every 500ms
                     await Task.Delay(500, externalToken);
