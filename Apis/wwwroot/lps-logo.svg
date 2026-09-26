@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="lps-logo-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00e676" />
+      <stop offset="100%" stop-color="#00bfa5" />
+    </linearGradient>
+  </defs>
+  <rect x="3" y="3" width="26" height="26" rx="6" fill="url(#lps-logo-gradient)" />
+  <path d="M9 21h3v-8H9v8zm6 0h3v-5h-3v5zm6 0h3v-11h-3v11z" fill="#071015" />
+</svg>

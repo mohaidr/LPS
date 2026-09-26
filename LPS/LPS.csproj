@@ -15,8 +15,6 @@
 		<!-- .NET Global Tool -->
 		<PackAsTool>true</PackAsTool>
 		<ToolCommandName>lps</ToolCommandName>
-		<DashboardWebRoot Condition="Exists('..\lps-dashboard\build\index.html')">..\lps-dashboard\build</DashboardWebRoot>
-		<DashboardWebRoot Condition="'$(DashboardWebRoot)' == ''">..\Apis\wwwroot</DashboardWebRoot>
 
 		<!-- NuGet metadata -->
 		<PackageId>lps</PackageId>
@@ -92,7 +90,7 @@
 
 	<!-- 🔹 NEW: Bring Apis/wwwroot into the tool package so static files are portable -->
 	<ItemGroup>
-		<Content Include="$(DashboardWebRoot)\**\*">
+		<Content Include="..\Apis\wwwroot\**\*">
 			<!-- Place them under this project's wwwroot at build/pack -->
 			<Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>

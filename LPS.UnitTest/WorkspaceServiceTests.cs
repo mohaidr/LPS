@@ -26,6 +26,30 @@ public class WorkspaceServiceTests : IDisposable
     private WorkspaceOptions Options => new(_directory, Path.Combine(_directory, "missing-runner.dll"));
 
     [Fact]
+    public void BundledDashboard_ContainsWorkspaceEntryPointAndReferencedAssets()
+    {
+        var webRoot = Path.Combine(AppContext.BaseDirectory, "wwwroot");
+        var index = File.ReadAllText(Path.Combine(webRoot, "index.html"));
+        using var assets = JsonDocument.Parse(File.ReadAllText(Path.Combine(webRoot, "asset-manifest.json")));
+        var files = assets.RootElement.GetProperty("files");
+        Assert.Equal("/index.html", files.GetProperty("index.html").GetString());
+        Assert.Contains(files.GetProperty("main.js").GetString()!, index);
+        Assert.Contains(files.GetProperty("main.css").GetString()!, index);
+        foreach (var asset in files.EnumerateObject())
+        {
+            var relativePath = asset.Value.GetString()!.TrimStart('/');
+            Assert.True(File.Exists(Path.Combine(webRoot, relativePath)), $"Missing bundled asset: {relativePath}");
+        }
+        using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(webRoot, "manifest.json")));
+        foreach (var icon in manifest.RootElement.GetProperty("icons").EnumerateArray())
+        {
+            var relativePath = icon.GetProperty("src").GetString()!.TrimStart('/');
+            Assert.True(File.Exists(Path.Combine(webRoot, relativePath)), $"Missing bundled icon: {relativePath}");
+        }
+        Assert.True(File.Exists(Path.Combine(webRoot, "lps-logo.svg")));
+    }
+
+    [Fact]
     public void BackgroundLaunch_PreservesArgumentsAndIsolatesConsoleStreams()
     {
         var args = new[] { "--port", "8017", "--open-browser", "true", "--data-directory", _directory, "--webroot", "folder with spaces" };
