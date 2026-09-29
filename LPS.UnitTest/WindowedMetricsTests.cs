@@ -191,7 +191,7 @@ public sealed class WindowedMetricsTests
             Throughput = new WindowedThroughputData { RequestsCount = 20, MaxConcurrentRequests = 5 },
             CoolingPeriods = new[]
             {
-                new CoolingPeriod("Watchdog", start.AddMilliseconds(250), start.AddSeconds(1)),
+                new CoolingPeriod("Watchdog", start.AddMilliseconds(250), start.AddSeconds(1), "10.0.0.2", "worker east", "CPU pressure"),
                 new CoolingPeriod("BatchCooldown", start.AddMilliseconds(500), start.AddSeconds(2))
             }
         };
@@ -201,6 +201,7 @@ public sealed class WindowedMetricsTests
         var watchdog = Assert.Single(lines, line => line.StartsWith("windowed_cooling,") && line.Contains("source=Watchdog"));
         var batch = Assert.Single(lines, line => line.StartsWith("windowed_cooling,") && line.Contains("source=BatchCooldown"));
         Assert.Contains("duration_ms=750.00", watchdog);
+        Assert.Contains("node=10.0.0.2,machine=worker\\ east,reason=CPU\\ pressure", watchdog);
         Assert.Contains("duration_ms=1500.00", batch);
         var end = new DateTimeOffset(start.AddSeconds(1)).ToUnixTimeMilliseconds() * 1_000_000;
         Assert.Contains($"end_ns={end}i", watchdog);

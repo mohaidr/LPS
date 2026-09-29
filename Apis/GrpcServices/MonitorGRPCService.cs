@@ -7,6 +7,7 @@ using LPS.Domain;
 using LPS.Protos.Shared;
 using LPS.Infrastructure.Common.GRPCExtensions;
 using LPS.Infrastructure.Logger;
+using LPS.Infrastructure.Monitoring;
 using ILogger = LPS.Domain.Common.Interfaces.ILogger;
 namespace Apis.Services
 {
@@ -15,6 +16,7 @@ namespace Apis.Services
         private readonly IEntityDiscoveryService _discoveryService;
         private readonly ICommandStatusMonitor<HttpIteration> _statusMonitor;
         private readonly IMetricsDataMonitor _metricsMonitor;
+        private readonly CoolingMetricsReporter _coolingReporter;
         ILogger _logger;
         IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         INodeMetadata _nodeMetadata;
@@ -24,7 +26,7 @@ namespace Apis.Services
                 ICommandStatusMonitor<HttpIteration> statusMonitor,
                 IMetricsDataMonitor metricsMonitor, 
                 ILogger logger, IRuntimeOperationIdProvider runtimeOperationIdProvider,
-                INodeMetadata nodeMetadata, CancellationTokenSource cts)
+                INodeMetadata nodeMetadata, CancellationTokenSource cts, CoolingMetricsReporter coolingReporter)
         {
             _discoveryService = discoveryService;
             _statusMonitor = statusMonitor;
@@ -33,6 +35,7 @@ namespace Apis.Services
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _nodeMetadata = nodeMetadata;
             _cts = cts;
+            _coolingReporter = coolingReporter;
         }
 
         public override async Task<StatusQueryResponse> QueryIterationStatuses(StatusQueryRequest request, ServerCallContext context)
@@ -51,6 +54,10 @@ namespace Apis.Services
                 .QueryAsync(iteration => iteration.Id == record.IterationId))
                 .SingleOrDefault()
                 .Value;
+
+            if (internalStatuses?.Count > 0 && internalStatuses.All(status =>
+                status is not (CommandExecutionStatus.Scheduled or CommandExecutionStatus.Ongoing)))
+                await _coolingReporter.FlushAsync(context.CancellationToken);
 
             // Map to gRPC-compatible enum
             var grpcStatuses = internalStatuses?

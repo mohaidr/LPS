@@ -55,6 +55,7 @@ namespace LPS.UI.Core.Host
         IWindowedMetricsCoordinator windowedMetricsCoordinator,
         ICumulativeMetricsCoordinator cumulativeMetricsCoordinator,
         IEnumerable<IMetricsDispatcher> metricsDispatchers,
+        LPS.Infrastructure.Monitoring.CoolingMetricsReporter coolingReporter,
         IHostApplicationLifetime applicationLifetime,
         CancellationTokenSource cts) : BackgroundService
     {
@@ -132,6 +133,7 @@ namespace LPS.UI.Core.Host
                 await WorkspaceRunner.ReportAsync("Failed");
                 Console.WriteLine(ex.ToString() );
                 _logger.Log(ex.ToString(), LPSLoggingLevel.Error);
+                await coolingReporter.CompleteAsync();
                 if (_localNode != null)
                     await _localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Failed);
             }
@@ -142,6 +144,7 @@ namespace LPS.UI.Core.Host
                 if (isTestExecution)
                 {
                     await WorkspaceRunner.ReportAsync("Finalizing");
+                    await coolingReporter.CompleteAsync();
                     if (_localNode?.Metadata.NodeType == NodeType.Master)
                     {
                         // Wait for all workers to complete before stopping coordinators

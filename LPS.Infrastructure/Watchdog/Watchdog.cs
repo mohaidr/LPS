@@ -50,6 +50,7 @@ namespace LPS.Infrastructure.Watchdog
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         private readonly IClusterConfiguration _clusterConfiguration;
         private readonly ICoolingTracker _coolingTracker;
+        private readonly string _nodeId = INode.NodeIP;
         private readonly ResourceEventListener _resourceListener = new ResourceEventListener();
 
         // Hostnames seen by BalanceAsync callers - the sampler will poll connection counts for these.
@@ -224,6 +225,7 @@ namespace LPS.Infrastructure.Watchdog
 
 
             int hostCount = 0;
+            int maxActiveConnections = 0;
             var hostsOverMax = new List<string>();
             var hostsOverCooldown = new List<string>();
             foreach (var host in _observedHosts.Keys)
@@ -232,6 +234,7 @@ namespace LPS.Infrastructure.Watchdog
                 if (active < 0) continue; // failure already logged
                 _hostConnectionCounts[host] = active;
                 hostCount++;
+                maxActiveConnections = Math.Max(maxActiveConnections, active);
                 if (active > MaxConcurrentConnectionsCountPerHostName)
                     hostsOverMax.Add($"{host} ({active} active)");
                 if (active > CoolDownConcurrentConnectionsCountPerHostName)
@@ -293,20 +296,16 @@ namespace LPS.Infrastructure.Watchdog
             {
                 // Attribute pressure to what crossed the threshold for the CURRENT state:
                 // Hot -> the max thresholds that triggered it; Cooling -> the cooldown thresholds still above the recovery watermark.
-                var drivers = new List<string>();
-                if (next == ResourceState.Hot)
-                {
-                    if (memExceeded) drivers.Add($"memory={memoryMB:F0}MB");
-                    if (cpuExceeded) drivers.Add($"cpu={cpuPct:F0}%");
-                    if (hostsOverMax.Count > 0) drivers.Add($"hosts=[{string.Join(", ", hostsOverMax)}]");
-                }
-                else  
-                {
-                    if (memCooldown) drivers.Add($"memory={memoryMB:F0}MB");
-                    if (cpuCooldown) drivers.Add($"cpu={cpuPct:F0}%");
-                    if (hostsOverCooldown.Count > 0) drivers.Add($"hosts=[{string.Join(", ", hostsOverCooldown)}]");
-                }
-                string coolingDriver = drivers.Count > 0 ? string.Join(" ", drivers) : "no active pressure";
+                var recovering = next == ResourceState.Cooling;
+                var reason = DescribePressure(memoryMB, cpuPct, maxActiveConnections,
+                    recovering ? CoolDownMemoryMB : MaxMemoryMB,
+                    recovering ? CoolDownCPUPercentage : MaxCPUPercentage,
+                    recovering ? CoolDownConcurrentConnectionsCountPerHostName : MaxConcurrentConnectionsCountPerHostName,
+                    recovering, includeMeasurements: true);
+                var affectedHosts = recovering ? hostsOverCooldown : hostsOverMax;
+                var coolingDriver = $"machine={Environment.MachineName}; node={_nodeId}; reason={reason}";
+                if (affectedHosts.Count > 0)
+                    coolingDriver += $"; hosts=[{string.Join(", ", affectedHosts)}]";
 
                 if (!_isCoolingStarted)
                 {
@@ -452,7 +451,34 @@ namespace LPS.Infrastructure.Watchdog
         {
             _currentState = next;
             foreach (var host in _observedHosts.Keys)
-                _coolingTracker?.SetWatchdogState(host, EvaluateSnapshot(host));
+            {
+                var state = EvaluateSnapshot(host);
+                var recovering = state == ResourceState.Cooling;
+                _hostConnectionCounts.TryGetValue(host, out var connections);
+                var reason = DescribePressure(_latestMemoryMB, _latestCPUPercentage, connections,
+                    recovering ? CoolDownMemoryMB : MaxMemoryMB,
+                    recovering ? CoolDownCPUPercentage : MaxCPUPercentage,
+                    recovering ? CoolDownConcurrentConnectionsCountPerHostName : MaxConcurrentConnectionsCountPerHostName,
+                    recovering);
+                _coolingTracker?.SetWatchdogState(host, state, reason);
+            }
+        }
+
+        internal static string DescribePressure(double memoryMB, double cpuPercentage, int connections,
+            double memoryThreshold, double cpuThreshold, int connectionThreshold, bool recovering, bool includeMeasurements = false)
+        {
+            var reasons = new List<string>();
+            var threshold = recovering ? "recovery threshold" : "limit";
+            if (memoryMB > memoryThreshold)
+                reasons.Add(FormattableString.Invariant($"Memory above {memoryThreshold:0.##} MB {threshold}") +
+                    (includeMeasurements ? FormattableString.Invariant($" (current={memoryMB:0.##} MB)") : ""));
+            if (cpuPercentage >= cpuThreshold)
+                reasons.Add(FormattableString.Invariant($"CPU at/above {cpuThreshold:0.##}% {threshold}") +
+                    (includeMeasurements ? FormattableString.Invariant($" (current={cpuPercentage:0.##}%)") : ""));
+            if (connections > connectionThreshold)
+                reasons.Add($"Target connections above {connectionThreshold} {threshold}" +
+                    (includeMeasurements ? $" (current={connections})" : ""));
+            return reasons.Count == 0 ? "Watchdog resource pressure" : string.Join("; ", reasons);
         }
 
         private async Task<int> GetHostActiveConnectionsCountAsync(string hostName)

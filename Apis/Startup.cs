@@ -101,6 +101,7 @@ namespace LPS.Apis
                 endpoints.MapGrpcService<NodeGRPCService>();
                 endpoints.MapGrpcService<MetricsGrpcService>();
                 endpoints.MapGrpcService<HostMetricsGrpcService>();
+                endpoints.MapGrpcService<CoolingGrpcService>();
                 endpoints.MapGrpcService<EntityDiscoveryGrpcService>();
                 endpoints.MapGrpcService<MonitorGRPCService>();
                 endpoints.MapGrpcService<MetricsQueryGrpcService>();

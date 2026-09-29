@@ -54,7 +54,11 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             {
                 var fields = $"start_ns={ToNanosecondTimestamp(period.Start)}i,end_ns={ToNanosecondTimestamp(period.End)}i," +
                     $"duration_ms={FormatFloat((period.End - period.Start).TotalMilliseconds)}";
-                lines.Add(BuildLine("windowed_cooling", $"{tags},source={EscapeTag(period.Source)}", fields, ToNanosecondTimestamp(period.End)));
+                var coolingTags = $"{tags},source={EscapeTag(period.Source)}";
+                if (!string.IsNullOrEmpty(period.NodeId)) coolingTags += $",node={EscapeTag(period.NodeId)}";
+                if (!string.IsNullOrEmpty(period.MachineName)) coolingTags += $",machine={EscapeTag(period.MachineName)}";
+                if (!string.IsNullOrEmpty(period.Reason)) coolingTags += $",reason={EscapeTag(period.Reason)}";
+                lines.Add(BuildLine("windowed_cooling", coolingTags, fields, ToNanosecondTimestamp(period.End)));
             }
 
             if (snapshot.IsFinal)

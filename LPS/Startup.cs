@@ -128,7 +128,13 @@ namespace LPS
                     .GetSection("LPSAppSettings:LiveMetrics")
                     .Get<LiveMetricsPublishingOptions>() ?? new LiveMetricsPublishingOptions());
                 services.AddSingleton<IPlanExecutionContext, PlanExecutionContext>();
-                services.AddSingleton<ICoolingTracker, LPS.Infrastructure.Monitoring.CoolingTracker>();
+                services.AddSingleton<ICoolingTracker>(provider =>
+                {
+                    var node = provider.GetRequiredService<INodeMetadata>();
+                    return new LPS.Infrastructure.Monitoring.CoolingTracker(nodeId: node.NodeIP, machineName: node.NodeName);
+                });
+                services.AddSingleton<LPS.Infrastructure.Monitoring.CoolingMetricsReporter>();
+                services.AddHostedService(provider => provider.GetRequiredService<LPS.Infrastructure.Monitoring.CoolingMetricsReporter>());
                 services.AddSingleton<IMetricsDataMonitor, MetricsDataMonitor>();
                 services.AddSingleton<IMetricsVariableService, MetricsVariableService>();
                 services.AddSingleton<IIterationStatusMonitor, IterationStatusMonitor>();

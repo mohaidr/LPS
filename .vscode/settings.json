@@ -4,6 +4,15 @@
         "dotnet build": true,
         "dotnet-dump": true,
         "dotnet vstest": true,
-        "Copy-Item": true
+        "Copy-Item": true,
+        "ForEach-Object": true,
+        "/^Select-String -Path 'C:\\\\Users\\\\Hassan\\\\Documents\\\\LPS\\\\LPS\\.Infrastructure\\\\Monitoring\\\\Metrics\\\\DurationMetricAggregator\\.cs' -Pattern 'private readonly LongHistogram\\|P95 = _histogram\\.GetValueAtPercentile\\|public class LatencyMetric\\|CopyFrom\\\\\\(\\|Update\\\\\\(' \\| ForEach-Object \\{ \"\\$\\(\\$_\\.LineNumber\\): \\$\\(\\$_\\.Line\\)\" \\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^Select-String -Path 'C:\\\\Users\\\\Hassan\\\\Documents\\\\LPS\\\\LPS\\.Protos\\.Shared\\\\Protos\\\\metricsquery\\.proto' -Pattern 'message TimingMetricStats\\|p50\\|p95\\|service MetricsQueryService\\|rpc GetDurationMetrics\\|rpc GetThroughputMetrics' \\| ForEach-Object \\{ \"\\$\\(\\$_\\.LineNumber\\): \\$\\(\\$_\\.Line\\)\" \\}$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
     }
 }
