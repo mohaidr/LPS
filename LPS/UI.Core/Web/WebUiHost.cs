@@ -36,6 +36,7 @@ internal static class WebUiHost
         builder.Services.AddSingleton(GetOptions(builder.Configuration));
         builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(90));
         builder.Services.AddSingleton<IWorkspacePlanService, WorkspacePlanService>();
+        builder.Services.AddSingleton<IWorkspaceSettingsService>(new WorkspaceSettingsService(LPS.Infrastructure.Common.AppConstants.AppSettingsFileLocation));
         builder.Services.AddSingleton<WorkspaceRunService>();
         builder.Services.AddSingleton<IWorkspaceRunService>(provider => provider.GetRequiredService<WorkspaceRunService>());
         builder.Services.AddHostedService(provider => provider.GetRequiredService<WorkspaceRunService>());

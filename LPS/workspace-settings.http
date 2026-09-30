@@ -1,0 +1,59 @@
+@baseUrl = http://127.0.0.1:8010
+
+### Read settings (saved token is omitted)
+GET {{baseUrl}}/api/workspace/settings
+X-LPS-Workspace: 1
+
+### Save settings for future runs (null retains the saved token)
+PUT {{baseUrl}}/api/workspace/settings
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{
+  "settings": {
+    "fileLogger": {
+      "logFilePath": "logs/lpslog.log",
+      "consoleLogingLevel": 1,
+      "enableConsoleLogging": true,
+      "disableConsoleErrorLogging": true,
+      "disableFileLogging": false,
+      "loggingLevel": 0
+    },
+    "watchdog": {
+      "maxMemoryMB": 5000,
+      "coolDownMemoryMB": 4000,
+      "maxCPUPercentage": 80,
+      "coolDownCPUPercentage": 60,
+      "coolDownRetryTimeInMs": 100,
+      "maxConcurrentConnectionsCountPerHostName": 3000,
+      "coolDownConcurrentConnectionsCountPerHostName": 1500,
+      "maxCoolingPeriod": 30,
+      "resumeCoolingAfter": 90,
+      "suspensionMode": 0
+    },
+    "httpClient": {
+      "clientTimeoutInSeconds": 60,
+      "pooledConnectionLifeTimeInSeconds": 1500,
+      "pooledConnectionIdleTimeoutInSeconds": 350,
+      "maxConnectionsPerServer": 3000,
+      "headerValidationMode": 2,
+      "allowHostOverride": false
+    },
+    "dashboard": { "builtInDashboard": true, "port": 8009, "refreshRate": 3 },
+    "liveMetrics": { "publishIntervalMs": 250 },
+    "influxDB": {
+      "enabled": false,
+      "url": "https://influx.example",
+      "token": null,
+      "organization": "LPS",
+      "bucket": "LPS_Metrics"
+    }
+  }
+}
+
+### Missing settings: validation problem (400)
+PUT {{baseUrl}}/api/workspace/settings
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{}

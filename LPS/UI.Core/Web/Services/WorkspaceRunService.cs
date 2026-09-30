@@ -269,17 +269,19 @@ public sealed class WorkspaceRunService : IWorkspaceRunService, IHostedService
         File.Move(temporary, path, overwrite: true);
     }
 
-    private async Task<string> WriteSettingsAsync(string directory, int port, int grpcPort, CancellationToken token)
+    internal static async Task<string> WriteSettingsAsync(string directory, int port, int grpcPort, CancellationToken token, string? sourcePath = null)
     {
-        var settings = JsonNode.Parse(await File.ReadAllTextAsync(AppConstants.AppSettingsFileLocation, token))!;
+        var settings = JsonNode.Parse(await File.ReadAllTextAsync(sourcePath ?? AppConstants.AppSettingsFileLocation, token))!;
         var app = settings["LPSAppSettings"]!;
-        app["Dashboard"] = new JsonObject { ["BuiltInDashboard"] = false, ["Port"] = port, ["RefreshRate"] = 1 };
+        var dashboard = app["Dashboard"] ??= new JsonObject();
+        dashboard["BuiltInDashboard"] = false;
+        dashboard["Port"] = port;
+        dashboard["RefreshRate"] ??= 3;
         app["Cluster"] = new JsonObject
         {
             ["MasterNodeIP"] = "127.0.0.1", ["GRPCPort"] = grpcPort,
             ["ExpectedNumberOfWorkers"] = 0, ["MasterNodeIsWorker"] = true
         };
-        app["InfluxDB"] = new JsonObject { ["Enabled"] = false };
         var path = Path.Combine(directory, "settings.json");
         await File.WriteAllTextAsync(path, settings.ToJsonString(), token);
         return path;

@@ -16,7 +16,7 @@ internal sealed class WorkspaceExceptionHandler : IExceptionHandler
                 .ToDictionary(group => group.Key, group => group.Select(error => error.ErrorMessage).ToArray()))
             {
                 Status = StatusCodes.Status400BadRequest,
-                Title = "The plan has validation errors."
+                Title = "The request has validation errors."
             };
         }
         else

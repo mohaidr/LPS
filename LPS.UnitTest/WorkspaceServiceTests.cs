@@ -25,6 +25,132 @@ public class WorkspaceServiceTests : IDisposable
 
     private WorkspaceOptions Options => new(_directory, Path.Combine(_directory, "missing-runner.dll"));
 
+    private async Task<WorkspaceSettingsService> CreateSettingsServiceAsync()
+    {
+        Directory.CreateDirectory(_directory);
+        var path = Path.Combine(_directory, "lpsSettings.json");
+        await File.WriteAllTextAsync(path, """
+            { "OtherRoot": { "Keep": true }, "LPSAppSettings": {
+              "FileLogger": { "LogFilePath": "logs/lpslog.log", "ConsoleLogingLevel": 1, "EnableConsoleLogging": true, "DisableConsoleErrorLogging": true, "DisableFileLogging": false, "LoggingLevel": 0 },
+              "Watchdog": { "MaxMemoryMB": 5000, "CoolDownMemoryMB": 4000, "MaxCPUPercentage": 80, "CoolDownCPUPercentage": 60, "CoolDownRetryTimeInMs": 100, "MaxConcurrentConnectionsCountPerHostName": 3000, "CoolDownConcurrentConnectionsCountPerHostName": 1500, "MaxCoolingPeriod": 30, "ResumeCoolingAfter": 90, "SuspensionMode": 0, "FutureOption": 42 },
+              "HttpClient": { "ClientTimeoutInSeconds": 60, "PooledConnectionLifeTimeInSeconds": 1500, "PooledConnectionIdleTimeoutInSeconds": 350, "MaxConnectionsPerServer": 3000, "HeaderValidationMode": "RawPassthrough", "AllowHostOverride": false },
+              "Dashboard": { "BuiltInDashboard": true, "Port": 8009, "RefreshRate": 3 },
+              "InfluxDB": { "Enabled": false, "Url": "https://influx.example", "Token": "test-token", "Organization": "LPS", "Bucket": "LPS_Metrics" },
+              "Cluster": { "GRPCPort": 5001 }
+            } }
+            """);
+        return new WorkspaceSettingsService(path);
+    }
+
+    [Fact]
+    public async Task Settings_SavePreservesUnknownFieldsAndTokenAndFeedsFutureRuns()
+    {
+        var service = await CreateSettingsServiceAsync();
+        var loaded = await service.GetAsync(CancellationToken.None);
+        Assert.True(loaded.HasInfluxDBToken);
+        Assert.Null(loaded.Settings.InfluxDB.Token);
+        Assert.Equal(250, loaded.Settings.LiveMetrics.PublishIntervalMs);
+        loaded.Settings.Watchdog.MaxMemoryMB = 6000;
+        loaded.Settings.InfluxDB.Enabled = true;
+
+        var saved = await service.SaveAsync(loaded.Settings, CancellationToken.None);
+
+        Assert.Null(saved.Settings.InfluxDB.Token);
+        Assert.True(saved.HasInfluxDBToken);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(loaded.FilePath));
+        var app = document.RootElement.GetProperty("LPSAppSettings");
+        Assert.True(document.RootElement.GetProperty("OtherRoot").GetProperty("Keep").GetBoolean());
+        Assert.Equal(42, app.GetProperty("Watchdog").GetProperty("FutureOption").GetInt32());
+        Assert.Equal(5001, app.GetProperty("Cluster").GetProperty("GRPCPort").GetInt32());
+        Assert.Equal("test-token", app.GetProperty("InfluxDB").GetProperty("Token").GetString());
+        Assert.True(app.GetProperty("FileLogger").TryGetProperty("ConsoleLogingLevel", out _));
+        Assert.Equal(6000, (await new WorkspaceSettingsService(loaded.FilePath).GetAsync(CancellationToken.None)).Settings.Watchdog.MaxMemoryMB);
+        var copied = await WorkspaceRunService.WriteSettingsAsync(_directory, 9010, 9011, CancellationToken.None, loaded.FilePath);
+        using var run = JsonDocument.Parse(await File.ReadAllTextAsync(copied));
+        Assert.Equal(6000, run.RootElement.GetProperty("LPSAppSettings").GetProperty("Watchdog").GetProperty("MaxMemoryMB").GetInt32());
+        Assert.True(run.RootElement.GetProperty("LPSAppSettings").GetProperty("InfluxDB").GetProperty("Enabled").GetBoolean());
+        Assert.Empty(Directory.GetFiles(_directory, "*.tmp"));
+    }
+
+    [Theory]
+    [InlineData("Watchdog.MaxMemoryMB")]
+    [InlineData("HttpClient")]
+    [InlineData("Dashboard.Port")]
+    [InlineData("LiveMetrics.PublishIntervalMs")]
+    [InlineData("InfluxDB.Token")]
+    [InlineData("FileLogger")]
+    public async Task Settings_RejectInvalidValuesWithoutWriting(string field)
+    {
+        var service = await CreateSettingsServiceAsync();
+        var loaded = await service.GetAsync(CancellationToken.None);
+        var original = await File.ReadAllTextAsync(loaded.FilePath);
+        var settings = loaded.Settings;
+        switch (field)
+        {
+            case "Watchdog.MaxMemoryMB": settings.Watchdog.MaxMemoryMB = 2000; break;
+            case "HttpClient": settings.HttpClient.PooledConnectionIdleTimeoutInSeconds = 1600; break;
+            case "Dashboard.Port": settings.Dashboard.Port = 70000; break;
+            case "LiveMetrics.PublishIntervalMs": settings.LiveMetrics.PublishIntervalMs = 0; break;
+            case "InfluxDB.Token": settings.InfluxDB.Enabled = true; settings.InfluxDB.Token = ""; break;
+            case "FileLogger": settings = settings with { FileLogger = null! }; break;
+        }
+
+        var failure = await Assert.ThrowsAsync<ValidationException>(() => service.SaveAsync(settings, CancellationToken.None));
+
+        Assert.Contains(failure.Errors, error => error.PropertyName == field);
+        Assert.Equal(original, await File.ReadAllTextAsync(loaded.FilePath));
+    }
+
+    [Fact]
+    public async Task Settings_TokenCanBeReplacedOrExplicitlyCleared()
+    {
+        var service = await CreateSettingsServiceAsync();
+        var loaded = await service.GetAsync(CancellationToken.None);
+        loaded.Settings.InfluxDB.Token = "replacement-test-token";
+        var replaced = await service.SaveAsync(loaded.Settings, CancellationToken.None);
+        Assert.True(replaced.HasInfluxDBToken);
+        Assert.Null(replaced.Settings.InfluxDB.Token);
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(loaded.FilePath));
+        Assert.Equal("replacement-test-token", document.RootElement.GetProperty("LPSAppSettings").GetProperty("InfluxDB").GetProperty("Token").GetString());
+
+        replaced.Settings.InfluxDB.Token = "";
+        var cleared = await service.SaveAsync(replaced.Settings, CancellationToken.None);
+        Assert.False(cleared.HasInfluxDBToken);
+        Assert.False((await service.GetAsync(CancellationToken.None)).HasInfluxDBToken);
+    }
+
+    [Fact]
+    public async Task Runs_CopyConfiguredSettingsWithoutChangingTheSource()
+    {
+        Directory.CreateDirectory(_directory);
+        var source = Path.Combine(_directory, "lpsSettings.json");
+        var original = """
+            { "LPSAppSettings": {
+              "Watchdog": { "MaxMemoryMB": 5000 },
+              "Dashboard": { "BuiltInDashboard": true, "Port": 8009, "RefreshRate": 7 },
+              "LiveMetrics": { "PublishIntervalMs": 250 },
+              "InfluxDB": { "Enabled": true, "Url": "https://influx.example", "Token": "test-token" }
+            } }
+            """;
+        await File.WriteAllTextAsync(source, original);
+        var runDirectory = Path.Combine(_directory, "run");
+        Directory.CreateDirectory(runDirectory);
+
+        var copied = await WorkspaceRunService.WriteSettingsAsync(runDirectory, 9010, 9011, CancellationToken.None, source);
+
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(copied));
+        var settings = document.RootElement.GetProperty("LPSAppSettings");
+        Assert.Equal(7, settings.GetProperty("Dashboard").GetProperty("RefreshRate").GetInt32());
+        Assert.Equal(9010, settings.GetProperty("Dashboard").GetProperty("Port").GetInt32());
+        Assert.False(settings.GetProperty("Dashboard").GetProperty("BuiltInDashboard").GetBoolean());
+        Assert.Equal(9011, settings.GetProperty("Cluster").GetProperty("GRPCPort").GetInt32());
+        Assert.True(settings.GetProperty("InfluxDB").GetProperty("Enabled").GetBoolean());
+        Assert.Equal("test-token", settings.GetProperty("InfluxDB").GetProperty("Token").GetString());
+        Assert.Equal(5000, settings.GetProperty("Watchdog").GetProperty("MaxMemoryMB").GetInt32());
+        Assert.Equal(250, settings.GetProperty("LiveMetrics").GetProperty("PublishIntervalMs").GetInt32());
+        Assert.Equal(original, await File.ReadAllTextAsync(source));
+    }
+
     [Fact]
     public void BundledDashboard_ContainsWorkspaceEntryPointAndReferencedAssets()
     {
