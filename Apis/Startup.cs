@@ -75,6 +75,8 @@ namespace LPS.Apis
 
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            if (LPS.Infrastructure.Distributed.ClusterRunSettings.Current != null)
+                app.UseMiddleware<ClusterAccessMiddleware>();
             if (!env.IsDevelopment())
             {
                 app.UseExceptionHandler("/Home/Error");
@@ -99,6 +101,8 @@ namespace LPS.Apis
 
                 // gRPC services
                 endpoints.MapGrpcService<NodeGRPCService>();
+                if (LPS.Infrastructure.Distributed.ClusterRunSettings.Current?.Role == LPS.Infrastructure.Nodes.NodeType.Master)
+                    endpoints.MapGrpcService<WorkerControlGrpcService>();
                 endpoints.MapGrpcService<MetricsGrpcService>();
                 endpoints.MapGrpcService<HostMetricsGrpcService>();
                 endpoints.MapGrpcService<CoolingGrpcService>();

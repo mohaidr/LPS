@@ -15,7 +15,8 @@ namespace LPS.UI.Common
         }
 
         public static int DefaultDashboardPort => 59444;
-        public static int DefaultGRPCPort => 5001;
+        public static int DefaultMasterNodePort => 5001;
+        public static int DefaultGRPCPort => DefaultMasterNodePort;
 
         private static int GenerateRandomPort()
         {

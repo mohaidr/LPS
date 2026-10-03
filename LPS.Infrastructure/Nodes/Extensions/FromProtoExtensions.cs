@@ -23,7 +23,9 @@ namespace LPS.Infrastructure.Grpc
                 logicalProcessors: proto.LogicalProcessors,
                 totalRam: proto.TotalRam,
                 disks: proto.Disks.Select(d => d.FromProto()).Cast<IDiskInfo>().ToList(),
-                networkInterfaces: proto.NetworkInterfaces.Select(n => n.FromProto()).Cast<INetworkInfo>().ToList()
+                networkInterfaces: proto.NetworkInterfaces.Select(n => n.FromProto()).Cast<INetworkInfo>().ToList(),
+                endpoint: proto.Endpoint,
+                nodeType: proto.NodeType == LPS.Protos.Shared.NodeType.Master ? Nodes.NodeType.Master : Nodes.NodeType.Worker
             );
         }
 

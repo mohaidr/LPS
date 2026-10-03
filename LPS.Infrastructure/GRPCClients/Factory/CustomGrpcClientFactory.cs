@@ -23,7 +23,7 @@ namespace LPS.Infrastructure.GRPCClients.Factory
 
             return (TClient)_instances.GetOrAdd(key, _ =>
             {
-                var fullAddress = $"http://{host}:{_clusterConfiguration.GRPCPort}";
+                var fullAddress = ResolveAddress(host);
                 return TClient.Create(fullAddress);
             });
         }
@@ -35,9 +35,13 @@ namespace LPS.Infrastructure.GRPCClients.Factory
 
             return (TClient)_instances.GetOrAdd(key, _ =>
             {
-                var fullAddress = $"http://{host}:{_clusterConfiguration.GRPCPort}";
+                var fullAddress = ResolveAddress(host);
                 return factory(fullAddress);
             });
         }
+
+        private string ResolveAddress(string host) => Uri.TryCreate(host, UriKind.Absolute, out var endpoint)
+            && endpoint.Scheme is "http" or "https" ? endpoint.GetLeftPart(UriPartial.Authority)
+            : new UriBuilder("http", host, _clusterConfiguration.MasterNodePort).Uri.GetLeftPart(UriPartial.Authority);
     }
 }

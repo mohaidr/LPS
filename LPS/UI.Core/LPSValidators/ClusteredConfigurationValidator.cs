@@ -22,9 +22,9 @@ namespace LPS.UI.Core.LPSValidators
             .WithMessage("MasterNodeIsWorker is required.");
 
 
-            RuleFor(c => c.GRPCPort)
-                .NotNull().WithMessage("GRPCPort is required.")
-                .InclusiveBetween(1, 65535).WithMessage("GRPCPort must be between 1 and 65535.");
+            RuleFor(c => c.MasterNodePort)
+                .NotNull().WithMessage("MasterNodePort is required (GRPCPort is accepted for compatibility).")
+                .InclusiveBetween(1, 65535).WithMessage("MasterNodePort must be between 1 and 65535.");
 
 
             RuleFor(config => config.ExpectedNumberOfWorkers)

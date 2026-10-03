@@ -279,7 +279,7 @@ public sealed class WorkspaceRunService : IWorkspaceRunService, IHostedService
         dashboard["RefreshRate"] ??= 3;
         app["Cluster"] = new JsonObject
         {
-            ["MasterNodeIP"] = "127.0.0.1", ["GRPCPort"] = grpcPort,
+            ["MasterNodeIP"] = "127.0.0.1", ["MasterNodePort"] = grpcPort,
             ["ExpectedNumberOfWorkers"] = 0, ["MasterNodeIsWorker"] = true
         };
         var path = Path.Combine(directory, "settings.json");

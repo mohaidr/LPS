@@ -27,7 +27,7 @@ namespace LPS.Infrastructure.Nodes
             {
                 foreach (var node in _nodeRegistry.GetNeighborNodes().Where(node => node.NodeStatus == NodeStatus.Running))
                 {
-                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.Endpoint ?? node.Metadata.NodeIP);
                     await client.SetNodeStatusAsync(new SetNodeStatusRequest() { NodeIp = this.Metadata.NodeIP, NodeName = this.Metadata.NodeName, Status = nodeStatus.ToGrpc() });
                 }
             }

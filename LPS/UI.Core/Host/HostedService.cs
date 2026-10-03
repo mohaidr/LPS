@@ -88,6 +88,9 @@ namespace LPS.UI.Core.Host
         INode? _localNode;
         protected override async Task ExecuteAsync(CancellationToken cancellationToken)
         {
+            var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            using var registration = _applicationLifetime.ApplicationStarted.Register(() => started.TrySetResult());
+            await started.Task.WaitAsync(cancellationToken);
             try
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, " -------------- LPS V1 - App execution has started  --------------", LPSLoggingLevel.Verbose);
@@ -97,6 +100,7 @@ namespace LPS.UI.Core.Host
                 // Only start metrics coordinators for test execution commands (not config commands)
                 if (isPlanExecutionCommand)
                 {
+                    Console.WriteLine($"Node endpoint: {_nodeMetadata.Endpoint ?? _nodeMetadata.NodeIP}");
                     await WorkspaceRunner.ReportAsync("Running");
                     RegisterLocalNode();
                     _localNode = _nodeRegistry.GetLocalNode();
@@ -201,7 +205,7 @@ namespace LPS.UI.Core.Host
                     {
                         try
                         {
-                            var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
+                            var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.Endpoint ?? node.Metadata.NodeIP);
                             client.CancelTest(new CancelTestRequest());
                         }
                         catch (RpcException ex)

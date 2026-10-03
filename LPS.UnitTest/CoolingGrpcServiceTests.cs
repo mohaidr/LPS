@@ -86,7 +86,7 @@ public sealed class CoolingGrpcServiceTests
         try
         {
             var address = new Uri(app.Urls.Single());
-            var cluster = Mock.Of<IClusterConfiguration>(value => value.MasterNodeIP == "127.0.0.1" && value.GRPCPort == address.Port);
+            var cluster = Mock.Of<IClusterConfiguration>(value => value.MasterNodeIP == "127.0.0.1" && value.MasterNodePort == address.Port);
             var workerTracker = new CoolingTracker(nodeId: "worker-1", machineName: "worker-east");
             using var reporter = new CoolingMetricsReporter(workerTracker, Metadata(NodeType.Worker, "worker-1"), cluster,
                 new CustomGrpcClientFactory(cluster), NullLogger<CoolingMetricsReporter>.Instance);

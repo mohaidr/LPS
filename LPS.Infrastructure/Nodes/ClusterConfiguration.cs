@@ -9,14 +9,15 @@ namespace LPS.Infrastructure.Nodes
     public class ClusterConfiguration : IClusterConfiguration
     {
         public string MasterNodeIP { get; }
-        public int GRPCPort { get;}
+        public int MasterNodePort { get; }
+        public int GRPCPort => MasterNodePort;
         public int ExpectedNumberOfWorkers { get;}
         public bool MasterNodeIsWorker { get; }
 
         private ClusterConfiguration(string masterNodeIp, int defaultGrpcPort)
         {
             MasterNodeIP = masterNodeIp;
-            GRPCPort = defaultGrpcPort;
+            MasterNodePort = defaultGrpcPort;
             ExpectedNumberOfWorkers = 0;
             MasterNodeIsWorker = true;
         }
@@ -24,7 +25,7 @@ namespace LPS.Infrastructure.Nodes
         public ClusterConfiguration(string masterNodeIP, int gRPCPort, bool masterIsWorker, int expectedNumberOfWorkers)
         {
             MasterNodeIP = masterNodeIP;
-            GRPCPort = gRPCPort;
+            MasterNodePort = gRPCPort;
             ExpectedNumberOfWorkers = expectedNumberOfWorkers;
             MasterNodeIsWorker = masterIsWorker;
         }

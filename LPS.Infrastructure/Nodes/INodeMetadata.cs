@@ -10,6 +10,7 @@ namespace LPS.Infrastructure.Nodes
     {
         string NodeName { get; }
         public string NodeIP { get; }
+        string? Endpoint => null;
         NodeType NodeType { get; }
         string OS { get; }
         string Architecture { get; }

@@ -20,7 +20,7 @@ namespace LPS.Infrastructure.GRPCClients
 
         private static GrpcChannel CreateChannel(string address, out GrpcChannel channel)
         {
-            channel = GrpcChannel.ForAddress(address);
+            channel = LPS.Infrastructure.Distributed.ClusterGrpcTransport.CreateChannel(address);
             return channel;
         }
 

@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.Nodes
                     _masterNode = node;
                 }
 
-                if (_nodeMetadata.NodeType == NodeType.Worker && _nodeMetadata.NodeIP == node.Metadata.NodeIP) // worker registering itself to master
+                if (_nodeMetadata.NodeType == NodeType.Worker && IsLocalNode(node)) // worker registering itself to master
                 {
                     var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
                     // Call the gRPC Service
@@ -47,7 +47,7 @@ namespace LPS.Infrastructure.Nodes
                 }
                 if (_nodeMetadata.NodeType == NodeType.Master && node.Metadata.NodeType == NodeType.Worker)// master regestering itself to worker
                 {
-                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.Endpoint ?? node.Metadata.NodeIP);
                     // Call the gRPC Service
                     client.RegisterNode(_nodeMetadata.ToProto()); // register the master on the local node
                     client.SetNodeStatus(new SetNodeStatusRequest { NodeIp = _nodeMetadata.NodeIP, NodeName = _nodeMetadata.NodeName, Status =  _masterNode?.NodeStatus.ToGrpc()?? NodeStatus.Created.ToGrpc() });
@@ -116,7 +116,7 @@ namespace LPS.Infrastructure.Nodes
         }
         private bool IsLocalNode(INode node)
         {
-            return node.Metadata.NodeIP == INode.NodeIP;
+            return node.Metadata.NodeIP == _nodeMetadata.NodeIP && node.Metadata.NodeName == _nodeMetadata.NodeName;
         }
     }
 

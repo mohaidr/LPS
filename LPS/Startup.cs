@@ -46,6 +46,10 @@ using LPS.Infrastructure.Monitoring.Windowed;
 using LPS.Infrastructure.Monitoring.Cumulative;
 using LPS.Infrastructure.Monitoring.Hosts;
 using LPS.Infrastructure.PlaceHolderService;
+using LPS.Infrastructure.Distributed;
+using LPS.UI.Core.Distributed;
+using System.CommandLine;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 namespace LPS
 {
@@ -53,6 +57,9 @@ namespace LPS
     {
         public static IHost ConfigureServices(string[] args)
         {
+            ListenOptions? nodeListener = null;
+            string? listenerHost = null;
+            string? legacyNodeIP = null;
             var host = Host.CreateDefaultBuilder()
             .ConfigureWebHostDefaults(webBuilder =>
             {
@@ -80,20 +87,66 @@ namespace LPS
                     .GetSection("LPSAppSettings:Cluster")
                     .Get<ClusterConfigurationOptions>();
 
-                var gRPCPort = (clusterOptions != null && new ClusteredConfigurationValidator().Validate(clusterOptions).IsValid) ? clusterOptions.GRPCPort.Value : GlobalSettings.DefaultGRPCPort;
+                var validCluster = clusterOptions != null && new ClusteredConfigurationValidator().Validate(clusterOptions).IsValid;
+                var masterPort = validCluster ? clusterOptions!.MasterNodePort!.Value : GlobalSettings.DefaultMasterNodePort;
+                var isWorker = validCluster && clusterOptions!.MasterNodeIP != INode.NodeIP;
+                var listenerOption = new Option<string?>("--listen");
+                var startupCommand = new RootCommand { TreatUnmatchedTokensAsErrors = false };
+                startupCommand.AddOption(listenerOption);
+                var startupArguments = startupCommand.Parse(args);
+                if (startupArguments.Errors.Count > 0)
+                    throw new ArgumentException(string.Join(" ", startupArguments.Errors.Select(error => error.Message)));
+                var explicitListener = startupArguments.GetValueForOption(listenerOption);
+                Uri? legacyListener = null;
+                if (explicitListener != null && ClusterRunSettings.Current == null)
+                {
+                    if (!Uri.TryCreate(explicitListener, UriKind.Absolute, out legacyListener)
+                        || legacyListener.Scheme != "http" || legacyListener.AbsolutePath != "/"
+                        || legacyListener.UserInfo.Length > 0 || legacyListener.Query.Length > 0 || legacyListener.Fragment.Length > 0)
+                        throw new ArgumentException("Legacy --listen requires an HTTP address with no path or credentials; use the persistent worker command for HTTPS.");
+                    if (validCluster)
+                    {
+                        legacyNodeIP = legacyListener.Host.Trim('[', ']');
+                        isWorker = legacyNodeIP != clusterOptions!.MasterNodeIP;
+                    }
+                }
 
                 webBuilder.ConfigureKestrel(serverOptions =>
                 {
-                    if (LPS.UI.Core.Web.WorkspaceRunner.IsManaged)
+                    if (ClusterRunSettings.Current is { } run)
                     {
-                        serverOptions.Listen(System.Net.IPAddress.Loopback, gRPCPort, listenOptions =>
-                            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+                        var endpoint = ClusterRunSettings.ValidateEndpoint(run.NodeAddress);
+                        var address = System.Net.IPAddress.TryParse(endpoint.Host.Trim('[', ']'), out var parsedAddress)
+                            ? parsedAddress : endpoint.IsLoopback ? System.Net.IPAddress.Loopback : System.Net.IPAddress.Any;
+                        serverOptions.Listen(address, endpoint.Port, listenOptions =>
+                        {
+                            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2;
+                            if (endpoint.Scheme == "https") listenOptions.UseHttps(run.CertificatePath!, run.CertificatePassword);
+                        });
+                        serverOptions.Listen(System.Net.IPAddress.Loopback, port);
+                    }
+                    else if (LPS.UI.Core.Web.WorkspaceRunner.IsManaged)
+                    {
+                        listenerHost = "127.0.0.1";
+                        serverOptions.Listen(System.Net.IPAddress.Loopback, masterPort, listenOptions =>
+                        {
+                            nodeListener = listenOptions;
+                            listenOptions.Protocols = HttpProtocols.Http2;
+                        });
                         serverOptions.Listen(System.Net.IPAddress.Loopback, port);
                     }
                     else
                     {
-                        serverOptions.ListenAnyIP(gRPCPort, listenOptions =>
-                            listenOptions.Protocols = Microsoft.AspNetCore.Server.Kestrel.Core.HttpProtocols.Http2);
+                        listenerHost = legacyListener?.Host ?? INode.NodeIP;
+                        var nodePort = legacyListener?.Port ?? (isWorker ? 0 : masterPort);
+                        void ConfigureListener(ListenOptions listenOptions)
+                        {
+                            nodeListener = listenOptions;
+                            listenOptions.Protocols = HttpProtocols.Http2;
+                        }
+                        if (legacyListener != null && System.Net.IPAddress.TryParse(legacyListener.Host.Trim('[', ']'), out var address))
+                            serverOptions.Listen(address, nodePort, ConfigureListener);
+                        else serverOptions.ListenAnyIP(nodePort, ConfigureListener);
                         serverOptions.ListenAnyIP(port);
                     }
                     serverOptions.AllowSynchronousIO = false;
@@ -157,7 +210,10 @@ namespace LPS
 
 
                 services.AddSingleton<ITestTriggerNotifier, TestTriggerNotifier>();
-                services.AddSingleton<INodeMetadata, NodeMetadata>();
+                services.AddSingleton<INodeMetadata>(provider => new NodeMetadata(provider.GetRequiredService<IClusterConfiguration>(),
+                    () => nodeListener?.IPEndPoint is { Port: > 0 } bound && listenerHost != null
+                        ? new UriBuilder("http", listenerHost, bound.Port).Uri.GetLeftPart(UriPartial.Authority) : null,
+                    legacyNodeIP));
                 services.AddSingleton<IClientManager<Domain.HttpRequest, Domain.HttpResponse, IClientService<Domain.HttpRequest, Domain.HttpResponse>>, HttpClientManager>();
                 services.AddSingleton<IRuntimeOperationIdProvider, RuntimeOperationIdProvider>();
                 services.AddSingleton<IHttpHeadersService, HttpHeadersService>();
@@ -223,7 +279,10 @@ namespace LPS
                 services.ConfigureWritable<HttpClientOptions>(hostContext.Configuration.GetSection("LPSAppSettings:HttpClient"), AppConstants.AppSettingsFileLocation);
                 services.ConfigureWritable<ClusterConfigurationOptions>(hostContext.Configuration.GetSection("LPSAppSettings:Cluster"), AppConstants.AppSettingsFileLocation);
                 services.ConfigureWritable<LPS.UI.Common.Options.InfluxDBOptions>(hostContext.Configuration.GetSection("LPSAppSettings:InfluxDB"), AppConstants.AppSettingsFileLocation);
-                services.AddHostedService(isp => isp.ResolveWith<HostedService>(new { args }));
+                if (ClusterRunSettings.Current is { } run)
+                    DistributedHostServices.Register(services, run);
+                else
+                    services.AddHostedService(isp => isp.ResolveWith<HostedService>(new { args }));
 
                 if (hostContext.HostingEnvironment.IsProduction())
                 {

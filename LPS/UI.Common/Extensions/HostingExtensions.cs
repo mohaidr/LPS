@@ -157,6 +157,8 @@ namespace LPS.UI.Common.Extensions
 
                 services.AddSingleton<IClusterConfiguration>(serviceProvider =>
                 {
+                    if (LPS.Infrastructure.Distributed.ClusterRunSettings.Current is { } run)
+                        return new ClusterConfiguration(run.MasterAddress, new Uri(run.MasterAddress).Port, false, run.ExpectedWorkers);
                     var (validOptions, isValid) = ValidateOptions(
                         lpsClusterOptions,
                         hostContext,
@@ -174,7 +176,7 @@ namespace LPS.UI.Common.Extensions
                     else
                     {
                         LogConfigurationIssue(logger, "Cluster", ClusterConfigSection, validOptions == null);
-                        instance = ClusterConfiguration.GetDefaultInstance(INode.NodeIP, GlobalSettings.DefaultGRPCPort);
+                        instance = ClusterConfiguration.GetDefaultInstance(INode.NodeIP, GlobalSettings.DefaultMasterNodePort);
                     }
 
                     LogAppliedConfiguration(instance, !isValid || validOptions == null, "LPS Cluster Configuration", logger);
@@ -328,7 +330,7 @@ namespace LPS.UI.Common.Extensions
 
         private static ClusterConfiguration MapToClusterConfiguration(ClusterConfigurationOptions options)
         {
-            var GrpcPort = options.GRPCPort ?? GlobalSettings.DefaultGRPCPort;
+            var GrpcPort = options.MasterNodePort ?? GlobalSettings.DefaultMasterNodePort;
             var masterIsWorker = options.MasterNodeIsWorker ?? true;
             return new ClusterConfiguration(options.MasterNodeIP, GrpcPort, masterIsWorker, options.ExpectedNumberOfWorkers.Value);
         }

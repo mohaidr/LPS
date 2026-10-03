@@ -1,5 +1,6 @@
 ﻿using LPS.Domain.Common.Interfaces;
 using LPS.Infrastructure.Nodes;
+using LPS.Infrastructure.Distributed;
 using LPS.UI.Common;
 using LPS.UI.Common.Options;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,7 @@ namespace LPS.UI.Core.Host
         readonly ILogger _logger;
         readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
         readonly IFinalizationDisplay _finalizationDisplay;
+        readonly ClusterRunSettings? _runSettings;
 
         IOptions<DashboardConfigurationOptions> _dashboardConfig;
         IClusterConfiguration _clusterConfiguration;
@@ -24,20 +26,24 @@ namespace LPS.UI.Core.Host
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
             IOptions<DashboardConfigurationOptions> dashboardConfig,
             IClusterConfiguration clusterConfiguration,
-            IFinalizationDisplay finalizationDisplay)
+            IFinalizationDisplay finalizationDisplay,
+            ClusterRunSettings? runSettings = null)
         {
             _dashboardConfig = dashboardConfig;
             _clusterConfiguration = clusterConfiguration;
             _logger = logger;
             _runtimeOperationIdProvider = runtimeOperationIdProvider;
             _finalizationDisplay = finalizationDisplay;
+            _runSettings = runSettings;
         }
+        public string Url => $"http://{(_runSettings != null ? "127.0.0.1" : _clusterConfiguration?.MasterNodeIP ?? "127.0.0.1")}:{_dashboardConfig.Value.Port ?? GlobalSettings.DefaultDashboardPort}";
+
         public void Start()
         {
+            if (_runSettings?.Role == NodeType.Master) Console.WriteLine($"Dashboard: {Url}");
             if (_dashboardConfig.Value.BuiltInDashboard.HasValue && _dashboardConfig.Value.BuiltInDashboard.Value)
             {
-                var port = _dashboardConfig.Value?.Port ?? GlobalSettings.DefaultDashboardPort;
-                OpenBrowser($"http://{_clusterConfiguration?.MasterNodeIP ?? "127.0.0.1"}:{port}");
+                OpenBrowser(Url);
             }
         }
         public async Task EnsureDashboardUpdateBeforeExitAsync()

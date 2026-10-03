@@ -9,8 +9,10 @@ namespace LPS.UI.Common
 {
     public interface ITestExecutionService
     {
+        bool HasFailedIterations { get; }
         Task ExecuteAsync(TestRunParameters parameters);
         Task<bool> PrepareAsync(TestRunParameters parameters);
+        Task ExecutePreparedAsync(TestRunParameters parameters);
         Task PersistMetricsAsync(CancellationToken token);
     }
 }

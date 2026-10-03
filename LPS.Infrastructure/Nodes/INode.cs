@@ -24,9 +24,9 @@ namespace LPS.Infrastructure.Nodes
     }
     public interface INode
     {
-        public static string NodeIP => string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LPS_WORKSPACE_RUN"))
+        public static string NodeIP => LPS.Infrastructure.Distributed.ClusterRunSettings.Current?.NodeAddress ?? (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("LPS_WORKSPACE_RUN"))
             ? NodeUtility.GetLocalIPAddress()
-            : IPAddress.Loopback.ToString();
+            : IPAddress.Loopback.ToString());
         INodeMetadata Metadata { get; }
         NodeStatus NodeStatus { get; }
         public ValueTask<SetNodeStatusResponse> SetNodeStatus(NodeStatus nodeStatus);

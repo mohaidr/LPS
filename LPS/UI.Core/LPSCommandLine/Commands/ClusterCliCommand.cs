@@ -53,7 +53,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 var candidate = new ClusterConfigurationOptions
                 {
                     MasterNodeIP = incoming.MasterNodeIP ?? current.MasterNodeIP,
-                    GRPCPort = incoming.GRPCPort ?? current.GRPCPort,
+                    MasterNodePort = incoming.MasterNodePort ?? current.MasterNodePort,
                     ExpectedNumberOfWorkers = incoming.ExpectedNumberOfWorkers ?? current.ExpectedNumberOfWorkers,
                     MasterNodeIsWorker = incoming.MasterNodeIsWorker ?? current.MasterNodeIsWorker
                 };
@@ -76,7 +76,8 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 _clusterOptions.Update(opt =>
                 {
                     opt.MasterNodeIP = candidate.MasterNodeIP;
-                    opt.GRPCPort = candidate.GRPCPort;
+                    opt.MasterNodePort = candidate.MasterNodePort;
+                    opt.GRPCPort = null;
                     opt.ExpectedNumberOfWorkers = candidate.ExpectedNumberOfWorkers;
                     opt.MasterNodeIsWorker = candidate.MasterNodeIsWorker;
                 });
@@ -84,7 +85,7 @@ namespace LPS.UI.Core.LPSCommandLine.Commands
                 _logger.Log(
                     _op.OperationId,
                     $"Cluster configuration updated. MasterNodeIP={candidate.MasterNodeIP}, " +
-                    $"GRPCPort={candidate.GRPCPort}, ExpectedWorkers={candidate.ExpectedNumberOfWorkers}, " +
+                    $"MasterNodePort={candidate.MasterNodePort}, ExpectedWorkers={candidate.ExpectedNumberOfWorkers}, " +
                     $"MasterNodeIsWorker={candidate.MasterNodeIsWorker}",
                     LPSLoggingLevel.Information);
 

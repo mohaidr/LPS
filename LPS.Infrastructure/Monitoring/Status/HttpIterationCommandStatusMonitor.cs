@@ -87,7 +87,7 @@ namespace LPS.Infrastructure.Monitoring.Status
             {
                 try
                 {
-                    var client = _grpcClientFactory.GetClient<GrpcMonitorClient>(node.Metadata.NodeIP);
+                    var client = _grpcClientFactory.GetClient<GrpcMonitorClient>(node.Metadata.Endpoint ?? node.Metadata.NodeIP);
                     var remote = await client.QueryIterationStatusesAsync(record.FullyQualifiedName);
                     statuses.AddRange(remote);
                 }

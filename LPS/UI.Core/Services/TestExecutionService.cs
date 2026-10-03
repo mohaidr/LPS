@@ -27,6 +27,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json;
 using System.Globalization;
 using LPS.UI.Core.Web;
+using LPS.Infrastructure.Distributed;
 
 namespace LPS.UI.Core.Services
 {
@@ -63,6 +64,11 @@ namespace LPS.UI.Core.Services
         private readonly IWindowedMetricsCoordinator _windowedMetricsCoordinator;
         private readonly ICumulativeMetricsCoordinator _cumulativeMetricsCoordinator;
         private readonly IPlanExecutionContext _planContext;
+        private Plan? _preparedPlan;
+        public bool HasFailedIterations => _entityRepositoryService.Query<Plan>()
+            .SelectMany(plan => plan.GetReadOnlyRounds()).SelectMany(round => round.GetReadOnlyIterations())
+            .Any(iteration => _historicalCumulativeMetricStore.TryGet(iteration.Id, out var snapshots)
+                && snapshots.Any(snapshot => snapshot.IsFinal && snapshot.ExecutionStatus == nameof(EntityExecutionStatus.Failed)));
         public TestExecutionService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -145,6 +151,16 @@ namespace LPS.UI.Core.Services
             return RunAsync(parameters, false);
         }
 
+        public async Task ExecutePreparedAsync(TestRunParameters parameters)
+        {
+            var plan = _preparedPlan ?? throw new InvalidOperationException("No prepared plan is available.");
+            _preparedPlan = null;
+            var hosts = plan.GetReadOnlyRounds().SelectMany(round => round.GetReadOnlyIterations()
+                .Select(iteration => ((HttpIteration)iteration).HttpRequest.Url.BaseUrl));
+            await _warmupService.TryWarmUpAsync(hosts.Distinct(), requestsPerHost: 1, ct: parameters.CancellationToken);
+            await ExecutePlanAsync(plan, parameters);
+        }
+
         public async Task PersistMetricsAsync(CancellationToken token)
         {
             foreach (var plan in _entityRepositoryService.Query<Plan>())
@@ -171,7 +187,7 @@ namespace LPS.UI.Core.Services
             var plan = new Plan(planCommand, _logger, _runtimeOperationIdProvider, _placeholderResolverService);
 
             // Set plan execution context for metrics
-            var testStartTime = DateTime.UtcNow;
+            var testStartTime = ClusterRunSettings.Current?.StartedUtc ?? DateTime.UtcNow;
             _planContext.SetContext(planDto.Name ?? "unknown", testStartTime);
 
             if (plan.IsValid)
@@ -294,25 +310,13 @@ namespace LPS.UI.Core.Services
 
                 if (!executePlan)
                 {
+                    _preparedPlan = plan;
                     await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                         $"Plan '{plan.Name}' is ready for worker metrics", LPSLoggingLevel.Information);
                     return true;
                 }
 
-                await localNode.SetNodeStatus(NodeStatus.Running);
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                    $"Plan '{plan?.Name}' execution has started", LPSLoggingLevel.Information);
-                _dashboardService.Start();
-                
-                await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _skippedRequestReporter, _httpClientManager,
-                        _config, _httpIterationExecutionCommandStatusMonitor,
-                        _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
-                    .ExecuteAsync(plan, _cts.Token);
-                
-                // Coordinators are stopped in HostedService.StopAsync after waiting for all workers to complete
-                
-                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                    $"Plan '{plan?.Name}' execution has completed", LPSLoggingLevel.Information);
+                await ExecutePlanAsync(plan, parameters);
                 if (!WorkspaceRunner.IsManaged)
                     await PersistAllSnapshotsAsync(plan, _cts.Token);
                 return true;
@@ -324,7 +328,20 @@ namespace LPS.UI.Core.Services
             }
         }
 
-        // unchanged methods ...
+        private async Task ExecutePlanAsync(Plan plan, TestRunParameters parameters)
+        {
+            await _nodeRegistry.GetLocalNode().SetNodeStatus(NodeStatus.Running);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                $"Plan '{plan.Name}' execution has started", LPSLoggingLevel.Information);
+            _dashboardService.Start();
+            await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _skippedRequestReporter, _httpClientManager,
+                    _config, _httpIterationExecutionCommandStatusMonitor,
+                    _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
+                .ExecuteAsync(plan, parameters.CancellationToken);
+            await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                $"Plan '{plan.Name}' execution has completed", LPSLoggingLevel.Information);
+        }
+
         private async Task<IVariableHolder> BuildVariableHolder(
             VariableDto variableDto,
             bool isGlobal,
@@ -457,7 +474,7 @@ namespace LPS.UI.Core.Services
                     Converters = { new JsonStringEnumConverter() }
                 };
 
-                if (WorkspaceRunner.IsManaged)
+                if (WorkspaceRunner.IsManaged || ClusterRunSettings.Current != null)
                 {
                     var hostIndex = 0;
                     foreach (var snapshot in _hostMetricsAggregatorFactory.GetLatestCumulativeSnapshots())

@@ -1,0 +1,52 @@
+syntax = "proto3";
+option csharp_namespace = "LPS.Protos.Shared";
+package workers;
+
+enum WorkerAction {
+  NONE = 0;
+  PREPARE = 1;
+  START = 2;
+  CANCEL = 3;
+  KEEP_ALIVE = 4;
+  RELEASE = 5;
+}
+
+enum WorkerRunState {
+  UNKNOWN = 0;
+  IDLE = 1;
+  PREPARING = 2;
+  READY = 3;
+  RUNNING = 4;
+  FINALIZING = 5;
+  COMPLETED = 6;
+  FAILED = 7;
+  CANCELLED = 8;
+}
+
+message WorkerUpdate {
+  string worker_id = 1;
+  string session_id = 2;
+  int32 protocol_version = 3;
+  string lps_version = 4;
+  string run_id = 5;
+  WorkerRunState state = 6;
+  string endpoint = 7;
+  string detail = 8;
+  bool released = 9;
+}
+
+message WorkerInstruction {
+  string run_id = 1;
+  string session_id = 2;
+  WorkerAction action = 3;
+  string plan_json = 4;
+  string plan_hash = 5;
+  string master_endpoint = 6;
+  string run_token = 7;
+  int32 lease_seconds = 8;
+  string started_utc = 9;
+}
+
+service WorkerControl {
+  rpc Connect(stream WorkerUpdate) returns (stream WorkerInstruction);
+}

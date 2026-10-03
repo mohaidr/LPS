@@ -13,8 +13,11 @@ namespace LPS.Infrastructure.Nodes
 {
     public record NodeMetadata : INodeMetadata
     {
+        private readonly Func<string?>? _endpointProvider;
+        private readonly string? _endpoint;
         public string NodeName { get; }
         public string NodeIP { get; }
+        public string? Endpoint => _endpointProvider?.Invoke() ?? _endpoint;
         public NodeType NodeType { get; private set; }
         public string OS { get; }
         public string Architecture { get; }
@@ -25,12 +28,15 @@ namespace LPS.Infrastructure.Nodes
         public List<IDiskInfo> Disks { get; }
         public List<INetworkInfo> NetworkInterfaces { get; }
 
-        public NodeMetadata(IClusterConfiguration clusterConfiguration)
+        public NodeMetadata(IClusterConfiguration clusterConfiguration, Func<string?>? endpointProvider = null, string? nodeIP = null)
         {
             ArgumentNullException.ThrowIfNull(clusterConfiguration);
-            NodeType = INode.NodeIP == clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker;
-            NodeName = Environment.MachineName;
-            NodeIP = INode.NodeIP;
+            _endpointProvider = endpointProvider;
+            _endpoint = LPS.Infrastructure.Distributed.ClusterRunSettings.Current?.NodeAddress;
+            NodeIP = nodeIP ?? INode.NodeIP;
+            NodeType = LPS.Infrastructure.Distributed.ClusterRunSettings.Current?.Role
+                ?? (NodeIP == clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker);
+            NodeName = LPS.Infrastructure.Distributed.ClusterRunSettings.Current?.NodeName ?? Environment.MachineName;
             OS = RuntimeInformation.OSDescription;
             Architecture = RuntimeInformation.OSArchitecture.ToString();
             Framework = RuntimeInformation.FrameworkDescription;
@@ -52,10 +58,13 @@ namespace LPS.Infrastructure.Nodes
             int logicalProcessors,
             string totalRam,
             List<IDiskInfo> disks,
-            List<INetworkInfo> networkInterfaces)
+            List<INetworkInfo> networkInterfaces,
+            string? endpoint = null,
+            NodeType? nodeType = null)
         {
             ArgumentNullException.ThrowIfNull(clusterConfiguration);
-            NodeType = nodeIP == clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker;
+            NodeType = nodeType ?? (nodeIP == clusterConfiguration.MasterNodeIP ? NodeType.Master : NodeType.Worker);
+            _endpoint = string.IsNullOrWhiteSpace(endpoint) ? null : endpoint;
             NodeName = nodeName;
             NodeIP = nodeIP;
             OS = os;

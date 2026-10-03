@@ -50,6 +50,11 @@ namespace Apis.Services
             }
 
 
+            if (!string.IsNullOrEmpty(metadata.Endpoint)
+                && (!Uri.TryCreate(metadata.Endpoint, UriKind.Absolute, out var endpoint)
+                    || endpoint.Scheme is not ("http" or "https") || endpoint.Port == 0 || endpoint.AbsolutePath != "/"
+                    || endpoint.UserInfo.Length > 0 || endpoint.Query.Length > 0 || endpoint.Fragment.Length > 0))
+                throw new RpcException(new Status(StatusCode.InvalidArgument, "Endpoint must be an HTTP(S) callback address with a nonzero port and no path or credentials."));
             var nodeMetadata = metadata.FromProto(_clusterConfig);
 
             INode node = nodeMetadata.NodeType ==  NodeType.Master  ? new MasterNode(nodeMetadata, _clusterConfig, _nodeRegistry, _customGrpcClientFactory): new WorkerNode(nodeMetadata, _clusterConfig, _nodeRegistry, _customGrpcClientFactory);
@@ -91,7 +96,7 @@ namespace Apis.Services
             {
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, "Received TriggerTest request. Notifying CLI to start the test...", LPSLoggingLevel.Information, _cts.Token);
 
-                _testTriggerNotifier.NotifyObservers();
+                await _testTriggerNotifier.NotifyObserversAsync();
                 await _logger.LogAsync(_runtimeOperationIdProvider.OperationId, $"Trigger Test Request Was Completed Successfully", LPSLoggingLevel.Verbose, _cts.Token);
                 return new TriggerTestResponse { Status = LPS.Protos.Shared.NodeStatus.Running };
             }

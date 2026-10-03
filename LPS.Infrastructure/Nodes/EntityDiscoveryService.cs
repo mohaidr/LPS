@@ -29,28 +29,32 @@ namespace LPS.Infrastructure.Nodes
 
         public void AddEntityDiscoveryRecord(string fullyQualifiedName, Guid roundId, Guid iterationId, Guid requestId, INode node)
         {
-            var record = new EntityDiscoveryRecord(fullyQualifiedName, roundId, iterationId, requestId, node);
-
-            if (!_entityDiscoveryRecords.Any(record=> record.FullyQualifiedName == fullyQualifiedName && record.Node.Metadata.NodeName == node.Metadata.NodeName))
+            lock (_entityDiscoveryRecords)
             {
-                if (node.Metadata.NodeType != NodeType.Master && _entityDiscoveryRecords.Any(record => record.FullyQualifiedName == fullyQualifiedName && record.Node.Metadata.NodeType == NodeType.Master))
-                {
-                    _entityDiscoveryRecords.Add(record);
-                }
-                else if(node.Metadata.NodeName == _nodeMetaData.NodeName)
-                {
-                    _entityDiscoveryRecords.Add(record);
-                }
+                var record = new EntityDiscoveryRecord(fullyQualifiedName, roundId, iterationId, requestId, node);
 
-                _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' has been added to discovery record", LPSLoggingLevel.Verbose);
-            }
-            else {
-                _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' already exists", LPSLoggingLevel.Warning);
+                if (!_entityDiscoveryRecords.Any(record=> record.FullyQualifiedName == fullyQualifiedName && record.Node.Metadata.NodeName == node.Metadata.NodeName))
+                {
+                    if (node.Metadata.NodeType != NodeType.Master && _entityDiscoveryRecords.Any(record => record.FullyQualifiedName == fullyQualifiedName && record.Node.Metadata.NodeType == NodeType.Master))
+                    {
+                        _entityDiscoveryRecords.Add(record);
+                    }
+                    else if(node.Metadata.NodeName == _nodeMetaData.NodeName)
+                    {
+                        _entityDiscoveryRecords.Add(record);
+                    }
+
+                    _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' has been added to discovery record", LPSLoggingLevel.Verbose);
+                }
+                else {
+                    _logger.Log(_operationIdProvider.OperationId, $"entity with FQDN '{fullyQualifiedName}' and request Id '{requestId}' already exists", LPSLoggingLevel.Warning);
+                }
             }
         }
         public ICollection<IEntityDiscoveryRecord>? Discover(Func<IEntityDiscoveryRecord, bool> predict)
         {
-            return _entityDiscoveryRecords.Where(predict).ToList();
+            lock (_entityDiscoveryRecords)
+                return _entityDiscoveryRecords.Where(predict).ToList();
         }
     }
 

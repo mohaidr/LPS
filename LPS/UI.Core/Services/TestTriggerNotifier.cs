@@ -5,27 +5,32 @@ namespace LPS.Common.Services
     public class TestTriggerNotifier : ITestTriggerNotifier
     {
         private readonly List<ITestTriggerObserver> _observers = new();
+        private readonly object _gate = new();
 
         public void RegisterObserver(ITestTriggerObserver observer)
         {
-            if (!_observers.Contains(observer))
+            lock (_gate)
             {
-                _observers.Add(observer);
+                if (!_observers.Contains(observer))
+                    _observers.Add(observer);
             }
         }
 
         public void UnregisterObserver(ITestTriggerObserver observer)
         {
-            _observers.Remove(observer);
+            lock (_gate)
+                _observers.Remove(observer);
         }
 
-        public void NotifyObservers()
+        public async Task NotifyObserversAsync()
         {
-            foreach (var observer in _observers)
+            ITestTriggerObserver[] observers;
+            lock (_gate)
             {
-                observer.OnTestTriggered();
-                UnregisterObserver(observer);
+                observers = _observers.ToArray();
+                _observers.Clear();
             }
+            await Task.WhenAll(observers.Select(observer => observer.OnTestTriggered()));
         }
     }
 }

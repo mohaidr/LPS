@@ -143,7 +143,8 @@ public class WorkspaceServiceTests : IDisposable
         Assert.Equal(7, settings.GetProperty("Dashboard").GetProperty("RefreshRate").GetInt32());
         Assert.Equal(9010, settings.GetProperty("Dashboard").GetProperty("Port").GetInt32());
         Assert.False(settings.GetProperty("Dashboard").GetProperty("BuiltInDashboard").GetBoolean());
-        Assert.Equal(9011, settings.GetProperty("Cluster").GetProperty("GRPCPort").GetInt32());
+        Assert.Equal(9011, settings.GetProperty("Cluster").GetProperty("MasterNodePort").GetInt32());
+        Assert.False(settings.GetProperty("Cluster").TryGetProperty("GRPCPort", out _));
         Assert.True(settings.GetProperty("InfluxDB").GetProperty("Enabled").GetBoolean());
         Assert.Equal("test-token", settings.GetProperty("InfluxDB").GetProperty("Token").GetString());
         Assert.Equal(5000, settings.GetProperty("Watchdog").GetProperty("MaxMemoryMB").GetInt32());

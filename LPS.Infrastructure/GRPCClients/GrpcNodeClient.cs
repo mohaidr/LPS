@@ -39,7 +39,7 @@ namespace LPS.Infrastructure.GRPCClients
                     }
                 }
             };
-            channel = GrpcChannel.ForAddress(address, new GrpcChannelOptions 
+            channel = LPS.Infrastructure.Distributed.ClusterGrpcTransport.CreateChannel(address, new GrpcChannelOptions
             { 
                 ServiceConfig = defaultServiceConfig
             });

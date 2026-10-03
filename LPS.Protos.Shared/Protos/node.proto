@@ -48,6 +48,7 @@ message NodeMetadata {
     string total_ram = 9;
     repeated DiskInfo disks = 10;
     repeated NetworkInfo network_interfaces = 11;
+    string endpoint = 12;
 }
 
 message RegisterNodeResponse {

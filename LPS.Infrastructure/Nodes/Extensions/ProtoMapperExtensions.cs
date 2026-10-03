@@ -17,6 +17,7 @@ namespace LPS.Infrastructure.Grpc
             {
                 NodeName = node.NodeName,
                 NodeIp = node.NodeIP,
+                Endpoint = node.Endpoint ?? "",
                 NodeType = node.NodeType == LPS.Infrastructure.Nodes.NodeType.Master ? NodeType.Master : NodeType.Worker,
                 Os = node.OS,
                 Architecture = node.Architecture,

@@ -5,6 +5,6 @@ namespace LPS.Common.Interfaces
     {
         void RegisterObserver(ITestTriggerObserver observer);
         void UnregisterObserver(ITestTriggerObserver observer);
-        void NotifyObservers();
+        Task NotifyObserversAsync();
     }
 }

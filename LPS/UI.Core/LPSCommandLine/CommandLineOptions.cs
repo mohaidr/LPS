@@ -329,6 +329,7 @@ namespace LPS.UI.Core.LPSCommandLine
         }
         public static class LPSRunCommandOptions
         {
+            public static Option<string?> ListenOption { get; } = new("--listen", "Own HTTP callback address; workers default to an automatic port");
             static LPSRunCommandOptions()
             {
                 RoundNameOption.AddAlias("-rn");
@@ -1269,7 +1270,7 @@ namespace LPS.UI.Core.LPSCommandLine
                 new("--masternodeip", "Master node IP or hostname") { IsRequired = false };
 
             public static Option<int?> GRPCPortOption { get; } =
-                new("--grpcport", "gRPC port for cluster communication") { IsRequired = false };
+                new("--masternodeport", "Master node port (--grpcport and -gp remain aliases)") { IsRequired = false };
 
             public static Option<int?> ExpectedWorkersOption { get; } =
                 new("--expectednumberofworkers", "Expected number of worker nodes") { IsRequired = false };

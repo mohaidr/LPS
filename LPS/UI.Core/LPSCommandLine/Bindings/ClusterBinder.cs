@@ -27,7 +27,7 @@ namespace LPS.UI.Core.LPSCommandLine.Bindings
             new ClusterConfigurationOptions
             {
                 MasterNodeIP = ctx.ParseResult.GetValueForOption(_masterNodeIPOption),
-                GRPCPort = ctx.ParseResult.GetValueForOption(_grpcPortOption),
+                MasterNodePort = ctx.ParseResult.GetValueForOption(_grpcPortOption),
                 ExpectedNumberOfWorkers = ctx.ParseResult.GetValueForOption(_expectedWorkersOption),
                 MasterNodeIsWorker = ctx.ParseResult.GetValueForOption(_masterNodeIsWorkerOption),
             };

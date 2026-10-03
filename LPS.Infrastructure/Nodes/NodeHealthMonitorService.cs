@@ -86,7 +86,7 @@ namespace LPS.Infrastructure.Services
         private async Task CheckMasterAsync(CancellationToken token)
         {
             var master = _nodeRegistry.GetMasterNode();
-            var ip = master?.Metadata.NodeIP ?? _clusterConfiguration.MasterNodeIP;
+            var ip = master?.Metadata.Endpoint ?? master?.Metadata.NodeIP ?? _clusterConfiguration.MasterNodeIP;
             var client = _grpcClientFactory.GetClient<GrpcNodeClient>(ip);
 
             try
@@ -113,7 +113,7 @@ namespace LPS.Infrastructure.Services
 
             foreach (var worker in neighbors)
             {
-                var client = _grpcClientFactory.GetClient<GrpcNodeClient>(worker.Metadata.NodeIP);
+                var client = _grpcClientFactory.GetClient<GrpcNodeClient>(worker.Metadata.Endpoint ?? worker.Metadata.NodeIP);
                 try
                 {
                     var status = await client.GetNodeStatusAsync(new GetNodeStatusRequest());

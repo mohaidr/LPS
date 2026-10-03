@@ -31,7 +31,7 @@ namespace LPS.UI.Core.Services
         private readonly ITestExecutionService _testExecutionService;
         private readonly ICustomGrpcClientFactory _customGrpcClientFactory;
         INodeMetadata _nodeMetadata;
-        TestRunParameters _parameters;
+        private readonly TaskCompletionSource _startSignal = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public TestOrchestratorService(
             ILogger logger,
             IRuntimeOperationIdProvider runtimeOperationIdProvider,
@@ -54,7 +54,6 @@ namespace LPS.UI.Core.Services
         public async Task RunAsync(TestRunParameters parameters)
         {
             //RegisterLocalNode();
-            _parameters = parameters;
             var localNode = _nodeRegistry.GetLocalNode();
             if (localNode.Metadata.NodeType == Infrastructure.Nodes.NodeType.Master)
             {
@@ -80,25 +79,26 @@ namespace LPS.UI.Core.Services
                 foreach (var node in _nodeRegistry.Query(node => node.Metadata.NodeType == Infrastructure.Nodes.NodeType.Worker))
                 {
                     // Create the gRPC Client
-                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.NodeIP);
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(node.Metadata.Endpoint ?? node.Metadata.NodeIP);
                     var response = await client.TriggerTestAsync(new TriggerTestRequest());
                 }
             }
             else
             {
-
-                // Create the gRPC Client
-                var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
-                var masterNodeStatus = await client.GetNodeStatusAsync(new GetNodeStatusRequest() { });
-
-                if (masterNodeStatus.Status == Protos.Shared.NodeStatus.Running || masterNodeStatus.Status == Protos.Shared.NodeStatus.Ready)
+                _testTriggerNotifier.RegisterObserver(this);
+                try
                 {
+                    var client = _customGrpcClientFactory.GetClient<GrpcNodeClient>(_clusterConfiguration.MasterNodeIP);
+                    var masterNodeStatus = await client.GetNodeStatusAsync(new GetNodeStatusRequest(), cancellationToken: parameters.CancellationToken);
+                    await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
+                    if (masterNodeStatus.Status == Protos.Shared.NodeStatus.Running || masterNodeStatus.Status == Protos.Shared.NodeStatus.Ready)
+                        _startSignal.TrySetResult();
+                    await _startSignal.Task.WaitAsync(parameters.CancellationToken);
                     await _testExecutionService.ExecuteAsync(parameters);
                 }
-                else
+                finally
                 {
-                    await localNode.SetNodeStatus(Infrastructure.Nodes.NodeStatus.Ready);
-                    _testTriggerNotifier.RegisterObserver(this);
+                    _testTriggerNotifier.UnregisterObserver(this);
                 }
             }
         }
@@ -109,11 +109,10 @@ namespace LPS.UI.Core.Services
             _nodeRegistry.RegisterNode(node); // register locally
         }
 
-        public async Task OnTestTriggered()
+        public Task OnTestTriggered()
         {
-            if(_parameters == null)
-                throw new ArgumentNullException("parameters");
-            await _testExecutionService.ExecuteAsync(this._parameters);
+            _startSignal.TrySetResult();
+            return Task.CompletedTask;
         }
     }
 }
