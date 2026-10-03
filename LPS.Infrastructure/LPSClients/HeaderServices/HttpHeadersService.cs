@@ -47,12 +47,6 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
         {
             if (httpRequestMessage == null || httpHeaders == null || httpHeaders.Count == 0) return;
 
-            var method = httpRequestMessage.Method?.Method ?? "GET";
-            bool supportContentHeaders =
-                   method.Equals("POST", StringComparison.OrdinalIgnoreCase) ||
-                   method.Equals("PUT", StringComparison.OrdinalIgnoreCase) ||
-                   method.Equals("PATCH", StringComparison.OrdinalIgnoreCase);
-
             foreach (var kv in httpHeaders)
             {
                 var name = kv.Key?.Trim();
@@ -62,47 +56,50 @@ namespace LPS.Infrastructure.LPSClients.HeaderServices
                     throw new NotSupportedException($"Unsafe or empty header: '{name}'.");
 
                 var resolvedValue = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(rawValue, sessionId, token);
+                ApplyResolvedHeader(httpRequestMessage, name, resolvedValue, _mode, _allowHostOverride);
+            }
+        }
 
-                // --- Host override via URL service ---
-                if (name.Equals("Host", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (_mode == HeaderValidationMode.Strict)
-                        throw new NotSupportedException("Host override is disabled in Strict mode.");
+        public static void ApplyHeader(HttpRequestMessage message, string name, string value, HeaderValidationMode mode, bool allowHostOverride)
+        {
+            name = name?.Trim();
+            if (!IsSafeHeaderPair(name, value))
+                throw new NotSupportedException($"Unsafe or empty header: '{name}'.");
+            ApplyResolvedHeader(message, name, value, mode, allowHostOverride);
+        }
 
-                    if (_mode == HeaderValidationMode.Lenient && !_allowHostOverride)
-                        throw new NotSupportedException("Host override is disabled by policy (AllowHostOverride=false).");
+        private static void ApplyResolvedHeader(HttpRequestMessage message, string name, string value, HeaderValidationMode mode, bool allowHostOverride)
+        {
+            var method = message.Method?.Method ?? "GET";
+            bool supportContentHeaders = method.Equals("POST", StringComparison.OrdinalIgnoreCase)
+                || method.Equals("PUT", StringComparison.OrdinalIgnoreCase)
+                || method.Equals("PATCH", StringComparison.OrdinalIgnoreCase);
 
-                    // Use your URL parser to validate/extract host[:port].
-                    // It accepts: host, host:port, http(s)://host[:port]/path?query, placeholders, etc.
-                    var parsed = new URL(resolvedValue);
-                    if (string.IsNullOrEmpty(parsed.HostName))
-                        throw new NotSupportedException("Invalid Host value. Expected 'host' or 'host:port' (URL with host also allowed).");
+            if (name.Equals("Host", StringComparison.OrdinalIgnoreCase))
+            {
+                if (mode == HeaderValidationMode.Strict)
+                    throw new NotSupportedException("Host override is disabled in Strict mode.");
+                if (mode == HeaderValidationMode.Lenient && !allowHostOverride)
+                    throw new NotSupportedException("Host override is disabled by policy (AllowHostOverride=false).");
+                var parsed = new URL(value);
+                if (string.IsNullOrEmpty(parsed.HostName))
+                    throw new NotSupportedException("Invalid Host value. Expected 'host' or 'host:port' (URL with host also allowed).");
+                message.Headers.Host = parsed.HostName;
+                return;
+            }
 
-                    httpRequestMessage.Headers.Host = parsed.HostName; // sets Host / :authority
-                    continue;
-                }
-                // -------------------------------------
-
-                if (ForbiddenHeaders.Contains(name) && _mode != HeaderValidationMode.RawPassthrough)
-                    throw new NotSupportedException($"Header '{name}' is managed by the client/tool.");
-
-                if (TrySetTypedHeader(httpRequestMessage, name, resolvedValue, supportContentHeaders))
-                    continue;
-
-                if (_mode == HeaderValidationMode.Strict)
-                    throw new NotSupportedException($"Unsupported or invalid header: {name}");
-
-                if (_mode == HeaderValidationMode.Lenient && !IsLenientAllowed(name))
-                    throw new NotSupportedException($"Header '{name}' is not allowed in Lenient mode unless it parses.");
-
-                if (!httpRequestMessage.Headers.TryAddWithoutValidation(name, resolvedValue))
-                {
-                    if (httpRequestMessage.Content == null)
-                        httpRequestMessage.Content = new ByteArrayContent(Array.Empty<byte>());
-
-                    if (!httpRequestMessage.Content.Headers.TryAddWithoutValidation(name, resolvedValue))
-                        throw new NotSupportedException($"Could not add header: {name}");
-                }
+            if (ForbiddenHeaders.Contains(name) && mode != HeaderValidationMode.RawPassthrough)
+                throw new NotSupportedException($"Header '{name}' is managed by the client/tool.");
+            if (TrySetTypedHeader(message, name, value, supportContentHeaders)) return;
+            if (mode == HeaderValidationMode.Strict)
+                throw new NotSupportedException($"Unsupported or invalid header: {name}");
+            if (mode == HeaderValidationMode.Lenient && !IsLenientAllowed(name))
+                throw new NotSupportedException($"Header '{name}' is not allowed in Lenient mode unless it parses.");
+            if (!message.Headers.TryAddWithoutValidation(name, value))
+            {
+                message.Content ??= new ByteArrayContent(Array.Empty<byte>());
+                if (!message.Content.Headers.TryAddWithoutValidation(name, value))
+                    throw new NotSupportedException($"Could not add header: {name}");
             }
         }
 

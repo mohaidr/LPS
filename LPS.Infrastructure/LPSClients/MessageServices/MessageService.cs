@@ -37,33 +37,16 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             var resolvedHttpVersion = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpVersion, sessionId, token);
             var resolvedHttpMethod = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.HttpMethod, sessionId, token);
             var resolvedUrl = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Url.Url, sessionId, token);
-            // Create the HttpRequestMessage with resolved values
-            var httpRequestMessage = new HttpRequestMessage
-            {
-                RequestUri = new Uri(resolvedUrl),
-                Method = new HttpMethod(resolvedHttpMethod),
-                Version = GetHttpVersion(resolvedHttpVersion)
-            };
+            bool supportsContent = SupportsContent(resolvedHttpMethod);
+            var raw = supportsContent && httpRequest.Payload?.Type == Payload.PayloadType.Raw
+                ? await _placeHolderResolver.ResolvePlaceholdersAsync<string>(httpRequest.Payload.RawValue, sessionId, token) ?? string.Empty
+                : null;
+            var httpRequestMessage = CreateRequestMessage(resolvedUrl, resolvedHttpMethod, resolvedHttpVersion, httpRequest.SupportH2C == true, raw);
 
-            // Determine if the request supports content
-            bool supportsContent = resolvedHttpMethod.Equals("post", StringComparison.CurrentCultureIgnoreCase)
-                                   || resolvedHttpMethod.Equals("put", StringComparison.CurrentCultureIgnoreCase)
-                                   || resolvedHttpMethod.Equals("patch", StringComparison.CurrentCultureIgnoreCase);
-
-            if (supportsContent && httpRequest.Payload != null)
+            if (supportsContent && httpRequest.Payload != null && httpRequest.Payload.Type != Payload.PayloadType.Raw)
             {
                 switch (httpRequest.Payload.Type)
                 {
-                    case Payload.PayloadType.Raw:
-
-                        var raw = await _placeHolderResolver.ResolvePlaceholdersAsync<string>(
-                            httpRequest.Payload.RawValue, sessionId, token) ?? string.Empty;
-
-                        var bytes = Encoding.UTF8.GetBytes(raw);         // UTF-8, no BOM
-                        httpRequestMessage.Content = new ByteArrayContent(bytes); // no Content-Type header
-                                                                                  // Do NOT set ContentType here; your header service will.
-                        break;
-
                     case Payload.PayloadType.Multipart:
                         var multipartContent = new MultipartFormDataContent();
                         // Add fields
@@ -148,16 +131,12 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
                 }
             }
 
-            if (httpRequest.SupportH2C.HasValue && httpRequest.SupportH2C.Value)
+            var requestedVersion = GetHttpVersion(resolvedHttpVersion);
+            if (httpRequest.SupportH2C == true && requestedVersion != HttpVersion.Version20)
             {
-                if (httpRequestMessage.Version != HttpVersion.Version20)
-                {
-                    await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
-                        $"SupportH2C was enabled on a non-HTTP/2 protocol, so the version is being overridden from {httpRequestMessage.Version} to {HttpVersion.Version20}.",
-                        LPSLoggingLevel.Warning, token);
-                    httpRequestMessage.Version = HttpVersion.Version20;
-                }
-                httpRequestMessage.VersionPolicy = HttpVersionPolicy.RequestVersionExact;
+                await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
+                    $"SupportH2C was enabled on a non-HTTP/2 protocol, so the version is being overridden from {requestedVersion} to {HttpVersion.Version20}.",
+                    LPSLoggingLevel.Warning, token);
             }
 
             // Apply headers to the request
@@ -179,6 +158,22 @@ namespace LPS.Infrastructure.LPSClients.MessageServices
             // Update the DataSent metric using MetricsService
 
             return (httpRequestMessage, messageSize);
+        }
+
+        public static bool SupportsContent(string method) => method.Equals("POST", StringComparison.OrdinalIgnoreCase)
+            || method.Equals("PUT", StringComparison.OrdinalIgnoreCase)
+            || method.Equals("PATCH", StringComparison.OrdinalIgnoreCase);
+
+        public static HttpRequestMessage CreateRequestMessage(string url, string method, string version, bool supportH2C, string rawPayload = null)
+        {
+            var message = new HttpRequestMessage(new HttpMethod(method), new Uri(url))
+            {
+                Version = supportH2C ? HttpVersion.Version20 : GetHttpVersion(version),
+                VersionPolicy = supportH2C ? HttpVersionPolicy.RequestVersionExact : HttpVersionPolicy.RequestVersionOrLower
+            };
+            if (SupportsContent(method) && rawPayload != null)
+                message.Content = new ByteArrayContent(Encoding.UTF8.GetBytes(rawPayload));
+            return message;
         }
 
         private static async Task<long> CalculateRequestSizeAsync(HttpRequestMessage httpRequestMessage)

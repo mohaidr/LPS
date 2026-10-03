@@ -16,6 +16,28 @@ X-LPS-Workspace: 1
 GET {{baseUrl}}/api/workspace/plans
 X-LPS-Workspace: 1
 
+### Test one literal draft request (30-second timeout, 1 MiB response preview, no redirects or load run)
+# Uses the same raw request builder and saved header policy as load runs.
+# No placeholder evaluation, hooks, retries, cookie persistence, or client certificate files.
+# Preview uses normal TLS certificate validation; it does not inherit the load client's custom TLS transport.
+POST {{baseUrl}}/api/workspace/requests/send
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{
+  "url": "{{baseUrl}}/api/workspace/host",
+  "httpMethod": "GET",
+  "httpVersion": "1.1",
+  "httpHeaders": { "X-LPS-Workspace": "1" }
+}
+
+### Unsupported request URL (400 Problem Details)
+POST {{baseUrl}}/api/workspace/requests/send
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{ "url": "file:///example.txt", "httpMethod": "GET", "httpVersion": "1.1" }
+
 ### Save a local test (start a target on port 8098 before running)
 # @name createPlan
 POST {{baseUrl}}/api/workspace/plans

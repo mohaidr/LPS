@@ -36,6 +36,13 @@ internal static class WebUiHost
         builder.Services.AddSingleton(GetOptions(builder.Configuration));
         builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(90));
         builder.Services.AddSingleton<IWorkspacePlanService, WorkspacePlanService>();
+        builder.Services.AddHttpClient<IWorkspaceRequestService, WorkspaceRequestService>(client => client.Timeout = TimeSpan.FromSeconds(30))
+            .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+            {
+                AllowAutoRedirect = false,
+                UseCookies = false,
+                AutomaticDecompression = DecompressionMethods.All
+            });
         builder.Services.AddSingleton<IWorkspaceSettingsService>(new WorkspaceSettingsService(LPS.Infrastructure.Common.AppConstants.AppSettingsFileLocation));
         builder.Services.AddSingleton<WorkspaceRunService>();
         builder.Services.AddSingleton<IWorkspaceRunService>(provider => provider.GetRequiredService<WorkspaceRunService>());

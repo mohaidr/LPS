@@ -26,11 +26,19 @@ internal sealed class WorkspaceExceptionHandler : IExceptionHandler
                 KeyNotFoundException => StatusCodes.Status404NotFound,
                 InvalidOperationException => StatusCodes.Status409Conflict,
                 ArgumentException => StatusCodes.Status400BadRequest,
+                HttpRequestException => StatusCodes.Status502BadGateway,
+                TimeoutException => StatusCodes.Status504GatewayTimeout,
                 _ => 0
             };
             if (status == 0)
                 return false;
-            problem = new ProblemDetails { Status = status, Title = exception.Message };
+            var title = exception switch
+            {
+                HttpRequestException => "The target API could not be reached or returned an invalid response.",
+                TimeoutException => "The API request timed out.",
+                _ => exception.Message
+            };
+            problem = new ProblemDetails { Status = status, Title = title };
         }
 
         context.Response.StatusCode = problem.Status!.Value;

@@ -15,7 +15,17 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Hosting;
 using Moq;
+using Moq.Protected;
+using System.Net;
+using System.Text;
+using LPS.Domain.LPSSession;
 using Microsoft.Extensions.Configuration;
+using LPS.Domain.Common.Interfaces;
+using LPS.Infrastructure.LPSClients;
+using LPS.Infrastructure.LPSClients.HeaderServices;
+using LPS.Infrastructure.LPSClients.MessageServices;
+using LPS.Infrastructure.Caching;
+using DomainHttpRequest = LPS.Domain.HttpRequest;
 
 namespace LPS.UnitTest;
 
@@ -24,6 +34,247 @@ public class WorkspaceServiceTests : IDisposable
     private readonly string _directory = Path.Combine(Path.GetTempPath(), $"lps-workspace-tests-{Guid.NewGuid():N}");
 
     private WorkspaceOptions Options => new(_directory, Path.Combine(_directory, "missing-runner.dll"));
+
+    private static WorkspaceRequestService CreateRequestService(HttpClient client)
+    {
+        var settings = new Mock<IWorkspaceSettingsService>();
+        settings.Setup(service => service.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new WorkspaceSettingsResponse("settings.json", new WorkspaceSettings(), false));
+        return new WorkspaceRequestService(client, settings.Object);
+    }
+
+    [Theory]
+    [InlineData("GET", "1.1", false, false)]
+    [InlineData("GET", "1.1", false, true)]
+    [InlineData("HEAD", "1.1", false, true)]
+    [InlineData("DELETE", "1.1", false, true)]
+    [InlineData("OPTIONS", "1.1", false, true)]
+    [InlineData("POST", "1.1", false, false)]
+    [InlineData("POST", "1.1", false, true)]
+    [InlineData("PUT", "1.1", false, true)]
+    [InlineData("PATCH", "1.1", false, true)]
+    [InlineData("POST", "2.0", false, true)]
+    [InlineData("POST", "2.0", true, true)]
+    [InlineData("GET", "2.0", true, true)]
+    public async Task Request_ConstructionMatchesEngine(string method, string version, bool supportH2C, bool contentHeader)
+    {
+        const string raw = "{\"message\":\"caf\u00e9\"}";
+        var baseUrl = supportH2C ? "http://example.test" : "https://example.test";
+        var resolver = new Mock<IPlaceholderResolverService>();
+        resolver.Setup(service => service.ResolvePlaceholdersAsync<string>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string input, string sessionId, CancellationToken token) => input?.Replace("$path", "resource").Replace("$body", raw).Replace("$header", "draft")!);
+        resolver.Setup(service => service.ResolvePlaceholdersAsync<bool>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string input, string sessionId, CancellationToken token) => bool.TryParse(input, out var value) && value);
+        var request = new HttpRequestDto
+        {
+            URL = $"{baseUrl}/$path", HttpMethod = method, HttpVersion = version, SupportH2C = supportH2C.ToString(),
+            Payload = new() { Type = Payload.PayloadType.Raw, Raw = "$body" },
+            HttpHeaders = new() { ["X-Draft"] = "$header", ["Referrer"] = "https://example.test/source" }
+        };
+        if (contentHeader) request.HttpHeaders["Content-Type"] = "application/json";
+        var mapper = new global::AutoMapper.MapperConfiguration(configuration => configuration.AddProfile(
+            new global::LPS.AutoMapper.DtoToCommandProfile(resolver.Object, "session")), NullLoggerFactory.Instance).CreateMapper();
+        var logger = Mock.Of<LPS.Domain.Common.Interfaces.ILogger>();
+        var operationId = Mock.Of<IRuntimeOperationIdProvider>();
+        var entity = new DomainHttpRequest(mapper.Map<DomainHttpRequest.SetupCommand>(request), logger, operationId);
+        Assert.True(entity.IsValid);
+        var headers = new HttpHeadersService(HttpClientConfiguration.GetDefaultInstance(), resolver.Object);
+        var messages = new MessageService(headers, logger, operationId, Mock.Of<ICacheService<long>>(), Mock.Of<ICacheService<object>>(), resolver.Object);
+        using var engineMessage = (await messages.BuildAsync(entity, "session")).HttpRequestMessage;
+        request.URL = $"{baseUrl}/resource";
+        request.Payload.Raw = raw;
+        request.HttpHeaders["X-Draft"] = "draft";
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (message, token) =>
+            {
+                Assert.Equal(engineMessage.RequestUri, message.RequestUri);
+                Assert.Equal(engineMessage.Method, message.Method);
+                Assert.Equal(engineMessage.Version, message.Version);
+                Assert.Equal(engineMessage.VersionPolicy, message.VersionPolicy);
+                var engineBody = engineMessage.Content == null ? null : await engineMessage.Content.ReadAsByteArrayAsync(token);
+                var previewBody = message.Content == null ? null : await message.Content.ReadAsByteArrayAsync(token);
+                Assert.Equal(engineBody, previewBody);
+                Assert.Equal(engineMessage.Headers.ToString(), message.Headers.ToString());
+                Assert.Equal(engineMessage.Content?.Headers.ToString(), message.Content?.Headers.ToString());
+                Assert.Equal(new Uri("https://example.test/source"), message.Headers.Referrer);
+                if (method is "POST" or "PUT" or "PATCH") Assert.Equal(Encoding.UTF8.GetBytes(raw), previewBody);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+        using var client = new HttpClient(handler.Object);
+        await CreateRequestService(client).SendAsync(request, CancellationToken.None);
+        handler.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Request_UsesCurrentHeaderSettingsBeforeSending()
+    {
+        var current = new WorkspaceSettings { HttpClient = new() { HeaderValidationMode = HeaderValidationMode.Strict } };
+        var settings = new Mock<IWorkspaceSettingsService>();
+        settings.Setup(service => service.GetAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() => new WorkspaceSettingsResponse("settings.json", current, false));
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        handler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK));
+        using var client = new HttpClient(handler.Object, disposeHandler: false);
+        var service = new WorkspaceRequestService(client, settings.Object);
+        var request = new HttpRequestDto { URL = "https://example.test", HttpMethod = "GET", HttpHeaders = new() { ["X-Draft"] = "yes" } };
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SendAsync(request, CancellationToken.None));
+        handler.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+        current.HttpClient.HeaderValidationMode = HeaderValidationMode.Lenient;
+        Assert.Equal(200, (await service.SendAsync(request, CancellationToken.None)).StatusCode);
+        handler.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+        settings.Verify(value => value.GetAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Theory]
+    [InlineData(HeaderValidationMode.Strict, false, "Accept", "application/json", true)]
+    [InlineData(HeaderValidationMode.Strict, false, "Referrer", "https://example.test/source", true)]
+    [InlineData(HeaderValidationMode.Strict, false, "Content-Type", "application/json", true)]
+    [InlineData(HeaderValidationMode.Strict, false, "X-Draft", "yes", false)]
+    [InlineData(HeaderValidationMode.Strict, false, "Connection", "close", false)]
+    [InlineData(HeaderValidationMode.Lenient, false, "X-Draft", "yes", true)]
+    [InlineData(HeaderValidationMode.Lenient, false, "Host", "example.test", false)]
+    [InlineData(HeaderValidationMode.Lenient, true, "Host", "example.test", true)]
+    [InlineData(HeaderValidationMode.RawPassthrough, false, "X-Draft", "yes\r\nInjected: value", false)]
+    [InlineData(HeaderValidationMode.RawPassthrough, false, "X-Draft", "", false)]
+    public async Task Request_HeaderPolicyMatchesEngine(HeaderValidationMode mode, bool allowHostOverride, string name, string value, bool accepted)
+    {
+        var resolver = new Mock<IPlaceholderResolverService>();
+        resolver.Setup(service => service.ResolvePlaceholdersAsync<string>(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string input, string sessionId, CancellationToken token) => input);
+        var configuration = new HttpClientConfiguration(TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1), 1, TimeSpan.FromSeconds(30), mode, allowHostOverride);
+        var headers = new HttpHeadersService(configuration, resolver.Object);
+        using var engineMessage = new HttpRequestMessage(HttpMethod.Post, "https://example.test");
+        using var previewMessage = new HttpRequestMessage(HttpMethod.Post, "https://example.test");
+        var engineFailure = await Record.ExceptionAsync(() => headers.ApplyHeadersAsync(engineMessage, "session", new() { [name] = value }, CancellationToken.None));
+        var previewFailure = Record.Exception(() => HttpHeadersService.ApplyHeader(previewMessage, name, value, mode, allowHostOverride));
+        Assert.Equal(accepted, engineFailure == null);
+        Assert.Equal(engineFailure?.GetType(), previewFailure?.GetType());
+        Assert.Equal(engineMessage.ToString(), previewMessage.ToString());
+    }
+
+    [Theory]
+    [InlineData("GET", false)]
+    [InlineData("HEAD", false)]
+    [InlineData("DELETE", false)]
+    [InlineData("OPTIONS", false)]
+    [InlineData("POST", true)]
+    [InlineData("PUT", true)]
+    [InlineData("PATCH", true)]
+    public async Task Request_SendsOnceWithDraftFieldsAndReturnsHttpErrors(string method, bool sendsBody)
+    {
+        var request = new HttpRequestDto
+        {
+            URL = "https://example.test/check?draft=1", HttpMethod = method, HttpVersion = "2.0",
+            HttpHeaders = new() { ["Accept"] = "application/json", ["X-Draft"] = "yes", ["Content-Type"] = "application/json" },
+            Payload = new() { Type = Payload.PayloadType.Raw, Raw = "{\"message\":\"draft\"}" }
+        };
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (message, token) =>
+            {
+                Assert.Equal(method, message.Method.Method);
+                Assert.Equal(request.URL, message.RequestUri!.AbsoluteUri);
+                Assert.Equal(HttpVersion.Version20, message.Version);
+                Assert.Equal("yes", message.Headers.GetValues("X-Draft").Single());
+                if (sendsBody)
+                {
+                    Assert.Equal(request.Payload.Raw, await message.Content!.ReadAsStringAsync(token));
+                }
+                else Assert.Equal("", await message.Content!.ReadAsStringAsync(token));
+                Assert.Equal("application/json", message.Content!.Headers.ContentType!.MediaType);
+                var response = new HttpResponseMessage(HttpStatusCode.UnprocessableEntity)
+                {
+                    Content = new StringContent("{\"error\":\"draft response\"}", Encoding.UTF8, "application/json")
+                };
+                response.Headers.Add("X-Reply", "received");
+                return response;
+            });
+        using var client = new HttpClient(handler.Object);
+        var result = await CreateRequestService(client).SendAsync(request, CancellationToken.None);
+        Assert.Equal(422, result.StatusCode);
+        Assert.Equal("{\"error\":\"draft response\"}", result.Body);
+        Assert.Equal(new[] { "received" }, result.Headers["X-Reply"]);
+        Assert.Contains("application/json", result.Headers["Content-Type"][0]);
+        Assert.Equal("text", result.BodyEncoding);
+        Assert.False(result.Truncated);
+        Assert.True(result.ElapsedMilliseconds >= 0);
+        Assert.Equal("{\"message\":\"draft\"}", request.Payload.Raw);
+        Assert.False(Directory.Exists(_directory));
+        handler.Protected().Verify("SendAsync", Times.Once(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData("file:///example.txt", "GET", "1.1")]
+    [InlineData("/relative", "GET", "1.1")]
+    [InlineData("https://example.test", "TRACE", "1.1")]
+    [InlineData("https://example.test", "GET", "3.0")]
+    public async Task Request_RejectsInvalidInputsWithoutSending(string url, string method, string version)
+    {
+        var handler = new Mock<HttpMessageHandler>(MockBehavior.Strict);
+        using var client = new HttpClient(handler.Object, disposeHandler: false);
+        await Assert.ThrowsAsync<ArgumentException>(() => CreateRequestService(client).SendAsync(
+            new HttpRequestDto { URL = url, HttpMethod = method, HttpVersion = version }, CancellationToken.None));
+        handler.Protected().Verify("SendAsync", Times.Never(), ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Request_LimitsResponseAndEncodesBinaryContent()
+    {
+        var bytes = new byte[1024 * 1024 + 20];
+        bytes[0] = 255;
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() =>
+            {
+                var content = new ByteArrayContent(bytes);
+                content.Headers.ContentType = new("application/octet-stream");
+                return new HttpResponseMessage(HttpStatusCode.OK) { Content = content };
+            });
+        using var client = new HttpClient(handler.Object);
+        var result = await CreateRequestService(client).SendAsync(new HttpRequestDto { URL = "https://example.test", HttpMethod = "GET" }, CancellationToken.None);
+        Assert.True(result.Truncated);
+        Assert.Equal(1024 * 1024, result.BodyBytes);
+        Assert.Equal("base64", result.BodyEncoding);
+        Assert.Equal(bytes.Take(1024 * 1024), Convert.FromBase64String(result.Body));
+    }
+
+    [Fact]
+    public async Task Request_TimeoutIncludesReadingTheResponseBody()
+    {
+        var stream = new Mock<Stream>();
+        stream.SetupGet(value => value.CanRead).Returns(true);
+        stream.Setup(value => value.ReadAsync(It.IsAny<Memory<byte>>(), It.IsAny<CancellationToken>()))
+            .Returns<Memory<byte>, CancellationToken>(async (buffer, token) =>
+            {
+                await Task.Delay(Timeout.Infinite, token);
+                return 0;
+            });
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .ReturnsAsync(() => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StreamContent(stream.Object) });
+        using var client = new HttpClient(handler.Object) { Timeout = TimeSpan.FromMilliseconds(100) };
+        await Assert.ThrowsAsync<TimeoutException>(() => CreateRequestService(client).SendAsync(
+            new HttpRequestDto { URL = "https://example.test", HttpMethod = "GET" }, CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task Request_PropagatesCallerCancellation()
+    {
+        using var cancellation = new CancellationTokenSource();
+        var handler = new Mock<HttpMessageHandler>();
+        handler.Protected().Setup<Task<HttpResponseMessage>>("SendAsync", ItExpr.IsAny<HttpRequestMessage>(), ItExpr.IsAny<CancellationToken>())
+            .Returns<HttpRequestMessage, CancellationToken>(async (message, token) =>
+            {
+                cancellation.Cancel();
+                await Task.Delay(Timeout.Infinite, token);
+                return new HttpResponseMessage(HttpStatusCode.OK);
+            });
+        using var client = new HttpClient(handler.Object);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => CreateRequestService(client).SendAsync(
+            new HttpRequestDto { URL = "https://example.test", HttpMethod = "GET" }, cancellation.Token));
+    }
 
     private async Task<WorkspaceSettingsService> CreateSettingsServiceAsync()
     {
