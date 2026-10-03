@@ -1,10 +1,12 @@
 {
   "files": {
-    "main.css": "/static/css/main.8d7284c1.css",
-    "main.js": "/static/js/main.49e50689.js",
-    "static/js/82.d3ae2edb.chunk.js": "/static/js/82.d3ae2edb.chunk.js",
-    "static/js/239.e69306a6.chunk.js": "/static/js/239.e69306a6.chunk.js",
-    "static/js/873.d39873ee.chunk.js": "/static/js/873.d39873ee.chunk.js",
+    "main.css": "/static/css/main.6981e99c.css",
+    "main.js": "/static/js/main.26e0aea0.js",
+    "static/js/760.94bf1753.chunk.js": "/static/js/760.94bf1753.chunk.js",
+    "static/js/239.b3b2bbe6.chunk.js": "/static/js/239.b3b2bbe6.chunk.js",
+    "static/js/873.9eb7011e.chunk.js": "/static/js/873.9eb7011e.chunk.js",
+    "static/js/567.f081f8ad.chunk.js": "/static/js/567.f081f8ad.chunk.js",
+    "static/js/76.e8af41e3.chunk.js": "/static/js/76.e8af41e3.chunk.js",
     "static/media/nucleo-icons.eot": "/static/media/nucleo-icons.bd42d77b9672555647d1.eot",
     "static/media/nucleo-icons.ttf": "/static/media/nucleo-icons.4466aeec3386b965a232.ttf",
     "static/media/nucleo-icons.woff": "/static/media/nucleo-icons.8e954b749f951b654fc6.woff",
@@ -12,7 +14,7 @@
     "index.html": "/index.html"
   },
   "entrypoints": [
-    "static/css/main.8d7284c1.css",
-    "static/js/main.49e50689.js"
+    "static/css/main.6981e99c.css",
+    "static/js/main.26e0aea0.js"
   ]
 }
