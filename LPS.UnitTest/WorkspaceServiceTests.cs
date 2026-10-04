@@ -25,6 +25,7 @@ using LPS.Infrastructure.LPSClients;
 using LPS.Infrastructure.LPSClients.HeaderServices;
 using LPS.Infrastructure.LPSClients.MessageServices;
 using LPS.Infrastructure.Caching;
+using LPS.Infrastructure.Common;
 using DomainHttpRequest = LPS.Domain.HttpRequest;
 
 namespace LPS.UnitTest;
@@ -576,6 +577,60 @@ public class WorkspaceServiceTests : IDisposable
         await Assert.ThrowsAsync<ValidationException>(() => service.SaveAsync(null,
             new PlanDto { Name = "Empty" }, CancellationToken.None));
         Assert.Empty(await service.ListAsync(CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData(null, "json")]
+    [InlineData("json", "json")]
+    [InlineData("yaml", "yaml")]
+    [InlineData("YAML", "yaml")]
+    public async Task Plans_ExportFormatsPreservePlanAndStorage(string? requestedFormat, string expectedFormat)
+    {
+        var service = new WorkspacePlanService(Options);
+        var plan = CreatePlan();
+        plan.Rounds[0].Iterations[0].HttpRequest.HttpMethod = "POST";
+        plan.Rounds[0].Iterations[0].HttpRequest.Payload = new() { Type = Payload.PayloadType.Raw, Raw = "{\"message\":\"caf\u00e9\"}" };
+        var saved = await service.SaveAsync(null, plan, CancellationToken.None);
+        var path = Path.Combine(_directory, "plans", $"{saved.Id}.json");
+        var original = await File.ReadAllBytesAsync(path);
+        var controller = new WorkspacePlansController(service);
+
+        var result = Assert.IsType<FileContentResult>(requestedFormat == null
+            ? await controller.Export(saved.Id, CancellationToken.None)
+            : await controller.Export(saved.Id, CancellationToken.None, requestedFormat));
+
+        Assert.Equal($"application/{expectedFormat}", result.ContentType);
+        Assert.Equal($"{plan.Name}.{expectedFormat}", result.FileDownloadName);
+        var content = Encoding.UTF8.GetString(result.FileContents);
+        var restored = expectedFormat == "yaml"
+            ? SerializationHelper.DeserializeFromYaml<PlanDto>(content)
+            : SerializationHelper.Deserialize<PlanDto>(content);
+        Assert.Equal(SerializationHelper.Serialize(plan), SerializationHelper.Serialize(restored));
+        Assert.Equal(original, await File.ReadAllBytesAsync(path));
+        Assert.Single(await service.ListAsync(CancellationToken.None));
+    }
+
+    [Theory]
+    [InlineData("xml")]
+    [InlineData("csv")]
+    public async Task Plans_ExportRejectsUnsupportedFormats(string format)
+    {
+        var service = new Mock<IWorkspacePlanService>(MockBehavior.Strict);
+        var controller = new WorkspacePlansController(service.Object);
+
+        var result = Assert.IsType<ObjectResult>(await controller.Export(Guid.NewGuid(), CancellationToken.None, format));
+
+        Assert.Equal(400, result.StatusCode);
+        Assert.Equal("Use json or yaml.", Assert.IsType<ProblemDetails>(result.Value).Detail);
+        service.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Plans_ExportUnknownIdPreservesNotFoundBehavior()
+    {
+        var service = new WorkspacePlanService(Options);
+        var controller = new WorkspacePlansController(service);
+        await Assert.ThrowsAsync<KeyNotFoundException>(() => controller.Export(Guid.NewGuid(), CancellationToken.None, "yaml"));
     }
 
     [Fact]

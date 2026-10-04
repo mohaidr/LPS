@@ -39,11 +39,18 @@ public sealed class WorkspacePlansController(IWorkspacePlanService plans) : Cont
     }
 
     [HttpGet("{id:guid}/export")]
-    [Produces("application/json")]
-    public async Task<IActionResult> Export(Guid id, CancellationToken token)
+    [Produces("application/json", "application/yaml")]
+    [ProducesResponseType(typeof(FileContentResult), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    [ProducesResponseType(typeof(ProblemDetails), 404)]
+    public async Task<IActionResult> Export(Guid id, CancellationToken token, [FromQuery] string format = "json")
     {
+        format = format?.ToLowerInvariant() ?? "json";
+        if (format is not ("json" or "yaml"))
+            return Problem(statusCode: 400, title: "Unsupported export format", detail: "Use json or yaml.");
         var saved = await plans.GetAsync(id, token);
-        return File(System.Text.Encoding.UTF8.GetBytes(SerializationHelper.Serialize(saved.Plan)),
-            "application/json", $"{saved.Plan.Name}.json");
+        var content = format == "yaml" ? SerializationHelper.SerializeToYaml(saved.Plan) : SerializationHelper.Serialize(saved.Plan);
+        return File(System.Text.Encoding.UTF8.GetBytes(content),
+            $"application/{format}", $"{saved.Plan.Name}.{format}");
     }
 }
