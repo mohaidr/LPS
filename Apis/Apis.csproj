@@ -72,43 +72,7 @@
         <Content Update="wwwroot\manifest.json">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
-        <Content Update="wwwroot\static\css\main.3b4b745f.css">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\265.fbc5e8ca.chunk.js">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\415.7d508b70.chunk.js">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\760.94bf1753.chunk.js">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\873.9eb7011e.chunk.js">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\main.025a9b0b.js">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\main.025a9b0b.js.LICENSE.txt">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\main.a685629b.js">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\js\main.a685629b.js.LICENSE.txt">
-          <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\media\nucleo-icons.4466aeec3386b965a232.ttf">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\media\nucleo-icons.8e954b749f951b654fc6.woff">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\media\nucleo-icons.bd42d77b9672555647d1.eot">
-            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-        </Content>
-        <Content Update="wwwroot\static\media\nucleo-icons.ec16bc4cc4526801004d.woff2">
+        <Content Update="wwwroot\static\**\*">
             <CopyToOutputDirectory>Always</CopyToOutputDirectory>
         </Content>
     </ItemGroup>

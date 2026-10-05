@@ -94,8 +94,7 @@
 			<!-- Place them under this project's wwwroot at build/pack -->
 			<Link>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</Link>
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-			<Pack>true</Pack>
-			<PackageCopyToOutput>true</PackageCopyToOutput>
+			<Pack>false</Pack>
 		</Content>
 	</ItemGroup>
 
