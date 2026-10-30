@@ -593,7 +593,7 @@ public class WorkspaceServiceTests : IDisposable
         var saved = await service.SaveAsync(null, plan, CancellationToken.None);
         var path = Path.Combine(_directory, "plans", $"{saved.Id}.json");
         var original = await File.ReadAllBytesAsync(path);
-        var controller = new WorkspacePlansController(service);
+        var controller = new WorkspacePlansController(service, new HarImportService());
 
         var result = Assert.IsType<FileContentResult>(requestedFormat == null
             ? await controller.Export(saved.Id, CancellationToken.None)
@@ -616,7 +616,7 @@ public class WorkspaceServiceTests : IDisposable
     public async Task Plans_ExportRejectsUnsupportedFormats(string format)
     {
         var service = new Mock<IWorkspacePlanService>(MockBehavior.Strict);
-        var controller = new WorkspacePlansController(service.Object);
+        var controller = new WorkspacePlansController(service.Object, new HarImportService());
 
         var result = Assert.IsType<ObjectResult>(await controller.Export(Guid.NewGuid(), CancellationToken.None, format));
 
@@ -629,7 +629,7 @@ public class WorkspaceServiceTests : IDisposable
     public async Task Plans_ExportUnknownIdPreservesNotFoundBehavior()
     {
         var service = new WorkspacePlanService(Options);
-        var controller = new WorkspacePlansController(service);
+        var controller = new WorkspacePlansController(service, new HarImportService());
         await Assert.ThrowsAsync<KeyNotFoundException>(() => controller.Export(Guid.NewGuid(), CancellationToken.None, "yaml"));
     }
 

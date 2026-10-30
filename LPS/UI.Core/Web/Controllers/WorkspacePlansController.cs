@@ -8,7 +8,7 @@ namespace LPS.UI.Core.Web.Controllers;
 [ApiController]
 [Route("api/workspace/plans")]
 [Produces("application/json")]
-public sealed class WorkspacePlansController(IWorkspacePlanService plans) : ControllerBase
+public sealed class WorkspacePlansController(IWorkspacePlanService plans, IHarImportService harImport) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<WorkspacePlan>>> List(CancellationToken token)
@@ -53,4 +53,47 @@ public sealed class WorkspacePlansController(IWorkspacePlanService plans) : Cont
         return File(System.Text.Encoding.UTF8.GetBytes(content),
             $"application/{format}", $"{saved.Plan.Name}.{format}");
     }
+
+    /// <summary>
+    /// Converts an uploaded HAR capture (e.g. a browser DevTools "Save all as HAR" export) into an
+    /// unsaved plan, so it can be opened and edited like any other draft test. Uses the same
+    /// filtering/conversion logic as `lps record`.
+    /// </summary>
+    [HttpPost("import/har")]
+    [RequestSizeLimit(200_000_000)]
+    [ProducesResponseType(typeof(ImportHarResult), 200)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
+    public async Task<ActionResult<ImportHarResult>> ImportHar([FromForm] ImportHarRequest request, CancellationToken token)
+    {
+        if (request.Har is null || request.Har.Length == 0)
+            return Problem(statusCode: 400, title: "No HAR file was uploaded.");
+
+        var options = new HarImportOptions
+        {
+            PlanName = request.PlanName,
+            RoundName = request.RoundName,
+            OnlyHosts = SplitList(request.OnlyHosts),
+            IgnoreHosts = SplitList(request.IgnoreHosts),
+            IgnorePaths = SplitList(request.IgnorePaths),
+            IgnoreMethods = SplitList(request.IgnoreMethods),
+            IgnoreContentTypes = SplitList(request.IgnoreContentTypes),
+            IgnoreHeaders = SplitList(request.IgnoreHeaders),
+            MinimalHeaders = request.MinimalHeaders,
+            ThinkTime = request.ThinkTime,
+            MaxThinkTimeMs = request.MaxThinkTimeMs,
+            NumberOfClients = request.NumberOfClients,
+            ArrivalDelay = request.ArrivalDelay,
+            RunInParallel = request.RunInParallel,
+            RequestCount = request.RequestCount,
+            Duration = request.Duration
+        };
+
+        await using var stream = request.Har.OpenReadStream();
+        return Ok(await harImport.ImportAsync(stream, options, token));
+    }
+
+    private static string[] SplitList(string? value) =>
+        string.IsNullOrWhiteSpace(value)
+            ? Array.Empty<string>()
+            : value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 }

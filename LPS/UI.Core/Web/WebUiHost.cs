@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
 using Microsoft.Extensions.Configuration;
@@ -36,6 +37,10 @@ internal static class WebUiHost
         builder.Services.AddSingleton(GetOptions(builder.Configuration));
         builder.Services.Configure<HostOptions>(options => options.ShutdownTimeout = TimeSpan.FromSeconds(90));
         builder.Services.AddSingleton<IWorkspacePlanService, WorkspacePlanService>();
+        builder.Services.AddSingleton<IHarImportService, HarImportService>();
+        // Recorded sessions can be large HAR files; raise the multipart limit above Kestrel/MVC's
+        // conservative defaults (the import endpoint itself carries a matching [RequestSizeLimit]).
+        builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = 200_000_000);
         builder.Services.AddHttpClient<IWorkspaceRequestService, WorkspaceRequestService>(client => client.Timeout = TimeSpan.FromSeconds(30))
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {

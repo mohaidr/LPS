@@ -13,6 +13,22 @@
         "/^Select-String -Path 'C:\\\\Users\\\\Hassan\\\\Documents\\\\LPS\\\\LPS\\.Protos\\.Shared\\\\Protos\\\\metricsquery\\.proto' -Pattern 'message TimingMetricStats\\|p50\\|p95\\|service MetricsQueryService\\|rpc GetDurationMetrics\\|rpc GetThroughputMetrics' \\| ForEach-Object \\{ \"\\$\\(\\$_\\.LineNumber\\): \\$\\(\\$_\\.Line\\)\" \\}$/": {
             "approve": true,
             "matchCommandLine": true
-        }
+        },
+        "where.exe": true,
+        "/^python -c \"import PIL, imageio_ffmpeg, edge_tts; print\\(PIL\\.__version__, imageio_ffmpeg\\.get_ffmpeg_exe\\(\\)\\)\" 2>&1; python -c \"import playwright; print\\('pw ok'\\)\" 2>&1; python -c \"import numpy; print\\('np', numpy\\.__version__\\)\" 2>&1; Get-ChildItem -Force -Directory c:\\\\Users\\\\Hassan\\\\Documents\\\\LPS\\\\lps-docs -Recurse -Depth 3 -Filter \"\\*venv\\*\" -ErrorAction SilentlyContinue \\| Select-Object FullName; Get-ChildItem \\$env:TEMP -Directory -Filter \"\\*venv\\*\" -ErrorAction SilentlyContinue \\| Select-Object FullName$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "Get-Item": true,
+        "&": true,
+        "Move-Item": true,
+        "Set-Content": true,
+        "Measure-Command": true,
+        "Out-Host": true,
+        "/^dotnet build LPS\\\\LPS\\.csproj -c Debug 2>&1 \\| Select-Object -Last 60$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "npm run build": true
     }
 }

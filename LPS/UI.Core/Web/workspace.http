@@ -70,6 +70,26 @@ Content-Type: application/json
 GET {{baseUrl}}/api/workspace/plans/{{planId}}/export
 X-LPS-Workspace: 1
 
+### Import a HAR capture into an unsaved plan (multipart/form-data)
+POST {{baseUrl}}/api/workspace/plans/import/har
+X-LPS-Workspace: 1
+Content-Type: multipart/form-data; boundary=lps-har-import
+
+--lps-har-import
+Content-Disposition: form-data; name="Har"; filename="capture.har"
+Content-Type: application/json
+
+< ./capture.har
+--lps-har-import
+Content-Disposition: form-data; name="PlanName"
+
+Imported HAR
+--lps-har-import
+Content-Disposition: form-data; name="MinimalHeaders"
+
+true
+--lps-har-import--
+
 ### Start an isolated run (201; a second active run returns 409)
 # @name startRun
 POST {{baseUrl}}/api/workspace/runs
