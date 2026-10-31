@@ -108,7 +108,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Console.Error.WriteLine(ex.ToString());
             }
             finally
             {
@@ -133,7 +133,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
+                Console.Error.WriteLine(ex.ToString());
             }
             finally
             {

@@ -32,7 +32,7 @@ namespace LPS.UI.Core.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error fetching configuration: {ex.Message}");
+                Console.Error.WriteLine($"Error fetching configuration: {ex.Message}");
                 return default;
             }
         }
@@ -74,7 +74,7 @@ namespace LPS.UI.Core.Services
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error saving configuration: {ex.Message}");
+                Console.Error.WriteLine($"Error saving configuration: {ex.Message}");
             }
         }
     }

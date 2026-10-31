@@ -135,7 +135,7 @@ namespace LPS.UI.Core.Host
             catch (Exception ex)
             {
                 await WorkspaceRunner.ReportAsync("Failed");
-                Console.WriteLine(ex.ToString() );
+                Console.Error.WriteLine(ex.ToString() );
                 _logger.Log(ex.ToString(), LPSLoggingLevel.Error);
                 await coolingReporter.CompleteAsync();
                 if (_localNode != null)

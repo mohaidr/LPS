@@ -198,7 +198,7 @@ namespace LPS.Infrastructure.LPSClients
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());   
+                Console.Error.WriteLine(ex.ToString());
 
                 await logger.LogAsync($"[ConnectionInit] to {host} failed: {ex.Message}", LPSLoggingLevel.Error, cancellationToken);
                 // OPTIONS failed - actual request will establish connection (with overhead)

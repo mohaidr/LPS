@@ -34,7 +34,7 @@ internal sealed class WorkerAgent(WorkerAgentOptions options)
             catch (OperationCanceledException) when (token.IsCancellationRequested) { return; }
             catch (Exception exception)
             {
-                Console.WriteLine($"Worker {options.Name}: waiting for master ({exception.GetType().Name}).");
+                Console.Error.WriteLine($"Worker {options.Name}: waiting for master ({exception.GetType().Name}).");
             }
             await Task.Delay(TimeSpan.FromMilliseconds(delaySeconds * 1000 + Random.Shared.Next(250)), token);
             delaySeconds = Math.Min(5, delaySeconds * 2);

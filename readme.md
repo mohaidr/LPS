@@ -45,6 +45,10 @@ lps --version
 lps ui
 ```
 
+Console-based failure diagnostics use standard error (`stderr`); normal status
+messages use standard output (`stdout`). The workspace Logs tab captures both
+streams from the runner process.
+
 # ⚡ Quick Test Examples
 
 CB, CRB, and DCB modes track each in-flight batch separately. A background cleanup

@@ -83,7 +83,7 @@ namespace LPS.UI.Core.Host
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error opening web browser: {ex.Message}");
+                Console.Error.WriteLine($"Error opening web browser: {ex.Message}");
             }
         }
     }

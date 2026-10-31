@@ -28,7 +28,7 @@ namespace LPS.Infrastructure.LPSClients
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine("Connection timed out.");
+                Console.Error.WriteLine("Connection timed out.");
             }
         }
 
@@ -55,7 +55,7 @@ namespace LPS.Infrastructure.LPSClients
             }
             catch (WebSocketException ex)
             {
-                Console.WriteLine($"WebSocket error: {ex.Message}");
+                Console.Error.WriteLine($"WebSocket error: {ex.Message}");
             }
             finally
             {

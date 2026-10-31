@@ -19,8 +19,8 @@ public class ConnectionCounterEventListener : EventListener
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
-            Console.WriteLine(e.InnerException?.Message);
+            Console.Error.WriteLine(e.Message);
+            Console.Error.WriteLine(e.InnerException?.Message);
         }
     }
 
@@ -53,8 +53,8 @@ public class ConnectionCounterEventListener : EventListener
         }
         catch (Exception e)
         {
-            Console.WriteLine(e.Message);
-            Console.WriteLine(e.InnerException?.Message);
+            Console.Error.WriteLine(e.Message);
+            Console.Error.WriteLine(e.InnerException?.Message);
         }
     }
 }
