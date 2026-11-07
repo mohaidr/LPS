@@ -20,7 +20,7 @@ namespace LPS.Domain.LPSRun.IterationMode
         readonly HttpIteration _httpIteration;
         readonly IIterationStatusMonitor _iterationStatusMonitor;
         readonly IWatchdog _watchdog;
-        private readonly IMetricsDataMonitor _metrics;
+        private readonly ICoolingTracker _coolingTracker;
 
         public CRBMode(
             HttpRequest.ExecuteCommand command,
@@ -32,14 +32,14 @@ namespace LPS.Domain.LPSRun.IterationMode
             HttpIteration httpIteration,
             IIterationStatusMonitor iterationStatusMonitor,
             IWatchdog watchdog,
-            IMetricsDataMonitor metrics = null)
+            ICoolingTracker coolingTracker)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _batchProcessor = batchProcessor ?? throw new ArgumentNullException(nameof(batchProcessor));
             _requestCount = requestCount;
             _coolDownTime = coolDownTime;
             _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
-            _metrics = metrics;
+            _coolingTracker = coolingTracker ?? throw new ArgumentNullException(nameof(coolingTracker));
             _batchSize = batchSize;
             _maximizeThroughput = maximizeThroughput;
             _httpIteration = httpIteration ?? throw new ArgumentNullException();
@@ -75,7 +75,9 @@ namespace LPS.Domain.LPSRun.IterationMode
                             awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, batchSize, batchCondition, cancellationToken));
                             _requestCount -= batchSize;
                             if (continueCondition() && coolDownWatch.Elapsed.TotalMilliseconds < _coolDownTime)
-                                cooling = _metrics?.BeginBatchCooldown(_httpIteration);
+                                cooling = _coolingTracker.BeginBatchCooldown(_httpIteration.Id,
+                                    _httpIteration.HttpRequest.Url.HostName,
+                                    $"{_httpIteration.Mode} batch cooldown: {_httpIteration.CoolDownTime} ms");
                         }
                         newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                     }
@@ -88,7 +90,9 @@ namespace LPS.Domain.LPSRun.IterationMode
                         if (continueCondition())
                         {
                             var delay = Math.Max(_coolDownTime, _coolDownTime - (int)coolDownWatch.ElapsedMilliseconds);
-                            using var pause = _metrics?.BeginBatchCooldown(_httpIteration);
+                            using var pause = _coolingTracker.BeginBatchCooldown(_httpIteration.Id,
+                                _httpIteration.HttpRequest.Url.HostName,
+                                $"{_httpIteration.Mode} batch cooldown: {_httpIteration.CoolDownTime} ms");
                             await Task.Delay(delay, cancellationToken);
                         }
                     }

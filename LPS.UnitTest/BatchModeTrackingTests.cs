@@ -23,6 +23,7 @@ public class BatchModeTrackingTests
         var operationId = Mock.Of<IRuntimeOperationIdProvider>();
         var expressions = Mock.Of<IExpressionEvaluator>();
         var watchdog = Mock.Of<IWatchdog>();
+        var coolingTracker = Mock.Of<ICoolingTracker>();
         var iteration = new HttpIteration(new HttpIteration.SetupCommand
         {
             Name = "Batch tracking",
@@ -58,9 +59,9 @@ public class BatchModeTrackingTests
 
         IIterationModeService service = mode switch
         {
-            IterationMode.CB => new CBMode(command, 1, 3, maximizeThroughput, processor, iteration, statuses.Object, watchdog),
-            IterationMode.CRB => new CRBMode(command, 5, 1, 3, maximizeThroughput, processor, iteration, statuses.Object, watchdog),
-            _ => new DCBMode(command, 60, 1, 3, maximizeThroughput, processor, iteration, statuses.Object, watchdog)
+            IterationMode.CB => new CBMode(command, 1, 3, maximizeThroughput, processor, iteration, statuses.Object, watchdog, coolingTracker),
+            IterationMode.CRB => new CRBMode(command, 5, 1, 3, maximizeThroughput, processor, iteration, statuses.Object, watchdog, coolingTracker),
+            _ => new DCBMode(command, 60, 1, 3, maximizeThroughput, processor, iteration, statuses.Object, watchdog, coolingTracker)
         };
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         var execution = service.ExecuteAsync(cancellation.Token);

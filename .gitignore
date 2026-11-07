@@ -26,6 +26,11 @@ obj
 /Dashboard/bin/Debug/net8.0/*.dll
 *.exe
 wwwroot
+# Retain deployed UI bundles referenced by the Razor layout and tool package.
+!/Apis/wwwroot/
+/Apis/wwwroot/*
+!/Apis/wwwroot/static/
+!/Apis/wwwroot/static/**
 net8.0
 /LPS/bin/Debug/net8.0.zip
 *.user

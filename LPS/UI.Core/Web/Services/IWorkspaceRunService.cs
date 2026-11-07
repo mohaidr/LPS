@@ -6,6 +6,6 @@ public interface IWorkspaceRunService
 {
     Task<IReadOnlyList<WorkspaceRun>> ListAsync(CancellationToken token);
     Task<WorkspaceRunDetails> GetAsync(Guid id, CancellationToken token);
-    Task<WorkspaceRun> StartAsync(Guid planId, CancellationToken token);
+    Task<WorkspaceRun> StartAsync(Guid planId, CancellationToken token, IReadOnlyList<string>? roundNames = null);
     Task<WorkspaceRun> StopAsync(Guid id, CancellationToken token);
 }

@@ -18,6 +18,8 @@ using Moq;
 using Moq.Protected;
 using System.Net;
 using System.Text;
+using System.Collections.Concurrent;
+using System.Net.Sockets;
 using LPS.Domain.LPSSession;
 using Microsoft.Extensions.Configuration;
 using LPS.Domain.Common.Interfaces;
@@ -670,6 +672,129 @@ public class WorkspaceServiceTests : IDisposable
 
         Assert.Empty(await runs.ListAsync(CancellationToken.None));
         await Assert.ThrowsAsync<KeyNotFoundException>(() => runs.GetAsync(Guid.NewGuid(), CancellationToken.None));
+    }
+
+    public static TheoryData<string[]> InvalidRoundSelections => new()
+    {
+        Array.Empty<string>(), new[] { "" }, new[] { " " }, new[] { "Unknown round" },
+        new[] { "Round 1", "Unknown round" }, new string[] { null! }
+    };
+
+    [Theory]
+    [MemberData(nameof(InvalidRoundSelections))]
+    public async Task Runs_RejectInvalidRoundSelectionBeforeCreatingRun(string[] roundNames)
+    {
+        var plans = new WorkspacePlanService(Options);
+        var saved = await plans.SaveAsync(null, CreatePlan(), CancellationToken.None);
+        var runs = new WorkspaceRunService(plans, Options, NullLogger<WorkspaceRunService>.Instance);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => runs.StartAsync(saved.Id, CancellationToken.None, roundNames));
+
+        Assert.Empty(await runs.ListAsync(CancellationToken.None));
+        Assert.Empty(Directory.GetDirectories(Path.Combine(_directory, "runs")));
+    }
+
+    [Fact]
+    public async Task Runs_ControllerForwardsScopeAndReturnsCreatedLocation()
+    {
+        var planId = Guid.NewGuid();
+        var names = new[] { "Round 1", "Round 2" };
+        using var cancellation = new CancellationTokenSource();
+        var run = new WorkspaceRun(Guid.NewGuid(), planId, "Test", "Preparing", DateTimeOffset.UtcNow,
+            null, null, 8009, CreatePlan(), names);
+        var service = new Mock<IWorkspaceRunService>(MockBehavior.Strict);
+        service.Setup(value => value.StartAsync(planId, cancellation.Token, names)).ReturnsAsync(run);
+
+        var result = await new WorkspaceRunsController(service.Object).Start(
+            new StartWorkspaceRunRequest(planId, names), cancellation.Token);
+
+        var created = Assert.IsType<CreatedAtActionResult>(result.Result);
+        Assert.Equal(nameof(WorkspaceRunsController.Get), created.ActionName);
+        Assert.Equal(run.Id, created.RouteValues!["id"]);
+        Assert.Same(run, created.Value);
+        service.VerifyAll();
+    }
+
+    public static TheoryData<string[]?> RoundSelections => new()
+    {
+        null, new[] { "Second round" }, new[] { "THIRD ROUND", "first round", "First round" },
+        new[] { "First round", "Second round", "Third round" }
+    };
+
+    [Theory]
+    [MemberData(nameof(RoundSelections))]
+    public async Task Runs_ExecuteSelectedRoundsThroughCliAndRetainFullPlan(string[]? roundNames)
+    {
+        using var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        using var target = new HttpListener();
+        target.Prefixes.Add($"http://127.0.0.1:{port}/");
+        target.Start();
+        var requests = new ConcurrentQueue<string>();
+        var server = Task.Run(async () =>
+        {
+            try
+            {
+                while (target.IsListening)
+                {
+                    var context = await target.GetContextAsync();
+                    if (context.Request.Headers["X-Round-Scope-Test"] == "workload")
+                        requests.Enqueue(context.Request.Url!.AbsolutePath);
+                    context.Response.StatusCode = 200;
+                    context.Response.Close();
+                }
+            }
+            catch (HttpListenerException) when (!target.IsListening) { }
+            catch (ObjectDisposedException) when (!target.IsListening) { }
+        });
+        var options = Options with { RunnerAssemblyPath = typeof(WorkspaceRunService).Assembly.Location };
+        var plans = new WorkspacePlanService(options);
+        var plan = CreatePlan();
+        plan.Rounds = new[] { "First", "Second", "Third" }.Select(name => new RoundDto
+        {
+            Name = $"{name} round", NumberOfClients = "1", RunInParallel = "false",
+            Iterations = new[] { 1, 2 }.Select(index => new HttpIterationDto
+            {
+                Name = $"{name} request {index}", Mode = "R", RequestCount = "1",
+                HttpRequest = new HttpRequestDto
+                {
+                    URL = $"http://127.0.0.1:{port}/{name.ToLowerInvariant()}/{index}", HttpMethod = "GET",
+                    HttpHeaders = new() { ["X-Round-Scope-Test"] = "workload" }
+                }
+            }).ToList()
+        }).ToList();
+        var saved = await plans.SaveAsync(null, plan, CancellationToken.None);
+        var runs = new WorkspaceRunService(plans, options, NullLogger<WorkspaceRunService>.Instance);
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(45));
+            var started = await runs.StartAsync(saved.Id, timeout.Token, roundNames);
+            WorkspaceRunDetails details;
+            using var timer = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
+            do
+            {
+                await timer.WaitForNextTickAsync(timeout.Token);
+                details = await runs.GetAsync(started.Id, timeout.Token);
+            } while (WorkspaceRunService.IsActive(details.Run.State));
+
+            Assert.True(details.Run.State == "Completed", string.Join("\n", details.Logs));
+            var selected = plan.Rounds.Where(round => roundNames == null || roundNames.Contains(round.Name, StringComparer.OrdinalIgnoreCase)).ToArray();
+            Assert.Equal(selected.SelectMany(round => round.Iterations.Select(iteration => new Uri(iteration.HttpRequest.URL).AbsolutePath)), requests);
+            Assert.Equal(roundNames == null ? null : selected.Select(round => round.Name).ToArray(), details.Run.RoundNames);
+            Assert.Equal(3, details.Run.Plan.Rounds.Count);
+            Assert.Equal(3, (await plans.GetAsync(saved.Id, timeout.Token)).Plan.Rounds.Count);
+            var restored = await new WorkspaceRunService(plans, options, NullLogger<WorkspaceRunService>.Instance).GetAsync(started.Id, timeout.Token);
+            Assert.Equal(details.Run.RoundNames, restored.Run.RoundNames);
+        }
+        finally
+        {
+            using var shutdown = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            await ((IHostedService)runs).StopAsync(shutdown.Token);
+            target.Stop();
+            await server;
+        }
     }
 
     [Fact]

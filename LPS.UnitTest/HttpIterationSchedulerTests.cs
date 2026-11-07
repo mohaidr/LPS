@@ -34,7 +34,7 @@ public class HttpIterationSchedulerTests : IAsyncLifetime
         }, Mock.Of<IExpressionEvaluator>(), logger, operationId);
         _command = new HttpIteration.ExecuteCommand(
             Mock.Of<IClientService<HttpRequest, HttpResponse>>(), logger, watchdog,
-            operationId, Mock.Of<ISkippedRequestReporter>(), metrics, _statuses.Object);
+            operationId, Mock.Of<ISkippedRequestReporter>(), metrics, _statuses.Object, Mock.Of<ICoolingTracker>());
         _statuses.Setup(value => value.GetTerminalStatusAsync(_iteration, It.IsAny<CancellationToken>()))
             .Returns(() =>
             {

@@ -19,9 +19,10 @@ public sealed class WorkspaceRunsController(IWorkspaceRunService runs) : Control
 
     [HttpPost]
     [ProducesResponseType(typeof(WorkspaceRun), 201)]
+    [ProducesResponseType(typeof(ProblemDetails), 400)]
     public async Task<ActionResult<WorkspaceRun>> Start(StartWorkspaceRunRequest request, CancellationToken token)
     {
-        var run = await runs.StartAsync(request.PlanId, token);
+        var run = await runs.StartAsync(request.PlanId, token, request.RoundNames);
         return CreatedAtAction(nameof(Get), new { id = run.Id }, run);
     }
 

@@ -16,6 +16,7 @@ namespace LPS.UnitTest
         private readonly ILogger _logger = Mock.Of<ILogger>();
         private readonly IRuntimeOperationIdProvider _operationId = Mock.Of<IRuntimeOperationIdProvider>();
         private readonly IMetricsDataMonitor _metrics = Mock.Of<IMetricsDataMonitor>();
+        private readonly LPS.Infrastructure.Monitoring.CoolingTracker _coolingTracker = new();
         private readonly Mock<IExpressionEvaluator> _expressions = new();
         private readonly Mock<IIterationStatusMonitor> _statuses = new();
         private readonly Mock<ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>>> _repository = new();
@@ -459,9 +460,6 @@ namespace LPS.UnitTest
         [InlineData(IterationMode.DCB, true)]
         public async Task BatchModes_RecordRealCooldownsAndCloseThemOnCancellation(IterationMode mode, bool maximizeThroughput)
         {
-            var tracker = new LPS.Infrastructure.Monitoring.CoolingTracker();
-            Mock.Get(_metrics).Setup(value => value.BeginBatchCooldown(It.IsAny<HttpIteration>()))
-                .Returns<HttpIteration>(iteration => tracker.BeginBatchCooldown(iteration.Id, iteration.HttpRequest.Url.HostName));
             var round = CreateRound(new Round.SetupCommand { NumberOfClients = 1 }, mode: mode, maximizeThroughput: maximizeThroughput);
             var start = DateTime.UtcNow;
             _cancellation.CancelAfter(TimeSpan.FromMilliseconds(250));
@@ -469,12 +467,15 @@ namespace LPS.UnitTest
             catch (OperationCanceledException) when (_cancellation.IsCancellationRequested) { }
             var end = DateTime.UtcNow;
 
-            var periods = tracker.GetPeriods("example.com", start, end);
+            var periods = _coolingTracker.GetPeriods("example.com", start, end);
             Assert.NotEmpty(periods);
             Assert.All(periods, period => Assert.Equal("BatchCooldown", period.Source));
+            Assert.All(periods, period => Assert.Equal($"{mode} batch cooldown: 20 ms", period.Reason));
+            Assert.Equal(periods, _coolingTracker.GetPeriods("example.com", start, end,
+                round.GetReadOnlyIterations().Single().Id));
+            Assert.Empty(_coolingTracker.GetPeriods("example.com", start, end, Guid.NewGuid()));
             Assert.All(periods, period => Assert.True(period.End > period.Start));
-            Assert.Empty(tracker.GetPeriods("example.com", end, end.AddSeconds(1)));
-            Mock.Get(_metrics).Verify(value => value.BeginBatchCooldown(It.IsAny<HttpIteration>()), Times.AtLeastOnce());
+            Assert.Empty(_coolingTracker.GetPeriods("example.com", end, end.AddSeconds(1)));
         }
 
         private Round CreateRound(Round.SetupCommand setup, int iterationCount = 1, int iterationStartupDelay = 0,
@@ -525,7 +526,7 @@ namespace LPS.UnitTest
         private Task RunAsync(Round round) => new Round.ExecuteCommand(
             _logger, Mock.Of<IWatchdog>(), _operationId, Mock.Of<ISkippedRequestReporter>(),
             _clients.Object, Mock.Of<IClientConfiguration<HttpRequest>>(), _repository.Object,
-            _metrics, _statuses.Object).ExecuteAsync(round, _cancellation.Token);
+            _metrics, _statuses.Object, _coolingTracker).ExecuteAsync(round, _cancellation.Token);
 
         public void Dispose()
         {

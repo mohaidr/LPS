@@ -134,10 +134,6 @@ namespace LPS.Infrastructure.Monitoring.MetricsServices
             }
         }
 
-        public IDisposable BeginBatchCooldown(HttpIteration iteration) =>
-            _coolingTracker.BeginBatchCooldown(iteration.Id, iteration.HttpRequest?.Url?.HostName ?? string.Empty,
-                $"{iteration.Mode} batch cooldown: {iteration.CoolDownTime} ms");
-
         public void Dispose()
         {
             // Dispose collectors

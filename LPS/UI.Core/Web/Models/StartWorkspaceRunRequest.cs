@@ -1,4 +1,4 @@
 namespace LPS.UI.Core.Web.Models;
 
-/// <summary>Starts a run from a saved workspace plan.</summary>
-public sealed record StartWorkspaceRunRequest(Guid PlanId);
+/// <summary>Starts a saved plan. Omit round names to run all rounds; otherwise select at least one existing round.</summary>
+public sealed record StartWorkspaceRunRequest(Guid PlanId, IReadOnlyList<string>? RoundNames = null);

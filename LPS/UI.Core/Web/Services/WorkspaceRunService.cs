@@ -75,17 +75,27 @@ public sealed class WorkspaceRunService : IWorkspaceRunService, IHostedService
         return new WorkspaceRunDetails(run, logs.OrderBy(line => line, StringComparer.Ordinal).TakeLast(300).ToArray(), metrics);
     }
 
-    public async Task<WorkspaceRun> StartAsync(Guid planId, CancellationToken token)
+    public async Task<WorkspaceRun> StartAsync(Guid planId, CancellationToken token, IReadOnlyList<string>? roundNames = null)
     {
         await _gate.WaitAsync(token);
         try
         {
             if (_process != null)
                 throw new InvalidOperationException("A run is already active. Stop it or wait for completion.");
+            var saved = await _plans.GetAsync(planId, token);
+            string[]? selectedRounds = null;
+            if (roundNames != null)
+            {
+                if (roundNames.Count == 0 || roundNames.Any(string.IsNullOrWhiteSpace))
+                    throw new ArgumentException("Select at least one round with a non-empty name.", nameof(roundNames));
+                var requested = new HashSet<string>(roundNames, StringComparer.OrdinalIgnoreCase);
+                if (requested.Any(name => !saved.Plan.Rounds.Any(round => string.Equals(round.Name, name, StringComparison.OrdinalIgnoreCase))))
+                    throw new ArgumentException("One or more selected rounds no longer exist in this plan. Refresh the plan and select again.", nameof(roundNames));
+                selectedRounds = saved.Plan.Rounds.Where(round => requested.Contains(round.Name)).Select(round => round.Name).ToArray();
+            }
             if (!File.Exists(_options.RunnerAssemblyPath))
                 throw new InvalidOperationException("The LPS runner is not available.");
 
-            var saved = await _plans.GetAsync(planId, token);
             var id = Guid.NewGuid();
             var directory = RunDirectory(id);
             Directory.CreateDirectory(directory);
@@ -96,7 +106,7 @@ public sealed class WorkspaceRunService : IWorkspaceRunService, IHostedService
             while (grpcPort == port)
                 grpcPort = GetAvailablePort();
             var settingsPath = await WriteSettingsAsync(directory, port, grpcPort, token);
-            var run = new WorkspaceRun(id, planId, saved.Plan.Name, "Preparing", DateTimeOffset.UtcNow, null, null, port, saved.Plan);
+            var run = new WorkspaceRun(id, planId, saved.Plan.Name, "Preparing", DateTimeOffset.UtcNow, null, null, port, saved.Plan, selectedRounds);
             await SaveRunAsync(run, token);
 
             var start = new ProcessStartInfo
@@ -112,6 +122,8 @@ public sealed class WorkspaceRunService : IWorkspaceRunService, IHostedService
             start.ArgumentList.Add(_options.RunnerAssemblyPath);
             start.ArgumentList.Add("run");
             start.ArgumentList.Add(planPath);
+            foreach (var roundName in selectedRounds ?? [])
+                start.ArgumentList.Add($"--roundname={roundName}");
             start.Environment["LPS_SETTINGS_FILE"] = settingsPath;
             start.Environment["LPS_WORKSPACE_RUN"] = directory;
             start.Environment["NO_COLOR"] = "1";

@@ -98,6 +98,21 @@ Content-Type: application/json
 
 { "planId": "{{planId}}" }
 
+### Run only selected rounds (case-insensitive; execution follows plan order)
+# Omit roundNames or use null for all rounds. Multiple names use the same CLI round filter.
+POST {{baseUrl}}/api/workspace/runs
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{ "planId": "{{planId}}", "roundNames": ["Main"] }
+
+### Empty or unknown round selection (400; no run is created)
+POST {{baseUrl}}/api/workspace/runs
+X-LPS-Workspace: 1
+Content-Type: application/json
+
+{ "planId": "{{planId}}", "roundNames": [] }
+
 ### Read status, recent logs, and retained final metrics
 GET {{baseUrl}}/api/workspace/runs/{{runId}}
 X-LPS-Workspace: 1

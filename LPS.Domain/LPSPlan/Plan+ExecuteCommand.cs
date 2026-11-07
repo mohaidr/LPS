@@ -40,6 +40,7 @@ namespace LPS.Domain
             readonly ICommandStatusMonitor<HttpIteration> _httpIterationExecutionCommandStatusMonitor;
             readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
             readonly IIterationStatusMonitor _iterationStatusMonitor;
+            internal readonly ICoolingTracker _coolingTracker;
             public ISkippedRequestReporter SkippedRequestReporter => _skippedRequestReporter;
             protected ExecuteCommand()
             {
@@ -53,7 +54,8 @@ namespace LPS.Domain
                 ICommandStatusMonitor<HttpIteration> httpIterationExecutionCommandStatusMonitor,
                 ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
-                IIterationStatusMonitor iterationStatusMonitor)
+                IIterationStatusMonitor iterationStatusMonitor,
+                ICoolingTracker coolingTracker)
             {
                 _logger = logger;
                 _watchdog = watchdog;
@@ -65,6 +67,7 @@ namespace LPS.Domain
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
                 _iterationStatusMonitor = iterationStatusMonitor;
+                _coolingTracker = coolingTracker ?? throw new ArgumentNullException(nameof(coolingTracker));
             }
             private CommandExecutionStatus _executionStatus;
             public CommandExecutionStatus Status => _executionStatus;
@@ -111,7 +114,7 @@ namespace LPS.Domain
                         command.SkippedRequestReporter,
                         _lpsClientManager,
                         _lpsClientConfig, _httpIterationExecutionCommandRepository,
-                        _lpsMetricsDataMonitor, _iterationStatusMonitor);
+                        _lpsMetricsDataMonitor, _iterationStatusMonitor, command._coolingTracker);
                     await roundExecCommand.ExecuteAsync(round, token);
                 }
             }
@@ -132,4 +135,3 @@ namespace LPS.Domain
         }
     }
 }
-
