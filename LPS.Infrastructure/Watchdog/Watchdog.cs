@@ -440,10 +440,6 @@ namespace LPS.Infrastructure.Watchdog
             _nextSampleSignal = CreateSampleSignal();
         }
 
-
-
-
-
         /// <summary>
         /// Publishes the new state. Single-writer (sampler only).
         /// </summary>
