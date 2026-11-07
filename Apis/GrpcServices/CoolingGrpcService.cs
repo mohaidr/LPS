@@ -8,7 +8,7 @@ using NodeType = LPS.Infrastructure.Nodes.NodeType;
 
 namespace Apis.Services;
 
-public sealed class CoolingGrpcService(ICoolingTracker tracker, IEntityDiscoveryService discovery, INodeMetadata node) : CoolingProtoService.CoolingProtoServiceBase
+public sealed class CoolingGrpcService(ICoolingTracker tracker, INodeMetadata node) : CoolingProtoService.CoolingProtoServiceBase
 {
     public override Task<CoolingReportResponse> Report(CoolingReportRequest request, ServerCallContext context)
     {
@@ -18,9 +18,8 @@ public sealed class CoolingGrpcService(ICoolingTracker tracker, IEntityDiscovery
         var updates = new List<CoolingUpdate>();
         foreach (var update in request.Updates)
         {
-            if (!Guid.TryParse(update.IterationId, out var iterationId) ||
-                string.IsNullOrWhiteSpace(update.NodeId) || string.IsNullOrWhiteSpace(update.HostName) ||
-                update.Source is not ("Watchdog" or "BatchCooldown") || update.Start == null || update.End == null)
+            if (string.IsNullOrWhiteSpace(update.NodeId) || string.IsNullOrWhiteSpace(update.HostName) ||
+                update.Source != "Watchdog" || update.Start == null || update.End == null)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "Invalid cooling interval or node identity."));
 
             DateTime start;
@@ -37,18 +36,7 @@ public sealed class CoolingGrpcService(ICoolingTracker tracker, IEntityDiscovery
             if (end < start)
                 throw new RpcException(new Status(StatusCode.InvalidArgument, "Cooling end must not precede its start."));
 
-            if (update.Source == "BatchCooldown")
-            {
-                var worker = discovery.Discover(record => record.IterationId == iterationId && record.Node.Metadata.NodeIP == update.NodeId)?.SingleOrDefault();
-                var master = worker == null ? null : discovery.Discover(record =>
-                    record.Node.Metadata.NodeType == NodeType.Master && record.FullyQualifiedName == worker.FullyQualifiedName)?.SingleOrDefault();
-                if (master == null)
-                    throw new RpcException(new Status(StatusCode.FailedPrecondition, "Cooling iteration has not been discovered on the master."));
-                iterationId = master.IterationId;
-            }
-            else iterationId = Guid.Empty;
-
-            updates.Add(new CoolingUpdate(iterationId, update.HostName,
+            updates.Add(new CoolingUpdate(update.HostName,
                 new CoolingPeriod(update.Source, start, end, update.NodeId, update.MachineName, update.Reason), update.IsActive));
         }
         foreach (var update in updates) tracker.ApplyUpdate(update);

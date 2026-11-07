@@ -18,7 +18,6 @@ namespace LPS.Domain.LPSRun.IterationMode
         readonly HttpIteration _httpIteration;
         readonly IIterationStatusMonitor _iterationStatusMonitor;
         readonly IWatchdog _watchdog;
-        private readonly ICoolingTracker _coolingTracker;
         public CBMode(
             HttpRequest.ExecuteCommand command,
             int coolDownTime,
@@ -27,8 +26,7 @@ namespace LPS.Domain.LPSRun.IterationMode
             IBatchProcessor<HttpRequest.ExecuteCommand, HttpRequest> batchProcessor, 
             HttpIteration httpIteration,
             IIterationStatusMonitor iterationStatusMonitor,
-            IWatchdog watchdog,
-            ICoolingTracker coolingTracker)
+            IWatchdog watchdog)
         {
             _command = command ?? throw new ArgumentNullException(nameof(command));
             _coolDownTime = coolDownTime;
@@ -38,7 +36,6 @@ namespace LPS.Domain.LPSRun.IterationMode
             _httpIteration = httpIteration ?? throw new ArgumentNullException();
             _iterationStatusMonitor = iterationStatusMonitor ?? throw new ArgumentNullException();
             _watchdog = watchdog ?? throw new ArgumentNullException(nameof(watchdog));
-            _coolingTracker = coolingTracker ?? throw new ArgumentNullException(nameof(coolingTracker));
         }
 
         public async Task<int> ExecuteAsync(CancellationToken token)
@@ -51,7 +48,6 @@ namespace LPS.Domain.LPSRun.IterationMode
             Func<bool> batchCondition = continueCondition;
             bool newBatch = true;
 
-            IDisposable cooling = null;
             try
             {
                 while (continueCondition() && !await _iterationStatusMonitor.IsTerminatedAsync(_httpIteration, token))
@@ -60,16 +56,10 @@ namespace LPS.Domain.LPSRun.IterationMode
                     {
                         if (newBatch)
                         {
-                            cooling?.Dispose();
-                            cooling = null;
                             coolDownWatch.Restart();
                             await Task.Yield();
                             await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, token);
                             awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
-                            if (continueCondition() && coolDownWatch.Elapsed.TotalMilliseconds < _coolDownTime)
-                                cooling = _coolingTracker.BeginBatchCooldown(_httpIteration.Id,
-                                    _httpIteration.HttpRequest.Url.HostName,
-                                    $"{_httpIteration.Mode} batch cooldown: {_httpIteration.CoolDownTime} ms");
                         }
                         newBatch = coolDownWatch.Elapsed.TotalMilliseconds >= _coolDownTime;
                     }
@@ -78,9 +68,6 @@ namespace LPS.Domain.LPSRun.IterationMode
                         coolDownWatch.Restart();
                         await _watchdog.BalanceAsync(_httpIteration.HttpRequest.Url.HostName, token);
                         awaitableTasks.Add(_batchProcessor.SendBatchAsync(_command, _batchSize, batchCondition, token));
-                        using var pause = _coolingTracker.BeginBatchCooldown(_httpIteration.Id,
-                            _httpIteration.HttpRequest.Url.HostName,
-                            $"{_httpIteration.Mode} batch cooldown: {_httpIteration.CoolDownTime} ms");
                         await Task.Delay((int)Math.Max(_coolDownTime, _coolDownTime - coolDownWatch.ElapsedMilliseconds), token);
                     }
                 }
@@ -88,10 +75,6 @@ namespace LPS.Domain.LPSRun.IterationMode
             catch (Exception ex)
             {
                 executionError = ex;
-            }
-            finally
-            {
-                cooling?.Dispose();
             }
 
             coolDownWatch.Stop();

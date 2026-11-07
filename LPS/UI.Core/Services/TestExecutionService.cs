@@ -42,7 +42,6 @@ namespace LPS.UI.Core.Services
         private readonly IPlaceholderResolverService _placeholderResolverService;
         private readonly IVariableManager _variableManager;
         private readonly IMetricsDataMonitor _lpsMonitoringEnroller;
-        private readonly ICoolingTracker _coolingTracker;
         private readonly IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> _httpClientManager;
         private readonly ISkippedRequestReporter _skippedRequestReporter;
         private readonly IClientConfiguration<HttpRequest> _config;
@@ -79,7 +78,6 @@ namespace LPS.UI.Core.Services
             IPlaceholderResolverService placeholderResolverService,
             IVariableManager variableManager,
             IMetricsDataMonitor lpsMonitoringEnroller,
-            ICoolingTracker coolingTracker,
             IClientManager<HttpRequest, HttpResponse, IClientService<HttpRequest, HttpResponse>> httpClientManager,
             ISkippedRequestReporter skippedRequestReporter,
             IClientConfiguration<HttpRequest> config,
@@ -111,7 +109,6 @@ namespace LPS.UI.Core.Services
             _placeholderResolverService = placeholderResolverService;
             _variableManager = variableManager;
             _lpsMonitoringEnroller = lpsMonitoringEnroller;
-            _coolingTracker = coolingTracker ?? throw new ArgumentNullException(nameof(coolingTracker));
             _httpClientManager = httpClientManager;
             _skippedRequestReporter = skippedRequestReporter;
             _config = config;
@@ -339,7 +336,7 @@ namespace LPS.UI.Core.Services
             _dashboardService.Start();
             await new Plan.ExecuteCommand(_logger, _watchdog, _runtimeOperationIdProvider, _skippedRequestReporter, _httpClientManager,
                     _config, _httpIterationExecutionCommandStatusMonitor,
-                    _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor, _coolingTracker)
+                    _httpIterationExecutionCommandRepository, _lpsMonitoringEnroller, _iterationStatusMonitor)
                 .ExecuteAsync(plan, parameters.CancellationToken);
             await _logger.LogAsync(_runtimeOperationIdProvider.OperationId,
                 $"Plan '{plan.Name}' execution has completed", LPSLoggingLevel.Information);

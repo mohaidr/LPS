@@ -14,7 +14,7 @@ namespace LPS.UnitTest;
 public sealed class HostMetricsAggregatorTests
 {
     [Fact]
-    public async Task WindowedCollector_PreservesBothCoolingSourcesWithActiveTraffic()
+    public async Task WindowedCollector_PreservesWatchdogCoolingWithActiveTraffic()
     {
         Func<Task>? close = null;
         var coordinator = new Mock<IWindowedMetricsCoordinator>();
@@ -26,11 +26,10 @@ public sealed class HostMetricsAggregatorTests
             .Callback<HostWindowedMetricsSnapshot>(snapshot => published = snapshot).Returns(true);
         var periods = new[]
         {
-            new CoolingPeriod("Watchdog", DateTime.UtcNow.AddSeconds(-1), DateTime.UtcNow),
-            new CoolingPeriod("BatchCooldown", DateTime.UtcNow.AddSeconds(-1), DateTime.UtcNow)
+            new CoolingPeriod("Watchdog", DateTime.UtcNow.AddSeconds(-1), DateTime.UtcNow)
         };
         var cooling = new Mock<ICoolingTracker>();
-        cooling.Setup(value => value.GetPeriods("example.com", It.IsAny<DateTime>(), It.IsAny<DateTime>(), null)).Returns(periods);
+        cooling.Setup(value => value.GetPeriods("example.com", It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(periods);
         using var aggregator = new HostMetricsAggregator(new HostKey("https", "example.com", 443));
         using var collector = new HostWindowedMetricsCollector(aggregator, queue.Object, coordinator.Object, coolingTracker: cooling.Object);
         await aggregator.IncreaseConnectionsCountAsync(CancellationToken.None);

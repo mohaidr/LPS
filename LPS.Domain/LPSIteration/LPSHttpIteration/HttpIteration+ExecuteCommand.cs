@@ -23,7 +23,6 @@ namespace LPS.Domain
             readonly IRuntimeOperationIdProvider _runtimeOperationIdProvider;
             readonly ISkippedRequestReporter _skippedRequestReporter;
             readonly IMetricsDataMonitor _lpsMonitoringEnroller;
-            internal readonly ICoolingTracker _coolingTracker;
             IIterationStatusMonitor _iterationStatusMonitor;
             public ISkippedRequestReporter SkippedRequestReporter => _skippedRequestReporter;
             protected ExecuteCommand()
@@ -37,8 +36,7 @@ namespace LPS.Domain
                 IRuntimeOperationIdProvider runtimeOperationIdProvider,
                 ISkippedRequestReporter skippedRequestReporter,
                 IMetricsDataMonitor lpsMonitoringEnroller,
-                IIterationStatusMonitor iterationStatusMonitor,
-                ICoolingTracker coolingTracker)
+                IIterationStatusMonitor iterationStatusMonitor)
             {
                 _httpClientService = httpClientService;
                 _logger = logger;
@@ -47,7 +45,6 @@ namespace LPS.Domain
                 _skippedRequestReporter = skippedRequestReporter;
                 _lpsMonitoringEnroller = lpsMonitoringEnroller;
                 _iterationStatusMonitor = iterationStatusMonitor;
-                _coolingTracker = coolingTracker ?? throw new ArgumentNullException(nameof(coolingTracker));
                 _executionStatus = CommandExecutionStatus.Scheduled;
             }
             private CommandExecutionStatus _executionStatus;
@@ -201,7 +198,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _iterationStatusMonitor, _watchdog, command._coolingTracker
+                            this, _iterationStatusMonitor, _watchdog
                         );
                         break;
 
@@ -214,7 +211,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _iterationStatusMonitor, _watchdog, command._coolingTracker
+                            this, _iterationStatusMonitor, _watchdog
                         );
                         break;
 
@@ -226,7 +223,7 @@ namespace LPS.Domain
                             batchSize: this.BatchSize.Value,
                             maximizeThroughput: this.MaximizeThroughput,
                             batchProcessor: batchProcessor,
-                            this, _iterationStatusMonitor, _watchdog, command._coolingTracker
+                            this, _iterationStatusMonitor, _watchdog
                         );
                         break;
 

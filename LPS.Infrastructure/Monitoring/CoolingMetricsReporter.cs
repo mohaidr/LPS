@@ -61,7 +61,7 @@ public sealed class CoolingMetricsReporter : BackgroundService
         foreach (var update in updates)
             request.Updates.Add(new CoolingStateUpdate
             {
-                IterationId = update.IterationId.ToString(), HostName = update.HostName,
+                HostName = update.HostName,
                 Source = update.Period.Source, Start = Timestamp.FromDateTime(update.Period.Start),
                 End = Timestamp.FromDateTime(update.Period.End), NodeId = update.Period.NodeId,
                 MachineName = update.Period.MachineName, Reason = update.Period.Reason, IsActive = update.IsActive

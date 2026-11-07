@@ -37,7 +37,7 @@ public sealed class WindowedMetricsTests
         var store = new Mock<IHistoricalWindowedMetricDataStore>();
         var cooling = new Mock<ICoolingTracker>();
         var periods = new[] { new CoolingPeriod("Watchdog", DateTime.UtcNow.AddSeconds(-1), DateTime.UtcNow) };
-        cooling.Setup(value => value.GetPeriods(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), iteration.Id)).Returns(periods);
+        cooling.Setup(value => value.GetPeriods(It.IsAny<string>(), It.IsAny<DateTime>(), It.IsAny<DateTime>())).Returns(periods);
         using var throughput = new WindowedThroughputAggregator(iteration, "Main");
         using var transfer = new WindowedDataTransmissionAggregator(iteration, "Main");
         using var collector = new WindowedIterationMetricsCollector(iteration, "Main", queue.Object, store.Object,
@@ -182,7 +182,7 @@ public sealed class WindowedMetricsTests
     }
 
     [Fact]
-    public void CoolingDuringActiveRequests_ExportsBothSourcesAndActualBoundaries()
+    public void CoolingDuringActiveRequests_ExportsWatchdogAndActualBoundaries()
     {
         var start = new DateTime(2026, 9, 24, 0, 0, 0, DateTimeKind.Utc);
         var snapshot = new WindowedIterationSnapshot
@@ -191,18 +191,16 @@ public sealed class WindowedMetricsTests
             Throughput = new WindowedThroughputData { RequestsCount = 20, MaxConcurrentRequests = 5 },
             CoolingPeriods = new[]
             {
-                new CoolingPeriod("Watchdog", start.AddMilliseconds(250), start.AddSeconds(1), "10.0.0.2", "worker east", "CPU pressure"),
-                new CoolingPeriod("BatchCooldown", start.AddMilliseconds(500), start.AddSeconds(2))
+                new CoolingPeriod("Watchdog", start.AddMilliseconds(250), start.AddSeconds(1), "10.0.0.2", "worker east", "CPU pressure")
             }
         };
 
         var lines = InfluxDBLineProtocolConverter.ConvertWindowedSnapshot(snapshot).Split('\n');
         Assert.False(snapshot.IsIdle);
         var watchdog = Assert.Single(lines, line => line.StartsWith("windowed_cooling,") && line.Contains("source=Watchdog"));
-        var batch = Assert.Single(lines, line => line.StartsWith("windowed_cooling,") && line.Contains("source=BatchCooldown"));
+        Assert.Single(lines, line => line.StartsWith("windowed_cooling,"));
         Assert.Contains("duration_ms=750.00", watchdog);
         Assert.Contains("node=10.0.0.2,machine=worker\\ east,reason=CPU\\ pressure", watchdog);
-        Assert.Contains("duration_ms=1500.00", batch);
         var end = new DateTimeOffset(start.AddSeconds(1)).ToUnixTimeMilliseconds() * 1_000_000;
         Assert.Contains($"end_ns={end}i", watchdog);
         Assert.EndsWith($" {end}", watchdog);

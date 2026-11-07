@@ -158,7 +158,7 @@ namespace LPS.Infrastructure.Monitoring.Windowed
                     ExecutionStatus = executionStatus,
                     IsFinal = isFinal,
                     CoolingPeriods = _coolingTracker?.GetPeriods(_httpIteration.HttpRequest?.Url?.HostName ?? string.Empty,
-                        _windowStart, windowEnd, _httpIteration.Id) ?? Array.Empty<CoolingPeriod>(),
+                        _windowStart, windowEnd) ?? Array.Empty<CoolingPeriod>(),
                     
                     // Windowed (for charts)
                     Duration = durationData,

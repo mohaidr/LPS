@@ -21,7 +21,6 @@ namespace LPS.Domain
         ISkippedRequestReporter _skippedRequestReporter;
         ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
         IIterationStatusMonitor _iterationStatusMonitor;
-        ICoolingTracker _coolingTracker;
 
         public class ExecuteCommand : IAsyncCommand<Round>
         {
@@ -33,7 +32,6 @@ namespace LPS.Domain
             readonly IClientConfiguration<HttpRequest> _lpsClientConfig;
             readonly IMetricsDataMonitor _lpsMetricsDataMonitor;
             readonly IIterationStatusMonitor _iterationStatusMonitor;
-            readonly ICoolingTracker _coolingTracker;
             readonly ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> _httpIterationExecutionCommandRepository;
 
             protected ExecuteCommand() { }
@@ -47,8 +45,7 @@ namespace LPS.Domain
                 IClientConfiguration<HttpRequest> lpsClientConfig,
                 ICommandRepository<HttpIteration, IAsyncCommand<HttpIteration>> httpIterationExecutionCommandRepository,
                 IMetricsDataMonitor lpsMetricsDataMonitor,
-                IIterationStatusMonitor iterationStatusMonitor,
-                ICoolingTracker coolingTracker)
+                IIterationStatusMonitor iterationStatusMonitor)
             {
                 _logger = logger;
                 _watchdog = watchdog;
@@ -59,7 +56,6 @@ namespace LPS.Domain
                 _httpIterationExecutionCommandRepository = httpIterationExecutionCommandRepository;
                 _lpsMetricsDataMonitor = lpsMetricsDataMonitor;
                 _iterationStatusMonitor = iterationStatusMonitor;
-                _coolingTracker = coolingTracker ?? throw new ArgumentNullException(nameof(coolingTracker));
             }
 
             private CommandExecutionStatus _executionStatus;
@@ -82,7 +78,6 @@ namespace LPS.Domain
                 entity._lpsMetricsDataMonitor = _lpsMetricsDataMonitor;
                 entity._httpIterationExecutionCommandRepository = _httpIterationExecutionCommandRepository;
                 entity._iterationStatusMonitor = _iterationStatusMonitor;
-                entity._coolingTracker = _coolingTracker;
 
                 entity._httpIterationSchedulerService = new HttpIterationSchedulerService(
                     _logger,
@@ -203,8 +198,7 @@ namespace LPS.Domain
                         _runtimeOperationIdProvider,
                         _skippedRequestReporter,
                         _lpsMetricsDataMonitor,
-                        _iterationStatusMonitor,
-                        _coolingTracker);
+                        _iterationStatusMonitor);
 
                     commands.Add((httpIterationCommand, httpIteration));
                     _httpIterationExecutionCommandRepository.Add(httpIteration, httpIterationCommand);

@@ -56,6 +56,12 @@ checks every 5 seconds and removes completed batches while retaining request tot
 and failure outcomes. This does not cap concurrency or change batch scheduling.
 On exit, outstanding batches are awaited before results or errors are returned.
 
+Cooling telemetry (dashboard flags and exports) records watchdog-triggered resource
+pressure only. Configured batch cooldowns still delay batches as specified in the
+plan, but do not create tracked or reported cooling periods.
+Worker cooling reports must use the `Watchdog` source; unsupported sources are rejected.
+The retired iteration identifier field is reserved in the cooling protocol.
+
 ### 1️⃣ Ramp up 1000 clients gradually
 ```bash
 lps --url https://www.example.com --numberofclients 1000 --arrivaldelay 100
