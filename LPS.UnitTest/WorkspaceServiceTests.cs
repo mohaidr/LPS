@@ -570,6 +570,60 @@ public class WorkspaceServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Plans_SaveAndReloadPreserveAdvancedFieldsAcrossWorkspaceJson()
+    {
+        var service = new WorkspacePlanService(Options);
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
+        var plan = CreatePlan();
+        plan.Variables.Add(new VariableDto { Name = "Enabled", Value = "true", As = "Boolean" });
+        plan.Environments.Add(new EnvironmentDto
+        {
+            Name = "Local",
+            Variables = new List<VariableDto> { new() { Name = "Endpoint", Value = "https://example.test", As = "String" } }
+        });
+        var iteration = plan.Rounds[0].Iterations[0];
+        iteration.Before = ["$prepare()"];
+        iteration.After = ["$cleanup()"];
+        iteration.SkipIf = "${Enabled} = false";
+        iteration.FailureRules = [new()
+        {
+            Metric = "ErrorRate > 0.05", Expression = "${Enabled} = false", ErrorStatusCodes = ">= 500"
+        }];
+        iteration.TerminationRules = [new()
+        {
+            Expression = "${Metrics.Main.Request.Throughput.RPS} <= 40", GracePeriod = "00:00:10"
+        }];
+        iteration.HttpRequest.SkipIf = "${Login.StatusCode} = 401";
+        iteration.HttpRequest.Capture = new() { To = "Login", As = "Json", MakeGlobal = "false" };
+        iteration.HttpRequest.Before = ["$prepareRequest()"];
+        iteration.HttpRequest.After = ["$afterRequest()"];
+        iteration.HttpRequest.Retry = new() { MaxRetries = "2", If = "${Enabled} = true" };
+
+        var wire = JsonSerializer.Serialize(new SaveWorkspacePlanRequest { Plan = plan }, options);
+        var request = JsonSerializer.Deserialize<SaveWorkspacePlanRequest>(wire, options)!;
+        var created = await service.SaveAsync(null, request.Plan, CancellationToken.None);
+        var loaded = await service.GetAsync(created.Id, CancellationToken.None);
+        Assert.Equal(JsonSerializer.Serialize(plan, options), JsonSerializer.Serialize(loaded.Plan, options));
+
+        loaded.Plan.Name = "Edited test";
+        loaded.Plan.Rounds[0].Iterations[0].HttpRequest.URL = "https://example.test/edited";
+        var rule = loaded.Plan.Rounds[0].Iterations[0].FailureRules[0];
+        rule.Metric = "ErrorRate > 0.1";
+        loaded.Plan.Rounds[0].Iterations[0].FailureRules[0] = rule;
+        var updatedWire = JsonSerializer.Serialize(new SaveWorkspacePlanRequest { Plan = loaded.Plan }, options);
+        var update = JsonSerializer.Deserialize<SaveWorkspacePlanRequest>(updatedWire, options)!;
+        await service.SaveAsync(created.Id, update.Plan, CancellationToken.None);
+
+        var restored = await service.GetAsync(created.Id, CancellationToken.None);
+        plan.Name = "Edited test";
+        iteration.HttpRequest.URL = "https://example.test/edited";
+        var expectedRule = iteration.FailureRules[0];
+        expectedRule.Metric = "ErrorRate > 0.1";
+        iteration.FailureRules[0] = expectedRule;
+        Assert.Equal(JsonSerializer.Serialize(plan, options), JsonSerializer.Serialize(restored.Plan, options));
+    }
+
+    [Fact]
     public async Task Plans_RejectInvalidAndEmptyPlansWithoutWritingFiles()
     {
         var service = new WorkspacePlanService(Options);
